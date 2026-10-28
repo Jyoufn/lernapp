@@ -1619,12 +1619,13 @@ async function continueAnswer(msgEl) {
 }
 /* Gestoppt, bevor eine Antwort da war (oder Rückfrage übersprungen): ruhige Karte wie bei „Bild konnte nicht erstellt werden“ –
    Stopp-Icon, kurzer Text, rechts „Neu starten“. Bleibt eine .msg-actions, damit Karten davor eingefügt werden können. */
+// Gestoppt, bevor Text kam: keine Karte – darunter nur das Icon zum Neu erzeugen (wie unter jeder Antwort)
 function restartBar(msgEl) {
-  const bar = el('div', 'msg-actions stop-card late-in');
-  bar.innerHTML = `<span class="sc-ico">${FadeIcons.svg('stop', 14)}</span><span class="sc-text"><strong>Antwort gestoppt</strong><span>Sie wurde angehalten, bevor sie fertig war.</span></span>`;
-  const redo = el('button', 'sc-redo', icon('i-refresh', 14) + '<span>Neu starten</span>');
+  const bar = el('div', 'msg-actions late-in');
+  const redo = el('button', 'msg-btn', icon('i-refresh'));
   redo.type = 'button';
-  redo.setAttribute('aria-label', 'Antwort neu starten');
+  redo.title = 'Neu erzeugen';
+  redo.setAttribute('aria-label', 'Antwort neu erzeugen');
   redo.addEventListener('click', () => regenerate(msgEl));
   bar.append(redo);
   return bar;
