@@ -2,7 +2,7 @@
    Anmeldung und Konto
    - Wird als erstes Skript geladen und lädt danach die App-Skripte (Liste in index.html → <template id="appScripts">).
    - Nicht angemeldet: links die App als Vorschau (leerer Chat mit Agenten-Leiste, Eingabefeld, Kacheln „Leicht“) –
-     nicht bedienbar; rechts das Anmeldefenster: E-Mail, Passwort, „Code senden“ → 6 Kacheln für den Code.
+     nicht bedienbar; rechts das Anmeldefenster: E-Mail, Passwort, „Anmelden“ (6 Code-Kacheln nur mit E-Mail-Code über Resend).
      Nach dem Anmelden wird die Vorschau groß und die App öffnet „Neuer Chat“.
    - Angemeldet: alles, was die App im Browser speichert (Einstellungen, API-Keys, Aufgaben, Kalender, Tags,
      Darstellung …), wird ins Konto übertragen und beim Start von dort geladen. Chats und Dokumente speichert der
@@ -171,7 +171,7 @@
       <form class="auth-card" novalidate autocomplete="on">
         <img class="auth-logo" src="icon-180.png?v=2" alt="" width="44" height="44" />
         <h1 class="auth-title">Bei Agenten anmelden</h1>
-        <p class="auth-sub">Mit E-Mail, Passwort und deinem 6-stelligen Code.</p>
+        <p class="auth-sub">Mit deiner E-Mail und deinem Passwort.</p>
         <div class="auth-fields">
           <label class="auth-label" for="authEmail">E-Mail</label>
           <div class="auth-field">${fi('user', 14)}<input id="authEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@beispiel.de" required /></div>
@@ -186,7 +186,7 @@
           </div>
         </div></div>
         <p class="auth-err" role="alert"></p>
-        <button type="submit" class="auth-btn"><span class="auth-btn-text">Code senden</span><span class="auth-spin" aria-hidden="true"></span></button>
+        <button type="submit" class="auth-btn"><span class="auth-btn-text">Anmelden</span><span class="auth-spin" aria-hidden="true"></span></button>
         <div class="auth-foot">
           <button type="button" class="auth-link" data-act="change" hidden>E-Mail ändern</button>
           <button type="button" class="auth-link" data-act="resend" hidden>Code erneut senden</button>
@@ -242,7 +242,7 @@
       codeWrap.setAttribute('aria-hidden', 'true');
       email.readOnly = pw.readOnly = false;
       digits.forEach((d) => { d.tabIndex = -1; });
-      btnText.textContent = 'Code senden';
+      btnText.textContent = 'Anmelden';
       btn.classList.remove('ready');
       resend.hidden = change.hidden = true;
       clearInterval(resendT);
