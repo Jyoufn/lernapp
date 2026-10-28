@@ -7159,3 +7159,11 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
 .tk-view:not(.tk-embed) .tk-tools { flex: 0 1 auto; min-width: 0; }
 .tk-view:not(.tk-embed) .tk-tools > * { flex-shrink: 0; }
 .tk-view:not(.tk-embed) .tk-tools > .tk-search { flex: 0 1 220px; width: auto; min-width: 110px; }
+
+/* Ein-/Ausklapp-Knopf (und die anderen Knöpfe oben in der Sidebar): auf dem iPad bleibt nach dem Tippen kein
+   grauer Hover-Hintergrund stehen – Touch-Geräte haben kein echtes Hover. Auch kein Tipp-Aufblitzen. */
+.sb-head-btn { -webkit-tap-highlight-color: transparent; }
+@media (hover: none) {
+  .sb-head-btn:hover, .sb-head-btn:active { background: none; }
+}
+.panel-toggle:focus:not(:focus-visible) { outline: none; }
