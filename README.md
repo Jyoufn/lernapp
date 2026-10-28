@@ -1,6 +1,6 @@
 > **Diese Fassung ist für Vercel vorbereitet** (zum Benutzen auf dem iPad). Unterschiede zur PC-Fassung: Auf Vercel liegen Chats und Dokumente nur vorübergehend in `/tmp` (gehen bei Neustarts verloren), die `/api` nimmt auch Anfragen von der eigenen Adresse an, alle `/api`-Anfragen laufen über die Funktion `api/index.js` (ruft `handler` aus `app-server.js` auf; am PC weiter `npm start`), die Browser-Dateien baut `vercel-build.js` nach `public/` (siehe `vercel.json`). **API-Keys** trägt man in der App unter Zahnrad → Agenten → Verbindung ein; sie bleiben auf dem Gerät. Keine `.env` hochladen.
 
-# Backbone – Lern-App
+# Agenten – Lern-App
 
 Lokale Lern-App mit KI-Chat, Agent (Sprache), Kalender, Musik und Timer. Ohne Framework: reines HTML/CSS/JS im Browser, ein kleiner Node-Server.
 

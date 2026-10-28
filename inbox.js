@@ -11,7 +11,7 @@ const Inbox = (() => {
 
   // Erste Nachricht, solange noch nichts da ist
   let messages = load() || [{
-    id: 'm-start', from: 'Backbone', subject: 'Willkommen in deiner Inbox',
+    id: 'm-start', from: 'Agenten', subject: 'Willkommen in deiner Inbox',
     text: 'Hier sammeln sich Nachrichten der App – zum Beispiel Erinnerungen an Termine und Aufgaben.\n\nLinks siehst du alle Nachrichten, rechts die, die du gerade geöffnet hast.',
     time: Date.now(), read: false,
   }];
@@ -28,7 +28,7 @@ const Inbox = (() => {
   const avatar = (name, big = false) => {
     const n = String(name || '?');
     const hue = [...n].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
-    const style = n === 'Backbone' ? '--av:var(--accent)' : `--av:hsl(${hue} 55% 62%)`;
+    const style = n === 'Agenten' ? '--av:var(--accent)' : `--av:hsl(${hue} 55% 62%)`;
     return `<span class="ib-av${big ? ' big' : ''}" style="${style}" aria-hidden="true">${esc(n.trim()[0]?.toUpperCase() || '?')}</span>`;
   };
 
@@ -88,7 +88,7 @@ const Inbox = (() => {
   search.addEventListener('keydown', (e) => e.stopPropagation());
 
   /* Neue Nachricht von anderen Teilen der App: Inbox.add({ from, subject, text }) */
-  function add({ from = 'Backbone', subject = '', text = '' }) {
+  function add({ from = 'Agenten', subject = '', text = '' }) {
     const m = { id: `m-${Date.now().toString(36)}`, from, subject, text, time: Date.now(), read: false };
     messages.unshift(m);
     save();
