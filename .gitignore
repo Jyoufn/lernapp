@@ -7,3 +7,7 @@ tts/
 
 chats/
 dokumente/
+
+# Vercel: wird beim Bauen erzeugt
+public/
+.vercel/

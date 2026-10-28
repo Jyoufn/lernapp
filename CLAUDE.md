@@ -5,5 +5,5 @@ Vor jeder Änderung an der Oberfläche **README.md lesen** – dort stehen die v
 - Neue Stile nur in den Block „FESTGELEGTER STIL“ am Ende von `style.css`.
 - Icons aus `icons.js` (`#f-<name>`), gefüllt; keine Emojis.
 - Neue Bausteine erst nach Absprache übernehmen und in der README (Abschnitt 4) eintragen.
-- Neue Browser-Dateien in `server.js` → `PUBLIC_FILES` eintragen.
+- Neue Browser-Dateien in `app-server.js` → `PUBLIC_FILES` eintragen.
 - Danach `npm run check` und `npm test`.

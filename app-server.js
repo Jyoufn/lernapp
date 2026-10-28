@@ -1247,9 +1247,8 @@ async function handle(req, res) {
 }
 
 // Nur auf diesem PC erreichbar: IPv4 (127.0.0.1) und IPv6 (::1) – „localhost“ kann beides sein
-// Vercel erkennt den Server am listen()-Aufruf beim Laden und leitet die Anfragen intern dorthin
-if (ON_VERCEL) http.createServer(handler).listen(PORT);
-else if (require.main === module) {
+// Auf Vercel startet hier nichts: api/index.js ruft handler() für jede Anfrage auf
+if (require.main === module) {
   http.createServer(handler).listen(PORT, HOST, () => console.log(`Läuft auf http://localhost:${PORT}`));
   // Vorschau-Server: liefert nur /vorschau/<chat-id>/… aus dem Speicher
   http.createServer((req, res) => {
@@ -1259,4 +1258,4 @@ else if (require.main === module) {
   }).listen(PREVIEW_PORT, HOST, () => console.log(`Vorschau auf http://localhost:${PREVIEW_PORT}`)).on('error', (e) => console.log(`Vorschau-Port ${PREVIEW_PORT} nicht frei: ${e.message}`));
   http.createServer(handler).listen(PORT, '::1').on('error', () => {}); // ohne IPv6 einfach weglassen
 }
-module.exports = { handler };
+module.exports = { handler, PUBLIC_FILES };
