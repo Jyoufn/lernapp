@@ -246,19 +246,23 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
-  <script src="icons.js"></script><!-- gefüllte Icons (#f-…), siehe README.md -->
-  <script src="chat-visuals.js"></script>
-  <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
-  <script src="app.js"></script>
-  <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
-  <script src="pixel-dogs.js"></script><!-- Pixel-Hunde: Modus-Icons oben, Begleiter am Eingabefeld -->
-  <script src="music.js"></script>
-  <script src="timer.js"></script>
-  <script src="ui-kit.js"></script>
-  <script src="calendar.js"></script>
-  <script src="tasks.js"></script>
-  <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
-  <script src="docs.js"></script>
-  <script src="inbox.js"></script>
+  <!-- App-Skripte: lädt auth.js in dieser Reihenfolge – erst, wenn klar ist, ob man angemeldet ist (und die Kontodaten da sind) -->
+  <template id="appScripts">
+    <script src="icons.js"></script><!-- gefüllte Icons (#f-…), siehe README.md -->
+    <script src="chat-visuals.js"></script>
+    <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
+    <script src="app.js"></script>
+    <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
+    <script src="pixel-dogs.js"></script><!-- Pixel-Hunde: Modus-Icons oben, Begleiter am Eingabefeld -->
+    <script src="music.js"></script>
+    <script src="timer.js"></script>
+    <script src="ui-kit.js"></script>
+    <script src="calendar.js"></script>
+    <script src="tasks.js"></script>
+    <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
+    <script src="docs.js"></script>
+    <script src="inbox.js"></script>
+  </template>
+  <script src="auth.js"></script><!-- Anmeldung + Konto (Daten ins Konto), lädt danach die App -->
 </body>
 </html>

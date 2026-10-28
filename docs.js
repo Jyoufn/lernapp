@@ -36,14 +36,22 @@ const Docs = (() => {
   }
   // gelöschte Dokumente werden dem Server ausdrücklich gemeldet – er löscht nie etwas, nur weil es in der Liste fehlt
   const deletedIds = new Set();
+  // zuletzt an den Server geschickter Stand je Dokument – geschickt werden nur geänderte (Vercel: höchstens ~4,5 MB je Anfrage)
+  const sentDocs = new Map();
+  let sentProjects = '';
   function write() {
     clearTimeout(saveT);
     if (!ready) return;
     const sent = [...deletedIds];
-    const body = JSON.stringify({ docs, projects, deleted: sent });
-    fetch('/api/docs', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
-      .then((r) => { if (r.ok) sent.forEach((id) => deletedIds.delete(id)); }).catch(() => {});
-    try { localStorage.setItem(LS, body); } catch {}
+    const strs = new Map(docs.map((d) => [d.id, JSON.stringify(d)]));
+    const changed = docs.filter((d) => sentDocs.get(d.id) !== strs.get(d.id));
+    const proj = JSON.stringify(projects);
+    if (changed.length || sent.length || proj !== sentProjects) {
+      const body = JSON.stringify({ docs: changed, projects, deleted: sent });
+      fetch('/api/docs', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
+        .then((r) => { if (!r.ok) return; sent.forEach((id) => deletedIds.delete(id)); changed.forEach((d) => sentDocs.set(d.id, strs.get(d.id))); sentProjects = proj; }).catch(() => {});
+    }
+    try { localStorage.setItem(LS, JSON.stringify({ docs, projects, deleted: sent })); } catch {}
   }
   window.addEventListener('pagehide', write);
   (async () => {
@@ -63,6 +71,8 @@ const Docs = (() => {
     } catch {}
     docs = Array.isArray(data?.docs) ? data.docs : [];
     projects = Array.isArray(data?.projects) ? data.projects : [];
+    docs.forEach((d) => sentDocs.set(d.id, JSON.stringify(d))); // so steht es schon auf dem Server
+    sentProjects = JSON.stringify(projects);
     ready = true;
     renderSide();
     if (list.open) list.render();

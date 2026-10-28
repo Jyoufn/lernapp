@@ -11,3 +11,6 @@ dokumente/
 # Vercel: wird beim Bauen erzeugt
 public/
 .vercel/
+
+# Konten am PC (Passwort-Hashes, Sitzungen, Chats je Konto)
+konten/

@@ -28,12 +28,14 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
 const WEB = require('./lib/web');
 const TTS = require('./lib/tts');
+const STORE = require('./lib/store');
+const ACC = require('./lib/accounts');
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -1033,71 +1035,13 @@ async function handleIcon(req, res, query) {
   res.end(icon.data);
 }
 
-/* ---------- Sicheres Speichern (Chats und Dokumente) ----------
-   - Nie stilles Löschen: gelöscht wird nur, was der Browser ausdrücklich als „deleted“ meldet –
-     und auch dann wandert die Datei nur in den Ordner „_papierkorb“.
-   - Ein älterer Stand (z. B. aus einem vergessenen Tab) überschreibt nie einen neueren.
-   - Einmal pro Tag (und beim ersten Speichern nach dem Start) wird der ganze Ordner nach „_sicherung/<Datum>“ kopiert. */
-const snapshotDone = new Set();
-function snapshot(dir) {
-  const day = new Date().toISOString().slice(0, 10);
-  const key = `${dir}|${day}`;
-  if (snapshotDone.has(key)) return;
-  snapshotDone.add(key);
-  const target = path.join(dir, '_sicherung', `${day}_${new Date().toTimeString().slice(0, 8).replace(/:/g, '-')}`);
-  try {
-    const files = fs.readdirSync(dir).filter((f) => f.endsWith('.json'));
-    if (!files.length) return;
-    fs.mkdirSync(target, { recursive: true });
-    for (const f of files) fs.copyFileSync(path.join(dir, f), path.join(target, f));
-  } catch {}
-}
-function moveToTrash(dir, file) {
-  try {
-    fs.mkdirSync(path.join(dir, '_papierkorb'), { recursive: true });
-    fs.renameSync(path.join(dir, file), path.join(dir, '_papierkorb', `${Date.now()}_${file}`));
-  } catch {}
-}
+/* ---------- Alte Ablage am PC (vor den Konten): wird nur noch gelesen – das erste Konto übernimmt sie (adoptLegacyData) ---------- */
 function readJson(file) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return null; } }
-// Löschliste: einmal gelöscht bleibt gelöscht – auch wenn ein alter Tab den Eintrag noch einmal schickt
-const tombFile = (dir) => path.join(dir, '_geloescht.json');
-const tombstones = (dir) => new Set(readJson(tombFile(dir))?.ids || []);
-function addTombstones(dir, ids) {
-  if (!ids.length) return;
-  const all = tombstones(dir);
-  ids.forEach((id) => all.add(id));
-  fs.writeFileSync(tombFile(dir), JSON.stringify({ ids: [...all] }));
-}
-// neuer als die Datei? (Zeitstempel; bei Chats zählt zusätzlich die Länge des Verlaufs)
-function isNewer(incoming, existing) {
-  if (!existing) return true;
-  const a = Number(incoming.updated) || 0, b = Number(existing.updated) || 0;
-  if (a !== b) return a > b;
-  const la = Array.isArray(incoming.history) ? incoming.history.length : (incoming.content || '').length;
-  const lb = Array.isArray(existing.history) ? existing.history.length : (existing.content || '').length;
-  return la >= lb;
-}
-function storeSafely(dir, items, deleted, idRe) {
-  fs.mkdirSync(dir, { recursive: true });
-  snapshot(dir);
-  const gone = (Array.isArray(deleted) ? deleted : []).map(String).filter((id) => idRe.test(id));
-  addTombstones(dir, gone);
-  const dead = tombstones(dir);
-  for (const it of items) {
-    if (dead.has(it.id)) continue; // gelöscht bleibt gelöscht
-    const file = path.join(dir, `${it.id}.json`);
-    const existing = readJson(file);
-    if (existing && !isNewer(it, existing)) continue; // veralteter Stand → Datei behalten
-    fs.writeFileSync(file, JSON.stringify(it, null, 1));
-  }
-  for (const id of gone) if (fs.existsSync(path.join(dir, `${id}.json`))) moveToTrash(dir, `${id}.json`);
-}
+const tombstones = (dir) => new Set(readJson(path.join(dir, '_geloescht.json'))?.ids || []);
 
-/* ---------- /api/chats: Chats als Dateien im Ordner „chats/“ (eine JSON-Datei pro Chat) ----------
-   GET liefert alle Chats + Reihenfolge, PUT schreibt den aktuellen Stand und löscht Dateien gelöschter Chats. */
+/* Chats (früher „chats/“, eine JSON-Datei pro Chat) */
 const CHATS_DIR = path.join(DATA_ROOT, 'chats');
 const CHAT_ID = /^c[a-z0-9]{4,30}$/;
-const APPEARANCE_FILE = path.join(CHATS_DIR, '_darstellung.json');
 function loadChats() {
   let state = {};
   try { state = JSON.parse(fs.readFileSync(path.join(CHATS_DIR, '_reihenfolge.json'), 'utf8')); } catch {}
@@ -1109,18 +1053,8 @@ function loadChats() {
   chats.sort((a, b) => ((order.indexOf(a.id) + 1) || 1e9) - ((order.indexOf(b.id) + 1) || 1e9));
   return { active: state.active, chats };
 }
-function storeChats({ active, chats, deleted }) {
-  const list = (Array.isArray(chats) ? chats : []).filter((c) => c && CHAT_ID.test(c.id));
-  storeSafely(CHATS_DIR, list, deleted, CHAT_ID);
-  // Reihenfolge: bekannte Chats in der Reihenfolge des Browsers, Chats nur auf der Platte hinten anhängen (nie verlieren)
-  const dead = tombstones(CHATS_DIR);
-  const onDisk = fs.readdirSync(CHATS_DIR).map((f) => f.replace(/\.json$/, '')).filter((id) => CHAT_ID.test(id) && !dead.has(id));
-  const order = [...list.map((c) => c.id), ...onDisk.filter((id) => !list.some((c) => c.id === id))];
-  fs.writeFileSync(path.join(CHATS_DIR, '_reihenfolge.json'), JSON.stringify({ active: CHAT_ID.test(active) ? active : null, order }));
-}
 
-/* ---------- /api/docs: Dokumente als Dateien im Ordner „dokumente/“ (eine JSON-Datei pro Dokument) ----------
-   GET liefert Dokumente + Projekte, PUT schreibt den Stand und löscht Dateien gelöschter Dokumente. */
+/* Dokumente (früher „dokumente/“, eine JSON-Datei pro Dokument) */
 const DOCS_DIR = path.join(DATA_ROOT, 'dokumente');
 const DOC_ID = /^d[a-z0-9]{4,30}$/;
 function loadDocs() {
@@ -1131,11 +1065,6 @@ function loadDocs() {
   const dead = tombstones(DOCS_DIR);
   const docs = files.map((f) => { try { return JSON.parse(fs.readFileSync(path.join(DOCS_DIR, f), 'utf8')); } catch { return null; } }).filter((d) => d && DOC_ID.test(d.id) && !dead.has(d.id));
   return { docs, projects: Array.isArray(meta.projects) ? meta.projects : [] };
-}
-function storeDocs({ docs, projects, deleted }) {
-  const list = (Array.isArray(docs) ? docs : []).filter((d) => d && DOC_ID.test(d.id));
-  storeSafely(DOCS_DIR, list, deleted, DOC_ID);
-  if (Array.isArray(projects) && projects.length) fs.writeFileSync(path.join(DOCS_DIR, '_projekte.json'), JSON.stringify({ projects: projects.slice(0, 200) }, null, 1));
 }
 
 /* ---------- Vorschau des Coding-Agenten ----------
@@ -1183,6 +1112,62 @@ function injectReporter(content) {
 
 /* ---------- Server ---------- */
 // gleiche Adresse wie die App selbst (z. B. deine-app.vercel.app) – die Vorschau auf Port 3001 bleibt fremd
+/* ---------- Konten: Speicher, Cookie, Anmeldung (Ablauf in lib/accounts.js) ---------- */
+// Geheime Einstellungen: .env am PC, Umgebungsvariablen auf Vercel
+const serverEnv = () => ({ ...readFileEnv(), ...process.env });
+let storeCache = { sig: null, store: null };
+function accountStore() {
+  if (process.env.APP_TEST_STORE === 'memory') return storeCache.store || (storeCache.store = STORE.memoryStore());
+  const env = serverEnv();
+  const sig = [env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL, env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN].join('|');
+  if (storeCache.sig !== sig || !storeCache.store) storeCache = { sig, store: STORE.pickStore(env, { onVercel: ON_VERCEL, dataRoot: DATA_ROOT }) };
+  return storeCache.store;
+}
+function cookiesOf(req) {
+  const out = {};
+  for (const part of String(req.headers.cookie || '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) out[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return out;
+}
+const isHttps = (req) => ON_VERCEL || req.headers['x-forwarded-proto'] === 'https';
+const sessionCookie = (req, token, maxAge) => `sid=${token ? encodeURIComponent(token) : ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${isHttps(req) ? '; Secure' : ''}`;
+async function handleAuth(req, res, urlPath, store) {
+  if (req.method === 'POST' && urlPath === '/api/auth/start') {
+    return sendJson(res, 200, await ACC.startLogin(store, serverEnv(), await readBody(req, 4000), { onVercel: ON_VERCEL }));
+  }
+  if (req.method === 'POST' && urlPath === '/api/auth/verify') {
+    const r = await ACC.verifyLogin(store, serverEnv(), await readBody(req, 4000));
+    if (r.fresh && !ON_VERCEL) await adoptLegacyData(store, r.user.id);
+    res.setHeader('Set-Cookie', sessionCookie(req, r.token, r.maxAge));
+    return sendJson(res, 200, { ok: true, user: { email: r.user.email }, fresh: r.fresh && await ACC.isFresh(store, r.user.id) });
+  }
+  if (req.method === 'POST' && urlPath === '/api/auth/logout') {
+    await ACC.logout(store, cookiesOf(req).sid);
+    res.setHeader('Set-Cookie', sessionCookie(req, '', 0));
+    return sendJson(res, 200, { ok: true });
+  }
+  if (req.method === 'GET' && urlPath === '/api/auth/me') {
+    const user = await ACC.sessionUser(store, cookiesOf(req).sid);
+    return user ? sendJson(res, 200, { user: { email: user.email } }) : sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
+  }
+  return sendJson(res, 404, { error: 'Unbekannt' });
+}
+// Am PC: das erste Konto übernimmt die Chats und Dokumente, die schon in „chats/“ und „dokumente/“ liegen (Dateien bleiben liegen)
+async function adoptLegacyData(store, uid) {
+  try {
+    if (await store.get('legacy:uebernommen')) return;
+    const { chats, active } = loadChats();
+    const { docs, projects } = loadDocs();
+    if (!chats.length && !docs.length) return;
+    await ACC.storeChats(store, uid, { chats, active, order: chats.map((c) => c.id) });
+    await ACC.storeDocs(store, uid, { docs, projects });
+    await store.set('legacy:uebernommen', uid);
+    console.log(`[Anmeldung] ${chats.length} Chats und ${docs.length} Dokumente ins Konto übernommen`);
+  } catch (e) { console.log('[Anmeldung] Übernahme alter Daten:', e.message); }
+}
+
 function sameHost(req) { try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; } }
 function handler(req, res) { return requestKeys.run(deviceKeysOf(req), () => handle(req, res)); }
 async function handle(req, res) {
@@ -1190,6 +1175,14 @@ async function handle(req, res) {
   try {
     // Fremde Herkunft (z. B. die Vorschau auf dem eigenen Port) darf die /api der App nicht benutzen
     if (urlPath.startsWith('/api/') && req.headers.origin && !APP_ORIGIN.test(req.headers.origin) && !sameHost(req)) { res.writeHead(403); return res.end(); }
+    let store = null, user = null;
+    if (urlPath.startsWith('/api/')) {
+      store = accountStore();
+      if (!store) return sendJson(res, 503, { error: 'Der Speicher für Konten ist noch nicht eingerichtet (Upstash Redis in Vercel verbinden).', setup: true });
+      if (urlPath.startsWith('/api/auth/')) return await handleAuth(req, res, urlPath, store);
+      user = await ACC.sessionUser(store, cookiesOf(req).sid);
+      if (!user) return sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
+    }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
     if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res);
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
@@ -1201,28 +1194,18 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
-    if (req.method === 'GET' && urlPath === '/api/chats') return sendJson(res, 200, loadChats());
-    // Darstellung (Modus, Akzent, Kacheln) – auf dem Server gespeichert, damit sie nach jedem Neustart und unter jeder Adresse gleich bleibt
-    if (req.method === 'GET' && urlPath === '/api/appearance') return sendJson(res, 200, readJson(APPEARANCE_FILE) || {});
-    if (req.method === 'PUT' && urlPath === '/api/appearance') {
-      const b = await readBody(req, 4000);
-      const clean = { mode: ['dark', 'black', 'light'].includes(b.mode) ? b.mode : 'dark', accent: /^#[0-9a-f]{6}$/i.test(b.accent) ? b.accent : '#2f86ff', tiles: Math.max(0, Math.min(100, Number(b.tiles) || 0)) };
-      fs.mkdirSync(CHATS_DIR, { recursive: true });
-      fs.writeFileSync(APPEARANCE_FILE, JSON.stringify(clean));
-      return sendJson(res, 200, { ok: true });
-    }
-    if (req.method === 'GET' && urlPath === '/api/docs') return sendJson(res, 200, loadDocs());
-    // Notfall-Sicherung aus einem offenen Tab: schreibt nur eine Datei nach „wiederherstellung/“ (löscht nie etwas)
-    if (req.method === 'POST' && urlPath === '/api/recovery') {
-      const body = await readBody(req, 80 * 1024 * 1024);
-      const dir = path.join(DATA_ROOT, 'wiederherstellung');
-      fs.mkdirSync(dir, { recursive: true });
-      const file = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
-      fs.writeFileSync(file, JSON.stringify(body, null, 1));
-      return sendJson(res, 200, { ok: true, file: path.basename(file) });
-    }
-    if (req.method === 'PUT' && urlPath === '/api/docs') { storeDocs(await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
-    if (req.method === 'PUT' && urlPath === '/api/chats') { storeChats(await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
+    // Chats, Dokumente, Darstellung, Browser-Speicher: je Konto (lib/accounts.js)
+    if (req.method === 'GET' && urlPath === '/api/chats') return sendJson(res, 200, await ACC.loadChats(store, user.id));
+    if (req.method === 'PUT' && urlPath === '/api/chats') { await ACC.storeChats(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
+    if (req.method === 'GET' && urlPath === '/api/docs') return sendJson(res, 200, await ACC.loadDocs(store, user.id));
+    if (req.method === 'PUT' && urlPath === '/api/docs') { await ACC.storeDocs(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
+    // Darstellung (Modus, Akzent, Kacheln) – im Konto, damit sie auf jedem Gerät und nach jedem Neustart gleich bleibt
+    if (req.method === 'GET' && urlPath === '/api/appearance') return sendJson(res, 200, await ACC.getAppearance(store, user.id));
+    if (req.method === 'PUT' && urlPath === '/api/appearance') { await ACC.setAppearance(store, user.id, await readBody(req, 4000)); return sendJson(res, 200, { ok: true }); }
+    if (req.method === 'GET' && urlPath === '/api/account/storage') return sendJson(res, 200, { data: await ACC.getStorage(store, user.id) });
+    if (req.method === 'PUT' && urlPath === '/api/account/storage') { await ACC.patchStorage(store, user.id, await readBody(req, 4 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
+    // Notfall-Sicherung aus einem offenen Tab: landet im Konto (löscht nie etwas)
+    if (req.method === 'POST' && urlPath === '/api/recovery') { await ACC.addRecovery(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
     if (req.method === 'GET' && urlPath === '/api/icon') return await handleIcon(req, res, new URL(req.url, 'http://x').searchParams);
     if (req.method === 'GET' && urlPath === '/api/status') {
       const env = readEnv();
@@ -1230,7 +1213,7 @@ async function handle(req, res) {
       return sendJson(res, 200, { gemini: !!env.GEMINI_API_KEY, nvidia: !!nvidiaKeyOf(env), model: GEMINI_MODEL, env: Object.fromEntries(DEVICE_KEYS.map((k) => [k, !!file[k]])) });
     }
   } catch (err) {
-    if (!res.headersSent) return sendJson(res, 400, { error: err.message });
+    if (!res.headersSent) return sendJson(res, err.status || 400, { error: err.message });
     return res.end();
   }
 

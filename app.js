@@ -4046,6 +4046,18 @@ function saveChats() {
   clearTimeout(saveT);
   saveT = setTimeout(writeChats, 150);
 }
+// Zuletzt an den Server geschickter Stand je Chat – geschickt werden nur geänderte Chats (Vercel nimmt höchstens ~4,5 MB je Anfrage)
+const sentChats = new Map();
+function chatItems(withImages) {
+  return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
+    const c = chatOf(tab);
+    return {
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined,
+      history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
+    };
+  });
+}
+function markChatsSent() { sentChats.clear(); chatItems(true).forEach((c) => sentChats.set(c.id, JSON.stringify(c))); }
 function writeChats() {
   clearTimeout(saveT);
   if (restoring) return;
@@ -4054,24 +4066,20 @@ function writeChats() {
     if (!tabs.length) return;
     const act = activeTab();
     const sent = [...deletedChats];
-    const data = (withImages) => JSON.stringify({
-      deleted: sent,
-      active: chatId(act && !act.dataset.view ? act : tabs.find((t) => !t.hidden) || tabs[0]),
-      chats: tabs.map((tab) => {
-        const c = chatOf(tab);
-        return {
-          id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined,
-          history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
-        };
-      }),
-    });
-    const full = data(true);
-    // Hauptspeicher: Ordner „chats/“ auf dem Rechner (eine Datei pro Chat, gelöschte Chats → Datei weg)
-    fetch('/api/chats', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: full, keepalive: full.length < 60000 })
-      .then((r) => { if (r.ok) sent.forEach((id) => deletedChats.delete(id)); }).catch(() => {});
+    const active = chatId(act && !act.dataset.view ? act : tabs.find((t) => !t.hidden) || tabs[0]);
+    const items = chatItems(true);
+    const strs = new Map(items.map((c) => [c.id, JSON.stringify(c)]));
+    const changed = items.filter((c) => sentChats.get(c.id) !== strs.get(c.id));
+    // Hauptspeicher: das Konto auf dem Server (nur geänderte Chats + Reihenfolge; gelöschte ausdrücklich gemeldet)
+    if (changed.length || sent.length || active !== writeChats.active) {
+      const body = JSON.stringify({ deleted: sent, active, order: items.map((c) => c.id), chats: changed });
+      fetch('/api/chats', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
+        .then((r) => { if (!r.ok) return; sent.forEach((id) => deletedChats.delete(id)); changed.forEach((c) => sentChats.set(c.id, strs.get(c.id))); writeChats.active = active; }).catch(() => {});
+    }
     // Ersatz im Browser, falls der Server mal nicht erreichbar ist
-    try { localStorage.setItem(CHATS_KEY, full); } catch {
-      try { localStorage.setItem(CHATS_KEY, data(false)); } catch {} // Speicher voll → ohne Bilder
+    const full = (withImages) => JSON.stringify({ deleted: sent, active, chats: withImages ? items : chatItems(false) });
+    try { localStorage.setItem(CHATS_KEY, full(true)); } catch {
+      try { localStorage.setItem(CHATS_KEY, full(false)); } catch {} // Speicher voll → ohne Bilder
     }
   }
 }
@@ -4179,6 +4187,8 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
   saved.chats.forEach((s) => { if (!s.closed) return; const t = tabsEl.querySelector(`.tab[data-cid="${s.id}"]`); if (t && !t.classList.contains('active')) t.hidden = true; });
   snapToPixels(tabsEl.querySelectorAll('.tab'));
   restoring = false;
+  markChatsSent(); // so steht es schon auf dem Server
+  writeChats.active = saved.active;
   renderBookmarks();
   chatScroll.scrollTop = chatScroll.scrollHeight;
   restoreLayout();
@@ -4217,6 +4227,7 @@ async function restoreLayout() {
   }
   layoutReady = true;
   saveLayout();
+  window.dispatchEvent(new Event('app-layout-ready')); // z. B. für auth.js: nach dem Anmelden „Neuer Chat“ öffnen
 }
 new MutationObserver(() => { clearTimeout(saveLayout.t); saveLayout.t = setTimeout(saveLayout, 200); })
   .observe(tabsEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });

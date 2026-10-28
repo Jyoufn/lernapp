@@ -1,8 +1,8 @@
 /* ---------- Einstellungen ----------
    Zahnrad oben in der Sidebar neben der Lupe → die Sidebar wird zur Einstellungs-Leiste („‹ Zurück“, Allgemein, Agenten),
    der Hauptteil zeigt die gewählte Seite. Kein Fenster, sondern eine eigene Ansicht wie Chatverlauf oder Bibliothek.
-   API-Keys, die hier eingetragen werden, bleiben auf diesem Gerät (localStorage) und gehen bei jeder Anfrage an /api
-   im Kopf „X-App-Keys“ mit; der Server nimmt sie statt der Werte aus .env (siehe readEnv in server.js).
+   API-Keys, die hier eingetragen werden, stehen im Browser (localStorage) und damit auch im Konto (auth.js überträgt sie);
+   sie gehen bei jeder Anfrage an /api im Kopf „X-App-Keys“ mit; der Server nimmt sie statt der Werte aus .env (siehe readEnv in server.js).
    Wird vor app.js geladen, damit schon die ersten Anfragen die Schlüssel mitschicken. */
 (() => {
   const KEYS_KEY = 'settings.keys.v1', NAME_KEY = 'settings.name.v1', PAGE_KEY = 'settings.page.v1';
@@ -122,11 +122,15 @@
     let body;
     if (page === 'general') {
       const onDevice = Object.values(deviceKeys).some(Boolean);
+      const account = window.Auth?.user();
       body = `<h2>Profil</h2><div class="st-card">
           <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><input class="st-field st-name-in" data-name maxlength="32" value="${esc(nameOf())}" aria-label="Name" /></div></div>
+        ${account ? `<h2>Konto</h2><div class="st-card">
+          <div class="st-row"><span class="st-name">${esc(account.email)}</span><span class="grow"></span><button type="button" class="st-btn dark" data-logout>Abmelden</button></div></div>` : ''}
         <h2>Daten</h2><div class="st-card">
-          <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">${/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? 'Auf diesem Computer' : 'Vorübergehend auf dem Server'}</span></div>
-          <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Auf diesem Gerät' : 'Aus .env'}</span></div></div>`;
+          <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
+          <div class="st-row"><span class="st-name">Einstellungen und Aufgaben</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
+          <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Im Konto' : 'Aus .env'}</span></div></div>`;
     } else if (page === 'look') {
       body = lookPage();
     } else {
@@ -181,6 +185,8 @@
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
+    const lo = e.target.closest('[data-logout]');
+    if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
