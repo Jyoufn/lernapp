@@ -7147,3 +7147,15 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
 @media (prefers-reduced-motion: reduce) {
   html.auth-ready.auth-locked #app, html.auth-ready .auth-card > * { animation: none; }
 }
+
+/* Kalender und Aufgaben: Titel rückt neben den Ein-/Ausklapp-Knopf oben links (wie der Chat-Titel, links 54 px),
+   auf gleicher Höhe wie der Knopf – nichts liegt mehr übereinander (iPad) */
+.cal-view { padding-top: 8px; }
+.cal-head { padding-left: 26px; min-height: 32px; }
+.tk-view:not(.tk-embed) { padding-top: 8px; }
+.tk-view:not(.tk-embed) .tk-head { padding-left: 26px; min-height: 32px; }
+/* schmales iPad (hochkant): Suche gibt nach, statt dass „Neue Aufgabe“ abgeschnitten wird */
+.tk-view:not(.tk-embed) .tk-head h2 { flex: none; }
+.tk-view:not(.tk-embed) .tk-tools { flex: 0 1 auto; min-width: 0; }
+.tk-view:not(.tk-embed) .tk-tools > * { flex-shrink: 0; }
+.tk-view:not(.tk-embed) .tk-tools > .tk-search { flex: 0 1 220px; width: auto; min-width: 110px; }
