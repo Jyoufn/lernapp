@@ -7190,3 +7190,9 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
 .heft-line .katex-display { display: inline-block; margin: 0; }
 .heft-gap { height: var(--kar); }
 .heft-note { width: max-content; max-width: 100%; margin: 4px 0; padding: 0 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: var(--text); white-space: normal; }
+
+/* Hefteintrag: nur ein Rand, innen durchsichtig (kein Karo, keine graue Fläche) */
+.md .heft { background: none; border-color: #333; }
+.heft-head { border-bottom-color: #2a2a2a; }
+.heft-page { background: none; padding: 14px 18px 16px; }
+.heft-note { background: none; padding: 0; color: var(--text); font-weight: 600; }
