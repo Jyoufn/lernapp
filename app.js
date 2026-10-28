@@ -906,6 +906,26 @@ function timelineFigure(data) {
 }
 /* Mindmap im festgelegten Stil (README.md): Thema in der Mitte, Äste links/rechts ohne Kästen,
    Unterpunkte als Liste, feine graue Verbindungen – werden nach dem Einfügen vermessen und gezeichnet */
+/* Hefteintrag: Kasten „So kommt es ins Heft“, darin Karopapier; „# …“ = Überschrift, „> …“ = Merkkasten, leere Zeile = Abstand.
+   Die Formeln ($…$) sind beim Aufruf schon von KaTeX gesetzt (stehen als HTML im Code-Element). */
+function heftFigure(code) {
+  const fig = el('figure', 'heft');
+  fig.dataset.viz = 'heft';
+  fig.dataset.raw = code.textContent;
+  fig.append(el('figcaption', 'heft-head', `${FadeIcons.svg('pencil', 13)}<span>So kommt es ins Heft</span>`));
+  const page = el('div', 'heft-page');
+  const lines = code.innerHTML.replace(/\n+$/, '').split('\n');
+  while (lines.length && !lines[0].trim()) lines.shift();
+  lines.forEach((line) => {
+    const t = line.trim();
+    if (!t) { page.append(el('div', 'heft-gap')); return; }
+    if (/^#{1,3}\s/.test(t)) { page.append(el('div', 'heft-title', t.replace(/^#{1,3}\s+/, ''))); return; }
+    if (/^&gt;\s?/.test(t)) { page.append(el('div', 'heft-line heft-note', t.replace(/^&gt;\s?/, ''))); return; }
+    page.append(el('div', 'heft-line', line.replace(/^\s+/, (sp) => '&nbsp;'.repeat(sp.length))));
+  });
+  fig.append(page);
+  return fig;
+}
 function mindmapFigure(data) {
   const figure = el('figure', 'chat-mindmap');
   figure.setAttribute('role', 'img');
@@ -1127,6 +1147,8 @@ function renderMarkdown(target, text, opts = {}) {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.mindmap(raw);
     if (data) pre.replaceWith(tagViz(mindmapFigure(data), 'mindmap', raw)); else pre.remove();
   });
+  // Hefteintrag (```heft): nur das, was ins Heft kommt – auf Karopapier, Zeile für Zeile, Formeln schon gesetzt
+  target.querySelectorAll('pre:has(code.language-heft)').forEach((pre) => pre.replaceWith(heftFigure(pre.querySelector('code'))));
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);

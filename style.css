@@ -7167,3 +7167,26 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
   .sb-head-btn:hover, .sb-head-btn:active { background: none; }
 }
 .panel-toggle:focus:not(:focus-visible) { outline: none; }
+
+/* Chat oben: der Text läuft beim Scrollen nicht mehr unter den Chat-Titel (links) und das Chat-Symbol (rechts) –
+   ganz oben bleibt ein freier Streifen, in den der Text weich ausblendet */
+.panel:not(.home) .chat-scroll {
+  padding-top: max(66px, calc(28px + var(--dock-space, 0px)));
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent calc(40px + var(--dock-space, 0px)), #000 calc(64px + var(--dock-space, 0px)));
+  mask-image: linear-gradient(to bottom, transparent 0, transparent calc(40px + var(--dock-space, 0px)), #000 calc(64px + var(--dock-space, 0px)));
+}
+
+/* Hefteintrag (```heft): Kasten im Stil der Karten, innen Karopapier – je Zeile zwei Kästchen hoch */
+.md .heft { margin: 18px 0 6px; border: 1px solid #2a2a2a; border-radius: 14px; background: #1b1b1b; overflow: hidden; }
+.heft-head { display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-bottom: 1px solid #262626; color: var(--text-3); font-size: 12px; font-weight: 500; }
+.heft-head svg { color: var(--text-4); }
+.heft-page { --kar: 15px; padding: calc(var(--kar) * 1) 18px calc(var(--kar) * 1.5) 22px; overflow-x: auto;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: var(--kar) var(--kar); background-position: -1px -1px; }
+.heft-title { min-height: calc(var(--kar) * 2); margin-bottom: calc(var(--kar) * 0); color: var(--text); font-size: 15px; font-weight: 600; line-height: calc(var(--kar) * 2);
+  text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.35); text-underline-offset: 5px; text-decoration-thickness: 1px; }
+.heft-line { min-height: calc(var(--kar) * 2); color: var(--text-2); font-size: 14px; line-height: calc(var(--kar) * 2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.heft-line .katex { font-size: 1.05em; }
+.heft-line .katex-display { display: inline-block; margin: 0; }
+.heft-gap { height: var(--kar); }
+.heft-note { width: max-content; max-width: 100%; margin: 4px 0; padding: 0 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); color: var(--text); white-space: normal; }
