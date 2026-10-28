@@ -1528,6 +1528,20 @@ function mainSources(sources, citations) {
   return cited.length > 4 ? cited.filter((s) => freq[s.n] >= Math.max(1, top / 4)) : cited;
 }
 
+/* API-Key fehlt oder wurde abgelehnt: Karte im Stil der Agent-Empfehlung (statt roter Box) – Knopf führt zu
+   Einstellungen → Agenten → Verbindung */
+function keyCard(kind, message) {
+  const card = el('div', 'agent-suggest key-card');
+  card.innerHTML = '<span class="as-dog"></span><span class="as-text"><strong></strong><span></span></span>';
+  card.querySelector('.as-dog').innerHTML = window.PixelDogs?.svg(window.PixelDogs.mode, 32) || '';
+  card.querySelector('strong').textContent = kind === 'rejected' ? 'API-Key abgelehnt' : 'Noch kein API-Key verbunden';
+  card.querySelector('.as-text span').textContent = String(message || '').replace(/\s*–\s*(verbinde|prüf)[^.]*\.?$/i, '.') || 'Verbinde deinen Schlüssel in den Einstellungen.';
+  const go = el('button', 'as-go', 'Zu den Einstellungen');
+  go.type = 'button';
+  go.addEventListener('click', () => window.Settings?.open('agents'));
+  card.append(go);
+  return card;
+}
 /* Antwort mitten im Text abgebrochen: Karte im Stil der Agent-Empfehlung – „Weiterschreiben“ setzt genau an der Stelle fort */
 function resumeCard(msgEl) {
   const card = el('div', 'agent-suggest resume');
@@ -2055,6 +2069,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       } else if (event === 'error') {
         failed = true;
         if (data.detail?.limit) { msgEl.append(limitNote(limitText(data.detail.resetAt))); scrollToBottom(); } // Limit: ruhig, nicht rot
+        else if (data.detail?.key) { msgEl.append(keyCard(data.detail.key, data.message)); scrollToBottom(); } // API-Key fehlt/abgelehnt: Karte mit Weg zu den Einstellungen
         else if (data.detail?.partial && answerR?.text.trim()) interrupted = true; // unterbrochen → Karte zum Weiterschreiben (unten)
         else showNote('error-note', data.message);
       }
