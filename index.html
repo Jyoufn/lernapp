@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Backbone</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" />
+  <!-- Formeln (KaTeX) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- SVG-Symbole: alle 16×16, auf ganzen Pixeln -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-sidebar" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4 2h8a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H4a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zM6 3h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6z"/></symbol>
+    <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3.5 5.5 8l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-forward" viewBox="0 0 16 16"><path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.25 10.25 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-updown" viewBox="0 0 16 16"><path d="M5.5 6 8 3.5 10.5 6M5.5 10 8 12.5 10.5 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-inbox" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4.5 3h7A2.5 2.5 0 0 1 14 5.5v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 10.5v-5A2.5 2.5 0 0 1 4.5 3zm-1 5.5h2.75a1.75 1.75 0 0 0 3.5 0h2.75v-3a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1z"/></symbol>
+    <symbol id="i-tasks" viewBox="0 0 16 16"><g fill="currentColor"><circle cx="8" cy="3.5" r="2"/><circle cx="3.5" cy="8" r="2"/><circle cx="12.5" cy="8" r="2"/><circle cx="8" cy="12.5" r="2"/></g></symbol>
+    <symbol id="i-calendar" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4.5 2.5h7A2.5 2.5 0 0 1 14 5v6.5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 11.5V5a2.5 2.5 0 0 1 2.5-2.5zm-1 4v5a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-5z"/></symbol>
+    <symbol id="i-analytics" viewBox="0 0 16 16"><g fill="currentColor"><rect x="2" y="8" width="3" height="6" rx="1"/><rect x="6.5" y="4.5" width="3" height="9.5" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/></g></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 16 16"><path d="M6.5 4.5 10 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-grip" viewBox="0 0 16 16"><g fill="currentColor"><circle cx="5.5" cy="4" r="1.25"/><circle cx="10.5" cy="4" r="1.25"/><circle cx="5.5" cy="8" r="1.25"/><circle cx="10.5" cy="8" r="1.25"/><circle cx="5.5" cy="12" r="1.25"/><circle cx="10.5" cy="12" r="1.25"/></g></symbol>
+    <symbol id="i-ring" viewBox="0 0 16 16"><circle cx="8" cy="8" r="2.75" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+    <symbol id="i-people" viewBox="0 0 16 16"><g fill="currentColor"><rect x="1.5" y="3" width="8" height="7" rx="2"/><rect x="6.5" y="6" width="8" height="7" rx="2" opacity=".75"/></g></symbol>
+    <symbol id="i-stack" viewBox="0 0 16 16"><g fill="currentColor"><rect x="2" y="2" width="12" height="3.5" rx="1.25"/><rect x="2" y="6.25" width="12" height="3.5" rx="1.25" opacity=".8"/><rect x="2" y="10.5" width="12" height="3.5" rx="1.25" opacity=".6"/></g></symbol>
+    <symbol id="i-db" viewBox="0 0 16 16"><g fill="currentColor"><ellipse cx="8" cy="3.75" rx="5.5" ry="2"/><path d="M2.5 5.75c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2v2.5c0 1.1-2.46 2-5.5 2s-5.5-.9-5.5-2z" opacity=".8"/><path d="M2.5 10.25c0 1.1 2.46 2 5.5 2s5.5-.9 5.5-2v2c0 1.1-2.46 2-5.5 2s-5.5-.9-5.5-2z" opacity=".6"/></g></symbol>
+    <symbol id="i-gear" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M6.9 1.5h2.2l.4 1.9 1.3.7 1.8-.7 1.1 1.9-1.4 1.3v1.6l1.4 1.3-1.1 1.9-1.8-.7-1.3.7-.4 1.9H6.9l-.4-1.9-1.3-.7-1.8.7-1.1-1.9 1.4-1.3V7.2L2.3 5.9l1.1-1.9 1.8.7 1.3-.7zM8 10.25a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 16 16"><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-plus"viewBox="0 0 16 16"><path d="M8 3.5v9M3.5 8h9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-branch" viewBox="0 0 16 16"><path d="M3 3v6.5A2.5 2.5 0 0 0 5.5 12H13M3 6.5h7M3 9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M10.5 9.5 13 12l-2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-terminal" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4 2.5h8A2.5 2.5 0 0 1 14.5 5v6a2.5 2.5 0 0 1-2.5 2.5H4A2.5 2.5 0 0 1 1.5 11V5A2.5 2.5 0 0 1 4 2.5zM3 5v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1z"/><path d="M5 6.5 6.75 8 5 9.5M8.5 10H11" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 16 16"><path d="M6 2.5 5 13.5M11 2.5l-1 11M2.5 6h11M2.5 10h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-file" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 1.5h4.4c.4 0 .78.16 1.06.44l2.6 2.6c.28.28.44.66.44 1.06v7.4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13V3a1.5 1.5 0 0 1 1.5-1.5z"/><path fill="#fff" opacity=".9" d="M6.5 7.5v4l3.25-2z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 16 16"><rect x="6" y="2" width="4" height="7" rx="2" fill="currentColor"/><path d="M3.75 7.5a4.25 4.25 0 0 0 8.5 0M8 12v2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-arrow-up" viewBox="0 0 16 16"><path d="M8 12.5V4M4.25 7.75 8 4l3.75 3.75" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 16 16"><rect x="5" y="5" width="6" height="6" rx="1.5" fill="currentColor"/></symbol>
+    <symbol id="i-pdf" viewBox="0 0 16 16"><path fill="currentColor" d="M4.5 1.5h4.4c.4 0 .78.16 1.06.44l2.6 2.6c.28.28.44.66.44 1.06v7.4a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13V3a1.5 1.5 0 0 1 1.5-1.5z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 16 16"><path fill="currentColor" d="M9.2 1.5 3.5 9h3.8l-.5 5.5L12.5 7H8.7z"/></symbol>
+    <symbol id="i-import" viewBox="0 0 16 16"><path d="M8 1.75v7.5M5.25 6.5 8 9.25l2.75-2.75" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.25 9.5v2.25a2.5 2.5 0 0 0 2.5 2.5h6.5a2.5 2.5 0 0 0 2.5-2.5V9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5.25" y="5.25" width="8" height="8" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.75 3.5v-.25A1.5 1.5 0 0 0 9.25 1.75h-5.5a1.5 1.5 0 0 0-1.5 1.5v5.5a1.5 1.5 0 0 0 1.5 1.5H4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.46-3.54" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M13.25 2.5v2.75H10.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-voice" viewBox="0 0 16 16"><g fill="currentColor"><rect x="1.75" y="6.5" width="1.75" height="3" rx=".875"/><rect x="4.75" y="4" width="1.75" height="8" rx=".875"/><rect x="7.125" y="2" width="1.75" height="12" rx=".875"/><rect x="9.5" y="4" width="1.75" height="8" rx=".875"/><rect x="12.5" y="6.5" width="1.75" height="3" rx=".875"/></g></symbol>
+    <symbol id="i-music" viewBox="0 0 16 16"><path d="M6 11.5V3.75l7-1.5v7.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="4.25" cy="11.75" r="1.9" fill="currentColor"/><circle cx="11.25" cy="10" r="1.9" fill="currentColor"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 16 16"><circle cx="8" cy="9" r="5.25" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 6.5V9l1.6 1.1M6.5 1.75h3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-book" viewBox="0 0 16 16"><path d="M3 3.25A1.25 1.25 0 0 1 4.25 2H13v10H4.25A1.25 1.25 0 0 0 3 13.25zM3 13.25A1.25 1.25 0 0 0 4.25 14.5H13V12" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 2.2 1.75 3.6 3.95.55-2.87 2.77.7 3.93L8 11.2l-3.53 1.85.7-3.93L2.3 6.35l3.95-.55z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 16 16"><path d="M8 13.3S2.5 10.2 2.5 6.3A2.8 2.8 0 0 1 8 5a2.8 2.8 0 0 1 5.5 1.3c0 3.9-5.5 7-5.5 7z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pencil" viewBox="0 0 16 16"><path d="M10.6 3.1l2.3 2.3-7.2 7.2-3 .7.7-3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 16 16"><path d="M9.6 2.4l4 4-1.6.6-2.3 2.3.3 2.6-1 1-2.3-2.3L4 13.3M6.7 10.6L4.4 8.3l1-1 2.6.3 2.3-2.3z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.5 4.5V3.25h3V4.5M4.5 4.5l.6 8.25h5.8l.6-8.25" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chats" viewBox="0 0 16 16"><path d="M2.5 4.25a1.75 1.75 0 0 1 1.75-1.75h5.5a1.75 1.75 0 0 1 1.75 1.75v3.5a1.75 1.75 0 0 1-1.75 1.75H6.5L4 11.5V9.5h0a1.75 1.75 0 0 1-1.5-1.75z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M11.5 6.5h.25a1.75 1.75 0 0 1 1.75 1.75v2.5a1.75 1.75 0 0 1-1.5 1.75v1.5l-2-1.5H8.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-list" viewBox="0 0 16 16"><path d="M3 4.5h10M3 8h10M3 11.5h6.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 16 16"><path d="M2.5 6.25v3.5h2.25L8 12.5v-9L4.75 6.25z" fill="currentColor"/><path d="M10.5 5.75a3 3 0 0 1 0 4.5M12.25 4a5.5 5.5 0 0 1 0 8" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-power" viewBox="0 0 16 16"><path d="M8 2.25v5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M5 4.25a5 5 0 1 0 6 0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 16 16"><path d="M5.5 3.6v8.8c0 .6.65.95 1.15.62l6.6-4.4a.75.75 0 0 0 0-1.24l-6.6-4.4A.75.75 0 0 0 5.5 3.6z" fill="currentColor"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 16 16"><rect x="4.25" y="3.25" width="2.75" height="9.5" rx="1" fill="currentColor"/><rect x="9" y="3.25" width="2.75" height="9.5" rx="1" fill="currentColor"/></symbol>
+    <symbol id="i-next" viewBox="0 0 16 16"><path d="M2.5 4.4v7.2c0 .55.6.88 1.06.58L8.5 8.6V11.6c0 .55.6.88 1.06.58l5-3.6a.7.7 0 0 0 0-1.16l-5-3.6A.7.7 0 0 0 8.5 4.4V7.4L3.56 3.82A.7.7 0 0 0 2.5 4.4z" fill="currentColor"/></symbol>
+    <symbol id="i-prev" viewBox="0 0 16 16"><path d="M13.5 4.4v7.2c0 .55-.6.88-1.06.58L7.5 8.6V11.6c0 .55-.6.88-1.06.58l-5-3.6a.7.7 0 0 1 0-1.16l5-3.6A.7.7 0 0 1 7.5 4.4V7.4l4.94-3.58a.7.7 0 0 1 1.06.58z" fill="currentColor"/></symbol>
+    <symbol id="i-gemini" viewBox="0 0 16 16"><defs><linearGradient id="g-gemini" x1="2" y1="2" x2="14" y2="14" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4c8dff"/><stop offset=".55" stop-color="#7b6cff"/><stop offset="1" stop-color="#c06cf0"/></linearGradient></defs><path d="M8 1.25c.45 3.55 3.2 6.3 6.75 6.75-3.55.45-6.3 3.2-6.75 6.75C7.55 11.2 4.8 8.45 1.25 8 4.8 7.55 7.55 4.8 8 1.25z" fill="url(#g-gemini)"/></symbol>
+    <symbol id="i-nvidia" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="3.5" fill="#76b900"/><path d="M4 8.6c1.4-2.5 4.9-3.2 7.6-.6-2.4 2.1-5.6 2.5-7.6.6z" fill="none" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 16 16"><path d="m3.5 8.5 3 3 6-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-globe" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12" fill="none" stroke="#1e1e1e" stroke-width="1.1"/></symbol>
+    <symbol id="i-half" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.5a5.5 5.5 0 0 1 0 11z" fill="currentColor"/></symbol>
+    <symbol id="i-agent" viewBox="0 0 16 16"><rect x="1.5" y="1.5" width="13" height="13" rx="4" fill="currentColor"/><path d="M5 8h6M8 5v6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".9"/></symbol>
+    <symbol id="i-logo-c" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><circle cx="8" cy="8" r="2.5" fill="#fff" opacity=".9"/></symbol>
+    <symbol id="i-square" viewBox="0 0 16 16"><rect x="2" y="2" width="12" height="12" rx="3.5" fill="currentColor"/><path d="M5 10.5 8 5.5l3 5z" fill="#fff" opacity=".85"/></symbol>
+    <!-- Linien-Icons für die Sidebar: direkt im 16er-Raster (1:1 bei 16 px → scharf), runde Enden, Strich 1,5 – bei 16 px sauber statt pixelig -->
+    <symbol id="o-plus" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></g></symbol>
+    <symbol id="o-search" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></g></symbol>
+    <symbol id="o-chat" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.25 13.25A5.75 5.75 0 1 0 2.75 10.75L2.25 13.75z"/></g></symbol>
+    <symbol id="o-library" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 2.75v10.5M6 4.75v8.5M9.25 4.75v8.5M11.5 4.75l2.25 8.5"/></g></symbol>
+    <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="6" width="4" height="4" rx="1.1"/><rect x="10.25" y="1.75" width="4" height="4" rx="1.1"/><rect x="10.25" y="10.25" width="4" height="4" rx="1.1"/><path d="M5.75 8H8M10.25 3.75h-1.1A1.15 1.15 0 0 0 8 4.9v6.2a1.15 1.15 0 0 0 1.15 1.15h1.1"/></g></symbol>
+    <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2.5"/><path d="M5.5 1.75v3M10.5 1.75v3M2.25 6.75h11.5"/></g><g fill="currentColor"><circle cx="5.5" cy="9.25" r=".85"/><circle cx="8" cy="9.25" r=".85"/><circle cx="10.5" cy="9.25" r=".85"/><circle cx="5.5" cy="11.5" r=".85"/><circle cx="8" cy="11.5" r=".85"/></g></symbol>
+    <symbol id="o-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7.5z"/><path d="M14 2.5v4a1.5 1.5 0 0 0 1.5 1.5h4"/></g></symbol>
+    <symbol id="o-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></g></symbol>
+    <symbol id="o-user" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.25" r="2.75"/><path d="M2.75 13.75c.55-2.45 2.6-3.9 5.25-3.9s4.7 1.45 5.25 3.9"/></g></symbol>
+    <symbol id="o-agent" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.9 14.1 8 8 14.1 1.9 8z"/></g></symbol>
+    <!-- Logos der KI-Anbieter (Einstellungen → Agenten), aus den offiziellen Marken (lobehub/simple-icons) -->
+    <symbol id="b-gemini" viewBox="0 0 24 24"><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="#3186FF"/><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#b-gem-g0)"/><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#b-gem-g1)"/><path d="M20.616 10.835a14.147 14.147 0 01-4.45-3.001 14.111 14.111 0 01-3.678-6.452.503.503 0 00-.975 0 14.134 14.134 0 01-3.679 6.452 14.155 14.155 0 01-4.45 3.001c-.65.28-1.318.505-2.002.678a.502.502 0 000 .975c.684.172 1.35.397 2.002.677a14.147 14.147 0 014.45 3.001 14.112 14.112 0 013.679 6.453.502.502 0 00.975 0c.172-.685.397-1.351.677-2.003a14.145 14.145 0 013.001-4.45 14.113 14.113 0 016.453-3.678.503.503 0 000-.975 13.245 13.245 0 01-2.003-.678z" fill="url(#b-gem-g2)"/></symbol>
+    <symbol id="b-openrouter" viewBox="0 0 24 24"><path d="M18.654 3.87a5.087 5.087 0 110 10.174L23.7 19.09c.64.641.187 1.737-.72 1.737H8.48a8.479 8.479 0 010-16.958h10.175zM8.479 7.26a5.087 5.087 0 100 10.176 5.087 5.087 0 000-10.175z" fill="currentColor" fill-rule="evenodd"/></symbol>
+    <symbol id="b-nvidia" viewBox="0 0 24 24"><path d="M10.212 8.976V7.62c.127-.01.256-.017.388-.021 3.596-.117 5.957 3.184 5.957 3.184s-2.548 3.647-5.282 3.647a3.227 3.227 0 01-1.063-.175v-4.109c1.4.174 1.681.812 2.523 2.258l1.873-1.627a4.905 4.905 0 00-3.67-1.846 6.594 6.594 0 00-.729.044m0-4.476v2.025c.13-.01.259-.019.388-.024 5.002-.174 8.261 4.226 8.261 4.226s-3.743 4.69-7.643 4.69c-.338 0-.675-.031-1.007-.092v1.25c.278.038.558.057.838.057 3.629 0 6.253-1.91 8.794-4.169.421.347 2.146 1.193 2.501 1.564-2.416 2.083-8.048 3.763-11.24 3.763-.308 0-.603-.02-.894-.048V19.5H24v-15H10.21zm0 9.756v1.068c-3.356-.616-4.287-4.21-4.287-4.21a7.173 7.173 0 014.287-2.138v1.172h-.005a3.182 3.182 0 00-2.502 1.178s.615 2.276 2.507 2.931m-5.961-3.3c1.436-1.935 3.604-3.148 5.961-3.336V6.523C5.81 6.887 2 10.723 2 10.723s2.158 6.427 8.21 7.015v-1.166C5.77 16 4.25 10.958 4.25 10.958h-.002z" fill="#76B900"/></symbol>
+    <symbol id="b-flux" viewBox="0 0 24 24"><g fill="currentColor" fill-rule="evenodd"><path d="M0 20.683L12.01 2.5 24 20.683h-2.233L12.009 5.878 3.471 18.806h12.122l1.239 1.877H0z"/><path d="M8.069 16.724l2.073-3.115 2.074 3.115H8.069zM18.24 20.683l-5.668-8.707h2.177l5.686 8.707h-2.196zM19.74 11.676l2.13-3.19 2.13 3.19h-4.26z"/></g></symbol>
+    <symbol id="b-spotify" viewBox="0 0 24 24"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" fill="#1ED760"/></symbol>
+    <linearGradient id="b-gem-g0" gradientUnits="userSpaceOnUse" x1="7" x2="11" y1="15.5" y2="12"><stop stop-color="#08B962"/><stop offset="1" stop-color="#08B962" stop-opacity="0"/></linearGradient>
+    <linearGradient id="b-gem-g1" gradientUnits="userSpaceOnUse" x1="8" x2="11.5" y1="5.5" y2="11"><stop stop-color="#F94543"/><stop offset="1" stop-color="#F94543" stop-opacity="0"/></linearGradient>
+    <linearGradient id="b-gem-g2" gradientUnits="userSpaceOnUse" x1="3.5" x2="17.5" y1="13.5" y2="12"><stop stop-color="#FABC12"/><stop offset=".46" stop-color="#FABC12" stop-opacity="0"/></linearGradient>
+    <symbol id="o-chev" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 10 5 5 5-5"/></g></symbol>
+  </svg>
+
+  <div class="app" id="app">
+    <!-- ===================== Sidebar ===================== -->
+    <aside class="sidebar" id="sidebar" aria-label="Sidebar">
+      <div class="sidebar-inner">
+        <!-- oben: Workspace (vorerst nur Anzeige), Suche -->
+        <div class="sb-head">
+          <button type="button" class="sb-ws" title="Workspace"><span class="sb-ws-name">Julian</span><svg class="sb-ws-chev" width="14" height="14"><use href="#o-chev"/></svg></button>
+          <button type="button" class="sb-head-btn" id="sbSearch" aria-label="Chats durchsuchen" title="Chats durchsuchen"><svg width="16" height="16"><use href="#o-search"/></svg></button>
+          <button type="button" class="sb-head-btn" id="sbSettings" aria-label="Einstellungen" title="Einstellungen"><svg width="16" height="16"><use href="#o-gear"/></svg></button>
+        </div>
+        <nav class="nav sb-main" aria-label="Hauptnavigation">
+          <a class="nav-item" href="#" data-nav="new"><svg width="16" height="16"><use href="#o-plus"/></svg>Neuer Chat</a>
+          <a class="nav-item" href="#" data-nav="history"><svg width="16" height="16"><use href="#o-chat"/></svg>Chatverlauf</a>
+          <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-library"/></svg>Bibliothek</a>
+          <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-tasks"/></svg>Aufgaben</a>
+          <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
+        </nav>
+        <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
+        <div class="sb-scroll" id="sbScroll">
+          <nav class="nav sb-chats sb-sec" id="sbChats" data-sec="chats" aria-label="Letzte Chats"></nav>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ===================== Hauptteil ===================== -->
+    <main class="main">
+      <!-- Tab-Leiste ausgeblendet (die Tabs arbeiten im Hintergrund weiter, gewechselt wird über die Sidebar) -->
+      <header class="tabbar" hidden>
+        <div class="tabs" id="tabs" role="tablist">
+          <div class="tab active" role="tab" tabindex="0" aria-selected="true"><svg width="14" height="14" style="color:#e0533d"><use href="#i-agent"/></svg><span class="tab-title">Neuer Chat</span><button class="tab-close" type="button" aria-label="Tab schließen"><svg width="16" height="16"><use href="#i-x"/></svg></button></div>
+          <button class="icon-btn" type="button" id="newTab" aria-label="Neuer Tab" title="Neuer Tab"><svg width="16" height="16"><use href="#i-plus"/></svg></button>
+        </div>
+      </header>
+
+      <!-- Hauptteil als abgerundeter Kasten – die Tabs liegen außerhalb -->
+      <div class="panel">
+      <!-- immer oben links im Hauptteil: Sidebar ein-/ausklappen -->
+      <button class="sb-head-btn panel-toggle" id="sidebarToggle" type="button" aria-label="Sidebar ein-/ausklappen" aria-controls="sidebar" aria-expanded="true" title="Sidebar ein-/ausklappen (Strg+B / ⌘B)"><svg width="16" height="16"><use href="#i-sidebar"/></svg></button>
+      <!-- Chat oben links (Titel + Menü) und oben rechts (alle Chats) -->
+      <div class="chat-bar" id="chatBar">
+        <div class="chat-title-wrap">
+          <button class="chat-title-btn" type="button" id="chatTitleBtn" aria-haspopup="menu" aria-expanded="false"><span class="chat-title" id="chatTitle">Neuer Chat</span><svg width="10" height="10"><use href="#f-chevron-down"/></svg></button>
+          <div class="chat-pop chat-menu" id="chatMenu" role="menu">
+            <button type="button" role="menuitem" data-cm="rename"><svg width="14" height="14"><use href="#f-pencil"/></svg><span>Umbenennen</span></button>
+            <button type="button" role="menuitem" data-cm="pin"><svg width="14" height="14"><use href="#f-pin"/></svg><span>Anheften</span></button>
+            <button type="button" role="menuitem" data-cm="copy"><svg width="14" height="14"><use href="#f-copy"/></svg><span>Als Text kopieren</span></button>
+            <div class="cm-sep" role="separator"></div>
+            <button type="button" role="menuitem" data-cm="delete" class="danger"><svg width="14" height="14"><use href="#f-trash"/></svg><span>Löschen</span></button>
+          </div>
+        </div>
+        <div class="chats-wrap">
+          <!-- oben rechts: Chat-Symbol → öffnet direkt den Chatverlauf -->
+          <button class="icon-btn chats-btn" type="button" id="chatsBtn" aria-label="Chatverlauf" title="Chatverlauf" aria-haspopup="dialog" aria-expanded="false"><svg width="15" height="15"><use href="#f-chats"/></svg></button>
+          <div class="chat-pop chats-pop" id="chatsPop" role="dialog" aria-label="Alle Chats">
+            <div class="cp-list" id="cpList"></div>
+          </div>
+        </div>
+      </div>
+      <div class="top-stack" id="topStack">
+      <div class="dock-ambient" id="dockAmbient" aria-hidden="true"></div>
+      <div class="dock-search" id="dockSearch"></div>
+      <div class="voice-agent" id="voiceAgent" role="region" aria-label="Agent" hidden>
+        <div class="va-head">
+          <button class="agent-face va-face" type="button" aria-label="Gespräch anzeigen" title="Gespräch anzeigen"></button><!-- Allgemein-Hund, eingesetzt von pixel-dogs.js -->
+          <div class="va-text">
+            <div class="va-title">Agent is on it <span class="va-level" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span></div>
+            <div class="va-status" id="vaStatus" aria-live="polite">Mikro an</div>
+          </div>
+          <div class="va-actions">
+          <button class="va-btn" type="button" id="vaMusic" aria-label="Player ein-/ausblenden" title="Player" aria-pressed="false" hidden><svg width="16" height="16"><use href="#i-music"/></svg></button>
+          <button class="va-btn" type="button" id="vaMic" aria-label="Mikrofon stummschalten" title="Mikrofon stummschalten"><svg width="16" height="16"><use href="#i-mic"/></svg></button>
+          <button class="va-btn" type="button" id="vaToggle" aria-label="Gespräch anzeigen" title="Gespräch anzeigen" aria-expanded="false"><svg width="16" height="16"><use href="#i-chevron-down"/></svg></button>
+          <button class="va-btn" type="button" id="vaClose" aria-label="Agent beenden" title="Beenden"><svg width="16" height="16"><use href="#i-x"/></svg></button>
+          </div>
+        </div>
+        <div class="va-panel">
+          <div class="va-ask" id="vaAsk"></div>
+        </div>
+      </div>
+      </div>
+      <div class="content">
+        <div class="chat-scroll" id="chatScroll">
+          <!-- Nachrichten werden per JavaScript eingefügt -->
+          <div class="chat" id="chat"></div>
+        </div>
+      </div>
+
+      <!-- ===================== Eingabe ===================== -->
+      <div class="composer-area">
+        <form class="composer" id="composer" autocomplete="off">
+          <!-- Modell-Auswahl -->
+          <div class="model-popover" id="modelPopover" role="dialog" aria-label="Modell wählen">
+            <div class="mp-list" id="modelList"></div>
+            <div class="mp-sep"></div>
+            <div class="mp-list" id="effortList" role="listbox" aria-label="Aufwand"></div>
+          </div>
+
+          <div class="attachments" id="attachments"></div>
+          <textarea id="input" rows="1" placeholder="Work with Agent…" aria-label="Nachricht"></textarea>
+          <div class="composer-bar">
+            <button type="button" class="plus-btn" id="attachBtn" aria-label="Foto hinzufügen" title="Foto hinzufügen"><svg width="16" height="16"><use href="#i-plus"/></svg></button>
+            <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden />
+            <button type="button" class="model-chip" id="modelChip" aria-haspopup="dialog" aria-expanded="false">
+              <span id="chipModel">Opus 5.5</span>
+              <span id="chipEffort">Extra High</span>
+              <svg class="chip-chev" width="16" height="16"><use href="#i-chevron-down"/></svg>
+            </button>
+
+            <div class="flex-spacer"></div>
+
+            <button type="button" class="mic-btn" id="micBtn" aria-label="Sprachaufnahme starten" title="Sprachaufnahme starten" aria-pressed="false">
+              <svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg>
+              <svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg>
+            </button>
+            <button type="button" class="voice-btn" id="voiceBtn" aria-label="Sprachmodus" title="Sprachmodus" aria-pressed="false"><svg width="16" height="16"><use href="#f-voice"/></svg></button>
+            <button type="submit" class="send-btn" id="sendBtn" aria-label="Senden" title="Senden"><svg class="icon-send" width="16" height="16"><use href="#i-arrow-up"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
+          </div>
+        </form>
+
+        <!-- Listening – ploppt unter dem Feld auf -->
+        <div class="status-row">
+          <div class="listening" id="listening" role="status" aria-live="polite">
+            <span class="dot"></span><span id="listeningText">Listening</span>
+          </div>
+        </div>      </div>
+      </div>
+    </main>
+    <aside class="rpane" id="rpane" aria-label="Seitenfenster"></aside>
+  </div>
+
+  <!-- Bild-Großansicht -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Bildansicht">
+    <div class="lb-backdrop" data-lb-close></div>
+    <div class="lb-stage" id="lbStage" data-lb-close></div>
+    <button class="lb-btn lb-close" type="button" aria-label="Schließen" data-lb-close><svg width="16" height="16"><use href="#i-x"/></svg></button>
+    <button class="lb-btn lb-prev" type="button" id="lbPrev" aria-label="Vorheriges Bild"><svg width="16" height="16"><use href="#i-back"/></svg></button>
+    <button class="lb-btn lb-next" type="button" id="lbNext" aria-label="Nächstes Bild"><svg width="16" height="16"><use href="#i-forward"/></svg></button>
+    <div class="lb-count" id="lbCount"></div>
+  </div>
+
+  <!-- Markdown → HTML, Sicherheitsfilter, Formeln -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.js"></script>
+  <script src="icons.js"></script><!-- gefüllte Icons (#f-…), siehe README.md -->
+  <script src="chat-visuals.js"></script>
+  <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
+  <script src="app.js"></script>
+  <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
+  <script src="pixel-dogs.js"></script><!-- Pixel-Hunde: Modus-Icons oben, Begleiter am Eingabefeld -->
+  <script src="music.js"></script>
+  <script src="timer.js"></script>
+  <script src="ui-kit.js"></script>
+  <script src="calendar.js"></script>
+  <script src="tasks.js"></script>
+  <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
+  <script src="docs.js"></script>
+  <script src="inbox.js"></script>
+</body>
+</html>

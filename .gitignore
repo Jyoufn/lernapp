@@ -1,0 +1,9 @@
+# API-Keys niemals mit hochladen
+.env
+node_modules/
+
+# lokale Sprachausgabe (Piper + Stimme, groß)
+tts/
+
+chats/
+dokumente/

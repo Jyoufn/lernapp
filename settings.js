@@ -1,0 +1,181 @@
+/* ---------- Einstellungen ----------
+   Zahnrad oben in der Sidebar neben der Lupe → die Sidebar wird zur Einstellungs-Leiste („‹ Zurück“, Allgemein, Agenten),
+   der Hauptteil zeigt die gewählte Seite. Kein Fenster, sondern eine eigene Ansicht wie Chatverlauf oder Bibliothek.
+   API-Keys, die hier eingetragen werden, bleiben auf diesem Gerät (localStorage) und gehen bei jeder Anfrage an /api
+   im Kopf „X-App-Keys“ mit; der Server nimmt sie statt der Werte aus .env (siehe readEnv in server.js).
+   Wird vor app.js geladen, damit schon die ersten Anfragen die Schlüssel mitschicken. */
+(() => {
+  const KEYS_KEY = 'settings.keys.v1', NAME_KEY = 'settings.name.v1', PAGE_KEY = 'settings.page.v1';
+  // Logos: #b-… in index.html (offizielle Marken)
+  const PROVIDERS = [
+    { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com' },
+    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys' },
+    { id: 'NVIDIA_API_KEY', name: 'NVIDIA', logo: 'nvidia', where: 'build.nvidia.com' },
+    { id: 'FLUX3_API_KEY', name: 'FLUX', logo: 'flux', where: 'build.nvidia.com' },
+    { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
+  ];
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fi = (name, size = 16) => `<svg width="${size}" height="${size}" aria-hidden="true"><use href="#f-${name}"/></svg>`;
+  const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+  /* ---------- Schlüssel vom Gerät an jede /api-Anfrage hängen ---------- */
+  let deviceKeys = read(KEYS_KEY, {});
+  const keyHeader = () => {
+    const list = Object.entries(deviceKeys).filter(([, v]) => v);
+    return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
+  };
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input?.url || '';
+    const h = keyHeader();
+    if (!h || !/^\/api\//.test(url.replace(location.origin, ''))) return nativeFetch(input, init);
+    const headers = new Headers(init.headers || (typeof input === 'string' ? undefined : input.headers));
+    headers.set('X-App-Keys', h);
+    return nativeFetch(input, { ...init, headers });
+  };
+
+  /* ---------- Name oben in der Sidebar ---------- */
+  const nameOf = () => read(NAME_KEY, '') || 'Julian';
+  const applyName = () => document.querySelectorAll('.sb-ws-name').forEach((n) => { n.textContent = nameOf(); });
+  applyName();
+
+  /* ---------- Aufbau ---------- */
+  const app = document.getElementById('app');
+  const inner = document.querySelector('.sidebar-inner');
+  const panel = document.querySelector('.panel');
+  let page = read(PAGE_KEY, 'agents') === 'general' ? 'general' : 'agents';
+  let fileKeys = {}; // Schlüssel, die in .env stehen (nur ja/nein vom Server)
+  let editing = null; // Anbieter, dessen Schlüssel gerade eingegeben wird
+
+  const side = document.createElement('nav');
+  side.className = 'nav st-side';
+  side.setAttribute('aria-label', 'Einstellungen');
+  side.innerHTML = `<button type="button" class="st-back"><svg width="14" height="14"><use href="#o-chev"/></svg><span>Zurück</span></button>
+    <a class="st-item" href="#" data-st="general"><svg width="15" height="15"><use href="#o-user"/></svg><span>Allgemein</span></a>
+    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>`;
+  inner?.append(side);
+
+  const view = document.createElement('section');
+  view.className = 'st-view';
+  view.setAttribute('aria-label', 'Einstellungen');
+  panel?.append(view);
+
+  const connected = (p) => (deviceKeys[p.id] ? 'device' : fileKeys[p.id] ? 'env' : '');
+  const logo = (p) => `<svg class="st-logo" width="20" height="20" aria-hidden="true"><use href="#b-${p.logo}"/></svg>`;
+
+  function drawSide() {
+    side.querySelectorAll('[data-st]').forEach((a) => a.classList.toggle('active', a.dataset.st === page));
+  }
+
+  // Anbieter: Logo, Name; rechts „✓ Verbunden“ (Klick → ändern) bzw. heller Knopf „Verbinden“.
+  // Eingabe direkt in der Zeile: Feld (grau) + Abbrechen + Speichern; ein auf dem Gerät gespeicherter Schlüssel lässt sich trennen.
+  function providerRow(p) {
+    const how = connected(p);
+    if (editing === p.id) {
+      const what = p.label || 'API-Key';
+      return `<form class="st-row editing" data-key="${p.id}" autocomplete="off">${logo(p)}<span class="st-name">${esc(p.name)}</span>
+        <input class="st-field st-key-in" type="password" placeholder="${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" />
+        ${deviceKeys[p.id] ? '<button type="button" class="st-btn dark danger" data-remove>Trennen</button>' : ''}<button type="button" class="st-btn dark" data-cancel>Abbrechen</button><button type="submit" class="st-btn light">Speichern</button></form>`;
+    }
+    const right = how
+      ? `<button type="button" class="st-ok" data-edit="${p.id}" title="${how === 'env' ? 'Schlüssel aus .env – Klick zum Ändern' : 'Schlüssel auf diesem Gerät – Klick zum Ändern'}">${fi('check', 12)}Verbunden</button>`
+      : `<button type="button" class="st-btn light" data-edit="${p.id}">Verbinden</button>`;
+    return `<div class="st-row">${logo(p)}<span class="st-name">${esc(p.name)}</span><span class="grow"></span>${right}</div>`;
+  }
+
+  function agentRow(m) {
+    const dogs = window.PixelDogs;
+    const off = dogs?.UNAVAILABLE?.has(m.id);
+    let cur = 'general';
+    try { cur = localStorage.getItem('dogMode') || 'general'; } catch {}
+    const right = off ? '<span class="st-muted">Nicht verfügbar</span>'
+      : cur === m.id ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>`
+      : `<button type="button" class="st-btn dark" data-agent="${m.id}">Auswählen</button>`;
+    return `<div class="st-row${off ? ' off' : ''}"><span class="st-dog">${dogs ? dogs.svg(m.id, 24) : ''}</span><span class="st-name">${esc(m.name)}</span><span class="grow"></span>${right}</div>`;
+  }
+
+  function drawView() {
+    const title = page === 'general' ? 'Allgemein' : 'Agenten';
+    let body;
+    if (page === 'general') {
+      const onDevice = Object.values(deviceKeys).some(Boolean);
+      body = `<h2>Profil</h2><div class="st-card">
+          <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><input class="st-field st-name-in" data-name maxlength="32" value="${esc(nameOf())}" aria-label="Name" /></div></div>
+        <h2>Daten</h2><div class="st-card">
+          <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">${/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? 'Auf diesem Computer' : 'Vorübergehend auf dem Server'}</span></div>
+          <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Auf diesem Gerät' : 'Aus .env'}</span></div></div>`;
+    } else {
+      const modes = window.PixelDogs?.MODES || [];
+      body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
+        + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.map(agentRow).join('')}</div>` : '');
+    }
+    view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
+    drawSide();
+  }
+
+  async function loadStatus() {
+    try { fileKeys = (await (await nativeFetch('/api/status')).json()).env || {}; } catch {}
+    if (app.classList.contains('settings-open')) drawView(); else drawSide();
+  }
+
+  function open(to) {
+    if (to) page = to;
+    editing = null;
+    app.classList.add('settings-open');
+    drawView();
+    loadStatus();
+  }
+  function close() {
+    app.classList.remove('settings-open');
+    editing = null;
+  }
+
+  /* ---------- Bedienung ---------- */
+  document.getElementById('sbSettings')?.addEventListener('click', () => (app.classList.contains('settings-open') ? close() : open()));
+  side.addEventListener('click', (e) => {
+    if (e.target.closest('.st-back')) { close(); return; }
+    const a = e.target.closest('[data-st]');
+    if (!a) return;
+    e.preventDefault();
+    page = a.dataset.st; write(PAGE_KEY, page); editing = null; drawView();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && app.classList.contains('settings-open') && !e.target.closest?.('input')) close();
+  });
+
+  view.addEventListener('click', (e) => {
+    const ed = e.target.closest('[data-edit]');
+    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); view.querySelector('.st-key-in')?.focus(); return; }
+    if (e.target.closest('[data-cancel]')) { editing = null; drawView(); return; }
+    if (e.target.closest('[data-remove]')) {
+      delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;
+    }
+    const ag = e.target.closest('[data-agent]');
+    if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
+  });
+  view.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const form = e.target.closest('form[data-key]');
+    const v = form?.querySelector('.st-key-in').value.trim();
+    if (!form || !v) { form?.querySelector('.st-key-in').focus(); return; }
+    deviceKeys[form.dataset.key] = v.slice(0, 400);
+    write(KEYS_KEY, deviceKeys);
+    editing = null;
+    drawView();
+  });
+  view.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; drawView(); }
+  });
+  view.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-name]')) return;
+    write(NAME_KEY, e.target.value.trim());
+    applyName();
+  });
+  document.addEventListener('dogmodechange', () => { if (app.classList.contains('settings-open') && page === 'agents') drawView(); });
+  window.addEventListener('chat-tab-switched', () => close()); // anderer Chat/Bereich geöffnet → Einstellungen zu
+
+  loadStatus();
+  window.Settings = { open, close };
+})();
