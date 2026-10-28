@@ -7196,3 +7196,7 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
 .heft-head { border-bottom-color: #2a2a2a; }
 .heft-page { background: none; padding: 14px 18px 16px; }
 .heft-note { background: none; padding: 0; color: var(--text); font-weight: 600; }
+
+/* iPad: nur die Markierung des Systems (die eigene, abgerundete gibt es dort nicht – Safari erlaubt das nicht) */
+html.native-selection .sel-layer { display: none; }
+html.native-selection body *:not(input):not(textarea)::selection, html.native-selection textarea::selection, html.native-selection input::selection { background: rgba(47, 134, 255, 0.3); }

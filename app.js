@@ -310,6 +310,32 @@ composer.addEventListener('submit', (e) => {
   sendMessage(text, images);
 });
 
+/* iPad: Antippen sicher machen. Ist die Tastatur offen, schließt sie sich beim Tippen auf einen Knopf und das Fenster verschiebt sich –
+   der Klick landet dann manchmal daneben (Auswahl/Senden „geht nicht“). Bei Touch löst deshalb schon das Loslassen auf dem Knopf aus
+   (pointerup bleibt beim angetippten Element), der nachfolgende Klick wird verworfen. */
+{
+  const TAP = '#sendBtn, #askNext, .ask-opt:not(.ask-own-row), .ask-skip, .ask-back, .ask-mic, .as-go, .ah-go';
+  let down = null, fired = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return;
+    const t = e.target.closest?.(TAP);
+    down = t ? { t, x: e.clientX, y: e.clientY } : null;
+  }, true);
+  document.addEventListener('pointerup', (e) => {
+    if (e.pointerType !== 'touch' || !down) return;
+    const { t, x, y } = down;
+    down = null;
+    if (Math.hypot(e.clientX - x, e.clientY - y) > 12 || t.disabled || !t.isConnected) return; // gewischt/gescrollt → kein Tippen
+    fired = { t, at: Date.now() };
+    t.click();
+  }, true);
+  document.addEventListener('pointercancel', () => { down = null; }, true);
+  document.addEventListener('click', (e) => {
+    if (!fired || !e.isTrusted || Date.now() - fired.at > 800) return;
+    e.preventDefault(); e.stopImmediatePropagation(); fired = null; // der Klick zum Tippen – auch wenn er nach dem Verschieben woanders landet
+  }, true);
+}
+
 /* Fotos hinzufügen (+), oder Einfügen mit Strg/⌘+V */
 $('attachBtn')?.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
@@ -2854,7 +2880,12 @@ function fieldSelectionRects(field) {
   }).filter((r) => r.bottom - r.top > 2 && r.right - r.left > 0.5);
 }
 
+// iPad/iPhone: Safari zeichnet die Markierung selbst (mit Anfassern) und lässt sich nicht umgestalten – die eigene Markierung
+// käme nur doppelt darüber (wirkt hell/verwaschen). Dort deshalb nur die Markierung des Systems.
+const touchOnly = matchMedia('(hover: none) and (pointer: coarse)').matches;
+if (touchOnly) document.documentElement.classList.add('native-selection');
 const queueSelection = () => {
+  if (touchOnly) return;
   if (selFrame) return;
   selFrame = requestAnimationFrame(drawSelection);
   setTimeout(() => { if (selFrame) { cancelAnimationFrame(selFrame); drawSelection(); } }, 60); // falls keine Frames kommen
