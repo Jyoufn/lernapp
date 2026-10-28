@@ -109,12 +109,21 @@
   function loadApp() {
     const tpl = document.getElementById('appScripts');
     const srcs = [...(tpl?.content.querySelectorAll('script[src]') || [])].map((s) => s.getAttribute('src'));
+    let last = null;
     for (const src of srcs) {
       const s = document.createElement('script');
       s.src = src;
       s.async = false; // Reihenfolge wie im HTML
       document.body.append(s);
+      last = s;
     }
+    return new Promise((res) => { if (!last) res(); last?.addEventListener('load', res); last?.addEventListener('error', res); });
+  }
+  // Anmeldebildschirm erst zeigen, wenn die Vorschau fertig aufgebaut ist (Skripte, Schrift, Hunde) – dann sauber einblenden
+  function reveal(appLoaded) {
+    const wait = Promise.all([appLoaded, document.fonts?.ready].filter(Boolean)).then(() => new Promise((r) => setTimeout(r, 120)));
+    Promise.race([wait, new Promise((r) => setTimeout(r, 2500))])
+      .then(() => requestAnimationFrame(() => requestAnimationFrame(() => root.classList.add('auth-ready'))));
   }
 
   /* ---------- Start ---------- */
@@ -129,7 +138,8 @@
       } catch {}
     }
     if (locked) showLogin();
-    loadApp();
+    const appLoaded = loadApp();
+    if (locked) reveal(appLoaded);
     if (!locked) whenReady();
   }
 

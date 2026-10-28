@@ -7066,9 +7066,8 @@ html.auth-locked .panel-toggle { transition: opacity 300ms ease 200ms; }
 html.auth-locked.auth-opening #app { left: 0; top: 0; width: 100vw; height: 100dvh; border-radius: 0; }
 
 .auth { position: fixed; z-index: 2; top: 0; right: 0; bottom: 0; width: var(--auth-side); display: flex; align-items: center; justify-content: center;
-  padding: 32px 36px; overflow-y: auto; background: var(--sidebar-bg); animation: auth-in 460ms var(--auth-ease) backwards;
+  padding: 32px 36px; overflow-y: auto; background: var(--sidebar-bg);
   transition: opacity 260ms ease, transform 560ms var(--auth-ease); }
-@keyframes auth-in { from { opacity: 0; transform: translateY(6px); } }
 html.auth-opening .auth { opacity: 0; transform: translateX(32px); pointer-events: none; }
 .auth-card { width: min(340px, 100%); margin: auto 0; }
 .auth-logo { display: block; width: 44px; height: 44px; margin: 0 0 18px -4px; image-rendering: pixelated; }
@@ -7132,3 +7131,19 @@ html.auth-opening .auth { opacity: 0; transform: translateX(32px); pointer-event
   html.auth-locked #app, .auth, .auth-code-wrap, .auth-digit { transition: none; animation: none; }
 }
 .auth-digit:focus-visible { outline: none; }
+
+/* Einblenden des Anmeldebildschirms: erst wenn alles aufgebaut ist (auth.js → .auth-ready).
+   Vorschau gleitet weich hoch und wird scharf, danach die Teile des Anmeldefensters nacheinander */
+html.auth-locked:not(.auth-ready) #app, html.auth-locked:not(.auth-ready) .auth-card { opacity: 0; }
+html.auth-ready.auth-locked #app { animation: auth-preview-in 820ms var(--auth-ease) backwards; }
+@keyframes auth-preview-in { from { opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(6px); } }
+html.auth-ready .auth-card > * { animation: auth-rise 640ms var(--auth-ease) backwards; }
+html.auth-ready .auth-card > :nth-child(1) { animation-delay: 160ms; }
+html.auth-ready .auth-card > :nth-child(2) { animation-delay: 210ms; }
+html.auth-ready .auth-card > :nth-child(3) { animation-delay: 250ms; }
+html.auth-ready .auth-card > :nth-child(4) { animation-delay: 300ms; }
+html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
+@keyframes auth-rise { from { opacity: 0; transform: translateY(10px); } }
+@media (prefers-reduced-motion: reduce) {
+  html.auth-ready.auth-locked #app, html.auth-ready .auth-card > * { animation: none; }
+}
