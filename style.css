@@ -7185,7 +7185,7 @@ html.auth-ready .auth-card > :nth-child(n+5) { animation-delay: 360ms; }
   background-size: var(--kar) var(--kar); background-position: -1px -1px; }
 .heft-title { min-height: calc(var(--kar) * 2); margin-bottom: calc(var(--kar) * 0); color: var(--text); font-size: 15px; font-weight: 600; line-height: calc(var(--kar) * 2);
   text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.35); text-underline-offset: 5px; text-decoration-thickness: 1px; }
-.heft-line { min-height: calc(var(--kar) * 2); color: var(--text-2); font-size: 14px; line-height: calc(var(--kar) * 2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.heft-line { min-height: calc(var(--kar) * 2); color: var(--text-2); font-size: 14px; line-height: calc(var(--kar) * 2); overflow-wrap: anywhere; font-variant-numeric: tabular-nums; } /* lange Zeilen umbrechen statt abschneiden */
 .heft-line .katex { font-size: 1.05em; }
 .heft-line .katex-display { display: inline-block; margin: 0; }
 .heft-gap { height: var(--kar); }
