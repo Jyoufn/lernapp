@@ -4726,7 +4726,7 @@ document.addEventListener('click', (e) => {
   syncSend();
 })();
 
-/* ---------- Darstellung (Icon oben rechts im leeren Chat, neben „Alle Chats“) ----------
+/* ---------- Darstellung (Einstellungen → Aussehen) ----------
    Modus (Dunkel, Schwarz, Hell – mit Mini-Vorschau), Akzentfarbe (Vorgaben oder eigene) und wie stark die Kacheln
    im Hintergrund zu sehen sind. Wird im Browser gespeichert und beim Start angewendet.
    Hell: die ganze Oberfläche wird farbtreu umgekehrt (style.css → [data-theme="light"]); Bilder bleiben unverändert. */
@@ -4788,73 +4788,11 @@ document.addEventListener('click', (e) => {
     apply();
   }).catch(() => {});
 
-  const wrap = document.querySelector('.chats-wrap');
-  if (!wrap) return;
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'icon-btn appearance-btn';
-  btn.id = 'appearanceBtn';
-  btn.title = 'Darstellung';
-  btn.setAttribute('aria-label', 'Darstellung');
-  btn.setAttribute('aria-haspopup', 'dialog');
-  btn.setAttribute('aria-expanded', 'false');
-  btn.innerHTML = FadeIcons.svg('sliders', 15);
-  wrap.prepend(btn);
-
-  const pop = document.createElement('div');
-  pop.className = 'ap-pop';
-  pop.setAttribute('role', 'dialog');
-  pop.setAttribute('aria-label', 'Darstellung');
-  wrap.append(pop);
-
-  // Mini-Vorschau eines Fensters in den Farben des Modus (Seitenleiste, Textzeilen, Akzent, Eingabefeld)
-  const preview = ({ pv }) => `<span class="ap-prev" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="pv-side"></span><span class="pv-body"><i></i><i></i><i class="acc"></i><i class="acc short"></i><b><em></em></b></span></span>`;
-  function render() {
-    pop.innerHTML = `
-      <h3>Darstellung</h3>
-      <div class="ap-section">
-        <span class="ap-label">Modus</span>
-        <div class="ap-modes">${Object.entries(MODES).map(([id, m]) => `<button type="button" class="ap-mode${cfg.mode === id ? ' on' : ''}" data-mode="${id}">${preview(m)}<span class="ap-mode-name">${m.label}</span></button>`).join('')}</div>
-      </div>
-      <div class="ap-row"><span class="ap-label">Akzent</span>
-        <div class="ap-accents">${ACCENTS.map((c) => `<button type="button" class="ap-swatch${cfg.accent.toLowerCase() === c ? ' on' : ''}" data-accent="${c}" style="--sw:${c}" aria-label="Akzent ${c}"></button>`).join('')}
-          <label class="ap-pill" title="Eigene Farbe"><span class="ap-dot" style="background:${cfg.accent}"></span><span class="ap-hex">${cfg.accent.toUpperCase()}</span><input type="color" value="${cfg.accent}" aria-label="Eigene Akzentfarbe"></label>
-        </div>
-      </div>
-      <div class="ap-row"><span class="ap-label">Kacheln</span>
-        <div class="ap-range-wrap"><input type="range" class="ap-range" min="0" max="100" step="1" value="${cfg.tiles}" style="--val:${cfg.tiles}%" aria-label="Sichtbarkeit der Kacheln"><span class="ap-val">${cfg.tiles}%</span></div>
-      </div>`;
-  }
-  const set = (patch) => { Object.assign(cfg, patch); apply(); save(); render(); };
-  pop.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const mode = e.target.closest('[data-mode]'); if (mode) return set({ mode: mode.dataset.mode });
-    const acc = e.target.closest('[data-accent]'); if (acc) return set({ accent: acc.dataset.accent });
-  });
-  // Regler und Farbwähler live, ohne das Fenster neu zu zeichnen (sonst verliert der Regler den Griff)
-  pop.addEventListener('input', (e) => {
-    if (e.target.matches('.ap-range')) {
-      cfg.tiles = Number(e.target.value);
-      e.target.style.setProperty('--val', `${cfg.tiles}%`);
-      pop.querySelector('.ap-val').textContent = `${cfg.tiles}%`;
-      apply(); save();
-    }
-    if (e.target.matches('input[type="color"]')) {
-      cfg.accent = e.target.value; apply(); save();
-      pop.querySelector('.ap-dot').style.background = cfg.accent;
-      pop.querySelector('.ap-hex').textContent = cfg.accent.toUpperCase();
-      pop.querySelectorAll('.ap-swatch').forEach((s) => s.classList.toggle('on', s.dataset.accent === cfg.accent.toLowerCase()));
-    }
-  });
-  const setOpen = (open) => {
-    if (open) render();
-    pop.classList.toggle('open', open);
-    btn.setAttribute('aria-expanded', String(open));
+  // eingestellt wird in den Einstellungen → Aussehen (settings.js); früher ein Fenster oben rechts im leeren Chat
+  window.Appearance = {
+    MODES: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.label])),
+    ACCENTS,
+    get: () => ({ ...cfg }),
+    set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(!pop.classList.contains('open')); });
-  document.addEventListener('click', (e) => { if (pop.classList.contains('open') && !e.target.closest('.ap-pop')) setOpen(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && pop.classList.contains('open')) setOpen(false); });
-  // Chat gestartet → Fenster zu
-  new MutationObserver(() => { if (!document.querySelector('.panel')?.classList.contains('home')) setOpen(false); })
-    .observe(document.querySelector('.panel'), { attributes: true, attributeFilter: ['class'] });
 })();

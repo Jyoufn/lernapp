@@ -7033,3 +7033,17 @@ button.st-ok:hover { background: rgba(255, 255, 255, 0.05); }
 .st-key-in { flex: 1; min-width: 0; }
 .st-name-in { width: 220px; }
 @media (max-width: 720px) { .st-page { padding: 28px 16px 60px; } .st-row.editing .st-name { display: none; } }
+/* Einstellungen → Aussehen: Umschalter wie „Allow · Ask me · Block“ der Vorlage, Akzent als runde Farben */
+.st-seg { display: inline-flex; flex: none; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 8px; background: rgba(255, 255, 255, 0.02); }
+.st-seg button { height: 24px; padding: 0 11px; border: 1px solid transparent; border-radius: 6px; background: none; color: var(--text-3); font: inherit; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease; }
+.st-seg button.on { border-color: rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.09); color: var(--text); }
+.st-swatches { display: flex; flex: none; align-items: center; gap: 8px; padding-right: 4px; }
+.st-sw { position: relative; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: var(--sw); cursor: pointer;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset; transition: transform 140ms ease; }
+.st-sw:active { transform: scale(0.92); }
+.st-sw.on { box-shadow: 0 0 0 2px var(--main-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.55); }
+/* eigene Farbe: Farbkreis, nach der Wahl in der gewählten Farbe */
+.st-sw-own { overflow: hidden; background: conic-gradient(from 0deg, #ff6363, #fbbf24, #4ade80, #38bdf8, #a78bfa, #f472b6, #ff6363); }
+.st-sw-own.on { background: var(--sw); }
+.st-sw-own input { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; opacity: 0; cursor: pointer; }

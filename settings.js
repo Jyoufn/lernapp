@@ -45,7 +45,10 @@
   const app = document.getElementById('app');
   const inner = document.querySelector('.sidebar-inner');
   const panel = document.querySelector('.panel');
-  let page = read(PAGE_KEY, 'agents') === 'general' ? 'general' : 'agents';
+  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten' };
+  let page = PAGES[read(PAGE_KEY, 'agents')] ? read(PAGE_KEY, 'agents') : 'agents';
+  // Kacheln im Hintergrund des neuen Chats: Stufen statt Regler (Wert = Deckkraft in %)
+  const TILES = [['Aus', 0], ['Leicht', 18], ['Mittel', 33], ['Stark', 60]];
   let fileKeys = {}; // Schlüssel, die in .env stehen (nur ja/nein vom Server)
   let editing = null; // Anbieter, dessen Schlüssel gerade eingegeben wird
 
@@ -54,6 +57,7 @@
   side.setAttribute('aria-label', 'Einstellungen');
   side.innerHTML = `<button type="button" class="st-back"><svg width="14" height="14"><use href="#o-chev"/></svg><span>Zurück</span></button>
     <a class="st-item" href="#" data-st="general"><svg width="15" height="15"><use href="#o-user"/></svg><span>Allgemein</span></a>
+    <a class="st-item" href="#" data-st="look"><svg width="15" height="15"><use href="#o-look"/></svg><span>Aussehen</span></a>
     <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>`;
   inner?.append(side);
 
@@ -96,8 +100,25 @@
     return `<div class="st-row${off ? ' off' : ''}"><span class="st-dog">${dogs ? dogs.svg(m.id, 24) : ''}</span><span class="st-name">${esc(m.name)}</span><span class="grow"></span>${right}</div>`;
   }
 
+  // Aussehen: Modus und Hintergrund als Umschalter (wie „Allow · Ask me · Block“ in der Vorlage), Akzent als runde Farben
+  const seg = (attr, items, on) => `<span class="st-seg" role="radiogroup">${items.map(([label, val]) => `<button type="button" role="radio" aria-checked="${val === on}" class="${val === on ? 'on' : ''}" ${attr}="${val}">${esc(label)}</button>`).join('')}</span>`;
+  function lookPage() {
+    const ap = window.Appearance;
+    if (!ap) return '';
+    const cfg = ap.get();
+    const accent = String(cfg.accent || '').toLowerCase();
+    const custom = !ap.ACCENTS.includes(accent);
+    const near = TILES.reduce((a, b) => (Math.abs(b[1] - cfg.tiles) < Math.abs(a[1] - cfg.tiles) ? b : a))[1];
+    return `<h2>Aussehen</h2><div class="st-card">
+        <div class="st-row"><span class="st-name">Modus</span><span class="grow"></span>${seg('data-ap-mode', Object.entries(ap.MODES).map(([id, label]) => [label, id]), cfg.mode)}</div>
+        <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
+        + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div></div>
+      <h2>Neuer Chat</h2><div class="st-card">
+        <div class="st-row"><span class="st-name">Hintergrund</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`;
+  }
+
   function drawView() {
-    const title = page === 'general' ? 'Allgemein' : 'Agenten';
+    const title = PAGES[page];
     let body;
     if (page === 'general') {
       const onDevice = Object.values(deviceKeys).some(Boolean);
@@ -106,6 +127,8 @@
         <h2>Daten</h2><div class="st-card">
           <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">${/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) ? 'Auf diesem Computer' : 'Vorübergehend auf dem Server'}</span></div>
           <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Auf diesem Gerät' : 'Aus .env'}</span></div></div>`;
+    } else if (page === 'look') {
+      body = lookPage();
     } else {
       const modes = window.PixelDogs?.MODES || [];
       body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
@@ -152,6 +175,12 @@
     if (e.target.closest('[data-remove]')) {
       delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;
     }
+    const md = e.target.closest('[data-ap-mode]');
+    if (md) { window.Appearance?.set({ mode: md.dataset.apMode }); drawView(); return; }
+    const ac = e.target.closest('[data-ap-accent]');
+    if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
+    const tl = e.target.closest('[data-ap-tiles]');
+    if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
@@ -169,6 +198,13 @@
     if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; drawView(); }
   });
   view.addEventListener('input', (e) => {
+    if (e.target.matches('.st-sw-own input')) { // eigene Akzentfarbe live, ohne neu zu zeichnen (der Farbwähler bliebe sonst nicht offen)
+      window.Appearance?.set({ accent: e.target.value });
+      const own = e.target.parentElement;
+      own.style.setProperty('--sw', e.target.value);
+      view.querySelectorAll('.st-sw').forEach((b) => b.classList.toggle('on', b === own));
+      return;
+    }
     if (!e.target.matches('[data-name]')) return;
     write(NAME_KEY, e.target.value.trim());
     applyName();
