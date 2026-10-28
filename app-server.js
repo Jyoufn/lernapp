@@ -948,6 +948,28 @@ async function handleDocAi(req, res) {
   sendJson(res, 502, { error: 'Die KI hat gerade nicht geantwortet.' });
 }
 
+/* ---------- /api/doc-intent: Will der Nutzer WIRKLICH jetzt ein Dokument / eine Notiz anlegen? ----------
+   Die App fragt nur nach, wenn in der Nachricht „Dokument“/„Notiz“ vorkommt und es nicht eindeutig ist. */
+const DOC_INTENT_SYSTEM = `Du entscheidest für eine Lern-App, ob der Nutzer mit seiner Nachricht AUSDRÜCKLICH verlangt, dass JETZT ein Dokument oder eine Notiz angelegt wird
+(z. B. „erstelle mir eine Notiz dazu“, „mach daraus ein Dokument“, „schreib das in ein Dokument“).
+NEIN, wenn er nur über Dokumente, Notizen, Randnotizen, Mitschriften o. Ä. spricht, etwas dazu fragt, erzählt oder erklärt haben will
+(z. B. „wie mache ich gute Randnotizen?“, „ich schreibe mir immer Notizen an den Rand“, „was ist ein Dokument?“). Im Zweifel: NEIN.
+Antworte NUR mit JSON: {"create": true} oder {"create": false}`;
+async function handleDocIntent(req, res) {
+  const body = await readBody(req, 20000);
+  const env = readEnv();
+  const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+  const ask = (raw) => /"create"\s*:\s*true/.test(String(raw || ''));
+  if (text && env.GEMINI_API_KEY) {
+    for (const [model, thinking] of [[P.GEMINI_MODEL, { budget: 0 }], [P.GEMINI_NEXT, { level: 'low' }]]) {
+      try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
+    }
+  }
+  const nvKey = nvidiaKeyOf(env);
+  if (text && nvKey) { try { return sendJson(res, 200, { create: ask(await P.nvidiaComplete(nvKey, DOC_INTENT_SYSTEM, text, AbortSignal.timeout(20000), 800)) }); } catch {} }
+  sendJson(res, 200, { create: null }); // keine KI erreichbar → die App entscheidet selbst (nur eindeutige Bitten)
+}
+
 const TITLE_SYSTEM = `Du gibst einem Lern-Chat einen kurzen, treffenden Titel – wie in einer Chat-Liste.
 Regeln: 2 bis 5 Wörter, Sprache der Anfrage (meist Deutsch), Thema statt Frageform, kein Punkt, keine Anführungszeichen, keine Emojis,
 keine Füllwörter wie „Frage zu“ oder „Hilfe bei“. Beispiele: „Photosynthese einfach erklärt“, „Quadratische Gleichungen lösen“, „Ursachen des Ersten Weltkriegs“.
@@ -1201,6 +1223,7 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
+    if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
     // Chats, Dokumente, Darstellung, Browser-Speicher: je Konto (lib/accounts.js)
     if (req.method === 'GET' && urlPath === '/api/chats') return sendJson(res, 200, await ACC.loadChats(store, user.id));

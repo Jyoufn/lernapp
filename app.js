@@ -2499,18 +2499,36 @@ async function continueAfterAsk(qa) {
    „Erstelle dazu ein Dokument“ → im Chat erscheint das Fenster „Dokument erstellen“ (Stil wie bei den Aufgaben):
    Titel (vom Chat) und Beschreibung schlägt die KI vor, ein Klick auf den blauen Knopf legt es an, öffnet es
    und man sieht, wie die KI hineinschreibt. Der Chat merkt sich sein Dokument (docId): „Bearbeite …“ ändert es. */
+// 'edit' | 'create' | 'maybe' (KI entscheidet, siehe docIntentAsk) | null
+// „Notiz“ nur als eigenes Wort – „Randnotizen“, „Notizbuch“-Fragen usw. lösen nichts aus
 function docIntent(text) {
   if (!window.Docs) return null;
   const t = text.toLowerCase();
   const linked = chatOf(activeTab())?.docId;
   const has = linked && window.Docs.get(linked);
-  const mentions = /dokument|\bdocs?\b|notiz/.test(t);
-  const fresh = /(neue[snm]?|weitere[snm]?|andere[snm]?|zweite[snm]?)\s+(dokument|doc|notiz)/.test(t);
+  const NOUN = '(dokumente?|docs?|notiz|notizen)';
+  const mentions = new RegExp(`\\b${NOUN}\\b`).test(t);
+  if (!mentions && !has) return null;
+  const fresh = new RegExp(`(neue[snm]?|weitere[snm]?|andere[snm]?|zweite[snm]?)\\s+${NOUN}\\b`).test(t);
   const editVerb = /(bearbeit|änder|ergänz|kürz|erweiter|überarbeit|umschreib|schreib\s.*\bum\b|formulier|verschieb|lösch|entfern|korrigier|füg|hinzu|pack|übernimm|tausch|aktualisier|verbesser)/.test(t);
   const editStart = /^(bitte\s+)?(bearbeite|ändere|ergänze|kürze|erweitere|überarbeite|formuliere|verschiebe|lösche|entferne|korrigiere|füge|aktualisiere|verbessere)\b/.test(t);
   if (has && !fresh && (mentions || editStart) && editVerb) return 'edit';
-  if (mentions && /(erstell|anleg|\ban\b|mach|daraus|draus|schreib|füg|pack|speicher|übernimm|hinzu|rein|übertrag|exportier|notier|sicher)/.test(t)) return 'create';
+  if (!mentions) return null;
+  // eindeutige Bitte: „erstell(e) mir ein Dokument“, „mach daraus eine Notiz“, „schreib das in ein Dokument“, „Dokument anlegen“
+  const strict = new RegExp(`^(bitte\\s+|kannst du\\s+|könntest du\\s+)?(erstell|leg|mach|schreib|pack|speicher|übertrag|notier|sicher|füg)\\w*\\b[^.?!]{0,40}\\b(ein(e|en)?|daraus|draus|dazu|davon|in|ins|als)\\b[^.?!]{0,20}\\b${NOUN}`).test(t)
+    || new RegExp(`\\b${NOUN}\\s+(erstellen|anlegen|machen|draus machen|daraus machen)\\b`).test(t);
+  if (strict && !t.includes('?')) return 'create'; // Fragen („Soll ich mir eine Notiz machen?“) beurteilt die KI
+  // „Dokument/Notiz“ mit einem Verb, aber nicht eindeutig → die KI beurteilt es
+  if (strict || /(erstell|anleg|mach|daraus|draus|schreib|speicher|übernimm|übertrag|exportier|notier)/.test(t)) return 'maybe';
   return null;
+}
+// KI fragen, ob wirklich ein Dokument gewünscht ist (sonst normale Antwort). Ohne KI: lieber kein Dokument.
+async function docIntentAsk(text) {
+  try {
+    const r = await fetch('/api/doc-intent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
+    const o = await r.json();
+    return o.create === true;
+  } catch { return false; }
 }
 function chatContext(list) {
   return list.filter((h) => h.text && !h.doc).slice(-14).map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${stripAskBlock(h.text)}`).join('\n\n');
@@ -2644,7 +2662,8 @@ async function sendMessage(text, images) {
     activeTab()._pendingAsk = null;
   }
   addUserMessage(text, images);
-  const docKind = !images.length && docIntent(text);
+  let docKind = !images.length && docIntent(text);
+  if (docKind === 'maybe') docKind = (await docIntentAsk(text)) ? 'create' : null; // die KI beurteilt unklare Fälle
   if (docKind) { docTurn(docKind, text); return; }
   const controller = new AbortController();
   const tab = activeTab(); // Antwort gehört zu diesem Chat – auch wenn inzwischen ein anderer Tab offen ist
