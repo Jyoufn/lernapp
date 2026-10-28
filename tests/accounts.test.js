@@ -110,3 +110,21 @@ test('Dateispeicher (am PC) kann dasselbe wie der Arbeitsspeicher', async () => 
     assert.equal(await store.get('a'), null);
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('feste Zugangsdaten aus Vercel: LOGIN_EMAIL/LOGIN_PASSWORD, optional fester LOGIN_CODE', async () => {
+  const store = memoryStore();
+  const env = { LOGIN_EMAIL: 'Ich@Mail.de', LOGIN_PASSWORD: 'MeinPasswort!' };
+  await assert.rejects(A.startLogin(store, env, { email: 'ich@mail.de', password: 'falsch' }, {}), /stimmt nicht/);
+  await assert.rejects(A.startLogin(store, env, { email: 'du@mail.de', password: 'MeinPasswort!' }, {}), /stimmt nicht/);
+  // ohne Code: direkt angemeldet
+  const d = await A.startLogin(store, env, { email: ' ich@mail.de ', password: 'MeinPasswort!' }, {});
+  assert.equal(d.mode, 'direct');
+  const uid = (await A.sessionUser(store, d.session.token)).id;
+  // mit festem Code: Kacheln, falscher Code abgelehnt, richtiger → gleiches Konto
+  const env2 = { ...env, LOGIN_CODE: '482915' };
+  const f = await A.startLogin(store, env2, { email: 'ich@mail.de', password: 'MeinPasswort!' }, {});
+  assert.equal(f.mode, 'fixed');
+  await assert.rejects(A.verifyLogin(store, env2, { email: 'ich@mail.de', code: '111111' }), /stimmt nicht/);
+  const v = await A.verifyLogin(store, env2, { email: 'ich@mail.de', code: '482915' });
+  assert.equal(v.user.id, uid);
+});

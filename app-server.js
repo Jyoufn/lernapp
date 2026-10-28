@@ -1135,7 +1135,13 @@ const isHttps = (req) => ON_VERCEL || req.headers['x-forwarded-proto'] === 'http
 const sessionCookie = (req, token, maxAge) => `sid=${token ? encodeURIComponent(token) : ''}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}${isHttps(req) ? '; Secure' : ''}`;
 async function handleAuth(req, res, urlPath, store) {
   if (req.method === 'POST' && urlPath === '/api/auth/start') {
-    return sendJson(res, 200, await ACC.startLogin(store, serverEnv(), await readBody(req, 4000), { onVercel: ON_VERCEL }));
+    const r = await ACC.startLogin(store, serverEnv(), await readBody(req, 4000), { onVercel: ON_VERCEL });
+    if (r.session) { // feste Zugangsdaten ohne Code: gleich angemeldet
+      const { session } = r;
+      res.setHeader('Set-Cookie', sessionCookie(req, session.token, session.maxAge));
+      return sendJson(res, 200, { ok: true, mode: 'direct', email: r.email, user: { email: r.email }, fresh: session.fresh });
+    }
+    return sendJson(res, 200, r);
   }
   if (req.method === 'POST' && urlPath === '/api/auth/verify') {
     const r = await ACC.verifyLogin(store, serverEnv(), await readBody(req, 4000));

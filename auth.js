@@ -171,7 +171,7 @@
       <form class="auth-card" novalidate autocomplete="on">
         <img class="auth-logo" src="icon-180.png?v=2" alt="" width="44" height="44" />
         <h1 class="auth-title">Bei Agenten anmelden</h1>
-        <p class="auth-sub">Mit E-Mail und Passwort. Danach schicken wir dir einen Code.</p>
+        <p class="auth-sub">Mit E-Mail, Passwort und deinem 6-stelligen Code.</p>
         <div class="auth-fields">
           <label class="auth-label" for="authEmail">E-Mail</label>
           <div class="auth-field">${fi('user', 14)}<input id="authEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@beispiel.de" required /></div>
@@ -191,7 +191,6 @@
           <button type="button" class="auth-link" data-act="change" hidden>E-Mail ändern</button>
           <button type="button" class="auth-link" data-act="resend" hidden>Code erneut senden</button>
         </div>
-        <p class="auth-hint">Noch kein Konto? Gib deine E-Mail und ein neues Passwort ein – das Konto wird dann angelegt.</p>
       </form>`;
     document.body.append(wrap);
 
@@ -206,7 +205,6 @@
     const sentEl = wrap.querySelector('.auth-sent');
     const resend = wrap.querySelector('[data-act="resend"]');
     const change = wrap.querySelector('[data-act="change"]');
-    const hint = wrap.querySelector('.auth-hint');
     let step = 'login', busy = false, resendAt = 0, resendT = 0;
     try { const last = lsGet('auth.lastEmail'); if (last) email.value = last; } catch {}
     setTimeout(() => (email.value ? pw : email).focus({ preventScroll: true }), 350);
@@ -224,17 +222,17 @@
       return j;
     }
 
-    function toCode(addr) {
+    function toCode(addr, mode) {
       step = 'code';
       wrap.classList.add('step-code');
       codeWrap.setAttribute('aria-hidden', 'false');
       email.readOnly = pw.readOnly = true;
       digits.forEach((d) => { d.value = ''; d.tabIndex = 0; d.classList.remove('filled'); });
-      sentEl.textContent = `an ${addr} gesendet`;
+      sentEl.textContent = mode === 'fixed' ? 'dein fester Code' : `an ${addr} gesendet`;
       btnText.textContent = 'Anmelden';
       btn.classList.remove('ready');
-      resend.hidden = change.hidden = false;
-      hint.hidden = true;
+      change.hidden = false;
+      resend.hidden = mode === 'fixed';
       startResendTimer();
       setTimeout(() => digits[0].focus({ preventScroll: true }), 260);
     }
@@ -247,7 +245,6 @@
       btnText.textContent = 'Code senden';
       btn.classList.remove('ready');
       resend.hidden = change.hidden = true;
-      hint.hidden = false;
       clearInterval(resendT);
       setErr('');
       pw.focus({ preventScroll: true });
@@ -274,7 +271,8 @@
       try {
         const j = await post('/api/auth/start', { email: addr, password: pw.value });
         lsSet('auth.lastEmail', j.email || addr);
-        toCode(j.email || addr);
+        if (j.mode === 'direct') { await enter(j); return; } // feste Zugangsdaten ohne Code
+        toCode(j.email || addr, j.mode);
       } catch (e) { setErr(e.message); }
       setBusy(false);
     }

@@ -3,10 +3,11 @@
 > **Anmeldung und Konto:** Ohne Anmeldung zeigt die App links nur eine Vorschau, rechts das Anmeldefenster (E-Mail + Passwort → 6-stelliger Code per E-Mail). Alles gehört zum Konto und bleibt auch nach jedem Update der Website erhalten: Chats, Dokumente, Einstellungen, Aufgaben, Kalender, Darstellung und die **API-Keys** (Zahnrad → Agenten → Verbindung).
 >
 > **Einrichten auf Vercel (einmalig):**
-> 1. **Speicher:** Vercel → Projekt → *Storage* → *Upstash for Redis* (kostenlos) anlegen und mit dem Projekt verbinden. Dadurch stehen `KV_REST_API_URL` und `KV_REST_API_TOKEN` (bzw. `UPSTASH_REDIS_REST_URL`/`_TOKEN`) automatisch in den Umgebungsvariablen.
-> 2. **E-Mail:** Bei [resend.com](https://resend.com) ein kostenloses Konto anlegen, API-Key erstellen und in Vercel als `RESEND_API_KEY` eintragen. Ohne eigene Domain schickt Resend nur an die E-Mail-Adresse des Resend-Kontos – für die eigene App reicht das. Mit eigener Domain zusätzlich `MAIL_FROM` setzen (z. B. `Agenten <login@deine-domain.de>`).
-> 3. Es gibt nur **ein** Konto: das erste Anmelden legt es an, danach nimmt die App keine andere E-Mail mehr an. Optional `ALLOWED_EMAILS` = deine E-Mail, damit auch das erste Konto nur deins sein kann.
-> 4. Neu bereitstellen (*Redeploy*). Beim ersten Anmelden mit einer neuen E-Mail wird das Konto angelegt; was schon auf dem iPad gespeichert war (API-Keys, Einstellungen, Chats im Browser-Speicher), wandert ins neue Konto.
+> 1. **Speicher:** Vercel → Projekt → *Storage* → *Upstash for Redis* (kostenlos) verbinden → `KV_REST_API_URL`/`KV_REST_API_TOKEN` stehen automatisch in den Umgebungsvariablen.
+> 2. **Zugangsdaten** unter *Settings → Environment Variables* selbst festlegen (das ist das einzige Konto): `LOGIN_EMAIL`, `LOGIN_PASSWORD` und `LOGIN_CODE` (fester 6-stelliger Code für die Kacheln; ohne `LOGIN_CODE` geht es nach dem Passwort direkt rein).
+> 3. *Redeploy*. Beim ersten Anmelden wandert, was schon auf dem iPad gespeichert war (API-Keys, Einstellungen, Chats im Browser-Speicher), ins Konto.
+>
+> Optional statt des festen Codes: `RESEND_API_KEY` (resend.com) → bei jedem Anmelden ein neuer Code per E-Mail. Ganz ohne `LOGIN_EMAIL`/`LOGIN_PASSWORD` legt das erste Anmelden das Konto an (dann braucht es Resend für den Code).
 >
 > Am PC (`npm start`) geht es ohne Einrichtung: Konten liegen im Ordner `konten/`, der Code erscheint im Terminal (oder per Resend, wenn `RESEND_API_KEY` in `.env` steht). Das erste Konto übernimmt die vorhandenen Ordner `chats/` und `dokumente/`.
 
