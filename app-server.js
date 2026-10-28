@@ -1151,7 +1151,7 @@ async function handleAuth(req, res, urlPath, store) {
   if (req.method === 'GET' && urlPath === '/api/auth/me') {
     const user = await ACC.sessionUser(store, cookiesOf(req).sid);
     if (user?.renewed) res.setHeader('Set-Cookie', sessionCookie(req, cookiesOf(req).sid, ACC.SESSION_TTL));
-    return user ? sendJson(res, 200, { user: { email: user.email } }) : sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
+    return user ? sendJson(res, 200, { ok: true }) : sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
   }
   return sendJson(res, 404, { error: 'Unbekannt' });
 }

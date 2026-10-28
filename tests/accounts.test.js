@@ -28,7 +28,11 @@ test('neues Konto: Code, dann Sitzung; falsches Passwort und falscher Code werde
   await assert.rejects(A.verifyLogin(store, {}, { email: 'a@b.de', code: wrong }), /stimmt nicht/);
   const v = await A.verifyLogin(store, {}, { email: 'a@b.de', code: s.code });
   assert.ok(v.token && v.created && v.fresh);
-  assert.equal((await A.sessionUser(store, v.token)).email, 'a@b.de');
+  assert.equal((await A.sessionUser(store, v.token)).id, v.user.id);
+  // E-Mail steht nirgends im Klartext im Speicher
+  assert.ok(!JSON.stringify([...(await Promise.all(['cfg:owner', `user:${v.user.id}`].map((k) => store.get(k))))]).includes('a@b.de'));
+  // nur EIN Konto: andere E-Mail wird abgewiesen (gleiche Meldung wie falsches Passwort)
+  await assert.rejects(A.startLogin(store, {}, { email: 'zweiter@b.de', password: 'geheim123' }, {}), /E-Mail oder Passwort stimmt nicht/);
   // Code ist nur einmal gültig
   await assert.rejects(A.verifyLogin(store, {}, { email: 'a@b.de', code: s.code }), /abgelaufen/);
   // bestehendes Konto: Passwort muss stimmen

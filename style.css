@@ -7061,6 +7061,7 @@ html.auth-locked:not(.auth-opening) .sidebar { width: 0; }
 html.auth-locked:not(.auth-opening) .sidebar-inner { opacity: 0; }
 html.auth-locked:not(.auth-opening) .panel { margin: 0; border-radius: 14px; }
 html.auth-locked:not(.auth-opening) .panel-toggle { opacity: 0; }
+html.auth-locked .chats-wrap { display: none; } /* Vorschau: kein Chat-Symbol oben rechts */
 html.auth-locked .panel-toggle { transition: opacity 300ms ease 200ms; }
 html.auth-locked.auth-opening #app { left: 0; top: 0; width: 100vw; height: 100dvh; border-radius: 0; }
 
