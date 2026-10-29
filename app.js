@@ -4514,7 +4514,7 @@ function savedThoughts(h) {
     inner.append(list);
     fold.append(inner);
     step.append(fold);
-    step.classList.add('foldable', 'open');
+    step.classList.add('foldable', 'open', 'has-box');
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', '<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>');
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
     w.steps.append(step);

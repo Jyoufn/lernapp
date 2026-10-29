@@ -5,7 +5,7 @@
      tippen: passende Aktionen, Agenten-Chats (Titel und Inhalt, davor der Hund des zuletzt genutzten Agenten), Dokumente (Titel und Text)
      Pfeile wählen, Enter öffnet, Esc schließt. Fundstelle im Inhalt erscheint grau dahinter.
    - Workspaces (höchstens 3): jeder mit eigenem Hund und eigenen Chats/Dokumenten. Menü oben links: Liste (Haken am aktiven),
-     „Workspace hinzufügen“ (Name eintippen, Enter), beim Darüberfahren Umbenennen/Löschen (Inhalt wandert in den ersten), Einstellungen
+     „Workspace hinzufügen“ (Name eintippen, Enter), Einstellungen. Umbenennen, Symbol wählen und Löschen: Einstellungen → Allgemein → Workspaces
    Braucht aus app.js: tabsEl, chatOf, historyOf, activateTab, createTab, openViewTab, isDraft, chatsView.
    =================================================================== */
 const AppSearch = (() => {
@@ -171,6 +171,7 @@ const AppSearch = (() => {
       wsData.list.push(w); wsData.active = w.id; wsSave(); refreshAll();
       return w;
     },
+    setDog(id, dog) { const w = wsData.list.find((x) => x.id === id); if (!w || !window.PixelDogs?.DOGS?.[dog]) return; w.dog = dog; wsSave(); refreshAll(); },
     rename(id, name) { const w = wsData.list.find((x) => x.id === id); if (!w || id === 'main') return; w.name = String(name).trim().slice(0, 32) || w.name; wsSave(); refreshAll(); },
     // Löschen: Chats und Dokumente gehen nicht verloren – sie wandern in den ersten Workspace
     remove(id) {
@@ -204,13 +205,12 @@ const AppSearch = (() => {
       ? `<div class="ws-row edit"><span class="ws-av">${dog(w.dog, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
       : `<div class="ws-row${w.id === wsData.active ? ' on' : ''}" data-ws-pick="${w.id}" role="menuitemradio" aria-checked="${w.id === wsData.active}" tabindex="0">
           <span class="ws-av">${dog(w.dog, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${w.id === 'main' ? 'Persönlicher Workspace' : 'Workspace'}</small></span>
-          ${w.id !== 'main' ? `<span class="ws-acts"><button type="button" class="ws-act" data-ws-rename="${w.id}" aria-label="Umbenennen" title="Umbenennen">${fi('pencil', 12)}</button><button type="button" class="ws-act" data-ws-del="${w.id}" aria-label="Löschen" title="Löschen (Chats und Dokumente wandern in den ersten Workspace)">${fi('trash', 12)}</button></span>` : ''}
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
     const full = wsData.list.length >= WS_MAX;
     pop.innerHTML = `${rows}
-      ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 14)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
+      ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 12)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
-      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new">${oi('plus', 15)}<span>Workspace hinzufügen</span></button>`}
+      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new">${oi('plus', 12)}<span>Workspace hinzufügen</span></button>`}
       <button type="button" class="ws-mi" data-ws="settings">${oi('settings', 15)}<span>Einstellungen</span></button>`;
     const inp = pop.querySelector('.ws-in');
     if (inp) { setTimeout(() => { inp.focus(); inp.select(); }, 20); }

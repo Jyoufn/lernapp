@@ -121,6 +121,22 @@
         <div class="st-row"><span class="st-name">Hintergrund</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`;
   }
 
+  // Workspaces (höchstens 3): Hund wählen (Klick auf den Hund), umbenennen, löschen – Chats/Dokumente wandern dann in den ersten
+  let wsPicking = null;
+  function wsSection() {
+    const W = window.Workspaces; if (!W) return '';
+    const dogsApi = window.PixelDogs;
+    const ids = (dogsApi?.MODES || []).map((m) => m.id).filter((id) => !dogsApi.UNAVAILABLE?.has(id));
+    const rows = W.list().map((w) => `<div class="st-row st-ws">
+        <button type="button" class="st-ws-dog" data-ws-dog="${w.id}" title="Symbol wählen" aria-label="Symbol wählen">${dogsApi ? dogsApi.svg(w.dog || 'general', 24) : ''}</button>
+        ${w.id === 'main' ? `<span class="st-name">${esc(nameOf())}</span><span class="st-muted st-ws-sub">Persönlicher Workspace</span>`
+          : `<input class="st-field st-ws-in" data-ws-name="${w.id}" maxlength="32" value="${esc(w.name || '')}" aria-label="Name des Workspace" />`}
+        <span class="grow"></span>
+        ${w.id === W.active() ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>` : `<button type="button" class="st-btn dark" data-ws-use="${w.id}">Öffnen</button>`}
+        ${w.id !== 'main' ? `<button type="button" class="st-btn dark" data-ws-del="${w.id}">Löschen</button>` : ''}
+      </div>${wsPicking === w.id ? `<div class="st-row st-ws-pick">${ids.map((d) => `<button type="button" class="st-ws-opt${d === (w.dog || 'general') ? ' on' : ''}" data-ws-set="${w.id}:${d}" aria-label="${d}">${dogsApi.svg(d, 24)}</button>`).join('')}</div>` : ''}`).join('');
+    return `<h2>Workspaces</h2><div class="st-card">${rows}${W.list().length < 3 ? `<div class="st-row"><span class="st-muted">Bis zu 3 Workspaces – neue legst du oben links über den Namen an.</span></div>` : ''}</div>`;
+  }
   function drawView() {
     const title = PAGES[page];
     let body;
@@ -131,6 +147,7 @@
           <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><input class="st-field st-name-in" data-name maxlength="32" value="${esc(nameOf())}" aria-label="Name" /></div></div>
         ${account ? `<h2>Konto</h2><div class="st-card">
           <div class="st-row"><span class="st-name">${esc(account.email)}</span><span class="grow"></span><button type="button" class="st-btn dark" data-logout>Abmelden</button></div></div>` : ''}
+        ${wsSection()}
         <h2>Daten</h2><div class="st-card">
           <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
           <div class="st-row"><span class="st-name">Einstellungen und Aufgaben</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
@@ -191,6 +208,17 @@
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
+    const wd = e.target.closest('[data-ws-dog]');
+    if (wd) { wsPicking = wsPicking === wd.dataset.wsDog ? null : wd.dataset.wsDog; drawView(); return; }
+    const wset = e.target.closest('[data-ws-set]');
+    if (wset) { const [id, d] = wset.dataset.wsSet.split(':'); window.Workspaces?.setDog(id, d); wsPicking = null; drawView(); return; }
+    const wu = e.target.closest('[data-ws-use]');
+    if (wu) { window.Workspaces?.set(wu.dataset.wsUse); drawView(); return; }
+    const wdel = e.target.closest('[data-ws-del]');
+    if (wdel) {
+      if (wdel.dataset.confirm !== '1') { wdel.dataset.confirm = '1'; wdel.textContent = 'Wirklich löschen?'; return; } // zweiter Klick löscht
+      window.Workspaces?.remove(wdel.dataset.wsDel); drawView(); return;
+    }
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
@@ -215,6 +243,7 @@
       view.querySelectorAll('.st-sw').forEach((b) => b.classList.toggle('on', b === own));
       return;
     }
+    if (e.target.matches('[data-ws-name]')) { window.Workspaces?.rename(e.target.dataset.wsName, e.target.value); return; }
     if (!e.target.matches('[data-name]')) return;
     write(NAME_KEY, e.target.value.trim());
     applyName();

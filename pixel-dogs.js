@@ -1033,63 +1033,118 @@ const PixelDogs = (() => {
        done   Daumen hoch mit kleinem Funkeln
      Übergänge: der alte Gegenstand gleitet weich nach unten weg, der neue kommt von unten – und jeder Zustand bleibt mindestens
      MIN_DWELL ms stehen. Kommen Wechsel schneller (kurzes Thinking), wird direkt zum NEUESTEN gesprungen statt alle abzuspielen. */
-  const AW = 34, AH = 24, AX = 14, AY = 4, MIN_DWELL = 950;
-  const APAL = { ...PROP, J: '#22352a', j: '#2e4537', D: '#5a5a5a' };
+  // Fläche 26 × 24: Hund rechts (x 6), Gegenstände vorn links – hält sich innerhalb des Rands links neben dem Text (wird sonst abgeschnitten)
+  const AW = 26, AH = 24, AX = 6, AY = 4, MIN_DWELL = 950;
+  const APAL = { ...PROP, J: '#22352a', j: '#2e4537', D: '#5a5a5a', T: '#e9e4d8', t: '#c9c2b2', E: '#2f86ff' };
   const fur = (id) => ({ ...APAL, F: (FUR[id] || FUR.general)[0], f: (FUR[id] || FUR.general)[1] });
   const P2 = (rows, x, y, pal = APAL) => ({ rows, x, y, pal });
-  const BUBBLE = (n) => ['.KKKKKKKK.', 'KLLLLLLLLK', `KL${[0, 1, 2].map((i) => (i < n ? 'NL' : 'LL')).join('')}LK`, 'KLLLLLLLLK', '.KKKKKKKK.'];
-  const LENS_S = ['.KKKKK..', 'KHgggvK.', 'Kgggggv.', 'KgggggK.', 'KvggvvK.', '.KKKKKK.', '.....KBK', '......KB'];
-  const PAN_S = ['KCCCCCCCK.....', '.KcccccK.BBBBB', '..KKKKK.......'];
+  // Denkwolke: runde Wolke mit Buckeln oben und unten, darin erscheinen die Punkte nacheinander; zwei kleine Wölkchen führen zum Kopf
+  const CLOUD = (n) => [
+    '..KKK.KKK..',
+    '.KLLLKLLLK.',
+    'KLLLLLLLLLK',
+    `KL${[0, 1, 2].map((i) => (i < n ? 'NL' : 'LL')).join('')}LLK`.slice(0, 10) + 'K',
+    'KLLLLLLLLLK',
+    '.KLLKLLLLK.',
+    '..KK.KKKK..',
+  ];
+  const PUFF = [P2(['.K.', 'KLK', '.K.'], 6, 7), P2(['K'], 9, 9)];
+  // Lupe: runder Rahmen (Metall), helles Glas mit Glanz, Griff schräg nach rechts unten zur Pfote
+  const LENS_S = [
+    '..KKKKK...',
+    '.KMMMMMK..',
+    'KMHAAAAMK.',
+    'KMHAAAAMK.',
+    'KMAAAAAMK.',
+    'KMAAAAAMK.',
+    '.KMMMMMK..',
+    '..KKKKKK..',
+    '......KBK.',
+    '.......KBK',
+  ];
+  const PAN_S = ['KCCCCCCCK....', '.KcccccK.BBBB', '..KKKKK......'];
   const FLAMES = [['..Y..Y.', '.YPYYPY', 'YPRPPRP', '.PRRRP.'], ['.Y...Y.', '.PY.YPY', 'YPRPRPY', '.PRRRP.'], ['...Y...', '.YPY.Y.', 'YPRPYPY', '.PRRRP.']];
-  const BOOK_S = ['.KKKKK.KKKKK.', 'KwwwwwKwwwwwK', 'KwvvvwKwvvvwK', 'KwwwwwKwwwwwK', 'KwvvwwKwvvvwK', 'KKKKKKKKKKKKK'];
-  const PAGE = [['.K', 'Kw', 'Kw'], ['K', 'w', 'w'], ['K.', 'wK', 'wK']];
-  const CLIP = ['...KKK...', '.KKMMMKK.', 'KBBBBBBBK', 'KBwwwwwBK', 'KBwwvvvBK', 'KBwwwwwBK', 'KBwwvvwBK', 'KBwwwwwBK', 'KBwwvvvBK', 'KBwwwwwBK', 'KBBBBBBBK', '.KKKKKKK.'];
-  const PAPER = ['KKKKKKKKKKKKK', 'KwwwwwwwwwwwK', 'KwNNNNNNNNNwK', 'KwwwwwwwwwwwK', 'KwvvvwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwwwwwwK', 'KKKKKKKKKKKKK'];
-  const THUMB = ['...KK...', '..KFFK..', '..KFFK..', 'KKKFFKK.', 'KFFFFFFK', 'KFFFFFfK', 'KFFFFFfK', 'KfFFFffK', '.KKKKKK.'];
+  // offenes Buch, ganz zu sehen: zwei Seiten mit Zeilen, Rücken in der Mitte, unten der Einband
+  const BOOK_S = [
+    '.KKKKKK.KKKKKK.',
+    'KwwwwwwKwwwwwwK',
+    'KwvvvvwKwvvvvwK',
+    'KwwwwwwKwwwwwwK',
+    'KwvvvwwKwvvvvwK',
+    'KwwwwwwKwwwwwwK',
+    'KOOOOOOKOOOOOOK',
+    '.KKKKKKKKKKKKK.',
+  ];
+  const PAGE = [['..KK', '.KwK', 'KwwK', 'KwwK'], ['.K.', 'KwK', 'KwK', 'KwK'], ['KK..', 'KwK.', 'KwwK', 'KwwK']];
+  // Notizblock mit Ringen oben: Titelzeile, darunter Punkte, die nacheinander abgehakt werden
+  const PAD = (n) => {
+    const rows = ['.KMKMKMKMK.', 'KTTTTTTTTTK', 'KTNNNNNTTTK', 'KTTTTTTTTTK'];
+    for (let i = 0; i < 3; i++) { rows.push(`KT${i < n ? 'X' : 'm'}T${'tttttt'.slice(0, 6 - (i % 2) * 2)}`.padEnd(10, 'T') + 'K'); rows.push('KTTTTTTTTTK'); }
+    rows.push('.KKKKKKKKK.');
+    return rows;
+  };
+  const PENCIL = ['....KK', '...KYK', '..KYK.', '.KYK..', 'KwK...', 'KK....'];
+  const NEWS = ['KKKKKKKKKKKKK', 'KwwwwwwwwwwwK', 'KwNNNNNNNNNwK', 'KwwwwwwwwwwwK', 'KwvvvwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwwwwwwK', 'KKKKKKKKKKKKK'];
+  // Daumen hoch: Daumen steht links nach oben, darunter die Faust mit vier Fingern (von der Seite)
+  const THUMB = [
+    '..KK.....',
+    '.KFFK....',
+    '.KFFK....',
+    '.KFFKKKKK',
+    'KKFFFFFFK',
+    'KFFFFKKKK',
+    'KFFFFFFFK',
+    'KFFFFKKKK',
+    'KfFFFFFfK',
+    '.KKKKKKK.',
+  ];
   const SPARK = ['.Y.', 'YHY', '.Y.'];
   const GLASSES = ['KKKKKKKKKK', 'KAAK..KAAK', '.KK....KK.'];
-  // Laptop von vorn: Bildschirm mit Textzeilen (Zeilen laufen bzw. werden getippt), darunter das Unterteil
-  const laptopRows = (lines, cursor = false) => {
-    const scr = Array.from({ length: 5 }, (_, i) => { const n = lines[i] || 0; return `KZ${'g'.repeat(n)}${cursor && i === lines.findIndex((x, k) => k === lines.length - 1) ? 'H' : ''}`.padEnd(10, 'Z').slice(0, 10) + 'K'; });
-    return ['KKKKKKKKKKK', ...scr, 'KKKKKKKKKKK', '.KNNNNNNNNNK', '..KKKKKKKKKK'];
+  // Laptop von vorn: Rahmen, Bildschirm mit Textzeilen, darunter die helle Tastatur – gut als Laptop zu erkennen
+  const laptopRows = (lines, cursor = -1) => {
+    const scr = Array.from({ length: 4 }, (_, i) => { const n = lines[i] || 0; return `.KCZ${'g'.repeat(n)}${i === cursor ? 'H' : ''}`.padEnd(11, 'Z').slice(0, 11) + 'CK.'; });
+    return ['.KKKKKKKKKKKK.', '.KCCCCCCCCCCK.', ...scr, '.KCCCCCCCCCCK.', 'KKKKKKKKKKKKKK', 'KMMMMMMMMMMMMK', '.KKKKKKKKKKKK.'];
   };
-  const SCROLL = [[6, 4, 7, 3, 5], [4, 7, 3, 5, 6], [7, 3, 5, 6, 4], [3, 5, 6, 4, 7]];
-  const TYPED = [[7], [7, 2], [7, 4], [7, 6], [7, 6, 3], [7, 6, 5], [7, 6, 5, 2]];
-  // kleines Tablet mit Kurslinie (wie beim Bären am Eingabefeld, nur kleiner)
-  const CH = [4, 3, 4, 2, 3, 1, 2, 1, 0, 1];
-  const tabRows = (shown) => {
-    const g = Array.from({ length: 5 }, () => Array(10).fill('Z'));
-    const n = Math.min(9, shown), col = CH[n] <= CH[0] ? 'X' : 'R';
-    for (let j = 0; j <= n; j++) { const a = CH[j], b = j < n ? CH[j + 1] : a; for (let y = Math.min(a, b); y <= Math.max(a, b); y++) g[y][j] = col; }
-    g[CH[n]][n] = 'H';
-    return ['.KKKKKKKKKK.', ...g.map((r) => `K${r.join('')}K`), 'KccccNNccccK', '.KKKKKKKKKK.'];
+  const SCROLL = [[6, 4, 7, 3], [4, 7, 3, 6], [7, 3, 6, 4], [3, 6, 4, 7]];
+  const TYPED = [[7], [7, 2], [7, 4], [7, 6], [7, 6, 3], [7, 6, 5]];
+  // Diagramm-Karte (hell wie die Zeitung): Achsen, Balken wachsen nacheinander, der letzte am höchsten (grün), einer rot
+  const BARS = [[2, 3, 'X'], [4, 2, 'R'], [6, 4, 'X'], [8, 6, 'X']];
+  const chartRows = (k) => {
+    const H = 7, rows = Array.from({ length: H }, () => Array(10).fill('w'));
+    for (let y = 0; y < H; y++) rows[y][1] = 'N';
+    rows[H - 1].fill('N', 1);
+    BARS.forEach(([x, h, c], i) => { const shown = Math.max(0, Math.min(h, k - i * 2)); for (let j = 0; j < shown; j++) { rows[H - 2 - j][x] = c; rows[H - 2 - j][x + 1] = c; } });
+    return ['KKKKKKKKKKKK', ...rows.map((r) => `K${r.join('')}K`), 'KKKKKKKKKKKK'];
   };
+  // Tafel: dunkles Holz, grüne Fläche, Kreide schreibt Zeile für Zeile (helle Spitze), unten die Kreideablage
   const boardRows = (k) => {
-    const L = [[2, 8], [4, 6], [6, 7]]; // Zeile, Länge
+    const L = [[1, 7], [3, 5], [5, 6]];
     let left = k;
-    const rows = ['BBBBBBBBBBBB', ...Array.from({ length: 8 }, (_, i) => {
+    const inner = Array.from({ length: 7 }, (_, i) => {
       const line = L.find(([r]) => r === i);
-      if (!line) return 'BJJJJJJJJJJB';
+      if (!line) return 'bJJJJJJJJJb';
       const n = Math.max(0, Math.min(line[1], left)); left -= line[1];
-      return `BJ${'w'.repeat(n)}${n < line[1] && n > 0 ? 'H' : ''}`.padEnd(11, 'J').slice(0, 11) + 'B';
-    }), 'BBBBBBBBBBBB', '.B........B.'];
-    return rows;
+      return `bJ${'w'.repeat(n)}${n < line[1] && n > 0 ? 'Y' : ''}`.padEnd(10, 'J').slice(0, 10) + 'b';
+    });
+    return ['bbbbbbbbbbb', ...inner, 'bbbbbbbbbbb', '.BBBBBBBBB.'];
   };
   const ANIMS = (id) => {
     const pf = fur(id);
     const seq = (n, ms) => Array.from({ length: n }, (_, i) => [i, ms]);
+    const chin = P2(['.KK.', 'KFFK', 'KfFK', '.KK.'], AX + 3, AY + 15, pf); // Pfote am Kinn
+    const paw = (x, y) => P2(['.KK.', 'KFFK', 'KfFK'], x, y, pf);
     return {
-      think: { frames: [0, 1, 2, 3].map((n) => [P2(BUBBLE(n), 1, 0), P2(['vv', 'vv'], 10, 6), P2(['v'], 12, 8), P2(['.KK.', 'KFFK', 'KfFK', '.KK.'], AX + 2, AY + 15, pf)]), loop: [[0, 300], [1, 300], [2, 300], [3, 700]] },
-      search: { frames: [0, 2, 4, 2].map((x) => [P2(LENS_S, x, 9), P2(['KFK', 'KfK'], x + 7, 16, pf)]), loop: [[0, 420], [1, 320], [2, 420], [3, 320]] },
-      cook: { frames: [0, 1, 2].map((k) => [P2(FLAMES[k], 1, 15), P2(PAN_S, k === 1 ? 1 : 0, 19), P2(['KFK', 'KfK'], 12, 19, pf)]), loop: [[0, 160], [1, 160], [2, 160], [1, 140]] },
-      book: { frames: [null, 0, 1, 2].map((k) => [P2(BOOK_S, 0, 16), ...(k == null ? [] : [P2(PAGE[k], [7, 6, 5][k], 13)])]), loop: [[0, 1100], [1, 120], [2, 120], [3, 120], [0, 900]] },
-      board: { frames: Array.from({ length: 23 }, (_, k) => [P2(boardRows(k), 0, 4)]), loop: [...seq(23, 110), [22, 900]] },
-      plan: { frames: [0, 1, 2, 3].map((n) => [P2(CLIP, 2, 9), ...[4, 6, 8].slice(0, n).map((r) => P2(['X'], 4, 9 + r))]), loop: [[0, 500], [1, 400], [2, 400], [3, 900]] },
-      laptop: { frames: SCROLL.map((l) => [P2(laptopRows(l), 1, 13)]), loop: seq(4, 340), glasses: true },
-      type: { frames: TYPED.map((l) => [P2(laptopRows(l, true), 1, 13)]), loop: [...seq(TYPED.length, 260), [TYPED.length - 1, 600]], glasses: true },
-      chart: { frames: Array.from({ length: 10 }, (_, k) => [P2(tabRows(k), 0, 14)]), loop: [...seq(10, 150), [9, 900]] },
-      news: { frames: [12, 13].map((y) => [P2(PAPER, 0, y), P2(['KFK', 'KfK'], 12, y + 6, pf)]), loop: [[0, 900], [1, 700]] },
-      done: { frames: [[P2(THUMB, 5, 16, pf)], [P2(THUMB, 5, 13, pf)], [P2(THUMB, 5, 12, pf), P2(SPARK, 1, 8)], [P2(THUMB, 5, 12, pf)]], loop: [[0, 70], [1, 90], [2, 360], [3, 300], [2, 360], [3, 2000]], once: true },
+      think: { frames: [0, 1, 2, 3].map((n) => [P2(CLOUD(n), 0, 0), ...PUFF, chin]), loop: [[0, 320], [1, 320], [2, 320], [3, 760]] },
+      search: { frames: [[0, 9], [1, 10], [2, 9], [1, 8]].map(([x, y]) => [P2(LENS_S, x, y), paw(x + 8, y + 9)]), loop: [[0, 420], [1, 360], [2, 420], [3, 360]] },
+      cook: { frames: [0, 1, 2].map((k) => [P2(FLAMES[k], 1, 16), P2(PAN_S, k === 1 ? 1 : 0, 20), paw(12, 19)]), loop: [[0, 160], [1, 160], [2, 160], [1, 140]] },
+      book: { frames: [null, 0, 1, 2].map((k) => [P2(BOOK_S, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 6, 4][k], 12)]), paw(0, 19), paw(11, 19)]), loop: [[0, 1100], [1, 120], [2, 120], [3, 120], [0, 900]] },
+      board: { frames: Array.from({ length: 19 }, (_, k) => [P2(boardRows(k), 0, 9)]), loop: [...seq(19, 120), [18, 1000]] },
+      plan: { frames: [0, 1, 2, 3].map((n) => [P2(PAD(n), 0, 9), P2(PENCIL, 8, 15), paw(11, 19)]), loop: [[0, 520], [1, 420], [2, 420], [3, 1000]] },
+      laptop: { frames: SCROLL.map((l) => [P2(laptopRows(l), 0, 13)]), loop: seq(4, 360), glasses: true },
+      type: { frames: TYPED.map((l, i) => [P2(laptopRows(l, l.length - 1), 0, 13), ...(i % 2 ? [paw(3, 20), paw(9, 21)] : [paw(3, 21), paw(9, 20)])]), loop: [...seq(TYPED.length, 260), [TYPED.length - 1, 600]], glasses: true },
+      chart: { frames: Array.from({ length: 13 }, (_, k) => [P2(chartRows(k), 0, 12), paw(11, 19)]), loop: [...seq(13, 120), [12, 1100]] },
+      news: { frames: [12, 13].map((y) => [P2(NEWS, 0, y), paw(11, y + 6)]), loop: [[0, 900], [1, 700]] },
+      done: { frames: [[P2(THUMB, 0, 16, pf)], [P2(THUMB, 0, 13, pf)], [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 9)], [P2(THUMB, 0, 12, pf)]], loop: [[0, 70], [1, 90], [2, 380], [3, 300], [2, 380], [3, 2000]], once: true },
     };
   };
   function actor(id) {
