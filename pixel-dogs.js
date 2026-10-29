@@ -1075,7 +1075,26 @@ const PixelDogs = (() => {
     'KOOOOOOKOOOOOOK',
     '.KKKKKKKKKKKKK.',
   ];
-  const PAGE = [['..KK', '.KwK', 'KwwK', 'KwwK'], ['.K.', 'KwK', 'KwK', 'KwK'], ['KK..', 'KwK.', 'KwwK', 'KwwK']];
+  // umblättern: Seite hebt sich rechts, steht senkrecht am Rücken, legt sich links ab – danach stehen andere Zeilen da
+  const PAGE = [['...KKKK', '..KwwwK', '.KwwwwK', 'KwwwwK.'], ['.K.', 'KwK', 'KwK', 'KwK', 'KwK'], ['KKKK...', 'KwwwK..', 'KwwwwK.', '.KwwwwK']];
+  const BOOK_B = BOOK_S.map((r, i) => (i === 2 ? 'KwvvvwwKwvvwwwK' : i === 4 ? 'KwvvvvwKwvvvvwK' : r));
+  // Pergamentrolle mit Feder (Research beim Aufschreiben): Zeilen entstehen, die Federspitze folgt
+  const SCROLL_LINES = [[2, 7], [4, 5], [6, 6]];
+  const parchment = (k) => {
+    let left = k; let tip = null;
+    const rows = ['KKKKKKKKKKKK', 'KttttttttttK'];
+    for (let i = 0; i < 6; i++) {
+      const line = SCROLL_LINES.find(([r]) => r === i + 1);
+      if (!line) { rows.push('.KTTTTTTTTK.'); continue; }
+      const n = Math.max(0, Math.min(line[1], left)); left -= line[1];
+      if (n > 0 && n < line[1]) tip = [3 + n, 2 + i];
+      if (n === line[1] && left <= 0 && tip == null) tip = [3 + n, 2 + i];
+      rows.push(`.KT${'N'.repeat(n)}`.padEnd(10, 'T') + 'K.');
+    }
+    rows.push('KttttttttttK', 'KKKKKKKKKKKK');
+    return { rows, tip: tip || [3, 3] };
+  };
+  const QUILL = ['....Kw', '...KwK', '..KwK.', '.KvK..', 'KK....'];
   // Notizblock mit Ringen oben: Titelzeile, darunter Punkte, die nacheinander abgehakt werden
   const PAD = (n) => {
     const rows = ['.KMKMKMKMK.', 'KTTTTTTTTTK', 'KTNNNNNTTTK', 'KTTTTTTTTTK'];
@@ -1137,7 +1156,9 @@ const PixelDogs = (() => {
       think: { frames: [0, 1, 2, 3].map((n) => [P2(CLOUD(n), 0, 0), ...PUFF, chin]), loop: [[0, 320], [1, 320], [2, 320], [3, 760]] },
       search: { frames: [[0, 9], [1, 10], [2, 9], [1, 8]].map(([x, y]) => [P2(LENS_S, x, y), paw(x + 8, y + 9)]), loop: [[0, 420], [1, 360], [2, 420], [3, 360]] },
       cook: { frames: [0, 1, 2].map((k) => [P2(FLAMES[k], 1, 16), P2(PAN_S, k === 1 ? 1 : 0, 20), paw(12, 19)]), loop: [[0, 160], [1, 160], [2, 160], [1, 140]] },
-      book: { frames: [null, 0, 1, 2].map((k) => [P2(BOOK_S, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 6, 4][k], 12)]), paw(0, 19), paw(11, 19)]), loop: [[0, 1100], [1, 120], [2, 120], [3, 120], [0, 900]] },
+      book: { frames: [[BOOK_S, null], [BOOK_S, 0], [BOOK_S, 1], [BOOK_B, 2], [BOOK_B, null]].map(([b, k]) => [P2(b, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 7, 3][k], k === 1 ? 11 : 12)]), paw(0, 19), paw(11, 19)]),
+        loop: [[0, 900], [1, 130], [2, 130], [3, 130], [4, 900], [3, 130], [2, 130], [1, 130], [0, 700]] },
+      quill: { frames: Array.from({ length: 19 }, (_, k) => { const { rows, tip } = parchment(k); return [P2(rows, 0, 11), P2(QUILL, tip[0] - 0, 11 + tip[1] - 4)]; }), loop: [...seq(19, 140), [18, 900]], glasses: true },
       board: { frames: Array.from({ length: 19 }, (_, k) => [P2(boardRows(k), 0, 9)]), loop: [...seq(19, 120), [18, 1000]] },
       plan: { frames: [0, 1, 2, 3].map((n) => [P2(PAD(n), 0, 9), P2(PENCIL, 8, 15), paw(11, 19)]), loop: [[0, 520], [1, 420], [2, 420], [3, 1000]] },
       laptop: { frames: SCROLL.map((l) => [P2(laptopRows(l), 0, 13)]), loop: seq(4, 360), glasses: true },
@@ -1156,7 +1177,7 @@ const PixelDogs = (() => {
     const glasses = id === 'research' ? `<g class="pa-glasses">${rects(P2(GLASSES, AX + 5, AY + 4), AX + 5, AY + 4)}</g>` : '';
     const groups = Object.entries(anims).map(([k, a]) => `<g class="pa-prop" data-anim="${k}">${a.frames.map((f, i) => `<g data-f="${i}"${i ? ' style="display:none"' : ''}>${f.map((p) => rects(p, p.x, p.y)).join('')}</g>`).join('')}</g>`).join('');
     wrap.innerHTML = `<svg class="pd pa-svg" width="${AW}" height="${AH}" viewBox="0 0 ${AW} ${AH}" shape-rendering="crispEdges"><g class="pa-dog">${rects(DOGS[id][20], AX, AY)}${glasses}</g>${groups}</svg>`;
-    let cur = null, want = null, since = 0, wait = null, loopT = null, onDone = null;
+    let cur = null, want = null, since = 0, wait = null, loopT = null, onDone = null, worked = null;
     const still = reduced();
     const loop = (k) => {
       clearTimeout(loopT);
@@ -1189,7 +1210,8 @@ const PixelDogs = (() => {
     };
     return {
       el: wrap,
-      set(k) { if (!anims[k]) k = 'think'; want = k; if (!cur) show(k); else if (!wait) step(); },
+      // Denkblase nur am Anfang: kommt nach der Arbeit nochmal „Thinking“, bleibt er bei dem, was er gerade tut
+      set(k) { if (!anims[k]) k = 'think'; if (k === 'think' && worked) k = worked; else if (k !== 'think' && k !== 'done') worked = k; want = k; if (!cur) show(k); else if (!wait) step(); },
       // fertig: Daumen hoch (nach der Mindestzeit des letzten Zustands), danach legt er alles weg und bleibt als kleiner Kopf
       finish(ok = true) {
         if (!ok) { clearTimeout(wait); clearTimeout(loopT); want = cur = null; wrap.querySelectorAll('.pa-prop.on').forEach((g) => g.classList.remove('on')); wrap.classList.remove('glasses'); return; }

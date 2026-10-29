@@ -173,6 +173,9 @@
     editing = null;
     app.classList.add('settings-open');
     drawView();
+    // nur beim Öffnen: Abschnitte gleiten nacheinander herein (beim Neuzeichnen nach Klicks nicht)
+    view.classList.add('st-enter'); clearTimeout(open.t); open.t = setTimeout(() => view.classList.remove('st-enter'), 700);
+    view.querySelectorAll('.st-page > *').forEach((n, i) => n.style.setProperty('--i', Math.min(i, 8)));
     loadStatus();
   }
   function close() {

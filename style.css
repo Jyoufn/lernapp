@@ -7557,3 +7557,23 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .st-ws-opt:hover { background: #242424; }
 .st-ws-opt.on { border-color: var(--accent); }
 .ws-menu .ws-av-new svg { width: 12px; height: 12px; }
+
+/* ===== Weichere Übergänge: Suchfeld, Workspace-Menü, Einstellungen ===== */
+/* Suchfeld: ruhigeres Grau (wie die Karten der App statt Menü-Grau), Zeilen gleiten beim Öffnen nacheinander herein */
+.cmdk-box { background: #1c1c1c; border-color: #2c2c2c; }
+.cmdk-in { border-bottom-color: #282828; }
+.cmdk-row.on { background: #262626; }
+.cmdk-row { transition: background-color 140ms ease, color 140ms ease; }
+.cmdk-list.enter .cmdk-row, .cmdk-list.enter .cmdk-g { animation: cmdk-in 300ms var(--spring) both; animation-delay: calc(var(--i, 0) * 22ms + 40ms); }
+@keyframes cmdk-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.cmdk { backdrop-filter: blur(1.5px); -webkit-backdrop-filter: blur(1.5px); }
+/* Workspace-Menü: federt auf, Zeilen kommen nacheinander */
+.ws-menu { transform: translateY(-6px) scale(0.96); }
+.ws-menu.open .ws-row, .ws-menu.open .ws-mi, .ws-menu.open .ws-sep { animation: cmdk-in 300ms var(--spring) both; animation-delay: calc(var(--i, 0) * 30ms + 30ms); }
+.sb-ws-chev { transition: transform 260ms var(--spring); }
+.sb-ws.on .sb-ws-chev { transform: rotate(180deg); }
+/* Einstellungen: beim Öffnen gleiten die Abschnitte nacheinander von unten herein */
+.st-view.st-enter .st-page > * { animation: st-rise 420ms var(--spring) both; animation-delay: calc(var(--i, 0) * 35ms); }
+@keyframes st-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.app.settings-open .st-side .nav-item, .app.settings-open .st-side a { animation: cmdk-in 320ms var(--spring) both; }
+@media (prefers-reduced-motion: reduce) { .cmdk-list.enter .cmdk-row, .cmdk-list.enter .cmdk-g, .ws-menu.open *, .st-view.st-enter .st-page > * { animation: none !important; } }

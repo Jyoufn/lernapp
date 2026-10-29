@@ -68,7 +68,7 @@ const AppSearch = (() => {
   const input = root.querySelector('input'), list = root.querySelector('.cmdk-list');
   let rows = [], sel = 0;
 
-  function build(qRaw) {
+  function build(qRaw, enter = false) {
     const q = norm(qRaw).trim();
     const out = [];
     const acts = ACTIONS().filter((a) => !q || norm(`${a.label} ${a.keys}`).includes(q));
@@ -77,9 +77,9 @@ const AppSearch = (() => {
       out.push(...acts.filter((a) => a.group === 'Aktionen'), ...recent, ...acts.filter((a) => a.group !== 'Aktionen'));
     } else {
       const cs = chats().filter((c) => norm(c.title).includes(q) || norm(c.text).includes(q)).slice(0, 8)
-        .map((c) => ({ group: 'Chats', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, html: mark(c.title, q), sub: norm(c.title).includes(q) ? '' : snippet(c.text, q), meta: when(c.updated), run: () => openChat(c.tab) }));
+        .map((c) => ({ group: 'Chats', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, html: mark(c.title, q), meta: when(c.updated), run: () => openChat(c.tab) }));
       const ds = docs().filter((d) => norm(d.title).includes(q) || norm(d.text).includes(q)).slice(0, 8)
-        .map((d) => ({ group: 'Dokumente', icon: d.icon && window.DocIcons?.has(d.icon.name) ? `<svg width="15" height="15" style="color:${d.icon.c}"><use href="#d-${d.icon.name}"/></svg>` : fi('file'), label: d.title, html: mark(d.title, q), sub: norm(d.title).includes(q) ? '' : snippet(d.text, q), meta: when(d.updated), run: () => window.Docs?.open(d.id) }));
+        .map((d) => ({ group: 'Dokumente', icon: d.icon && window.DocIcons?.has(d.icon.name) ? `<svg width="15" height="15" style="color:${d.icon.c}"><use href="#d-${d.icon.name}"/></svg>` : fi('file'), label: d.title, html: mark(d.title, q), meta: when(d.updated), run: () => window.Docs?.open(d.id) }));
       out.push(...cs, ...ds, ...acts);
     }
     rows = out;
@@ -88,9 +88,11 @@ const AppSearch = (() => {
     let html = '', last = '';
     rows.forEach((r, i) => {
       if (r.group !== last) { html += `<div class="cmdk-g">${r.group}</div>`; last = r.group; }
-      html += `<div class="cmdk-row" role="option" data-i="${i}"><span class="cmdk-ic">${r.icon}</span><span class="cmdk-t"><span class="cmdk-l">${r.html || esc(r.label)}</span>${r.sub ? `<span class="cmdk-s">${mark(r.sub, q)}</span>` : ''}</span>${r.meta ? `<span class="cmdk-m">${esc(r.meta)}</span>` : ''}</div>`;
+      html += `<div class="cmdk-row" role="option" data-i="${i}" style="--i:${Math.min(i, 9)}"><span class="cmdk-ic">${r.icon}</span><span class="cmdk-t"><span class="cmdk-l">${r.html || esc(r.label)}</span>${r.sub ? `<span class="cmdk-s">${mark(r.sub, q)}</span>` : ''}</span>${r.meta ? `<span class="cmdk-m">${esc(r.meta)}</span>` : ''}</div>`;
     });
     list.innerHTML = html;
+    list.classList.toggle('enter', enter); // beim Öffnen gleiten die Zeilen nacheinander herein, beim Tippen blendet die Liste nur weich um
+    if (!enter) list.animate?.([{ opacity: 0.55 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' });
     paint();
   }
   function paint(scroll = false) {
@@ -105,7 +107,7 @@ const AppSearch = (() => {
     menu.set(false);
     root.hidden = false;
     requestAnimationFrame(() => root.classList.add('open'));
-    input.value = q; build(q);
+    input.value = q; build(q, true);
     setTimeout(() => input.focus(), 20);
   }
   function close() {
@@ -220,6 +222,7 @@ const AppSearch = (() => {
       if (!ws) return;
       if (on) { adding = false; renaming = null; draw(); }
       pop.classList.toggle('open', on);
+      if (on) pop.querySelectorAll('.ws-row, .ws-mi, .ws-sep').forEach((n, i) => n.style.setProperty('--i', i));
       ws.classList.toggle('on', on);
       ws.setAttribute('aria-expanded', String(on));
     },

@@ -44,6 +44,10 @@ function activateTab(tab) {
   if (tab.hidden) { tab.hidden = false; saveChats(); } // geschlossener Chat wird wieder geöffnet
   const prev = tabsEl.querySelector('.tab.active');
   const drop = prev && prev !== tab && isDraft(prev) ? prev : null; // leerer Chat / leeres Dokument wird beim Verlassen verworfen
+  if (prev && prev !== tab && typeof chat !== 'undefined' && !tab.dataset.view && chat.animate) {
+    // Chat wechseln: Inhalt blendet weich ein und gleitet ein Stück hoch (statt hart umzuspringen)
+    requestAnimationFrame(() => chat.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
+  }
   if (prev && prev !== tab && typeof chat !== 'undefined') {
     const nodes = document.createDocumentFragment();
     nodes.append(...chat.childNodes);
