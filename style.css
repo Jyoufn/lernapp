@@ -7359,20 +7359,9 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 @media (prefers-reduced-motion: reduce) { .bst *, .bst, .bst-toast { animation: none !important; transition: none !important; } }
 
 
-/* Plan in der Zeitleiste als Abzweig (wie ein Seitenast der Linie): kein Kasten – eine feine, enge Linie biegt kurz von der Zeitleiste ab,
-   läuft an den Punkten entlang und mündet wieder ein (Ecken nur leicht gerundet). Die Texte bleiben in derselben Spalte wie die übrigen Schritte.
-   Punkte auf dem Ast: offen = Kreis, gerade dran = Ladekreis, erledigt = blauer Haken. */
-.steps .step > .fold > .fold-in { margin-left: -22px; padding-left: 22px; } /* Ast darf bis an die Zeitleiste reichen */
-.steps .plan-list { position: relative; display: grid; gap: 6px; max-width: none; margin: 6px 0 4px; padding: 0; border: 0; border-radius: 0; background: none; }
-.steps .plan-list::before { content: ""; position: absolute; left: -17px; top: -3px; bottom: -3px; width: 9px; border: 1px solid #333; border-left: 0; border-radius: 0 5px 5px 0; pointer-events: none; }
-.steps .plan-item { position: relative; display: flex; gap: 0; padding: 2px 0; border-radius: 0; background: none !important; align-items: flex-start; }
-/* auf dem Ast: kleine Punkte (wie im Vorbild) – offen = Ring, gerade dran = kleiner Ladekreis, erledigt = blauer Punkt */
-.steps .plan-list .pi-mark { position: absolute; left: -12.5px; top: 7.5px; width: 7px; height: 7px; margin: 0; border: 1.5px solid #4a4a4a; box-sizing: border-box;
-  background: var(--main-bg); box-shadow: 0 0 0 2px var(--main-bg); }
-.steps .plan-list .pi-mark svg { display: none; }
-.steps .plan-item[data-state="active"] .pi-mark { left: -13.5px; top: 6.5px; width: 9px; height: 9px; border-color: #3a3a3a; border-top-color: var(--accent); }
-.steps .plan-item[data-state="done"] .pi-mark { border: 0; background: var(--accent); }
-/* Tiefen-Recherche: Suchen im Abzweig – Suchtext, darunter ihre Quellen in genau einer Reihe (+N öffnet alle) */
+/* Tiefen-Recherche: Suchen in der Plan-Liste (Kasten wie der Plan) – Suchtext, darunter ihre Quellen in genau einer Reihe (+N öffnet alle) */
+.plan-item.q-item { align-items: flex-start; }
+.plan-item.q-item .pi-mark { margin-top: 2px; }
 .q-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .q-body .pi-text { color: var(--text-2); }
 .q-body .chips { margin-top: 0; }

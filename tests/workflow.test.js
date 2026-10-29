@@ -747,3 +747,15 @@ test('Research-Agent: Tiefen-Recherche statt einfacher Suche – Phasen gehen an
     assert.ok(r.of('research').some((e) => e.status === 'done' && e.sources.length === 3));
   } finally { DEEP.run = orig; }
 });
+
+test('Kein Bild erzeugen, wenn der Nutzer von seinem angehängten Bild spricht („im Bild siehst du …, zeig mir …“)', async () => {
+  fx = M.installFetch([
+    { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false }) },
+    { match: (c) => c.url.includes('integrate.api.nvidia.com'), respond: () => M.nvidiaJson({ relevant: true, missing: '', topic: 'x', shows: 'Tabelle' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Ich habe die Einträge übernommen.'])) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
+  ]);
+  const r = await run({ messages: [{ role: 'user', text: 'Im Bild siehst du mein Handelsbuch, bau das in meine Übersicht ein und zeig sie mir', images: [{ url: 'data:image/png;base64,iVBORw0KGgo=', name: 'tagebuch.png' }] }], effort: 'low' });
+  const reasons = r.events.filter((e) => e.event === 'status').map((e) => e.data.effort?.reason || '');
+  assert.ok(!reasons.some((x) => /Bildwunsch/.test(x)), `kein Bildwunsch: ${reasons.join(' | ')}`);
+});
