@@ -2,10 +2,24 @@
   "buildCommand": "node vercel-build.js",
   "outputDirectory": "public",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/spotify-callback", "destination": "/index.html" }
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/spotify-callback",
+      "destination": "/index.html"
+    }
   ],
   "functions": {
-    "api/index.js": { "maxDuration": 300 }
-  }
+    "api/index.js": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/boerse/radar-cron",
+      "schedule": "5 8 * * 1-5"
+    }
+  ]
 }

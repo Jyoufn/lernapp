@@ -182,23 +182,27 @@ test('Order-Vorschlag: Limit/Stop-Buy, Stückzahl nach Risiko und 20-%-Regel, Ch
   assert.match(sb.type, /^Stop-Buy 100,50/);
 });
 
-test('Börsen-Agent: liest Nachrichten/Ausblick zu den Werten (Websuche) und denkt mindestens auf Medium nach', async () => {
+test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf, keine Quellensuche), denkt auf High, Radar im Prompt', async () => {
   const b = bars(400, 0.0015);
   fx = M.installFetch([
     { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
-    { match: (c) => /stooq|tradegate|wertpapiere\.ing|news\.google|finance\/search/.test(c.url), respond: () => new Response('weg', { status: 503 }) },
-    { match: (c) => c.url.includes('duckduckgo') || c.url.includes('bing.com') || c.url.includes('search'), respond: () => new Response('<html></html>') },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Rheinmetall halten.**'])) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
   ]);
   const c = M.collect();
-  await W.runChat({ env: M.ENV, body: { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
-  assert.ok(c.stages().includes('browsing:active'), 'Websuche zu Rheinmetall');
+  await W.runChat({ env: M.ENV, body: { log: false, effort: 'auto', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
+  assert.ok(!c.stages().includes('browsing:active'), 'keine allgemeine Quellensuche');
+  assert.ok(!fx.calls.some(M.is.analyze), 'kein Planungs-Aufruf');
+  const plan = c.of('status').find((s) => s.stage === 'thinking' && s.status === 'done');
+  assert.deepEqual(plan.meta.points, ['Marktlage und Stimmung', 'Tag, Woche und Monat je Wert', 'Nachrichten und Chancen-Radar', 'Risiko-Check und Order-Plan']);
   const gen = fx.calls.filter(M.is.geminiStream).pop();
-  assert.ok(gen.body.generationConfig.thinkingConfig.thinkingBudget >= 4096, 'mindestens Medium mit Denkphase');
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192, 'High');
+  assert.equal(gen.body.tools, undefined, 'keine Google-Suche im Modell');
   const sys = M.systemOf(gen);
-  assert.match(sys, /Bulle gegen Bär/);
-  assert.match(sys, /```stock/);
+  assert.match(sys, /DENKWEG/);
+  assert.match(sys, /CHANCEN-RADAR/);
   assert.match(sys, /MARKTLAGE: DAX/);
+  assert.doesNotMatch(sys, /BULLEN-ANALYST/);
 });
 
 test('Zeitebenen: Tag, Woche und Monat zusammen – Rücksetzer im Aufwärtstrend wird erkannt', async () => {
@@ -224,21 +228,14 @@ test('Chart-Block wird angehängt, wenn die Antwort einen Wert bespricht und kei
   assert.equal(B.chartBlocksFor('SAP\n```stock\n{"symbol":"SAP.DE"}\n```', list), '');
 });
 
-test('Börsen-Agent: Bulle und Bär schreiben vorher ihren Fall, die Antwort entscheidet (Risiko-Manager)', async () => {
+test('Börsen-Agent: Chart wird angehängt, wenn die Antwort einen Wert ohne Chart bespricht', async () => {
   const b = bars(400, 0.0015);
   fx = M.installFetch([
     { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
-    { match: (c) => c.url.includes(':generateContent') && /BULLEN-Analyst/.test(c.body?.systemInstruction?.parts?.[0]?.text || ''), respond: () => M.json({ candidates: [{ content: { parts: [{ text: 'DAFÜR: Aufwärtstrend auf allen Ebenen.' }] } }] }) },
-    { match: (c) => c.url.includes(':generateContent') && /BÄREN-Analyst/.test(c.body?.systemInstruction?.parts?.[0]?.text || ''), respond: () => M.json({ candidates: [{ content: { parts: [{ text: 'DAGEGEN: RSI hoch.' }] } }] }) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**SAP kaufen.** Rheinmetall eher nicht.'])) },
     { match: () => true, respond: () => new Response('weg', { status: 503 }) },
   ]);
   const c = M.collect();
   await W.runChat({ env: M.ENV, body: { log: false, effort: 'auto', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich SAP oder Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
-  assert.ok(c.stages().includes('debate:done'));
-  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
-  assert.match(sys, /BULLEN-ANALYST \(dafür\):\nDAFÜR: Aufwärtstrend/);
-  assert.match(sys, /BÄREN-ANALYST \(dagegen\):\nDAGEGEN: RSI hoch/);
-  assert.match(sys, /IMMER ALLE ZEITEBENEN ZUSAMMEN/);
-  assert.match(c.text(), /```stock\n\{"symbol":"(SAP\.DE|RHM\.DE)"/, 'Chart wurde angehängt');
+  assert.match(c.text(), /```stock\n\{"symbol":"(SAP\.DE|RHM\.DE)"/);
 });

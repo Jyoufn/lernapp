@@ -386,11 +386,11 @@ const PixelDogs = (() => {
         ],
       },
     },
-    // Börse: Bär im dunklen Anzug mit weißem Hemd und grüner Krawatte (Börse im Plus), Fell mit Licht von links oben –
+    // Börse: Bär im schwarzen Anzug mit schwarzer Krawatte auf weißem Hemd und Sonnenbrille, Fell mit Licht von links oben –
     // selbst gezeichnet im selben 32er-Pixelstil, Generator scratch/bear.py
     boerse: {
       32: {
-        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#eeeeee', S: '#2e343d', U: '#3b434e', T: '#4b5563'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#101114', G: '#3a3e46', W: '#eeeeee', S: '#16181c', U: '#22252b', T: '#30343b', k: '#0a0a0c', x: '#5a6270', X: '#c9d2de'},
         rows: [
           '................................',
           '.....aaaaa............aaaaa.....',
@@ -402,11 +402,11 @@ const PixelDogs = (() => {
           '...accpqdddddddcccccccbbqpbba...',
           '....accddddddcccbcccbbbbbbba....',
           '.....addddddccccccbbbbbbbba.....',
-          '.....addddceeccccbbbeebbbba.....',
-          '....adddcceccccbbbbbbbebbbba....',
-          '....adcccccwabbbbbbbwabbbbba....',
-          '....accccccaabbbbbbbaabbbbba....',
-          '....acccccbaabbbbbbbaabbbbba....',
+          '.....addddcccccccbbbbbbbbba.....',
+          '....adkkkkXxkkkkkkkkXxkkkkba....',
+          '....adcccxkkkkbbbbbxkkkkbbba....',
+          '....acccckkkkkbbbbbkkkkkbbba....',
+          '....accccckkkbbbbbbbkkkbbbba....',
           '....acccbbbbmmmnnmmmbbbbbbea....',
           '....acbbbbbmmmwnnnmmmbbbbeea....',
           '....abbbbbmmLLnnnnmmmmbeeeea....',
@@ -419,15 +419,15 @@ const PixelDogs = (() => {
           '......aUUUUSSSTWWTSSSSSSSa......',
           '.....aUUUUUSSSTggTSSSSSSSSa.....',
           '.....aUUUUSSSTWggWTSSSSSSSa.....',
-          '....aUUUUUSSSTWgGWTSSSSSSSSa....',
-          '...aUUUUUUSSTWWgGWWTSSSSSSSSa...',
-          '...aUUUUUSSTWWggGGWWTSSSSSSSa...',
-          '..aUUUUUUSSTWWggGGWWTSSSSSSSSa..',
-          '..aUUUUUUSTWWWggGGWWWTSSSSSSSa..',
+          '....aUUUUUSSSTWGgWTSSSSSSSSa....',
+          '...aUUUUUUSSTWWGgWWTSSSSSSSSa...',
+          '...aUUUUUSSTWWGgggWWTSSSSSSSa...',
+          '..aUUUUUUSSTWWGgggWWTSSSSSSSSa..',
+          '..aUUUUUUSTWWWGgggWWWTSSSSSSSa..',
         ],
       },
       24: {
-        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#eeeeee', S: '#2e343d', U: '#3b434e', T: '#4b5563'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#101114', G: '#3a3e46', W: '#eeeeee', S: '#16181c', U: '#22252b', T: '#30343b', k: '#0a0a0c', x: '#5a6270', X: '#c9d2de'},
         rows: [
           '.....a............a.....',
           '...aacaa........aacaa...',
@@ -436,11 +436,11 @@ const PixelDogs = (() => {
           '..acpqpddddddccccpqpba..',
           '..acpqdddddccccccbqpba..',
           '...acdddddcccccbbbbba...',
-          '...addddeecccbbeebbba...',
-          '...addcecccbbbbbbebba...',
-          '...adcccwabbbbbwabbba...',
-          '...accccaabbbbbaabbba...',
-          '...accbbaamnnmbaabbba...',
+          '...addddcccccbbbbbbba...',
+          '...akkkXkkkkkkkXkkkka...',
+          '...adcxkkkbbbbxkkkbba...',
+          '...acckkkkbbbbkkkkbba...',
+          '...accbkkbmnnmbkkbbba...',
           '...acbbbmmnwnnmmbbeea...',
           '...abbbbmLLLLmmmbeeea...',
           '....abbbmmmmeemmeeea....',
@@ -449,14 +449,14 @@ const PixelDogs = (() => {
           '.....aaaabemmeeaaaa.....',
           '....aUUUSSSTTSSSSSSa....',
           '...aUUUUSSTggTSSSSSSa...',
-          '...aUUUUSTWgGWTSSSSSa...',
-          '..aUUUUSSTWgGWTSSSSSSa..',
-          '..aUUUUSTWWgGWWTSSSSSa..',
-          '.aUUUUUTWWggGGWWTSSSSSa.',
+          '...aUUUUSTWGgWTSSSSSa...',
+          '..aUUUUSSTWGgWTSSSSSSa..',
+          '..aUUUUSTWWGgWWTSSSSSa..',
+          '.aUUUUUTWWGgggWWTSSSSSa.',
         ],
       },
       20: {
-        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#eeeeee', S: '#2e343d', U: '#3b434e', T: '#4b5563'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', L: '#e8caa4', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#101114', G: '#3a3e46', W: '#eeeeee', S: '#16181c', U: '#22252b', T: '#30343b', k: '#0a0a0c', x: '#5a6270', X: '#c9d2de'},
         rows: [
           '...aaa........aaa...',
           '..accca......adcca..',
@@ -465,9 +465,9 @@ const PixelDogs = (() => {
           '.accqdddddccccbqbba.',
           '..acddddccccbbbbba..',
           '...addcccccbbbbba...',
-          '..adcccwabbbwabbba..',
-          '..accccaabbbaabbba..',
-          '..accbbbmmmmbbbbba..',
+          '..adkkXkkkkkkXkkba..',
+          '..accxkkkbbbxkkkba..',
+          '..accbkkmmmmbkkbba..',
           '..acbbbmLnnmmbbeea..',
           '...abbmmLLmmmmeea...',
           '...abbmmmmmmmmeea...',
@@ -475,9 +475,9 @@ const PixelDogs = (() => {
           '....aaabemmeeaaa....',
           '...aUUUSSTTSSSSSa...',
           '...aUUUSTggTSSSSa...',
-          '..aUUUSTWgGWTSSSSa..',
-          '.aUUUUSTWgGWTSSSSSa.',
-          '.aUUUUTWWgGWWTSSSSa.',
+          '..aUUUSTWGgWTSSSSa..',
+          '.aUUUUSTWGgWTSSSSSa.',
+          '.aUUUUTWWGgWWTSSSSa.',
         ],
       },
     },
@@ -528,24 +528,24 @@ const PixelDogs = (() => {
   // Pfote, die etwas hält – mit Unterarm, der von unten hinter dem Rand hochkommt
   const holdPaw = (id, x, y) => [part(Array(Math.max(0, 32 - y - 4)).fill('KFFFK'), x, y + 4, pawPal(id)), part(PAW_HOLD, x, y, pawPal(id))];
 
-  // Bär: Augen 2 breit, 3 hoch (Zeile 12–14). Zu = Fell (Farbe links daneben) + Strich unten; nach unten schauen = Auge eine Zeile tiefer
-  const bearEye = (x, how) => {
-    const { rows, pal } = DOGS.boerse[32], fur = (y) => rows[y][x - 1];
-    const out = how === 'closed' ? [fur(12).repeat(2), fur(13).repeat(2), 'aa'] : [fur(12).repeat(2), 'wa', 'aa', 'aa'];
-    return part(out, DX + x, 12, pal);
-  };
   // Augen zu: Lid in Fellfarbe über das Auge, die untere Kante bleibt als Strich
   const BLINK = {
     general: [part(['ddd', 'dddd'], DX + 9, 12, DOGS.general[32].pal), part(['ddd', 'dddd'], DX + 19, 12, DOGS.general[32].pal)],
     research: [part(['fff', 'aaa', 'fff'], DX + 10, 8, DOGS.research[32].pal), part(['ddd', 'aaa', 'ddd'], DX + 19, 8, DOGS.research[32].pal)],
     learn: [part(['nnn'], DX + 10, 13, DOGS.learn[32].pal), part(['nn'], DX + 20, 13, DOGS.learn[32].pal)],
     code: [part(['.jj.', 'jjjj', 'KKKK', '.ss.'], DX + 10, 12, DOGS.code[32].pal), part(['.ll.', 'llll', 'KKKK', '.ss.'], DX + 18, 12, DOGS.code[32].pal)],
-    boerse: [11, 20].map((x) => bearEye(x, 'closed')),
   };
-  const blinkTrack = (id) => ({ frames: [[], BLINK[id]], seq: [[0, 3600], [1, 130], [0, 2900], [1, 130], [0, 260], [1, 110]] });
+  const blinkTrack = (id) => (id === 'boerse' ? glintTrack() : { frames: [[], BLINK[id]], seq: [[0, 3600], [1, 130], [0, 2900], [1, 130], [0, 260], [1, 110]] });
+  // Bär mit Sonnenbrille: statt Blinzeln wandert ab und zu ein Lichtreflex schräg über beide Gläser (Gläser: Zeile 11–14, Spalten 9–13 und 19–23)
+  function glintTrack() {
+    const pal = { X: '#ffffff', x: '#9aa3b0' };
+    const glint = (x) => part(['.xX', 'xX.', 'X..'], DX + x, 11, pal);
+    const frames = [[], [glint(9)], [glint(10)], [glint(11)], [glint(19)], [glint(20)], [glint(21)]];
+    const sweep = [[1, 70], [2, 70], [3, 70], [0, 40], [4, 70], [5, 70], [6, 70]];
+    return { frames, seq: [[0, 4200], ...sweep, [0, 6500], ...sweep, [0, 3000]] };
+  }
   // Blick (liegt im atmenden Kopf, wird per Klasse gezeigt): Research schaut nach links zur Lupe, Allgemein nach links unten in die Pfanne
   const LOOK = {
-    boerse: [11, 20].map((x) => bearEye(x, 'down')), // Bär: Blick nach unten aufs Tablet
     research: [part(['aaaf', 'ahaf', 'aaaf'], DX + 9, 8, DOGS.research[32].pal), part(['aaad', 'ahad', 'aaad'], DX + 18, 8, DOGS.research[32].pal)],
     general: [part(['..fff', '...af', 'aab.f', '.aaa.'], DX + 8, 12, DOGS.general[32].pal), part(['.fff.', 'a.aff', 'ab...', 'aaa..'], DX + 18, 12, DOGS.general[32].pal)],
   };
@@ -806,7 +806,7 @@ const PixelDogs = (() => {
     research: { icon: 'search', tint: 'rgba(226, 168, 104, 0.08)', text: 'Recherchiert gründlich – nur auf vertrauenswürdigen Seiten.' },
     learn: { icon: 'book', tint: 'rgba(255, 255, 255, 0.05)', text: 'Erklärt Schulstoff verständlich, auch mit deinem Material.' },
     code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Hilft beim Programmieren. Projekte mit Vorschau folgen.' },
-    boerse: { icon: 'trend', tint: 'rgba(140, 90, 51, 0.10)', text: 'Nur Aktien: Echtzeitkurse, Charts, Nachrichten – wann rein, wann raus fürs Planspiel Börse.' },
+    boerse: { icon: 'trend', tint: 'rgba(140, 90, 51, 0.10)', text: 'Nur Aktien: Echtzeitkurse, Charts, Chancen-Radar – wann rein, wann raus fürs Planspiel Börse.' },
   };
   const fine = (id) => (DOGS[id][64] ? 64 : 32); // feineres Raster für die großen Ansichten
   const art = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;
