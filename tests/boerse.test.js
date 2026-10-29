@@ -182,16 +182,33 @@ test('Order-Vorschlag: Limit/Stop-Buy, Stückzahl nach Risiko und 20-%-Regel, Ch
   assert.match(sb.type, /^Stop-Buy 100,50/);
 });
 
-test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf, keine Quellensuche), denkt auf High, Radar im Prompt', async () => {
+test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf), liest nur Nachrichten seriöser Seiten zum gefragten Wert, denkt auf High', async () => {
   const b = bars(400, 0.0015);
+  const html = (body) => new Response(body, { headers: { 'content-type': 'text/html' } });
+  const ddg = (urls) => urls.map((u) => `<a class="result__a" href="//duckduckgo.com/l/?uddg=${encodeURIComponent(u)}">${u}</a>`).join('\n');
+  const WEBLIB = require('../lib/web');
+  const lookup = WEBLIB.hooks.lookup;
+  WEBLIB.hooks.lookup = async () => [{ address: '93.184.216.34' }];
+  test.after(() => { WEBLIB.hooks.lookup = lookup; });
+  const article = '<html><head><title>Rheinmetall: Großauftrag</title></head><body><article><p>' + 'Rheinmetall meldet einen Großauftrag der Bundeswehr und hebt die Prognose an. '.repeat(20) + '</p></article></body></html>';
   fx = M.installFetch([
+    { match: (c) => c.url.includes('html.duckduckgo.com'), respond: () => html(ddg(['https://www.wallstreet-forum.de/thread/1', 'https://www.handelsblatt.com/rheinmetall-auftrag', 'https://aktien-tipps-blog.example/rheinmetall'])) },
+    { match: (c) => c.url.includes('handelsblatt.com'), respond: () => html(article) },
     { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Rheinmetall halten.**'])) },
     { match: () => true, respond: () => new Response('weg', { status: 503 }) },
   ]);
   const c = M.collect();
   await W.runChat({ env: M.ENV, body: { log: false, effort: 'auto', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
-  assert.ok(!c.stages().includes('browsing:active'), 'keine allgemeine Quellensuche');
+  WEBLIB.hooks.lookup = lookup;
+  const charts = fx.calls.filter((x) => x.url.includes('finance.yahoo.com/v8')).map((x) => decodeURIComponent(x.url.split('/chart/')[1].split('?')[0]));
+  assert.deepEqual([...new Set(charts)].filter((x) => !x.startsWith('^')), ['RHM.DE'], 'bei einer Frage zu einem Wert wird nur dieser Wert gerechnet');
+  const browse = c.of('status').find((s) => s.stage === 'browsing' && s.status === 'active');
+  assert.ok(browse?.meta?.news, 'Nachrichten werden gelesen');
+  const queries = fx.calls.filter((x) => x.url.includes('html.duckduckgo.com')).map((x) => decodeURIComponent(new URL(x.url).searchParams.get('q')));
+  assert.ok(queries.length && queries.every((q) => /Rheinmetall/.test(q)), `nur der gefragte Wert: ${queries}`);
+  assert.ok(!fx.calls.some((x) => /wallstreet-forum|aktien-tipps-blog/.test(x.url)), 'Foren und Tipp-Blogs werden nicht gelesen');
+  assert.ok(fx.calls.some((x) => x.url.includes('handelsblatt.com')), 'Handelsblatt wird gelesen');
   assert.ok(!fx.calls.some(M.is.analyze), 'kein Planungs-Aufruf');
   const plan = c.of('status').find((s) => s.stage === 'thinking' && s.status === 'done');
   assert.deepEqual(plan.meta.points, ['Marktlage und Stimmung', 'Tag, Woche und Monat je Wert', 'Nachrichten und Chancen-Radar', 'Risiko-Check und Order-Plan']);
@@ -200,8 +217,10 @@ test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf, keine Quellensuche), d
   assert.equal(gen.body.tools, undefined, 'keine Google-Suche im Modell');
   const sys = M.systemOf(gen);
   assert.match(sys, /DENKWEG/);
-  assert.match(sys, /CHANCEN-RADAR/);
+  assert.doesNotMatch(sys, /CHANCEN-RADAR \(Algorithmus/, 'Frage zu einem Wert: kein Radar über alle Werte');
   assert.match(sys, /MARKTLAGE: DAX/);
+  assert.match(sys, /NACHRICHTEN-WIRKUNG/);
+  assert.match(sys, /Großauftrag/, 'Artikeltext im Prompt');
   assert.doesNotMatch(sys, /BULLEN-ANALYST/);
 });
 

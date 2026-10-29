@@ -38,6 +38,7 @@ const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
 const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
 const RADAR = require('./lib/radar'); // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
+const PLANSPIEL = require('./lib/planspiel'); // Zugang zum Planspiel Börse (verschlüsselt je Konto)
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -1248,6 +1249,15 @@ async function handle(req, res) {
     // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
     if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
     if (req.method === 'GET' && urlPath === '/api/boerse/radar') return sendJson(res, 200, await RADAR.latest(store));
+    // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
+    if (urlPath === '/api/planspiel') {
+      if (req.method === 'GET') return sendJson(res, 200, await PLANSPIEL.status(store, user.id));
+      if (req.method === 'DELETE') return sendJson(res, 200, await PLANSPIEL.remove(store, user.id));
+      if (req.method === 'POST') {
+        try { return sendJson(res, 200, await PLANSPIEL.save(store, serverEnv(), user.id, await readBody(req, 4000))); }
+        catch (e) { return sendJson(res, e.status || 500, { error: e.status ? e.message : 'Konnte nicht gespeichert werden.' }); }
+      }
+    }
     if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);

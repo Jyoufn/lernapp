@@ -76,3 +76,29 @@ test('Bilanz: nach 5/10 Handelstagen ausgewertet', () => {
   assert.equal(rec.win10, 100);
   assert.equal(rec.byType.ruecksetzer.n, 2);
 });
+
+test('Planspiel-Universum: alle Aktien-Indizes des Planspiels, ohne doppelte Werte', () => {
+  const U = require('../lib/universe');
+  for (const k of ['DAX', 'MDAX', 'SDAX', 'TecDAX', 'EuroStoxx 50', 'Dow Jones', 'Nasdaq 100', 'FTSE MIB', 'ATX', 'LuxX', 'Global Challenges', 'Selection Europe']) {
+    assert.ok(U.INDICES[k]?.length, `Index ${k} fehlt`);
+  }
+  assert.ok(U.LIST.length >= 400, `nur ${U.LIST.length} Werte`);
+  assert.equal(new Set(U.LIST.map((u) => u.symbol)).size, U.LIST.length);
+  assert.ok(U.LIST.every((u) => u.symbol && u.name && u.sector));
+});
+
+test('Planspiel-Zugang: verschlüsselt gespeichert, Status ohne Passwort, Trennen löscht', async () => {
+  const P = require('../lib/planspiel');
+  const store = STORE.memoryStore();
+  await assert.rejects(P.save(store, {}, 'u1', { user: 'julian', code: '' }), /fehlen/);
+  const st = await P.save(store, { PLANSPIEL_SECRET: 'geheim' }, 'u1', { user: 'julian08', code: 'Code-1234' });
+  assert.deepEqual({ connected: st.connected, user: st.user }, { connected: true, user: 'julian08' });
+  assert.equal(JSON.stringify(st).includes('Code-1234'), false, 'Status ohne Passwort');
+  const raw = await store.get(P.KEY('u1'));
+  assert.equal(raw.includes('Code-1234'), false, 'nicht im Klartext gespeichert');
+  assert.deepEqual(await P.credentials(store, { PLANSPIEL_SECRET: 'geheim' }, 'u1'), { user: 'julian08', code: 'Code-1234' });
+  assert.equal(await P.credentials(store, { PLANSPIEL_SECRET: 'falsch' }, 'u1'), null, 'falscher Schlüssel → nichts');
+  assert.deepEqual(await P.status(store, 'u2'), { connected: false }, 'andere Konten sehen nichts');
+  await P.remove(store, 'u1');
+  assert.deepEqual(await P.status(store, 'u1'), { connected: false });
+});

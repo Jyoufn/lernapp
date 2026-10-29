@@ -1919,9 +1919,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const startStage = (s) => {
     if (s.stage === 'searching_sources' && stages.browsing) stages.browsing.step.remove();
     const from = Date.now();
-    const step = stepLine('spin', `<span class="shimmer">${STAGE_TEXT[s.stage]}</span><span class="t live" data-from="${from}">1s</span>`);
-    stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null };
-    const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], browsing: ['search', 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
+    const news = s.stage === 'browsing' && s.meta?.news; // Börsen-Agent: liest nur Nachrichten seriöser Finanzseiten
+    const step = stepLine('spin', `<span class="shimmer">${news ? 'Reading the news' : STAGE_TEXT[s.stage]}</span><span class="t live" data-from="${from}">1s</span>`);
+    stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null, news };
+    const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], browsing: ['search', news ? 'Reading the news' : 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
     if (head) queueMicrotask(() => setActivity(...head));
     if (s.stage === 'browsing') { stages.browsing.pages = []; stages.browsing.chips = el('div', 'chips'); step.append(stages.browsing.chips); }
     ensureWork().steps.append(step);
@@ -1939,7 +1940,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (s.status === 'failed') { line.innerHTML = `${STAGE_TEXT[s.stage]} – not completed`; st.step.classList.add('warn'); return; }
     if (s.stage === 'browsing') {
       const n = st.pages.length;
-      line.innerHTML = n ? `Used <strong>${n} ${n === 1 ? 'source' : 'sources'}</strong> ${dur}` : `No suitable sources found ${dur}`;
+      line.innerHTML = st.news ? (n ? `Read <strong>${n} ${n === 1 ? 'article' : 'articles'}</strong> ${dur}` : `No recent articles from trusted sources ${dur}`)
+        : n ? `Used <strong>${n} ${n === 1 ? 'source' : 'sources'}</strong> ${dur}` : `No suitable sources found ${dur}`;
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
       line.innerHTML = used.length ? `Used <strong>${used.length} ${used.length === 1 ? 'source' : 'sources'}</strong> ${dur}` : `No suitable sources found ${dur}`;
@@ -2020,7 +2022,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
      Was auf der Seite stand, zeigt der Tooltip. */
   const onWeb = (e) => {
     const st = stages.browsing;
-    if (st && e.action === 'visit') setActivity('read', 'Reading websites');
+    if (st && e.action === 'visit') setActivity('read', st.news ? 'Reading the news' : 'Reading websites');
     if (!st || e.action !== 'visited' || e.status !== 'done') return;
     st.pages.push({ title: e.title || e.domain, domain: e.domain, url: e.url, seen: e.seen });
     fillChips(st.chips, st.pages, () => openSourcesModal(st.pages, null));

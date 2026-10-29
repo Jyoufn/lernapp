@@ -51,6 +51,8 @@
   const TILES = [['Aus', 0], ['Leicht', 18], ['Mittel', 33], ['Stark', 60]];
   let fileKeys = {}; // Schlüssel, die in .env stehen (nur ja/nein vom Server)
   let editing = null; // Anbieter, dessen Schlüssel gerade eingegeben wird
+  // Planspiel Börse: Zugang liegt verschlüsselt im Konto auf dem Server (lib/planspiel.js) – hier nur „verbunden als …“
+  let planspiel = { connected: false, loaded: false }, psBusy = false, psError = '';
 
   const side = document.createElement('nav');
   side.className = 'nav st-side';
@@ -87,6 +89,27 @@
       ? `<button type="button" class="st-ok" data-edit="${p.id}" title="${how === 'env' ? 'Schlüssel aus .env – Klick zum Ändern' : 'Schlüssel auf diesem Gerät – Klick zum Ändern'}">${fi('check', 12)}Verbunden</button>`
       : `<button type="button" class="st-btn light" data-edit="${p.id}">Verbinden</button>`;
     return `<div class="st-row">${logo(p)}<span class="st-name">${esc(p.name)}</span><span class="grow"></span>${right}</div>`;
+  }
+
+  // Planspiel Börse: Bär als Logo; verbunden → „✓ Verbunden als …“ (Klick → ändern/trennen), sonst „Verbinden“.
+  // Eingabe in der Zeile: Benutzername + Passwort/Code; gespeichert wird nur auf dem Server, verschlüsselt im Konto.
+  function planspielRow() {
+    const bear = `<span class="st-dog">${window.PixelDogs?.svg('boerse', 24) || ''}</span>`;
+    if (editing === 'planspiel') {
+      return `<form class="st-row editing st-ps" data-ps autocomplete="off">${bear}<span class="st-name">Planspiel Börse</span>
+        <input class="st-field st-ps-user" name="user" placeholder="Benutzername" aria-label="Benutzername für Planspiel Börse" spellcheck="false" autocapitalize="off" value="${esc(planspiel.user || '')}" maxlength="80" />
+        <input class="st-field st-ps-code" name="code" type="password" placeholder="Passwort / Code" aria-label="Passwort oder Code für Planspiel Börse" maxlength="200" />
+        ${planspiel.connected ? '<button type="button" class="st-btn dark danger" data-ps-remove>Trennen</button>' : ''}<button type="button" class="st-btn dark" data-cancel>Abbrechen</button><button type="submit" class="st-btn light"${psBusy ? ' disabled' : ''}>${psBusy ? 'Speichern …' : 'Speichern'}</button></form>
+        ${psError ? `<div class="st-row st-ps-note err">${esc(psError)}</div>` : ''}`;
+    }
+    const right = !planspiel.loaded ? '<span class="st-muted">…</span>'
+      : planspiel.connected ? `<button type="button" class="st-ok" data-edit="planspiel" title="Klick zum Ändern oder Trennen">${fi('check', 12)}Verbunden als ${esc(planspiel.user)}</button>`
+      : '<button type="button" class="st-btn light" data-edit="planspiel">Verbinden</button>';
+    return `<div class="st-row">${bear}<span class="st-name">Planspiel Börse</span><span class="grow"></span>${right}</div>`;
+  }
+  async function loadPlanspiel() {
+    try { const r = await (await nativeFetch('/api/planspiel')).json(); planspiel = { ...r, loaded: true }; } catch { planspiel = { connected: false, loaded: true }; }
+    if (app.classList.contains('settings-open') && page === 'agents' && editing !== 'planspiel') drawView();
   }
 
   function agentRow(m) {
@@ -136,6 +159,8 @@
     } else {
       const modes = window.PixelDogs?.MODES || [];
       body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
+        + `<h2>Planspiel Börse</h2><div class="st-card">${planspielRow()}</div>
+          <p class="st-hint">Für den Börsen-Bären: Zugang zu deinem Depot beim Planspiel Börse. Wird verschlüsselt in deinem Konto gespeichert und nie angezeigt.</p>`
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.map(agentRow).join('')}</div>` : '');
     }
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
@@ -153,6 +178,7 @@
     app.classList.add('settings-open');
     drawView();
     loadStatus();
+    loadPlanspiel();
   }
   function close() {
     app.classList.remove('settings-open');
@@ -174,8 +200,12 @@
 
   view.addEventListener('click', (e) => {
     const ed = e.target.closest('[data-edit]');
-    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); view.querySelector('.st-key-in')?.focus(); return; }
-    if (e.target.closest('[data-cancel]')) { editing = null; drawView(); return; }
+    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; psError = ''; drawView(); view.querySelector('.st-key-in, .st-ps-user')?.focus(); return; }
+    if (e.target.closest('[data-cancel]')) { editing = null; psError = ''; drawView(); return; }
+    if (e.target.closest('[data-ps-remove]')) {
+      nativeFetch('/api/planspiel', { method: 'DELETE' }).then((r) => r.json()).then((r) => { planspiel = { ...r, loaded: true }; editing = null; drawView(); }).catch(() => {});
+      return;
+    }
     if (e.target.closest('[data-remove]')) {
       delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;
     }
@@ -190,8 +220,24 @@
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
-  view.addEventListener('submit', (e) => {
+  view.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const ps = e.target.closest('form[data-ps]');
+    if (ps) {
+      const user = ps.querySelector('.st-ps-user').value.trim(), code = ps.querySelector('.st-ps-code').value;
+      if (!user) { ps.querySelector('.st-ps-user').focus(); return; }
+      if (!code) { ps.querySelector('.st-ps-code').focus(); return; }
+      psBusy = true; psError = ''; drawView();
+      try {
+        const r = await nativeFetch('/api/planspiel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ user, code }) });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || 'Konnte nicht gespeichert werden.');
+        planspiel = { ...j, loaded: true }; editing = null;
+      } catch (err) { psError = err.message; }
+      psBusy = false; drawView();
+      if (psError) view.querySelector('.st-ps-user')?.focus();
+      return;
+    }
     const form = e.target.closest('form[data-key]');
     const v = form?.querySelector('.st-key-in').value.trim();
     if (!form || !v) { form?.querySelector('.st-key-in').focus(); return; }
