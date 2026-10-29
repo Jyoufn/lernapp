@@ -1260,7 +1260,7 @@ async function handle(req, res) {
     // Depot aus dem Planspiel (Grafik ```depot im Chat): Werte, Bargeld, Positionen – nie Zugangsdaten
     if (req.method === 'GET' && urlPath === '/api/planspiel/depot') {
       const q = new URL(req.url, 'http://x').searchParams;
-      return sendJson(res, 200, await PLANSPIEL.depot(store, serverEnv(), user.id, { maxAgeMs: q.get('fresh') ? 5000 : 30000 }));
+      return sendJson(res, 200, await PLANSPIEL.depotFull(store, serverEnv(), user.id, { maxAgeMs: q.get('fresh') ? 5000 : 60000 }));
     }
     if (urlPath === '/api/planspiel') {
       if (req.method === 'GET') return sendJson(res, 200, await PLANSPIEL.status(store, user.id));

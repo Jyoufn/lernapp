@@ -275,6 +275,8 @@ test('Frage-Art: Scan über alle Werte nur bei Ideen/Empfehlungen – Depot, ein
   assert.equal(m('Was sind gerade gute Aktien?'), 'ideas');
   assert.equal(m('Wo kann ich mein Geld anlegen?'), 'ideas');
   assert.equal(m('Was ist eine Aktie?'), 'market', 'Wissensfrage → kein Scan');
+  assert.equal(m('Gib mir eine Depotübersicht und sag mir ebenfalls, an was ich am besten investieren soll'), 'both');
+  assert.equal(m('Wie stehen meine Aktien und was sollte ich neu kaufen?'), 'both');
 });
 
 test('Planspiel: Depot aus Portfolio und Buchungen – Stück, Kaufkurs, Gewinn nach Gebühr, Anteil', () => {
@@ -383,4 +385,31 @@ test('Börsen-Agent: „In was kann ich aktuell am besten investieren?“ → Sc
   assert.ok(m, 'Chancen-Block hängt an');
   const data = JSON.parse(m[1]);
   assert.deepEqual(data.picks.map((p) => `${p.symbol}:${p.verdict}`), ['RHM.DE:kaufen', 'FTNT:kaufen']);
+});
+
+test('Depot-Karte: Verlauf aus Buchungen und Kursen, DAX-Vergleich, Empfehlung je Position, realisierter Gewinn', async () => {
+  const P = require('../lib/planspiel');
+  const raw = bars(400, 0.001, 0.01, 200), shift = Date.now() - raw.at(-1).t;
+  const b = raw.map((x) => ({ ...x, t: x.t + shift })); // Verlauf endet heute (Spiel läuft seit 1. Oktober)
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+  ]);
+  const trades = [
+    { id: 1, date: '2026-10-02 10:00:00', transactionType: 'BUY', amount: -10015, order: { quantity: 50, executionPrice: 200, transactionCosts: 15, instrument: { isin: 'DE0007164600', name: 'SAP SE' } } },
+    { id: 2, date: '2026-10-05 10:00:00', transactionType: 'BUY', amount: -5015, order: { quantity: 100, executionPrice: 50, transactionCosts: 15, instrument: { isin: 'DE000ZAL1111', name: 'Zalando SE' } } },
+    { id: 3, date: '2026-10-09 10:00:00', transactionType: 'SELL', amount: 5985, order: { quantity: 100, executionPrice: 60, transactionCosts: 15, instrument: { isin: 'DE000ZAL1111', name: 'Zalando SE' } } },
+  ];
+  const d = P.build({ portfolio: { credit: 40955, value: 51000 }, items: [{ instrument: { isin: 'DE0007164600', name: 'SAP SE', bid: 201 } }] }, trades, 'julian');
+  assert.equal(d.realized, 970, 'Verkauf: 6.000 − 15 Verkaufsgebühr − 5.000 − 15 Kaufgebühr');
+  assert.equal(d.feesPaid, 45);
+  d.positions[0].symbol = 'SAP.DE';
+  const r = await P.insights(d);
+  assert.ok(r.history.length >= 2, 'Verlauf vorhanden');
+  assert.equal(r.history[0].v, 50000, 'Start bei 50.000 €');
+  assert.equal(r.history.at(-1).v, 51000, 'letzter Punkt = echter Wert aus dem Spiel');
+  assert.ok(Array.isArray(r.bench) && r.bench.length === r.history.length, 'DAX zum Vergleich');
+  assert.ok(['halten', 'beobachten', 'nachkaufen', 'teilgewinn', 'verkaufen'].includes(r.positions[0].action));
+  assert.ok(r.status.daysLeft >= 0);
 });
