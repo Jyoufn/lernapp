@@ -7617,3 +7617,13 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .chn-chart .stk { margin: 4px 0 0; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0; background: none; max-width: none; animation: none; }
 @media (prefers-reduced-motion: reduce) { .chn-chart { transition: none; } }
 .chn-chart .stk-title { visibility: hidden; } /* Name steht schon oben auf der Karte */
+
+/* Plan-Kasten v2: links offen – oben und unten beginnt der Rand erst dort, wo der Text anfängt; rechts geschlossen und rund.
+   Die Kreise/Haken sitzen auf der Linie der Zeitleiste: der erste ist mit dem Planungs-Schritt darüber verbunden, alle
+   untereinander, der letzte mit dem nächsten Schritt darunter (die Linie des Schritts läuft durch den Plan hindurch). */
+.step.has-box > .fold:has(> .fold-in > .plan-list) { margin-left: -32px; }
+.step.has-box > .fold > .fold-in > .plan-list { margin-left: 40px; padding: 6px 4px 6px 0; border-left: 0; border-radius: 0 12px 12px 0; }
+.plan-list .plan-item { padding-left: 0; }
+.plan-list .plan-item .pi-mark { left: -31px; }
+.step.has-box:not(:last-child):has(> .fold > .fold-in > .plan-list)::before { display: block; }
+.step.has-box:not(.open):has(> .fold > .fold-in > .plan-list)::before { display: block; }
