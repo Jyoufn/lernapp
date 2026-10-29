@@ -1956,74 +1956,83 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     });
   };
 
-  /* Tiefen-Recherche (Research-Agent): eigener Bereich in der Zeitleiste statt einzelner Zeilen –
-     Phasen (Plan · Search · Read · Compare · Write), Teilfragen mit Anzahl Quellen, gelesene Quellen als Chips, Vergleich als Balken */
-  let deepUI = null;
-  const DEEP_PHASES = [['plan', 'Plan'], ['search', 'Search'], ['read', 'Read'], ['compare', 'Compare'], ['write', 'Write']];
-  const deepPanel = () => {
-    if (deepUI) return deepUI;
-    const root = el('div', 'step dr');
-    root.innerHTML = `<div class="dr-phases">${DEEP_PHASES.map(([k, l]) => `<span class="dr-ph" data-ph="${k}"><i></i>${l}</span>`).join('<span class="dr-line"></span>')}</div>
-      <div class="dr-sec dr-subs" hidden><div class="dr-h">Questions</div><ol></ol></div>
-      <div class="dr-sec dr-src" hidden><div class="dr-h">Sources <span class="dr-n"></span></div><div class="chips"></div></div>
-      <div class="dr-sec dr-cmp" hidden><div class="dr-h">Comparison</div><div class="dr-bar"></div><div class="dr-legend"></div></div>`;
-    ensureWork().steps.append(root);
-    deepUI = { root, sources: [], subs: new Map(), found: 0, failed: 0, phase: null };
-    return deepUI;
+  /* Tiefen-Recherche (Research-Agent): ganz normale Schritte auf der Zeitleiste – wie alle anderen auch:
+     1. Fragen planen → „Split into 4 questions“ (aufklappbare Liste wie der Plan, Haken sobald gelesen)
+     2. Quellen suchen und lesen → „Read 15 sources · 28 found“ mit Chips
+     3. Vergleichen → „Compared 16 claims · 11 confirmed · 2 contradicting“
+     4. Lücken schließen → „Searched again · +3 sources“ */
+  const deep = { steps: {}, sources: [], found: 0, subs: new Map() };
+  const deepStep = (key, text) => {
+    if (deep.steps[key]) return deep.steps[key];
+    const step = stepLine('spin', `<span class="shimmer">${text}</span><span class="t live" data-from="${Date.now()}">1s</span>`);
+    deep.steps[key] = { step, from: Date.now() };
+    ensureWork().steps.append(step);
+    scrollToBottom();
+    return deep.steps[key];
   };
-  const deepPhase = (ph) => {
-    const ui = deepPanel(), idx = DEEP_PHASES.findIndex(([k]) => k === (ph === 'deepen' ? 'read' : ph));
-    if (idx < 0) return;
-    ui.root.querySelectorAll('.dr-ph').forEach((x, i) => { x.classList.toggle('done', i < idx); x.classList.toggle('on', i === idx); });
-    const act = { plan: ['think', 'Planning the research'], search: ['search', 'Searching sources'], read: ['read', 'Reading sources'], deepen: ['search', 'Filling the gaps'], compare: ['think', 'Comparing sources'], write: ['write', 'Writing the report'] }[ph];
-    if (act && ui.phase !== ph) setActivity(...act);
-    ui.phase = ph;
+  const deepDone = (key, html) => {
+    const st = deep.steps[key]; if (!st || st.done) return;
+    st.done = true;
+    finishStep(st.step, `${html} <span class="t">${secs(st.from)}</span>`);
   };
+  const deepLive = (key, text) => { const sh = deep.steps[key]?.step.querySelector('.shimmer'); if (sh) sh.textContent = text; };
   const onDeep = (e) => {
-    const ui = deepPanel();
-    const late = ['deepen', 'compare'].includes(ui.phase) && ['search', 'read'].includes(e.phase); // Lücken schließen: Anzeige springt nicht zurück
-    if ((!e.done || e.phase === 'write') && !late) deepPhase(e.phase);
-    if (e.phase === 'plan' && e.subs) {
-      const ol = ui.root.querySelector('.dr-subs ol');
-      ol.replaceChildren(...e.subs.map((x) => {
-        const li = el('li', 'dr-sub');
-        li.innerHTML = `<span class="spinner"></span><span class="dr-q"></span><span class="dr-c"></span>`;
-        li.querySelector('.dr-q').textContent = x.q;
-        ui.subs.set(x.id, { li, n: 0 });
-        return li;
-      }));
-      ui.root.querySelector('.dr-subs').hidden = false;
+    if (e.phase === 'plan' && !e.done) { deepStep('plan', 'Planning the research'); setActivity('think', 'Planning the research'); }
+    if (e.phase === 'plan' && e.done && e.subs) {
+      deepStep('plan', 'Planning the research');
+      deepDone('plan', `Split into <strong>${e.subs.length} ${e.subs.length === 1 ? 'question' : 'questions'}</strong>`);
+      const step = deep.steps.plan.step;
+      const list = el('div', 'plan-list');
+      e.subs.forEach((x) => {
+        const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(x.q)}</span>`);
+        row.dataset.state = 'active';
+        list.append(row);
+        deep.subs.set(x.id, row);
+      });
+      const fold = el('div', 'fold'), inner = el('div', 'fold-in');
+      inner.append(list); fold.append(inner); step.append(fold);
+      step.classList.add('foldable', 'open');
+      step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`);
+      step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
     }
-    if (e.phase === 'search' && e.results != null) ui.found += e.results;
+    if (e.phase === 'search' && !e.done && !deep.steps.deepen) {
+      if (!deep.steps.read) { deepStep('read', 'Searching sources'); setActivity('search', 'Searching sources'); }
+      if (e.results != null) { deep.found += e.results; if (!deep.sources.length) deepLive('read', `Searching sources · ${deep.found} found`); }
+    }
+    if (e.phase === 'search' && !e.done && deep.steps.deepen && e.results != null) deep.found += e.results;
     if (e.phase === 'read' && e.source) {
-      ui.sources.push({ n: e.source.n, title: e.source.title, domain: e.source.domain, url: e.source.url });
-      (e.source.subs || []).forEach((id) => { const s = ui.subs.get(id); if (s) { s.n++; s.li.querySelector('.dr-c').textContent = `${s.n} ${s.n === 1 ? 'source' : 'sources'}`; } });
-      const box = ui.root.querySelector('.dr-src');
-      box.hidden = false;
-      fillChips(box.querySelector('.chips'), ui.sources, () => openSourcesModal(ui.sources, null));
+      const key = deep.steps.deepen && !deep.steps.deepen.done ? 'deepen' : 'read';
+      const st = deepStep(key, 'Reading sources');
+      if (key === 'read') { setActivity('read', 'Reading sources'); deepLive('read', `Reading sources · ${deep.sources.length + 1} read`); }
+      deep.sources.push({ n: e.source.n, title: e.source.title, domain: e.source.domain, url: e.source.url });
+      (st.list ||= []).push(deep.sources.at(-1));
+      if (!st.chips) { st.chips = el('div', 'chips'); st.step.append(st.chips); }
+      fillChips(st.chips, st.list, () => openSourcesModal(st.list, null));
+      (e.source.subs || []).forEach((id) => { const row = deep.subs.get(id); if (row && row.dataset.state !== 'done') { row.dataset.state = 'done'; row.querySelector('.pi-mark').innerHTML = FadeIcons.svg('check-circle', 13); } });
     }
-    if (e.phase === 'read' && e.failed) ui.failed++;
-    if (e.phase === 'read' || e.phase === 'search') {
-      const n = ui.root.querySelector('.dr-n');
-      n.textContent = ui.sources.length ? `${ui.sources.length} read${ui.found ? ` · ${ui.found} found` : ''}` : ui.found ? `${ui.found} found` : '';
+    if (e.phase === 'read' && e.done && !deep.steps.deepen) {
+      deepStep('read', 'Reading sources');
+      const n = deep.steps.read.list?.length || 0;
+      deepDone('read', n ? `Read <strong>${n} ${n === 1 ? 'source' : 'sources'}</strong>${deep.found ? ` · ${deep.found} found` : ''}` : 'No suitable sources found');
+      if (!n) deep.steps.read.step.classList.add('warn');
     }
-    if ((e.phase === 'read' && e.done) || e.phase === 'compare') ui.subs.forEach((s) => s.li.classList.add('done'));
-    if (e.phase === 'compare' && e.done && e.stats) {
-      const st = e.stats, box = ui.root.querySelector('.dr-cmp');
-      box.querySelector('.dr-bar').innerHTML = [['agree', st.agree], ['conflict', st.conflict], ['single', st.single]].filter(([, v]) => v)
-        .map(([k, v]) => `<span class="${k}" style="flex:${v}" title="${v}"></span>`).join('');
-      box.querySelector('.dr-legend').innerHTML = `<b>${st.claims}</b> claims checked · <span class="agree">${st.agree} confirmed by several sources</span>`
-        + (st.conflict ? ` · <span class="conflict">${st.conflict} contradicting</span>` : '') + (st.single ? ` · <span class="single">${st.single} single source</span>` : '');
-      box.hidden = false;
+    if (e.phase === 'compare' && !e.done) { deepStep('compare', 'Comparing sources'); setActivity('think', 'Comparing sources'); }
+    if (e.phase === 'compare' && e.done) {
+      const st = e.stats;
+      deepDone('compare', st ? `Compared <strong>${st.claims} claims</strong> · ${st.agree} confirmed${st.conflict ? ` · ${st.conflict} contradicting` : ''}${st.single ? ` · ${st.single} single` : ''}` : 'Compared the sources');
     }
+    if (e.phase === 'deepen' && !e.done) { deepStep('deepen', 'Searching again for gaps'); setActivity('search', 'Filling the gaps'); }
+    if (e.phase === 'deepen' && e.done) {
+      const n = deep.steps.deepen?.list?.length || 0;
+      deepDone('deepen', n ? `Searched again for gaps · <strong>+${n} ${n === 1 ? 'source' : 'sources'}</strong>` : 'Searched again for gaps · nothing new');
+    }
+    if (e.phase === 'write') setActivity('write', 'Writing the report');
     scrollToBottom();
   };
   const startStage = (s) => {
     if (s.stage === 'searching_sources' && stages.browsing) stages.browsing.step.remove();
-    if (s.stage === 'searching_sources' && s.meta?.deep) { // Tiefen-Recherche: eigener Bereich (siehe onDeep)
-      stages[s.stage] = { step: deepPanel().root, from: Date.now(), serverFrom: Date.parse(s.ts) || null, deep: true };
-      deepPhase('plan');
-      scrollToBottom();
+    if (s.stage === 'searching_sources' && s.meta?.deep) { // Tiefen-Recherche: eigene Schritte (siehe onDeep)
+      stages[s.stage] = { step: el('div'), from: Date.now(), serverFrom: Date.parse(s.ts) || null, deep: true };
       return;
     }
     const from = Date.now();
@@ -2041,7 +2050,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const st = stages[s.stage];
     if (!st || st.ended) return;
     st.ended = true;
-    if (st.deep) { deepUI?.subs.forEach((x) => x.li.classList.add('done')); return; } // Tiefen-Recherche: Bereich bleibt, Phase „Write“ läuft weiter
+    if (st.deep) { Object.keys(deep.steps).forEach((k) => { if (!deep.steps[k].done) deepDone(k, k === 'plan' ? 'Planned the research' : k === 'compare' ? 'Compared the sources' : `Read <strong>${deep.steps[k].list?.length || 0} sources</strong>`); }); return; }
     const dur = `<span class="t">${st.serverFrom && s.ts ? secs(st.serverFrom, Date.parse(s.ts)) : secs(st.from)}</span>`;
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
@@ -2261,7 +2270,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     else if (err.name !== 'AbortError') { errorText = err.message || 'Verbindung unterbrochen'; msgEl.append(errorCard(msgEl, errorText, null)); scrollToBottom(); } // gestoppt: kein Hinweis – unten erscheint „Neu starten“
   } finally {
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
-    if (deepUI) { deepUI.root.querySelectorAll('.dr-ph').forEach((x) => { x.classList.remove('on'); if (!signal.aborted && !failed) x.classList.add('done'); }); deepUI.root.querySelectorAll('.dr-sub .spinner').forEach((x) => x.remove()); }
+    deep.subs.forEach((row) => { if (row.dataset.state === 'active') { row.dataset.state = 'todo'; } }); // Teilfrage ohne eigene Quelle: offen, kein vorgetäuschter Haken
     clearInterval(timer);
     removePending();
     endThought();

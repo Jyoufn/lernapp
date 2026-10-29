@@ -7289,37 +7289,6 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 
 @media (prefers-reduced-motion: reduce) { .chn *, .chn { animation: none !important; transition: none !important; } }
 
-/* ===== Tiefen-Recherche in der Zeitleiste (Research-Agent): Phasen, Teilfragen, Quellen, Vergleich – ruhig wie die übrigen Schritte ===== */
-.step.dr { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; margin-left: -22px; border: 1px solid #2a2a2a; border-radius: 12px; background: var(--main-bg); z-index: 1; }
-.dr-phases { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.dr-ph { display: inline-flex; align-items: center; gap: 6px; color: var(--text-4); font-size: 12px; font-weight: 500; transition: color 240ms ease; }
-.dr-ph i { position: relative; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid #4a4a4a; transition: background-color 240ms ease, border-color 240ms ease; }
-.dr-ph.on { color: var(--text); }
-.dr-ph.on i { border-color: var(--text-2); }
-.dr-ph.on i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--text-3); opacity: 0; animation: dr-ping 1.6s ease-out infinite; }
-.dr-ph.done { color: var(--text-3); }
-.dr-ph.done i { border-color: #4fcf8a; background: #4fcf8a; }
-.dr-line { flex: 0 1 18px; min-width: 8px; height: 1px; background: #2e2e2e; }
-@keyframes dr-ping { from { transform: scale(0.6); opacity: 0.8; } to { transform: scale(1.4); opacity: 0; } }
-.dr-sec { display: flex; flex-direction: column; gap: 6px; animation: step-in 360ms var(--ease) both; }
-.dr-h { color: var(--text-3); font-size: 12px; font-weight: 600; }
-.dr-n { margin-left: 4px; color: var(--text-4); font-weight: 500; font-variant-numeric: tabular-nums; }
-.dr-subs ol { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
-.dr-sub { display: flex; align-items: center; gap: 8px; color: var(--text-2); font-size: 12.5px; line-height: 1.45; }
-.dr-sub .spinner { width: 10px; height: 10px; }
-.dr-sub.done::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 50%; background: #4a4a4a; transform: scale(0.5); }
-.dr-sub.done .spinner { display: none; }
-.dr-q { flex: 1; min-width: 0; }
-.dr-c { flex: none; color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
-.dr-src .chips { margin-top: 0; }
-.dr-bar { display: flex; gap: 2px; height: 6px; overflow: hidden; border-radius: 999px; background: #2a2a2a; }
-.dr-bar span { min-width: 4px; transition: flex-grow 400ms var(--ease); }
-.dr-bar .agree { background: #4fcf8a; } .dr-bar .conflict { background: #fb9a52; } .dr-bar .single { background: #6e6e6e; }
-.dr-legend { color: var(--text-4); font-size: 12px; line-height: 1.5; }
-.dr-legend b { color: var(--text-2); font-weight: 600; }
-.dr-legend .agree { color: #4fcf8a; } .dr-legend .conflict { color: #fb9a52; } .dr-legend .single { color: var(--text-3); }
-@media (prefers-reduced-motion: reduce) { .dr-ph.on i::after { animation: none; } }
-
 /* ===== „Meine Käufe“ des Börsen-Bären (boerse-bestand.js): Karte ```bestand, Bestätigung ```merken, Hinweis oben rechts =====
    Gleich ruhig wie der Chancen-Radar: eine Fläche, innen nur feine Ränder, Farbe nur als Bedeutung. */
 .bst { --line: #2e2e2e; margin: 14px 0 18px; padding: 14px 16px 16px; border: 1px solid #2c2c2c; border-radius: 14px; background: #212121; max-width: 760px; font-feature-settings: "tnum" 1; }
