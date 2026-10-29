@@ -1181,6 +1181,11 @@ function renderMarkdown(target, text, opts = {}) {
     const raw = pre.querySelector('code').textContent, spec = window.StockChart?.parse(raw);
     if (spec) pre.replaceWith(tagViz(StockChart.figure(spec), 'stock', raw)); else pre.remove();
   });
+  // Depot-Grafik (```depot): das echte Depot aus dem Planspiel Börse, live vom Server (depot-card.js) – höchstens eine je Antwort
+  target.querySelectorAll('pre:has(code.language-depot)').forEach((pre, i) => {
+    if (i || !window.DepotCard) { pre.remove(); return; }
+    pre.replaceWith(DepotCard.figure());
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -1953,8 +1958,11 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (s.stage === 'market') {
       const m = s.meta || {}, n = m.count || 0;
       const extra = [m.frames ? `${m.frames} × day/week/month` : '', m.headlines ? `${m.headlines} headlines` : '', m.radar != null ? `radar: ${m.radar} ${m.radar === 1 ? 'chance' : 'chances'}` : ''].filter(Boolean).join(' · ');
-      line.innerHTML = n ? `Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong>${extra ? ` · ${extra}` : ''} ${dur}` : `Market data not reachable ${dur}`;
-      if (!n) st.step.classList.add('warn');
+      // nur das zeigen, was wirklich gerechnet wurde: Depot, gefragte Werte oder (bei Ideen) der Scan über alle Planspiel-Werte
+      const dep = m.depot != null ? `Read your <strong>Planspiel depot</strong> (${m.depot} ${m.depot === 1 ? 'position' : 'positions'})` : '';
+      const main = n ? `Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong>` : dep ? '' : m.indices ? 'Checked the <strong>market indices</strong>' : '';
+      line.innerHTML = main || dep ? `${[dep, main].filter(Boolean).join(' · ')}${extra ? ` · ${extra}` : ''} ${dur}` : `Market data not reachable ${dur}`;
+      if (!main && !dep) st.step.classList.add('warn');
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
       line.innerHTML = m.relevant === true ? `Analyzed your sources – <strong>answering from them</strong> ${dur}`

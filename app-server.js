@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'boerse-radar.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'depot-card.js', 'boerse-radar.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -101,10 +101,15 @@ function startSse(res) {
 }
 
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
-async function handleChat(req, res) {
+async function handleChat(req, res, user = null) {
   const body = await readBody(req);
-  delete body.radarStore;
-  if (body.agent === 'boerse') Object.defineProperty(body, 'radarStore', { value: accountStore(), enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
+  delete body.radarStore; delete body.loadDepot;
+  if (body.agent === 'boerse') {
+    const store = accountStore();
+    Object.defineProperty(body, 'radarStore', { value: store, enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
+    // Depot live aus dem Planspiel Börse (nur wenn in den Einstellungen verbunden) – der Server meldet sich selbst an
+    if (user?.id && store) Object.defineProperty(body, 'loadDepot', { value: (opts) => PLANSPIEL.depot(store, serverEnv(), user.id, opts), enumerable: false });
+  }
   const sse = startSse(res);
   const controller = new AbortController();
   res.on('close', () => controller.abort()); // Stopp-Button → alle laufenden Anfragen abbrechen
@@ -1245,11 +1250,16 @@ async function handle(req, res) {
       if (user.renewed) res.setHeader('Set-Cookie', sessionCookie(req, cookiesOf(req).sid, ACC.SESSION_TTL)); // Cookie mit verlängern
     }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
-    if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res);
+    if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res, user);
     // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
     if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
     if (req.method === 'GET' && urlPath === '/api/boerse/radar') return sendJson(res, 200, await RADAR.latest(store));
     // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
+    // Depot aus dem Planspiel (Grafik ```depot im Chat): Werte, Bargeld, Positionen – nie Zugangsdaten
+    if (req.method === 'GET' && urlPath === '/api/planspiel/depot') {
+      const q = new URL(req.url, 'http://x').searchParams;
+      return sendJson(res, 200, await PLANSPIEL.depot(store, serverEnv(), user.id, { maxAgeMs: q.get('fresh') ? 5000 : 30000 }));
+    }
     if (urlPath === '/api/planspiel') {
       if (req.method === 'GET') return sendJson(res, 200, await PLANSPIEL.status(store, user.id));
       if (req.method === 'DELETE') return sendJson(res, 200, await PLANSPIEL.remove(store, user.id));

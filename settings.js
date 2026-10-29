@@ -160,7 +160,7 @@
       const modes = window.PixelDogs?.MODES || [];
       body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
         + `<h2>Planspiel Börse</h2><div class="st-card">${planspielRow()}</div>
-          <p class="st-hint">Für den Börsen-Bären: Zugang zu deinem Depot beim Planspiel Börse. Wird verschlüsselt in deinem Konto gespeichert und nie angezeigt.</p>`
+          <p class="st-hint">Für den Börsen-Bären: Damit meldet er sich beim Planspiel Börse an und liest dein Depot (nur lesen – er kauft und verkauft nichts). Beim Speichern wird die Anmeldung geprüft. Verschlüsselt in deinem Konto gespeichert und nie angezeigt.</p>`
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.map(agentRow).join('')}</div>` : '');
     }
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;

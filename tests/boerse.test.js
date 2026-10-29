@@ -113,7 +113,9 @@ test('Börsen-Agent: Live-Marktdaten, Depot und Planspiel-Regeln landen im Promp
   assert.match(sys, /AGENT: BÖRSE/);
   assert.match(sys, /LIVE-MARKTDATEN/);
   assert.match(sys, /Rheinmetall \(RHM\.DE/);
-  assert.match(sys, /EIGENE POSITION: 10 Stück/);
+  assert.doesNotMatch(sys, /EIGENE POSITION: 10 Stück/, 'Frage nach einer bestimmten Aktie: andere Depot-Werte werden nicht durchgerechnet');
+  assert.match(sys, /FRAGE-ART: bestimmte Aktie/);
+  assert.doesNotMatch(sys, /MARKTSCAN/, 'kein Scan über alle Werte');
   assert.match(sys, /mind\. 3 abgerechnete Käufe bis 22\.01\.2027 \(bisher 1, es fehlen noch 2\)/);
   assert.match(sys, /Rheinmetall erhält Großauftrag/);
   assert.ok(fx.calls.some((c) => c.url.includes('stooq.com')), 'zweite Quelle wurde gefragt');
@@ -257,4 +259,98 @@ test('Börsen-Agent: Chart wird angehängt, wenn die Antwort einen Wert ohne Cha
   const c = M.collect();
   await W.runChat({ env: M.ENV, body: { log: false, effort: 'auto', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich SAP oder Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
   assert.match(c.text(), /```stock\n\{"symbol":"(SAP\.DE|RHM\.DE)"/);
+});
+
+test('Frage-Art: Scan über alle Werte nur bei Ideen/Empfehlungen – Depot, einzelne Aktie und Marktlage ohne Scan', () => {
+  const m = (q, asked = []) => B.intentOf(q, asked).mode;
+  assert.equal(m('Gib mir einen Überblick von meinem Depot'), 'depot');
+  assert.equal(m('Wie stehen meine Aktien?'), 'depot');
+  assert.equal(m('Welche Aktien soll ich jetzt kaufen?'), 'ideas');
+  assert.equal(m('Was ist gerade empfohlen?'), 'ideas');
+  assert.equal(m('Zeig mir die besten Chancen'), 'ideas');
+  assert.equal(m('Soll ich SAP kaufen?', ['SAP.DE']), 'stocks');
+  assert.equal(m('Gibt es eine bessere Alternative zu SAP?', ['SAP.DE']), 'ideas');
+  assert.equal(m('Wie läuft der DAX heute?'), 'market');
+});
+
+test('Planspiel: Depot aus Portfolio und Buchungen – Stück, Kaufkurs, Gewinn nach Gebühr, Anteil', () => {
+  const trades = [
+    { id: 1, date: '2026-10-02 10:00:00', transactionType: 'BUY', amount: -10015, order: { quantity: 50, executionPrice: 200, transactionCosts: 15, instrument: { isin: 'DE0007164600', name: 'SAP SE' } } },
+    { id: 2, date: '2026-10-05 10:00:00', transactionType: 'BUY', amount: -5015, order: { quantity: 100, executionPrice: 50, transactionCosts: 15, instrument: { isin: 'DE000ZAL1111', name: 'Zalando SE' } } },
+    { id: 3, date: '2026-10-09 10:00:00', transactionType: 'SELL', amount: 2985, order: { quantity: 50, executionPrice: 60, transactionCosts: 15, instrument: { isin: 'DE000ZAL1111', name: 'Zalando SE' } } },
+    { id: 4, date: '2026-10-10 10:00:00', transactionType: 'DIVIDEND', amount: 20, order: {} },
+  ];
+  const port = { portfolio: { name: 'Wettbewerbsdepot', credit: 37955, value: 51205, numTrades: 3 },
+    items: [{ instrument: { isin: 'DE0007164600', name: 'SAP SE', bid: 210, ask: 210.2 } }, { instrument: { isin: 'DE000ZAL1111', name: 'Zalando SE', bid: 55 } }] };
+  const P = require('../lib/planspiel');
+  const d = P.build(port, trades, 'julian');
+  assert.equal(d.value, 51205);
+  assert.equal(d.cash, 37955);
+  assert.equal(d.buys, 2);
+  assert.equal(d.positions.length, 2);
+  const sap = d.positions.find((x) => x.isin === 'DE0007164600');
+  assert.equal(sap.qty, 50);
+  assert.equal(sap.buyPrice, 200);
+  assert.equal(sap.value, 10500);
+  assert.equal(sap.gainEur, 485); // 10.500 − 10.000 − 15 Gebühr
+  const zal = d.positions.find((x) => x.isin === 'DE000ZAL1111');
+  assert.equal(zal.qty, 50, 'Teilverkauf verringert die Stückzahl');
+  assert.equal(zal.buyPrice, 50);
+  assert.equal(d.gainPct, 2.41);
+  assert.ok(sap.weightPct > 20 && sap.weightPct < 21);
+});
+
+test('Planspiel: Server meldet sich an, liest das Depot und gibt nie das Passwort heraus; falsches Passwort wird nicht gespeichert', async () => {
+  const P = require('../lib/planspiel');
+  const STORE = require('../lib/store');
+  const store = STORE.memoryStore();
+  const env = { PLANSPIEL_SECRET: 'test' };
+  let logins = 0;
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('v-ms7/authenticate'), respond: (c) => {
+      logins++;
+      const b = JSON.parse(c.init.body);
+      if (b.password !== 'richtig') return new Response('{}', { status: 401 });
+      return M.json({ success: true, result: { token: { accessToken: 'tok' }, user: { userPortfolios: [{ id: 77, name: 'Wettbewerb' }] } } });
+    } },
+    { match: (c) => c.url.includes('getPortfolioWithItems') && c.url.includes('portfolioId=77'), respond: (c) => (c.init.headers.Authorization === 'Bearer tok'
+      ? M.json({ portfolio: { credit: 40000, value: 50100 }, items: [{ instrument: { isin: 'DE0007164600', name: 'SAP SE', bid: 201 } }] }) : new Response('', { status: 401 })) },
+    { match: (c) => c.url.includes('getTransactions'), respond: () => M.json([{ id: 1, date: '2026-10-02', transactionType: 'BUY', order: { quantity: 50, executionPrice: 200, transactionCosts: 15, instrument: { isin: 'DE0007164600', name: 'SAP SE' } } }]) },
+  ]);
+  await assert.rejects(P.save(store, env, 'u1', { user: 'julian', code: 'falsch' }), /fehlgeschlagen/);
+  assert.equal((await P.status(store, 'u1')).connected, false);
+  const st = await P.save(store, env, 'u1', { user: 'julian', code: 'richtig' });
+  assert.deepEqual(Object.keys(st).sort(), ['checked', 'connected', 'since', 'user']);
+  const d = await P.depot(store, env, 'u1');
+  assert.equal(d.connected, true);
+  assert.equal(d.positions[0].symbol, 'SAP.DE', 'ISIN wird dem Kürzel der App zugeordnet');
+  assert.equal(d.positions[0].qty, 50);
+  assert.ok(!JSON.stringify(d).includes('richtig'), 'kein Passwort in der Antwort');
+  assert.equal(logins, 2, 'Token wird wiederverwendet');
+});
+
+test('Börsen-Agent: „Überblick von meinem Depot“ liest das Planspiel-Depot, rechnet nur die eigenen Werte und hängt die Depot-Grafik an', async () => {
+  const b = bars(400, 0.0015);
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+    { match: (c) => c.url.includes('news.google.com'), respond: () => new Response('<rss></rss>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Dein Depot: 50.100 €.**'])) },
+  ]);
+  const ps = { connected: true, user: 'julian', asOf: new Date().toISOString(), value: 50100, cash: 40000, invested: 10100, gainEur: 100, gainPct: 0.2, trades: 1, buys: 1,
+    positions: [{ isin: 'DE0007164600', symbol: 'SAP.DE', name: 'SAP SE', qty: 50, buyPrice: 200, price: 202, value: 10100, gainEur: 85, gainPct: 0.9, weightPct: 20.2, bought: '2026-10-02' }] };
+  const body = { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Gib mir einen Überblick von meinem Depot' }] };
+  Object.defineProperty(body, 'loadDepot', { value: async () => ps, enumerable: false });
+  const out = M.collect();
+  await W.runChat({ env: M.ENV, body, send: out.send, signal: new AbortController().signal });
+  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+  assert.match(sys, /FRAGE-ART: Depot-Überblick/);
+  assert.match(sys, /live aus dem Planspiel Börse/);
+  assert.match(sys, /EIGENE POSITION: 50 Stück/);
+  assert.doesNotMatch(sys, /MARKTSCAN/, 'kein Scan über alle ~430 Werte');
+  const yahooCalls = fx.calls.filter((c) => c.url.includes('finance.yahoo.com/v8')).map((c) => decodeURIComponent(c.url));
+  assert.ok(yahooCalls.every((u) => /SAP\.DE|\^GDAXI|\^STOXX50E|\^NDX|EURUSD|=X/.test(u)), `nur eigene Werte und Indizes: ${yahooCalls.filter((u) => !/SAP\.DE|\^/.test(u)).slice(0, 3)}`);
+  const text = out.events.filter((e) => e.event === 'text').map((e) => e.data.text).join('');
+  assert.match(text, /```depot/);
 });
