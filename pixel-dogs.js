@@ -1154,18 +1154,28 @@ const PixelDogs = (() => {
     const paw = (x, y) => P2(['.KK.', 'KFFK', 'KfFK'], x, y, pf);
     return {
       think: { frames: [0, 1, 2, 3].map((n) => [P2(CLOUD(n), 0, 0), ...PUFF, chin]), loop: [[0, 320], [1, 320], [2, 320], [3, 760]] },
-      search: { frames: [[0, 9], [1, 10], [2, 9], [1, 8]].map(([x, y]) => [P2(LENS_S, x, y), paw(x + 8, y + 9)]), loop: [[0, 420], [1, 360], [2, 420], [3, 360]] },
-      cook: { frames: [0, 1, 2].map((k) => [P2(FLAMES[k], 1, 16), P2(PAN_S, k === 1 ? 1 : 0, 20), paw(12, 19)]), loop: [[0, 160], [1, 160], [2, 160], [1, 140]] },
+      // sucht: Lupe wandert, ein Lichtreflex huscht über das Glas, ab und zu blitzt ein Fund auf
+      search: { frames: [[0, 9, 0], [1, 10, 1], [2, 9, 2], [1, 8, 3], [0, 9, 4], [1, 10, 0]].map(([x, y, g]) => [P2(LENS_S, x, y), ...(g < 3 ? [P2(['H', 'H'].slice(0, 2 - (g === 2)), x + 3 + g, y + 2 + g)] : []), ...(g === 4 ? [P2(SPARK, x + 6, y - 3)] : []), paw(x + 8, y + 9)]),
+        loop: [[0, 260], [1, 260], [2, 260], [3, 340], [4, 260], [5, 300]] },
+      // kocht: Flammen flackern, die Pfanne ruckelt kurz, Dampfwölkchen steigen auf und verblassen
+      cook: { frames: [0, 1, 2, 3, 4, 5].map((k) => [
+          ...[[2, 14 - (k % 3) * 2, k % 3 === 2 ? 'v' : 'L'], [5, 13 - ((k + 1) % 3) * 2, (k + 1) % 3 === 2 ? 'v' : 'L']].map(([x, y, c]) => P2([`${c}.`, `.${c}`], x, y)),
+          P2(FLAMES[k % 3], 1, 16), P2(PAN_S, k === 3 ? 1 : 0, 20), paw(12, 19)]), loop: seq(6, 150) },
       book: { frames: [[BOOK_S, null], [BOOK_S, 0], [BOOK_S, 1], [BOOK_B, 2], [BOOK_B, null]].map(([b, k]) => [P2(b, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 7, 3][k], k === 1 ? 11 : 12)]), paw(0, 19), paw(11, 19)]),
         loop: [[0, 900], [1, 130], [2, 130], [3, 130], [4, 900], [3, 130], [2, 130], [1, 130], [0, 700]] },
       quill: { frames: Array.from({ length: 19 }, (_, k) => { const { rows, tip } = parchment(k); return [P2(rows, 0, 11), P2(QUILL, tip[0] - 0, 11 + tip[1] - 4)]; }), loop: [...seq(19, 140), [18, 900]], glasses: true },
       board: { frames: Array.from({ length: 19 }, (_, k) => [P2(boardRows(k), 0, 9)]), loop: [...seq(19, 120), [18, 1000]] },
       plan: { frames: [0, 1, 2, 3].map((n) => [P2(PAD(n), 0, 9), P2(PENCIL, 8, 15), paw(11, 19)]), loop: [[0, 520], [1, 420], [2, 420], [3, 1000]] },
-      laptop: { frames: SCROLL.map((l) => [P2(laptopRows(l), 0, 13)]), loop: seq(4, 360), glasses: true },
+      laptop: { frames: SCROLL.map((l, i) => [P2(laptopRows(l, i % 2 ? 3 : -1), 0, 13), P2(['qqqqqqqqqq'], 2, 12)]), loop: seq(4, 320), glasses: true },
       type: { frames: TYPED.map((l, i) => [P2(laptopRows(l, l.length - 1), 0, 13), ...(i % 2 ? [paw(3, 20), paw(9, 21)] : [paw(3, 21), paw(9, 20)])]), loop: [...seq(TYPED.length, 260), [TYPED.length - 1, 600]], glasses: true },
       chart: { frames: Array.from({ length: 13 }, (_, k) => [P2(chartRows(k), 0, 12), paw(11, 19)]), loop: [...seq(13, 120), [12, 1100]] },
-      news: { frames: [12, 13].map((y) => [P2(NEWS, 0, y), paw(11, y + 6)]), loop: [[0, 900], [1, 700]] },
-      done: { frames: [[P2(THUMB, 0, 16, pf)], [P2(THUMB, 0, 13, pf)], [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 9)], [P2(THUMB, 0, 12, pf)]], loop: [[0, 70], [1, 90], [2, 380], [3, 300], [2, 380], [3, 2000]], once: true },
+      // liest: Zeitung bewegt sich leicht, die Schlagzeile leuchtet kurz auf, der Blick wandert die Spalten entlang
+      news: { frames: [[12, 0], [12, 1], [13, 2], [13, 3]].map(([y, k]) => [P2(NEWS, 0, y), ...(k === 1 ? [P2(['RRRRRRRRR'], 2, y + 2)] : []), ...(k >= 2 ? [P2(['N'], k === 2 ? 2 : 7, y + 4 + (k - 2) * 2)] : []), paw(11, y + 6)]),
+        loop: [[0, 700], [1, 220], [0, 300], [1, 220], [2, 600], [3, 600]] },
+      // fertig: Daumen schnellt hoch, Funken springen nacheinander auf (oben, rechts, links) und verglühen
+      done: { frames: [[P2(THUMB, 0, 16, pf)], [P2(THUMB, 0, 11, pf)], [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 8)],
+          [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 8), P2(['Y'], 3, 9), P2(['H'], 12, 13)], [P2(THUMB, 0, 12, pf), P2(['Y'], 10, 9), P2(SPARK, 2, 8)], [P2(THUMB, 0, 12, pf), P2(['H'], 3, 9)], [P2(THUMB, 0, 12, pf)]],
+        loop: [[0, 60], [1, 80], [2, 140], [3, 160], [4, 180], [5, 200], [6, 2000]], once: true },
     };
   };
   function actor(id) {
@@ -1198,6 +1208,7 @@ const PixelDogs = (() => {
       wrap.querySelector(`[data-anim="${k}"]`)?.classList.add('on');
       wrap.classList.toggle('glasses', !!anims[k]?.glasses);
       wrap.dataset.state = k;
+      if (cur && !still) { wrap.classList.remove('swap'); void wrap.offsetWidth; wrap.classList.add('swap'); setTimeout(() => wrap.classList.remove('swap'), 360); } // kurzer Hüpfer beim Wechsel
       cur = k; since = Date.now();
       loop(k);
     };

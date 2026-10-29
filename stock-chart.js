@@ -160,7 +160,9 @@ const StockChart = (() => {
         defs.innerHTML = '<linearGradient id="stk-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.07"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>';
         svg.append(defs);
         svg.append(svgEl('path', { d: `M${pts[0]} L${pts.join(' L')} L${xOf(n - 1).toFixed(1)},${H_PRICE} L${xOf(0).toFixed(1)},${H_PRICE} Z`, fill: 'url(#stk-fade)' })); // Fläche unter der Linie: neutrales Grau, nach unten auslaufend (nicht grün/rot getönt)
-        svg.append(svgEl('path', { d: `M${pts.join(' L')}`, fill: 'none', stroke: c, 'stroke-width': 1.8, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', class: 'stk-line' }));
+        svg.append(svgEl('path', { d: `M${pts.join(' L')}`, fill: 'none', stroke: c, 'stroke-width': 1.8, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', class: 'stk-line', pathLength: 1 }));
+        // nur beim ersten Zeichnen zieht sich die Linie von links nach rechts (Live-Kurse und Zeitraum-Wechsel zeichnen ohne Effekt)
+        if (!fig.classList.contains('drawn')) setTimeout(() => fig.classList.add('drawn'), 1100);
       }
       // 20/50-Tage-Linie
       [[d.sma20, S20], [d.sma50, S50]].forEach(([arr, col]) => {
@@ -315,3 +317,5 @@ const StockChart = (() => {
   return { parse, figure, RANGES };
 })();
 window.StockChart = StockChart;
+// Börsen-Karten blenden nur EINMAL ein: beim Neuzeichnen der Antwort (Text läuft noch) würden sie sonst jedes Mal neu hereingleiten
+if (typeof document !== 'undefined') document.addEventListener('animationend', (e) => { if (e.animationName === 'card-in') e.target.classList.add('shown'); });
