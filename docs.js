@@ -26,6 +26,9 @@ const Docs = (() => {
   const tagOf = (id) => tags.find((g) => g.id === id);
   const projOf = (id) => projects.find((p) => p.id === id);
   const docOf = (id) => docs.find((d) => d.id === id);
+  // Workspace: jedes Dokument gehört zu einem Workspace (ältere ohne Angabe: „main“); Listen zeigen nur den aktiven
+  const wsNow = () => window.Workspaces?.active() || 'main';
+  const inWs = (d) => (d.ws || 'main') === wsNow();
 
   /* ---------- Laden / Speichern ---------- */
   let saveT = 0;
@@ -473,7 +476,7 @@ const Docs = (() => {
 
   /* ---------- Anlegen / Öffnen / Löschen ---------- */
   function create(projectId = '') {
-    const d = { id: newId('d'), title: '', subtitle: '', projectId, tags: [], content: '', created: Date.now(), updated: Date.now() };
+    const d = { id: newId('d'), title: '', subtitle: '', projectId, tags: [], content: '', created: Date.now(), updated: Date.now(), ws: wsNow() };
     docs.unshift(d);
     save(); renderSide(); if (list.open) list.render();
     open(d.id, true);
@@ -502,7 +505,7 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   function renderSide() {
-    const loose = docs.filter((d) => !projOf(d.projectId) && !isEmpty(d)).sort((a, b) => b.updated - a.updated).slice(0, 6);
+    const loose = docs.filter((d) => inWs(d) && !projOf(d.projectId) && !isEmpty(d)).sort((a, b) => b.updated - a.updated).slice(0, 6);
     side.hidden = !loose.length; // ohne Dokumente keine leere Überschrift
     side.innerHTML = (window.sbSectionHead?.('Dokumente', 'docs') || '<div class="section-label">Dokumente</div>')
       // Projekt-Ordner stehen nicht in der Seitenleiste (nur in der Bibliothek); Dokumente ohne Projekt mit eigenem Icon oder Linien-Icon
@@ -556,7 +559,7 @@ const Docs = (() => {
       setProject() { api.render(); }, // Projekte gibt es in der Liste nicht mehr
       render() {
         const q = search.value.trim().toLowerCase();
-        const items = docs.filter((d) => !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
+        const items = docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
           .sort((a, b) => b.updated - a.updated);
         let i = 0;
         rows.innerHTML = [['Pinned', items.filter((d) => d.pinned)], ['Recent', items.filter((d) => !d.pinned)]]
@@ -1323,7 +1326,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       // „Verschieben nach“: Block ans Ende eines anderen Dokuments
       moveTo: (id, html) => { const t = docOf(id); if (t) update(id, { content: `${t.content || ''}${html}` }); },
       // „Verschieben nach → Neues Dokument“: leeres Dokument anlegen (ohne es zu öffnen)
-      newDoc: () => { const d = { id: newId('d'), title: '', subtitle: '', projectId: '', tags: [], content: '', created: Date.now(), updated: Date.now() }; docs.unshift(d); save(); return d.id; },
+      newDoc: () => { const d = { id: newId('d'), title: '', subtitle: '', projectId: '', tags: [], content: '', created: Date.now(), updated: Date.now(), ws: wsNow() }; docs.unshift(d); save(); return d.id; },
     });
     function renderBlocks() { window.DocBlocks?.render(content(), blockCtx()); }
     function serialize(c) {
@@ -2289,7 +2292,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
 
   /* ---------- Schnittstelle für den Chat (der Agent legt Dokumente an und bearbeitet sie) ---------- */
   function add({ title = '', subtitle = '', content = '', projectId = '' } = {}) {
-    const d = { id: newId('d'), title: String(title).slice(0, 160), subtitle: String(subtitle).slice(0, 400), projectId, tags: [], content: clean(content), created: Date.now(), updated: Date.now() };
+    const d = { id: newId('d'), title: String(title).slice(0, 160), subtitle: String(subtitle).slice(0, 400), projectId, tags: [], content: clean(content), created: Date.now(), updated: Date.now(), ws: wsNow() };
     docs.unshift(d); save(); renderSide(); if (list.open) list.render();
     return d;
   }
@@ -2298,6 +2301,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     if (patch.content != null) { const next = clean(patch.content); if (editor.isShowing(id)) editor.remember(d.content, next); d.content = next; }
     if (patch.title != null) d.title = String(patch.title).slice(0, 160);
     if (patch.subtitle != null) d.subtitle = String(patch.subtitle).slice(0, 400);
+    if (patch.ws != null) d.ws = String(patch.ws).slice(0, 30);
     touch(d); renderSide(); if (list.open) list.render();
     const tab = document.querySelector(`.tab[data-doc="${id}"]`);
     if (tab) window.setTabTitle?.(tab, d.title.trim() || 'Unbenannt');
@@ -2405,6 +2409,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     isEmpty: (id) => { const d = docOf(id); return !d || isEmpty(d); },
     titleOf: (id) => docOf(id)?.title || 'Unbenannt',
     get docs() { return docs.slice(); },
+    inWs: (d) => inWs(d),
+    refresh: () => { renderSide(); if (list.open) list.render(); },
   };
 })();
 window.Docs = Docs;

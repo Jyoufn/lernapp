@@ -524,7 +524,7 @@ const Tasks = (() => {
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
     if (!agents) return;
-    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent, output: t.output } });
+    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent, output: t.output, ws: window.Workspaces?.active() || 'main' } });
     // keepalive: die Anfrage geht auch raus, wenn die App gleich geschlossen wird – der Server arbeitet dann allein weiter
     fetch('/api/agent-tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true })
       .then(() => pull()).catch(() => {});

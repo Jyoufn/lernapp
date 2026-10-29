@@ -1818,7 +1818,15 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Denk-Ablauf dieses Agenten (thinking.js): Kopf = Hauptstatus, Schritte = Unterpunkte
   const agentId = msgEl.dataset.dog || window.PixelDogs?.mode || 'general';
   const P = (k) => window.Thinking ? Thinking.of(agentId, k) : { main: 'Working', sub: k, kind: 'work' };
-  const phase = (k) => setActivity(P(k).kind, P(k).main);
+  // Hund neben dem Hauptstatus (PixelDogs.actor): tut je Zustand etwas anderes; Wechsel weich und nie zu hektisch
+  let actor = null;
+  const ensureActor = () => {
+    if (actor || !window.PixelDogs?.actor) return;
+    actor = PixelDogs.actor(agentId);
+    msgEl.prepend(actor.el);
+    msgEl.classList.add('acting');
+  };
+  const phase = (k) => { setActivity(P(k).kind, P(k).main); ensureActor(); actor?.set(P(k).anim); };
   const live = (k, from = Date.now()) => `<span class="shimmer">${P(k).sub}</span><span class="t live" data-from="${from}">1s</span>`;
   const doneLine = (k, extra = '', dur = '') => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}${dur ? ` <span class="t">${dur}</span>` : ''}`;
   const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(lastAsk) && /(erstell|mach|zeichne|generier|zeig|gib|such|nimm)/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem)/i.test(lastAsk); // mit Textwunsch: normaler Ablauf
@@ -2008,6 +2016,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     finishStep(st.step, `${html} <span class="t">${secs(st.from)}</span>`);
     if (fold) { st.step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`); }
     if (key === 'search' || key === 'gaps') markerIcon(st.step, 'search'); // Lupe wie bei der Websuche
+    // Suchen fertig → die Liste der Suchen klappt weich zu (eine Zeile); Klick auf die Zeile öffnet sie wieder – sonst wird es zu voll
+    if ((key === 'search' || key === 'gaps') && fold) setTimeout(() => st.step.classList.remove('open'), 500);
   };
   // fertiger Schritt ohne eigene Dauer (Ergebnis einer Phase, z. B. „Collecting key findings · 14 sources“)
   const noteStep = (k, extra) => { const st = stepLine('dot', doneLine(k, extra)); ensureWork().steps.append(st); scrollToBottom(); return st; };
@@ -2411,6 +2421,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         if (picStep) pictures.finally(() => finishPicStep(signal.aborted));
       } else { answer.querySelectorAll('.chat-illustration[data-prompt]').forEach((f) => f.remove()); finishPicStep(true); } // gestoppt: keine hängenden Platzhalter
     }
+    actor?.finish(!signal.aborted && !failed && !/```ask/.test(answerR?.text || ''));
     if (work) {
       work.endStart?.();
       work.work.classList.remove('active');
@@ -4002,11 +4013,14 @@ function chatOf(tab) {
   if (!tab) return null;
   if (!tab._chat) {
     const t = tab.querySelector('.tab-title')?.textContent || 'Neuer Chat';
-    tab._chat = { title: DEFAULT_TITLES.has(t) ? 'Neuer Chat' : t, auto: true, pinned: false, updated: Date.now() };
+    tab._chat = { title: DEFAULT_TITLES.has(t) ? 'Neuer Chat' : t, auto: true, pinned: false, updated: Date.now(), ws: window.Workspaces?.active() || 'main' };
   }
   return tab._chat;
 }
 const activeTab = () => tabsEl.querySelector('.tab.active');
+// Workspace eines Chats (ältere ohne Angabe: „main“) – Seitenleiste, Chatverlauf und Suche zeigen nur den aktiven Workspace
+const inWorkspace = (tab) => (chatOf(tab)?.ws || 'main') === (window.Workspaces?.active() || 'main');
+window.inWorkspace = inWorkspace;
 // Hund des zuletzt genutzten Agenten als kleiner runder Kopf vor dem Chat-Titel (ältere Chats: Allgemein)
 function chatAvatar(tab, cls = 'chat-av') {
   const dogs = window.PixelDogs?.DOGS;
@@ -4218,7 +4232,7 @@ const chatsView = (() => {
   view.querySelector('.cl-new').addEventListener('click', () => { hide(); createTab('Neuer Chat'); input.focus(); });
   const render = () => {
     const q = search.value.trim().toLowerCase();
-    const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t)).map((t) => ({ tab: t, c: chatOf(t) })); // leere Chats zählen nicht
+    const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t)).map((t) => ({ tab: t, c: chatOf(t) })); // leere Chats zählen nicht
     const items = all.filter((x) => !q || x.c.title.toLowerCase().includes(q)).sort((a, b) => b.c.updated - a.c.updated);
     const frag = document.createDocumentFragment();
     [['Angeheftet', items.filter((x) => x.c.pinned)], ['Zuletzt', items.filter((x) => !x.c.pinned)]].forEach(([label, rows]) => {
@@ -4379,7 +4393,7 @@ window.renderSideChats = () => {
     const v = activeTab()?.dataset.view;
     const kind = chatsView.open ? 'history' : v === 'doc' ? 'docs' : v || '';
     document.querySelectorAll('.sidebar .sb-main [data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === kind));
-    const items = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t))
+    const items = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
       .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => (b.c.pinned - a.c.pinned) || (b.c.updated - a.c.updated)).slice(0, 8); // angeheftete zuerst
     // „Chats“ steht immer da (auch ohne Chats, dann ohne Hinweis darunter); rechts ein Plus für einen neuen Chat – nur beim Darüberfahren
     const body = el('div', 'sb-sec-body');
@@ -4451,7 +4465,7 @@ function chatItems(withImages) {
   return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
     const c = chatOf(tab);
     return {
-      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined,
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
       history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
     };
   });
@@ -4572,7 +4586,7 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     const tab = i === 0 && first ? first : createTab(s.title);
     if (i === 0) activateTab(tab);
     tab.dataset.cid = s.id;
-    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent };
+    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' };
     tab.querySelector('.tab-title').textContent = s.title;
     tab.classList.toggle('pinned', !!s.pinned);
     chat.replaceChildren();
@@ -4605,7 +4619,7 @@ async function openSavedChat(id) {
     if (!tab) {
       tab = createTab(s.title);
       tab.dataset.cid = s.id;
-      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent };
+      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' };
       tab.querySelector('.tab-title').textContent = s.title;
       chat.replaceChildren();
       history.length = 0;

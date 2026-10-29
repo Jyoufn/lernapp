@@ -38,7 +38,10 @@
 
   /* ---------- Name oben in der Sidebar ---------- */
   const nameOf = () => read(NAME_KEY, '') || 'Julian';
-  const applyName = () => document.querySelectorAll('.sb-ws-name').forEach((n) => { n.textContent = nameOf(); });
+  // Kopf oben links: Name des aktiven Workspace (der erste heißt wie der Nutzer)
+  const applyName = () => document.querySelectorAll('.sb-ws-name').forEach((n) => { n.textContent = window.Workspaces?.label?.() || nameOf(); });
+  window.userName = nameOf;
+  window.applyWorkspaceName = applyName;
   applyName();
 
   /* ---------- Aufbau ---------- */

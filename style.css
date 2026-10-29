@@ -7485,3 +7485,45 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 
 /* Zeitleiste: Zusatz hinter einem Unterpunkt („· 5 sources“, „· no issues found“) – leiser als der Unterpunkt selbst */
 .step-line .ph-x { color: var(--text-4); }
+
+/* ===== Hund neben dem Hauptstatus (PixelDogs.actor) – kleiner als früher (20 px), links neben „Thinking … / Completed“ =====
+   Gegenstand links vom Hund; Wechsel: alter Gegenstand gleitet weg, der neue kommt kurz danach von unten. Nie hektisch (Mindestzeit im Skript). */
+#chat .msg-ai::before { left: -30px; top: 1px; width: 20px; height: 20px; }
+#chat .msg-ai.acting::before { opacity: 0 !important; }
+.pd-actor { position: absolute; left: -44px; top: -3px; width: 34px; height: 24px; pointer-events: none; }
+.pd-actor svg { display: block; overflow: visible; }
+.pa-prop { opacity: 0; transform: translateY(4px); transition: opacity 160ms ease, transform 260ms var(--spring); }
+.pa-prop.on { opacity: 1; transform: none; transition-delay: 120ms; }
+.pa-glasses { opacity: 0; transition: opacity 220ms ease; }
+.pd-actor.glasses .pa-glasses { opacity: 1; }
+.pd-actor[data-state="think"] .pa-dog { animation: pa-bob 1.4s steps(1) infinite; }   /* nachdenklich: wippt ganz leicht */
+.pd-actor[data-state="search"] .pa-dog { animation: pa-look 1.48s steps(1) infinite; } /* schaut der Lupe hinterher */
+.pd-actor[data-state="cook"] .pa-dog, .pd-actor[data-state="type"] .pa-dog, .pd-actor[data-state="board"] .pa-dog { animation: pa-bob 0.9s steps(1) infinite; }
+.pd-actor[data-state="done"] .pa-dog { animation: pa-hop 520ms var(--spring) 1; }
+@keyframes pa-bob { 0%, 100% { transform: none; } 50% { transform: translateY(-1px); } }
+@keyframes pa-look { 0%, 100% { transform: none; } 50% { transform: translateX(-1px); } }
+@keyframes pa-hop { 0%, 100% { transform: none; } 40% { transform: translateY(-2px); } }
+@media (min-width: 721px) { #chat .msg-ai.acting .work-head .act { display: none; } }
+@media (max-width: 720px) { .pd-actor { display: none; } }
+.app.cw-wide .pd-actor { display: none; }
+.app.cw-wide #chat .msg-ai.acting .work.active .work-head .act { display: grid; }
+[data-theme="light"] .pd-actor svg { filter: invert(1) hue-rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .pa-prop, .pa-glasses { transition: none; } .pd-actor .pa-dog { animation: none !important; } }
+
+/* Workspaces im Menü: je Zeile Hund im abgerundeten Kästchen, Name, „Persönlicher Workspace“; aktiver mit blauem Haken;
+   beim Darüberfahren Stift und Papierkorb (nicht beim ersten). Tabs anderer Workspaces sind ausgeblendet. */
+.tab.ws-off { display: none !important; }
+.ws-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 6px 8px 6px 10px; border-radius: 9px; color: var(--text); cursor: pointer; outline: none; }
+.ws-row:hover, .ws-row:focus-visible { background: var(--menu-hover); }
+.ws-row.edit { cursor: default; }
+.ws-row.edit:hover { background: none; }
+.ws-row .ws-check { display: grid; place-items: center; flex: none; color: var(--accent); }
+.ws-acts { display: none; gap: 2px; }
+.ws-row:hover .ws-acts { display: flex; }
+.ws-row:hover .ws-check { display: none; }
+.ws-act { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); cursor: pointer; }
+.ws-act:hover { background: #2f2f2f; color: var(--text); }
+.ws-in { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 1px solid #333; border-radius: 8px; background: #1e1e1e; color: var(--text); font: inherit; font-size: 13px; outline: none; }
+.ws-in:focus { border-color: #444; }
+.ws-av-new { color: var(--text-3); }
+.ws-note { padding: 8px 10px; color: var(--text-4); font-size: 12px; }

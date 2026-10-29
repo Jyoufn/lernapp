@@ -1023,12 +1023,134 @@ const PixelDogs = (() => {
     document.querySelectorAll('.va-face').forEach((face) => { face.innerHTML = svg('general', 32).replace('</svg>', `${mouth}</svg>`); });
   }
 
+  /* ---------- Darsteller neben dem Hauptstatus der Zeitleiste (Thinking/Researching/…): kleiner Hund (20 px) mit Gegenstand ----------
+     Fläche 34 × 24, Hund rechts (x 14, y 4), links Platz für den Gegenstand. Je Zustand ein Gegenstand mit eigener kleiner Schleife:
+       think  Denkblase, Punkte erscheinen nacheinander, Kopf wippt leicht     search  Lupe wandert links hin und her
+       cook   Pfanne mit flackernden Flammen (Allgemein „Cooking“)            book    offenes Buch, Seite blättert um
+       board  Tafel, Kreide schreibt Zeile für Zeile                          plan    Klemmbrett, Haken erscheinen
+       laptop Laptop, Zeilen laufen (mit Brille)                              type    Laptop, Text wird getippt (mit Brille)
+       chart  Tablet, Kurslinie zeichnet sich                                  news    Zeitung, wird leicht bewegt
+       done   Daumen hoch mit kleinem Funkeln
+     Übergänge: der alte Gegenstand gleitet weich nach unten weg, der neue kommt von unten – und jeder Zustand bleibt mindestens
+     MIN_DWELL ms stehen. Kommen Wechsel schneller (kurzes Thinking), wird direkt zum NEUESTEN gesprungen statt alle abzuspielen. */
+  const AW = 34, AH = 24, AX = 14, AY = 4, MIN_DWELL = 950;
+  const APAL = { ...PROP, J: '#22352a', j: '#2e4537', D: '#5a5a5a' };
+  const fur = (id) => ({ ...APAL, F: (FUR[id] || FUR.general)[0], f: (FUR[id] || FUR.general)[1] });
+  const P2 = (rows, x, y, pal = APAL) => ({ rows, x, y, pal });
+  const BUBBLE = (n) => ['.KKKKKKKK.', 'KLLLLLLLLK', `KL${[0, 1, 2].map((i) => (i < n ? 'NL' : 'LL')).join('')}LK`, 'KLLLLLLLLK', '.KKKKKKKK.'];
+  const LENS_S = ['.KKKKK..', 'KHgggvK.', 'Kgggggv.', 'KgggggK.', 'KvggvvK.', '.KKKKKK.', '.....KBK', '......KB'];
+  const PAN_S = ['KCCCCCCCK.....', '.KcccccK.BBBBB', '..KKKKK.......'];
+  const FLAMES = [['..Y..Y.', '.YPYYPY', 'YPRPPRP', '.PRRRP.'], ['.Y...Y.', '.PY.YPY', 'YPRPRPY', '.PRRRP.'], ['...Y...', '.YPY.Y.', 'YPRPYPY', '.PRRRP.']];
+  const BOOK_S = ['.KKKKK.KKKKK.', 'KwwwwwKwwwwwK', 'KwvvvwKwvvvwK', 'KwwwwwKwwwwwK', 'KwvvwwKwvvvwK', 'KKKKKKKKKKKKK'];
+  const PAGE = [['.K', 'Kw', 'Kw'], ['K', 'w', 'w'], ['K.', 'wK', 'wK']];
+  const CLIP = ['...KKK...', '.KKMMMKK.', 'KBBBBBBBK', 'KBwwwwwBK', 'KBwwvvvBK', 'KBwwwwwBK', 'KBwwvvwBK', 'KBwwwwwBK', 'KBwwvvvBK', 'KBwwwwwBK', 'KBBBBBBBK', '.KKKKKKK.'];
+  const PAPER = ['KKKKKKKKKKKKK', 'KwwwwwwwwwwwK', 'KwNNNNNNNNNwK', 'KwwwwwwwwwwwK', 'KwvvvwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwvvvvwK', 'KwvvvwwvvvvwK', 'KwwwwwwwwwwwK', 'KKKKKKKKKKKKK'];
+  const THUMB = ['...KK...', '..KFFK..', '..KFFK..', 'KKKFFKK.', 'KFFFFFFK', 'KFFFFFfK', 'KFFFFFfK', 'KfFFFffK', '.KKKKKK.'];
+  const SPARK = ['.Y.', 'YHY', '.Y.'];
+  const GLASSES = ['KKKKKKKKKK', 'KAAK..KAAK', '.KK....KK.'];
+  // Laptop von vorn: Bildschirm mit Textzeilen (Zeilen laufen bzw. werden getippt), darunter das Unterteil
+  const laptopRows = (lines, cursor = false) => {
+    const scr = Array.from({ length: 5 }, (_, i) => { const n = lines[i] || 0; return `KZ${'g'.repeat(n)}${cursor && i === lines.findIndex((x, k) => k === lines.length - 1) ? 'H' : ''}`.padEnd(10, 'Z').slice(0, 10) + 'K'; });
+    return ['KKKKKKKKKKK', ...scr, 'KKKKKKKKKKK', '.KNNNNNNNNNK', '..KKKKKKKKKK'];
+  };
+  const SCROLL = [[6, 4, 7, 3, 5], [4, 7, 3, 5, 6], [7, 3, 5, 6, 4], [3, 5, 6, 4, 7]];
+  const TYPED = [[7], [7, 2], [7, 4], [7, 6], [7, 6, 3], [7, 6, 5], [7, 6, 5, 2]];
+  // kleines Tablet mit Kurslinie (wie beim Bären am Eingabefeld, nur kleiner)
+  const CH = [4, 3, 4, 2, 3, 1, 2, 1, 0, 1];
+  const tabRows = (shown) => {
+    const g = Array.from({ length: 5 }, () => Array(10).fill('Z'));
+    const n = Math.min(9, shown), col = CH[n] <= CH[0] ? 'X' : 'R';
+    for (let j = 0; j <= n; j++) { const a = CH[j], b = j < n ? CH[j + 1] : a; for (let y = Math.min(a, b); y <= Math.max(a, b); y++) g[y][j] = col; }
+    g[CH[n]][n] = 'H';
+    return ['.KKKKKKKKKK.', ...g.map((r) => `K${r.join('')}K`), 'KccccNNccccK', '.KKKKKKKKKK.'];
+  };
+  const boardRows = (k) => {
+    const L = [[2, 8], [4, 6], [6, 7]]; // Zeile, Länge
+    let left = k;
+    const rows = ['BBBBBBBBBBBB', ...Array.from({ length: 8 }, (_, i) => {
+      const line = L.find(([r]) => r === i);
+      if (!line) return 'BJJJJJJJJJJB';
+      const n = Math.max(0, Math.min(line[1], left)); left -= line[1];
+      return `BJ${'w'.repeat(n)}${n < line[1] && n > 0 ? 'H' : ''}`.padEnd(11, 'J').slice(0, 11) + 'B';
+    }), 'BBBBBBBBBBBB', '.B........B.'];
+    return rows;
+  };
+  const ANIMS = (id) => {
+    const pf = fur(id);
+    const seq = (n, ms) => Array.from({ length: n }, (_, i) => [i, ms]);
+    return {
+      think: { frames: [0, 1, 2, 3].map((n) => [P2(BUBBLE(n), 1, 0), P2(['vv', 'vv'], 10, 6), P2(['v'], 12, 8), P2(['.KK.', 'KFFK', 'KfFK', '.KK.'], AX + 2, AY + 15, pf)]), loop: [[0, 300], [1, 300], [2, 300], [3, 700]] },
+      search: { frames: [0, 2, 4, 2].map((x) => [P2(LENS_S, x, 9), P2(['KFK', 'KfK'], x + 7, 16, pf)]), loop: [[0, 420], [1, 320], [2, 420], [3, 320]] },
+      cook: { frames: [0, 1, 2].map((k) => [P2(FLAMES[k], 1, 15), P2(PAN_S, k === 1 ? 1 : 0, 19), P2(['KFK', 'KfK'], 12, 19, pf)]), loop: [[0, 160], [1, 160], [2, 160], [1, 140]] },
+      book: { frames: [null, 0, 1, 2].map((k) => [P2(BOOK_S, 0, 16), ...(k == null ? [] : [P2(PAGE[k], [7, 6, 5][k], 13)])]), loop: [[0, 1100], [1, 120], [2, 120], [3, 120], [0, 900]] },
+      board: { frames: Array.from({ length: 23 }, (_, k) => [P2(boardRows(k), 0, 4)]), loop: [...seq(23, 110), [22, 900]] },
+      plan: { frames: [0, 1, 2, 3].map((n) => [P2(CLIP, 2, 9), ...[4, 6, 8].slice(0, n).map((r) => P2(['X'], 4, 9 + r))]), loop: [[0, 500], [1, 400], [2, 400], [3, 900]] },
+      laptop: { frames: SCROLL.map((l) => [P2(laptopRows(l), 1, 13)]), loop: seq(4, 340), glasses: true },
+      type: { frames: TYPED.map((l) => [P2(laptopRows(l, true), 1, 13)]), loop: [...seq(TYPED.length, 260), [TYPED.length - 1, 600]], glasses: true },
+      chart: { frames: Array.from({ length: 10 }, (_, k) => [P2(tabRows(k), 0, 14)]), loop: [...seq(10, 150), [9, 900]] },
+      news: { frames: [12, 13].map((y) => [P2(PAPER, 0, y), P2(['KFK', 'KfK'], 12, y + 6, pf)]), loop: [[0, 900], [1, 700]] },
+      done: { frames: [[P2(THUMB, 5, 16, pf)], [P2(THUMB, 5, 13, pf)], [P2(THUMB, 5, 12, pf), P2(SPARK, 1, 8)], [P2(THUMB, 5, 12, pf)]], loop: [[0, 70], [1, 90], [2, 360], [3, 300], [2, 360], [3, 2000]], once: true },
+    };
+  };
+  function actor(id) {
+    if (!DOGS[id]?.[20]) id = 'general';
+    const anims = ANIMS(id);
+    const wrap = document.createElement('span');
+    wrap.className = 'pd-actor';
+    wrap.setAttribute('aria-hidden', 'true');
+    const glasses = id === 'research' ? `<g class="pa-glasses">${rects(P2(GLASSES, AX + 5, AY + 4), AX + 5, AY + 4)}</g>` : '';
+    const groups = Object.entries(anims).map(([k, a]) => `<g class="pa-prop" data-anim="${k}">${a.frames.map((f, i) => `<g data-f="${i}"${i ? ' style="display:none"' : ''}>${f.map((p) => rects(p, p.x, p.y)).join('')}</g>`).join('')}</g>`).join('');
+    wrap.innerHTML = `<svg class="pd pa-svg" width="${AW}" height="${AH}" viewBox="0 0 ${AW} ${AH}" shape-rendering="crispEdges"><g class="pa-dog">${rects(DOGS[id][20], AX, AY)}${glasses}</g>${groups}</svg>`;
+    let cur = null, want = null, since = 0, wait = null, loopT = null, onDone = null;
+    const still = reduced();
+    const loop = (k) => {
+      clearTimeout(loopT);
+      const a = anims[k], g = wrap.querySelector(`[data-anim="${k}"]`);
+      const frame = (f) => g.querySelectorAll(':scope > [data-f]').forEach((n) => { n.style.display = +n.dataset.f === f ? '' : 'none'; });
+      if (still) { frame(a.loop[a.loop.length - 1][0]); return; }
+      let i = 0;
+      const tick = () => {
+        if (i >= a.loop.length) { if (a.once) { onDone?.(); return; } i = 0; }
+        const [f, ms] = a.loop[i++];
+        frame(f);
+        loopT = setTimeout(tick, ms);
+      };
+      tick();
+    };
+    const show = (k) => {
+      wrap.querySelectorAll('.pa-prop.on').forEach((g) => g.classList.remove('on'));
+      wrap.querySelector(`[data-anim="${k}"]`)?.classList.add('on');
+      wrap.classList.toggle('glasses', !!anims[k]?.glasses);
+      wrap.dataset.state = k;
+      cur = k; since = Date.now();
+      loop(k);
+    };
+    const step = () => {
+      wait = null;
+      if (!want || want === cur) return;
+      const left = MIN_DWELL - (Date.now() - since);
+      if (left > 0 && cur) { wait = setTimeout(step, left); return; }
+      show(want);
+    };
+    return {
+      el: wrap,
+      set(k) { if (!anims[k]) k = 'think'; want = k; if (!cur) show(k); else if (!wait) step(); },
+      // fertig: Daumen hoch (nach der Mindestzeit des letzten Zustands), danach legt er alles weg und bleibt als kleiner Kopf
+      finish(ok = true) {
+        if (!ok) { clearTimeout(wait); clearTimeout(loopT); want = cur = null; wrap.querySelectorAll('.pa-prop.on').forEach((g) => g.classList.remove('on')); wrap.classList.remove('glasses'); return; }
+        onDone = () => setTimeout(() => { wrap.querySelectorAll('.pa-prop.on').forEach((g) => g.classList.remove('on')); wrap.classList.remove('glasses'); wrap.dataset.state = 'rest'; }, 200);
+        this.set('done');
+      },
+      stop() { clearTimeout(wait); clearTimeout(loopT); },
+    };
+  }
+
   if (typeof document !== 'undefined') {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
     else mount();
   }
 
-  return { DOGS, MODES, UNAVAILABLE, SCENE_W, SCENE_H, sceneTracks, svg, select: (id) => (DOGS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
+  return { actor, DOGS, MODES, UNAVAILABLE, SCENE_W, SCENE_H, sceneTracks, svg, select: (id) => (DOGS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
 })();
 if (typeof window !== 'undefined') window.PixelDogs = PixelDogs;
 if (typeof module !== 'undefined') module.exports = PixelDogs;

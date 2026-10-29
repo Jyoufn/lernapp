@@ -1,10 +1,11 @@
 /* ===================================================================
    Suchfeld (Lupe oben in der Seitenleiste, ⌘K / Strg+K) und Workspace-Menü (Name oben links)
    - Suchfeld wie eine Befehlspalette: oben das Eingabefeld, darunter Gruppen
-     leer:   Aktionen (Neuer Chat, Neues Dokument, Neue Aufgabe) · Zuletzt (Chats mit Hund) · Gehe zu · Darstellung · Einstellungen
+     leer:   Aktionen (Neuer Chat, Neues Dokument, Neue Aufgabe) · Zuletzt (Chats mit Hund) · Gehe zu
      tippen: passende Aktionen, Agenten-Chats (Titel und Inhalt, davor der Hund des zuletzt genutzten Agenten), Dokumente (Titel und Text)
      Pfeile wählen, Enter öffnet, Esc schließt. Fundstelle im Inhalt erscheint grau dahinter.
-   - Workspace-Menü: oben der Workspace mit Hund, darunter „Workspace hinzufügen“ (kommt später), Suchen, Einstellungen
+   - Workspaces (höchstens 3): jeder mit eigenem Hund und eigenen Chats/Dokumenten. Menü oben links: Liste (Haken am aktiven),
+     „Workspace hinzufügen“ (Name eintippen, Enter), beim Darüberfahren Umbenennen/Löschen (Inhalt wandert in den ersten), Einstellungen
    Braucht aus app.js: tabsEl, chatOf, historyOf, activateTab, createTab, openViewTab, isDraft, chatsView.
    =================================================================== */
 const AppSearch = (() => {
@@ -17,12 +18,12 @@ const AppSearch = (() => {
   const norm = (s) => String(s || '').toLowerCase();
 
   /* ---------- Daten ---------- */
-  const chatTabs = () => [...document.querySelectorAll('#tabs .tab:not([data-view]):not(.uil-tab)')].filter((t) => !t.classList.contains('draft') || historyOf(t).length);
+  const chatTabs = () => [...document.querySelectorAll('#tabs .tab:not([data-view]):not(.uil-tab)')].filter((t) => (!t.classList.contains('draft') || historyOf(t).length) && (window.inWorkspace?.(t) ?? true));
   const chats = () => chatTabs().map((tab) => {
     const c = chatOf(tab) || {};
     return { tab, title: c.title || 'Chat', agent: c.agent, updated: c.updated || 0, text: historyOf(tab).map((h) => h.text || '').join('\n') };
   }).sort((a, b) => b.updated - a.updated);
-  const docs = () => (window.Docs?.docs || []).filter((d) => !window.Docs.isEmpty(d.id)).map((d) => ({ id: d.id, title: d.title || 'Unbenannt', updated: d.updated || 0, icon: d.icon, text: `${d.subtitle || ''} ${plain(d.content)}` }))
+  const docs = () => (window.Docs?.docs || []).filter((d) => !window.Docs.isEmpty(d.id) && (window.Docs.inWs?.(d) ?? true)).map((d) => ({ id: d.id, title: d.title || 'Unbenannt', updated: d.updated || 0, icon: d.icon, text: `${d.subtitle || ''} ${plain(d.content)}` }))
     .sort((a, b) => b.updated - a.updated);
   // kurzer Ausschnitt um die Fundstelle
   const snippet = (text, q) => {
@@ -46,17 +47,14 @@ const AppSearch = (() => {
     chatsView?.hide?.();
     setTimeout(() => document.getElementById('input')?.focus(), 60);
   };
-  const lightNow = () => window.Appearance?.get?.().mode === 'light';
   const ACTIONS = () => [
     { group: 'Aktionen', icon: oi('plus'), label: 'Neuer Chat', keys: 'chat neu', run: newChat },
-    { group: 'Aktionen', icon: fi('file'), label: 'Neues Dokument', keys: 'dokument neu notiz', run: () => window.Docs?.create() },
-    { group: 'Aktionen', icon: fi('tasks'), label: 'Neue Aufgabe', keys: 'aufgabe neu task', run: () => { openViewTab('tasks'); setTimeout(() => document.querySelector('.tk-view:not([hidden]) .tk-new')?.click(), 120); } },
+    { group: 'Aktionen', icon: oi('doc-new'), label: 'Neues Dokument', keys: 'dokument neu notiz', run: () => window.Docs?.create() },
+    { group: 'Aktionen', icon: oi('tasks'), label: 'Neue Aufgabe', keys: 'aufgabe neu task', run: () => { openViewTab('tasks'); setTimeout(() => document.querySelector('.tk-view:not([hidden]) .tk-new')?.click(), 120); } },
     { group: 'Gehe zu', icon: oi('chat'), label: 'Chatverlauf', keys: 'chats verlauf alle', run: () => window.openChatsFromAnywhere?.() },
     { group: 'Gehe zu', icon: oi('library'), label: 'Bibliothek', keys: 'dokumente bibliothek library', run: () => openViewTab('docs') },
     { group: 'Gehe zu', icon: oi('tasks'), label: 'Aufgaben', keys: 'aufgaben board tasks', run: () => openViewTab('tasks') },
     { group: 'Gehe zu', icon: oi('calendar'), label: 'Kalender', keys: 'kalender termine', run: () => openViewTab('calendar') },
-    { group: 'Darstellung', icon: fi(lightNow() ? 'eye' : 'bulb'), label: lightNow() ? 'Zu dunklem Design wechseln' : 'Zu hellem Design wechseln', keys: 'hell dunkel design theme modus', run: () => window.Appearance?.set({ mode: lightNow() ? 'dark' : 'light' }) },
-    { group: 'Einstellungen', icon: fi('settings'), label: 'Einstellungen', keys: 'einstellungen settings api agenten', hint: isMac ? '⌘,' : 'Strg+,', run: () => window.Settings?.open() },
   ];
 
   /* ---------- Fenster ---------- */
@@ -64,7 +62,7 @@ const AppSearch = (() => {
   root.className = 'cmdk';
   root.hidden = true;
   root.innerHTML = `<div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Suchen">
-      <label class="cmdk-in">${oi('search', 15)}<input type="text" placeholder="Suchen oder Aktion …" aria-label="Suchen" autocomplete="off" spellcheck="false" /><kbd>Esc</kbd></label>
+      <label class="cmdk-in">${oi('search', 15)}<input type="text" placeholder="Suchen oder Aktion …" aria-label="Suchen" autocomplete="off" spellcheck="false" /></label>
       <div class="cmdk-list" role="listbox"></div></div>`;
   document.body.append(root);
   const input = root.querySelector('input'), list = root.querySelector('.cmdk-list');
@@ -90,7 +88,7 @@ const AppSearch = (() => {
     let html = '', last = '';
     rows.forEach((r, i) => {
       if (r.group !== last) { html += `<div class="cmdk-g">${r.group}</div>`; last = r.group; }
-      html += `<div class="cmdk-row" role="option" data-i="${i}"><span class="cmdk-ic">${r.icon}</span><span class="cmdk-t"><span class="cmdk-l">${r.html || esc(r.label)}</span>${r.sub ? `<span class="cmdk-s">${mark(r.sub, q)}</span>` : ''}</span>${r.meta ? `<span class="cmdk-m">${esc(r.meta)}</span>` : ''}${r.hint ? `<kbd>${r.hint}</kbd>` : ''}</div>`;
+      html += `<div class="cmdk-row" role="option" data-i="${i}"><span class="cmdk-ic">${r.icon}</span><span class="cmdk-t"><span class="cmdk-l">${r.html || esc(r.label)}</span>${r.sub ? `<span class="cmdk-s">${mark(r.sub, q)}</span>` : ''}</span>${r.meta ? `<span class="cmdk-m">${esc(r.meta)}</span>` : ''}</div>`;
     });
     list.innerHTML = html;
     paint();
@@ -132,30 +130,95 @@ const AppSearch = (() => {
   });
   document.getElementById('sbSearch')?.addEventListener('click', () => open());
 
+  /* ---------- Workspaces (höchstens 3) – im Konto gespeichert (workspaces.v1, wird wie der übrige Browser-Speicher übertragen) ---------- */
+  const WS_KEY = 'workspaces.v1', WS_MAX = 3, WS_DOGS = ['general', 'research', 'learn', 'boerse'];
+  const wsLoad = () => { try { const o = JSON.parse(localStorage.getItem(WS_KEY) || 'null'); if (o?.list?.length) return o; } catch {} return { list: [{ id: 'main', dog: 'general' }], active: 'main' }; };
+  let wsData = wsLoad();
+  const wsSave = () => { try { localStorage.setItem(WS_KEY, JSON.stringify(wsData)); } catch {} };
+  const wsOf = (id) => wsData.list.find((w) => w.id === id) || wsData.list[0];
+  const wsName = (w) => (w.id === 'main' ? (window.userName?.() || 'Julian') : w.name || 'Workspace');
+  // Tabs oben: nur Chats und Dokumente des aktiven Workspace (Kalender, Aufgaben, Bibliothek bleiben)
+  const applyTabs = () => {
+    const act = wsData.active;
+    document.querySelectorAll('#tabs .tab:not(.uil-tab)').forEach((t) => {
+      const kind = t.dataset.view;
+      const ws = !kind ? (chatOf(t)?.ws || 'main') : kind === 'doc' ? (window.Docs?.get(t.dataset.doc)?.ws || 'main') : act;
+      t.classList.toggle('ws-off', ws !== act);
+    });
+    const cur = document.querySelector('#tabs .tab.active');
+    if (cur?.classList.contains('ws-off')) {
+      const next = document.querySelector('#tabs .tab:not(.uil-tab):not(.ws-off):not([hidden]):not([data-view])');
+      if (next) activateTab(next); else createTab('Neuer Chat');
+    }
+  };
+  const refreshAll = () => {
+    applyTabs();
+    window.applyWorkspaceName?.();
+    paintAv();
+    window.renderSideChats?.();
+    window.Docs?.refresh?.();
+    if (chatsView?.open) chatsView.render?.();
+  };
+  window.Workspaces = {
+    active: () => wsData.active,
+    list: () => wsData.list.slice(),
+    label: () => wsName(wsOf(wsData.active)),
+    set(id) { if (!wsData.list.some((w) => w.id === id) || id === wsData.active) return; wsData.active = id; wsSave(); refreshAll(); },
+    add(name) {
+      if (wsData.list.length >= WS_MAX) return null;
+      const used = new Set(wsData.list.map((w) => w.dog));
+      const w = { id: `w${Date.now().toString(36)}`, name: String(name || 'Workspace').trim().slice(0, 32) || 'Workspace', dog: WS_DOGS.find((d) => !used.has(d)) || 'general' };
+      wsData.list.push(w); wsData.active = w.id; wsSave(); refreshAll();
+      return w;
+    },
+    rename(id, name) { const w = wsData.list.find((x) => x.id === id); if (!w || id === 'main') return; w.name = String(name).trim().slice(0, 32) || w.name; wsSave(); refreshAll(); },
+    // Löschen: Chats und Dokumente gehen nicht verloren – sie wandern in den ersten Workspace
+    remove(id) {
+      if (id === 'main' || !wsData.list.some((w) => w.id === id)) return;
+      document.querySelectorAll('#tabs .tab:not(.uil-tab):not([data-view])').forEach((t) => { const c = chatOf(t); if (c?.ws === id) { c.ws = 'main'; c.updated = Date.now(); } });
+      (window.Docs?.docs || []).filter((d) => d.ws === id).forEach((d) => window.Docs.update(d.id, { ws: 'main' }));
+      window.saveChats?.();
+      wsData.list = wsData.list.filter((w) => w.id !== id);
+      if (wsData.active === id) wsData.active = 'main';
+      wsSave(); refreshAll();
+    },
+  };
+  window.addEventListener('storage', (e) => { if (e.key === WS_KEY) { wsData = wsLoad(); refreshAll(); } });
+  // nach dem Laden der Chats/Dokumente einmal die Tabs zuordnen
+  window.addEventListener('app-layout-ready', () => setTimeout(applyTabs, 0));
+  setTimeout(applyTabs, 2500);
+
   /* ---------- Workspace-Menü (Name oben links) ---------- */
   const ws = document.querySelector('.sb-ws');
   const av = ws?.querySelector('.sb-ws-av');
-  const paintAv = () => { if (av) av.innerHTML = dog('general', 20); };
+  function paintAv() { if (av) av.innerHTML = dog(wsOf(wsData.active).dog, 20); }
   paintAv();
-  if (av && !av.innerHTML) window.addEventListener('load', paintAv); // Hunde-Skript kommt nach diesem Skript
-  setTimeout(paintAv, 0);
+  setTimeout(() => { paintAv(); window.applyWorkspaceName?.(); }, 0); // Hunde-Skript kommt nach diesem Skript
   const pop = document.createElement('div');
   pop.className = 'ws-menu';
   pop.setAttribute('role', 'menu');
   ws?.parentElement?.append(pop);
-  const nameOf = () => ws?.querySelector('.sb-ws-name')?.textContent || 'Workspace';
+  let adding = false, renaming = null;
   const draw = () => {
-    pop.innerHTML = `<div class="ws-cur"><span class="ws-av">${dog('general', 24)}</span><span class="ws-t"><b>${esc(nameOf())}</b><small>Persönlicher Workspace</small></span>${fi('check', 13)}</div>
+    const rows = wsData.list.map((w) => renaming === w.id
+      ? `<div class="ws-row edit"><span class="ws-av">${dog(w.dog, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
+      : `<div class="ws-row${w.id === wsData.active ? ' on' : ''}" data-ws-pick="${w.id}" role="menuitemradio" aria-checked="${w.id === wsData.active}" tabindex="0">
+          <span class="ws-av">${dog(w.dog, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${w.id === 'main' ? 'Persönlicher Workspace' : 'Workspace'}</small></span>
+          ${w.id !== 'main' ? `<span class="ws-acts"><button type="button" class="ws-act" data-ws-rename="${w.id}" aria-label="Umbenennen" title="Umbenennen">${fi('pencil', 12)}</button><button type="button" class="ws-act" data-ws-del="${w.id}" aria-label="Löschen" title="Löschen (Chats und Dokumente wandern in den ersten Workspace)">${fi('trash', 12)}</button></span>` : ''}
+          ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
+    const full = wsData.list.length >= WS_MAX;
+    pop.innerHTML = `${rows}
+      ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 14)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
-      <button type="button" class="ws-mi" data-ws="new" aria-disabled="true">${oi('plus', 15)}<span>Workspace hinzufügen</span><em>Bald</em></button>
-      <div class="ws-sep"></div>
-      <button type="button" class="ws-mi" data-ws="search">${oi('search', 15)}<span>Suchen</span><kbd>${isMac ? '⌘K' : 'Strg+K'}</kbd></button>
-      <button type="button" class="ws-mi" data-ws="settings">${oi('gear', 15)}<span>Einstellungen</span><kbd>${isMac ? '⌘,' : 'Strg+,'}</kbd></button>`;
+      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new">${oi('plus', 15)}<span>Workspace hinzufügen</span></button>`}
+      <button type="button" class="ws-mi" data-ws="settings">${oi('settings', 15)}<span>Einstellungen</span></button>`;
+    const inp = pop.querySelector('.ws-in');
+    if (inp) { setTimeout(() => { inp.focus(); inp.select(); }, 20); }
   };
   const menu = {
     set(on) {
       if (!ws) return;
-      if (on) draw();
+      if (on) { adding = false; renaming = null; draw(); }
       pop.classList.toggle('open', on);
       ws.classList.toggle('on', on);
       ws.setAttribute('aria-expanded', String(on));
@@ -163,11 +226,24 @@ const AppSearch = (() => {
   };
   ws?.addEventListener('click', (e) => { e.stopPropagation(); menu.set(!pop.classList.contains('open')); });
   pop.addEventListener('click', (e) => {
+    const ren = e.target.closest('[data-ws-rename]'); if (ren) { e.stopPropagation(); renaming = ren.dataset.wsRename; adding = false; draw(); return; }
+    const del = e.target.closest('[data-ws-del]'); if (del) { e.stopPropagation(); window.Workspaces.remove(del.dataset.wsDel); draw(); return; }
+    const pick = e.target.closest('[data-ws-pick]'); if (pick) { window.Workspaces.set(pick.dataset.wsPick); menu.set(false); return; }
     const b = e.target.closest('[data-ws]'); if (!b) return;
-    if (b.dataset.ws === 'new') return; // kommt später: eigene Workspaces mit eigenen Chats, teilbar
+    if (b.dataset.ws === 'new') { adding = true; renaming = null; draw(); return; }
     menu.set(false);
-    if (b.dataset.ws === 'search') open();
     if (b.dataset.ws === 'settings') window.Settings?.open();
+  });
+  pop.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    const inp = e.target.closest('.ws-in');
+    if (inp && e.key === 'Enter') {
+      e.preventDefault();
+      if (inp.dataset.new != null) { if (inp.value.trim()) { window.Workspaces.add(inp.value); menu.set(false); } }
+      else { window.Workspaces.rename(inp.dataset.rename, inp.value); renaming = null; draw(); }
+    }
+    if (e.key === 'Escape') { e.preventDefault(); if (adding || renaming) { adding = false; renaming = null; draw(); } else menu.set(false); }
+    if (!inp && e.key === 'Enter' && e.target.closest('[data-ws-pick]')) { window.Workspaces.set(e.target.closest('[data-ws-pick]').dataset.wsPick); menu.set(false); }
   });
   document.addEventListener('pointerdown', (e) => { if (!pop.contains(e.target) && !ws?.contains(e.target)) menu.set(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') menu.set(false); });
