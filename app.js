@@ -77,13 +77,13 @@ window.markDrafts = markDrafts;
 
 /* Kalender und Aufgaben öffnen als eigene Tabs (ein Tab je Ansicht) */
 const VIEW_TABS = {
-  inbox: { title: 'Inbox', icon: 'i-inbox', view: () => window.Inbox },
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
   docs: { title: 'Library', icon: 'f-file', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
 function openViewTab(kind) {
+  if (!VIEW_TABS[kind]) return; // z. B. ein gemerkter Tab einer Ansicht, die es nicht mehr gibt (Inbox)
   const tab = tabsEl.querySelector(`.tab[data-view="${kind}"]`);
   if (tab) activateTab(tab); else createTab(VIEW_TABS[kind].title, kind);
 }
@@ -1186,6 +1186,11 @@ function renderMarkdown(target, text, opts = {}) {
     if (i || !window.DepotCard) { pre.remove(); return; }
     pre.replaceWith(DepotCard.figure());
   });
+  // Chancen-Übersicht (```chancen): Kästchen Kaufen / Beobachten / Nicht kaufen (chancen-card.js) – höchstens eine je Antwort
+  target.querySelectorAll('pre:has(code.language-chancen)').forEach((pre, i) => {
+    if (i || !window.ChancenCard) { pre.remove(); return; }
+    pre.replaceWith(ChancenCard.figure(pre.querySelector('code').textContent));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -1600,6 +1605,23 @@ function keyCard(kind, message) {
   const go = el('button', 'as-go', 'Zu den Einstellungen');
   go.type = 'button';
   go.addEventListener('click', () => window.Settings?.open('agents'));
+  card.append(go);
+  return card;
+}
+/* Fehler (z. B. Modelle überlastet): ruhige Karte im Stil der Agent-Empfehlung statt roter Box – „Nochmal versuchen“ startet die
+   Antwort neu; darunter kommt die normale Leiste (Kopieren, Neu erzeugen, Ins Dokument) */
+function errorCard(msgEl, message, status) {
+  const busy = status === 503 || /überlastet/i.test(message || '');
+  const card = el('div', 'agent-suggest error-card');
+  card.innerHTML = '<span class="as-dog"></span><span class="as-text"><strong></strong><span></span></span>';
+  card.querySelector('.as-dog').innerHTML = window.PixelDogs?.svg(window.PixelDogs.mode, 32) || '';
+  card.querySelector('strong').textContent = busy ? 'Die Modelle sind gerade überlastet' : 'Das hat gerade nicht geklappt';
+  card.querySelector('.as-text span').textContent = busy
+    ? 'Gerade fragen sehr viele gleichzeitig an – das liegt nicht an dir. In ein paar Sekunden klappt es meistens wieder.'
+    : String(message || 'Unbekannter Fehler');
+  const go = el('button', 'as-go', 'Nochmal versuchen');
+  go.type = 'button';
+  go.addEventListener('click', () => { if (runOf()) return; card.classList.add('chosen'); setTimeout(() => regenerate(msgEl), 200); });
   card.append(go);
   return card;
 }
@@ -2089,7 +2111,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     thought.steps.forEach(finishThoughtStep);
   };
   const pendingAskStep = () => false; // Rückfragen laufen über die Zeitleiste selbst
-  const showNote = (cls, text) => { msgEl.append(el('div', cls, escapeHtml(text))); scrollToBottom(); };
+  let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
 
   try {
     const response = await fetch('/api/chat', {
@@ -2143,12 +2165,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         if (data.detail?.limit) { msgEl.append(limitNote(limitText(data.detail.resetAt))); scrollToBottom(); } // Limit: ruhig, nicht rot
         else if (data.detail?.key) { msgEl.append(keyCard(data.detail.key, data.message)); scrollToBottom(); } // API-Key fehlt/abgelehnt: Karte mit Weg zu den Einstellungen
         else if (data.detail?.partial && answerR?.text.trim()) interrupted = true; // unterbrochen → Karte zum Weiterschreiben (unten)
-        else showNote('error-note', data.message);
+        else { errorText = data.message || 'Unbekannter Fehler'; msgEl.append(errorCard(msgEl, errorText, data.detail?.status)); scrollToBottom(); }
       }
     }
   } catch (err) {
     if (err.name !== 'AbortError' && answerR?.text.trim()) interrupted = true; // Verbindung mitten in der Antwort weg → weiterschreiben anbieten
-    else if (err.name !== 'AbortError') showNote('error-note', err.message); // gestoppt: kein Hinweis – unten erscheint „Neu starten“
+    else if (err.name !== 'AbortError') { errorText = err.message || 'Verbindung unterbrochen'; msgEl.append(errorCard(msgEl, errorText, null)); scrollToBottom(); } // gestoppt: kein Hinweis – unten erscheint „Neu starten“
   } finally {
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
     clearInterval(timer);
@@ -2214,6 +2236,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       footer.hidden = true;
       pictures.finally(() => { footer.hidden = false; footer.classList.add('late-in'); });
     }
+  }
+  else if (errorText && !signal.aborted && !questions) {
+    // Fehler ohne Antworttext: unter der Karte dieselbe Leiste wie bei einer Antwort (Kopieren, Neu erzeugen, Ins Dokument)
+    const footer = messageFooter(msgEl, errorText);
+    footer.classList.add('late-in');
+    msgEl.append(footer);
   }
   else if (signal.aborted && !questions) {
     // gestoppt, bevor Text kam: alles Bisherige bleibt sichtbar, darunter nur „Neu erzeugen“

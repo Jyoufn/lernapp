@@ -15,11 +15,5 @@
     "api/index.js": {
       "maxDuration": 300
     }
-  },
-  "crons": [
-    {
-      "path": "/api/boerse/radar-cron",
-      "schedule": "5 8 * * 1-5"
-    }
-  ]
+  }
 }

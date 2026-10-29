@@ -120,7 +120,6 @@
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-library"/></svg>Bibliothek</a>
           <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-tasks"/></svg>Aufgaben</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
-          <a class="nav-item" href="#" data-nav="inbox"><svg width="16" height="16"><use href="#o-inbox"/></svg>Inbox<span class="nav-badge" hidden></span></a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -255,6 +254,7 @@
     <script src="chat-visuals.js"></script>
     <script src="stock-chart.js"></script><!-- Aktienchart (```stock) für den Börsen-Agenten -->
     <script src="depot-card.js"></script><!-- Depot-Grafik (```depot) aus dem Planspiel Börse -->
+    <script src="chancen-card.js"></script><!-- Chancen-Übersicht (```chancen) des Börsen-Bären -->
     <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
     <script src="app.js"></script>
     <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
@@ -266,8 +266,6 @@
     <script src="tasks.js"></script>
     <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
     <script src="docs.js"></script>
-    <script src="inbox.js"></script>
-    <script src="boerse-radar.js"></script><!-- Chancen-Radar des Börsen-Bären: neue Chancen als Hinweis + Inbox -->
   </template>
   <script src="auth.js?v=4"></script><!-- Anmeldung + Konto (Daten ins Konto), lädt danach die App -->
 </body>

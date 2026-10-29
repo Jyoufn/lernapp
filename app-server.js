@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'depot-card.js', 'boerse-radar.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'depot-card.js', 'chancen-card.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -1254,6 +1254,8 @@ async function handle(req, res) {
     // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
     if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
     if (req.method === 'GET' && urlPath === '/api/boerse/radar') return sendJson(res, 200, await RADAR.latest(store));
+    // Chancen-Übersicht für die Karte im Chat (```chancen): NUR der gespeicherte Radar – hier wird nichts neu gerechnet
+    if (req.method === 'GET' && urlPath === '/api/boerse/chancen') return sendJson(res, 200, RADAR.overview(await RADAR.latest(store, { stored: true }).catch(() => null)) || { picks: [] });
     // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
     // Depot aus dem Planspiel (Grafik ```depot im Chat): Werte, Bargeld, Positionen – nie Zugangsdaten
     if (req.method === 'GET' && urlPath === '/api/planspiel/depot') {

@@ -4067,32 +4067,6 @@ textarea::selection, input::selection { background: transparent; }
 .dc-loose:hover { color: var(--text) !important; }
 .dc-loose span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Inbox: ein Kasten, links Nachrichten, Trennstrich, rechts die Nachricht */
-.panel.view-inbox .content, .panel.view-inbox .composer-area, .panel.view-inbox .chat-bar,
-.panel.view-inbox .prompt-nav, .panel.view-inbox .pn-card { visibility: hidden; }
-.ib-view { position: absolute; inset: 0; z-index: 20; display: flex; background: var(--main-bg); animation: cal-in 380ms var(--spring) both; }
-.ib-list { flex: none; width: 320px; display: flex; flex-direction: column; gap: 1px; padding: 22px 10px 16px; border-right: 1px solid #262626; overflow-y: auto; }
-.ib-head { display: flex; align-items: baseline; gap: 8px; padding: 0 8px 12px; }
-.ib-head h2 { margin: 0; color: var(--text); font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
-.ib-count { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
-.ib-item { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: 10px; background: none; color: var(--text-3); font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease; }
-.ib-item:hover { background: #1f1f1f; }
-.ib-item.on { background: #222; }
-.ib-item-top { display: flex; align-items: baseline; gap: 8px; }
-.ib-from { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-size: 12.5px; font-weight: 500; }
-.ib-time { flex: none; color: var(--text-4); font-size: 11px; font-variant-numeric: tabular-nums; }
-.ib-subject { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-size: 12.5px; }
-.ib-snippet { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-4); font-size: 12px; }
-.ib-item.unread .ib-from, .ib-item.unread .ib-subject { color: var(--text); font-weight: 600; }
-.ib-read { flex: 1; min-width: 0; overflow-y: auto; }
-.ib-read-in { max-width: 720px; padding: 32px 40px 60px; animation: step-in 260ms var(--spring) both; }
-.ib-read h1 { margin: 0 0 8px; color: var(--text); font-size: 20px; font-weight: 600; letter-spacing: -0.2px; }
-.ib-meta { display: flex; gap: 10px; padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid #262626; color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
-.ib-meta span:first-child { color: var(--text-3); font-weight: 500; }
-.ib-body { color: var(--text-2); font-size: 13px; line-height: 1.65; }
-.ib-empty { padding: 8px 10px; color: var(--text-4); font-size: 12.5px; }
-.ib-none { display: grid; place-items: center; height: 100%; }
-@media (prefers-reduced-motion: reduce) { .ib-view, .ib-read-in { animation: none !important; } }
 
 
 /* Agenten-Leiste etwas kleiner (zwischen Tab-Höhe und vorher) */
@@ -5959,7 +5933,7 @@ input.dcb-inl.dcb-tm-t { flex: none; font-size: 13.5px; font-weight: 500; }
   opacity: 0; transform: translate(-50%, -6px); pointer-events: none;
   transition: opacity 260ms ease, transform 420ms var(--spring), top 420ms var(--spring);
 }
-.panel.home:not(.view-calendar):not(.view-chats):not(.view-tasks):not(.view-docs):not(.view-inbox) > .dog-modes { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.panel.home:not(.view-calendar):not(.view-chats):not(.view-tasks):not(.view-docs) > .dog-modes { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 /* läuft oben schon Agent, Musik oder Timer: Leiste rutscht darunter */
 .panel:has(#topStack.dock-on) > .dog-modes { top: 72px; }
 /* alle Gesichter und das Plus zusammen in einer runden Leiste; Gesichter bei mehr Hunden waagerecht scrollbar (ohne Balken) */
@@ -6550,41 +6524,6 @@ svg.pd { display: block; image-rendering: pixelated; }
    fett), rechts die Nachricht – Betreff groß, Absender mit Kreis und Zeit, oben rechts Löschen (2× klicken).
    Ungelesene als kleine Zahl am Eintrag „Inbox“ in der Sidebar.
    ===================================================================== */
-.ib-side { flex: none; width: 340px; display: flex; flex-direction: column; min-height: 0; padding: 24px 12px 12px; border-right: 1px solid #232323; }
-.ib-list { flex: 1; width: auto; min-height: 0; gap: 2px; padding: 0; border: 0; overflow-y: auto; scrollbar-width: none; }
-.ib-head { padding: 0 6px 14px; }
-.ib-head h2 { font-size: 22px; letter-spacing: -0.3px; }
-.ib-search { display: flex; align-items: center; gap: 8px; height: 34px; margin: 0 2px 10px; padding: 0 12px; border: 1px solid var(--field-border, #272727); border-radius: 12px;
-  background: var(--field-bg, #1c1c1c); color: var(--text-4); cursor: text; }
-.ib-search input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 13px; }
-.ib-search input::placeholder { color: var(--text-4); }
-.ib-search input::-webkit-search-cancel-button { display: none; }
-.ib-item { position: relative; flex-direction: row; align-items: flex-start; gap: 11px; padding: 10px 10px 10px 12px; border-radius: 12px; }
-.ib-item:hover { background: #1b1b1b; }
-.ib-item.on { background: #212121; }
-.ib-item.unread::before { content: ""; position: absolute; left: 3px; top: 22px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
-.ib-item-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.ib-av { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-top: 1px; border-radius: 50%;
-  background: color-mix(in srgb, var(--av) 20%, transparent); color: var(--av); font-size: 12.5px; font-weight: 600; }
-.ib-av.big { width: 34px; height: 34px; font-size: 13.5px; }
-.ib-from { font-size: 13px; }
-.ib-subject { font-size: 12.5px; color: var(--text-3); }
-.ib-snippet { font-size: 12px; }
-.ib-item.unread .ib-subject { color: var(--text-2); font-weight: 500; }
-.ib-empty { padding: 30px 10px; text-align: center; }
-.ib-read-in { max-width: 760px; margin: 0 auto; padding: 18px 40px 60px; }
-.ib-read-bar { display: flex; align-items: center; height: 30px; margin-bottom: 14px; }
-.ib-act { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
-.ib-act:hover { background: #1f1f1f; }
-.ib-act.confirm { background: rgba(239, 107, 95, 0.12); color: #ff7d6c; }
-.ib-read h1 { margin: 0 0 16px; font-size: 22px; letter-spacing: -0.3px; line-height: 1.3; }
-.ib-meta { align-items: center; gap: 11px; padding-bottom: 18px; margin-bottom: 20px; border-bottom: 1px solid #232323; }
-.ib-meta-text { display: flex; flex-direction: column; gap: 1px; }
-.ib-meta-text b { color: var(--text-2); font-size: 13px; font-weight: 600; }
-.ib-meta-text span { color: var(--text-4); font-size: 12px; }
-.ib-body { font-size: 13.5px; line-height: 1.7; }
-.ib-none { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 100%; color: var(--text-4); font-size: 12.5px; }
-.ib-none svg { color: #3a3a3a; }
 
 /* =====================================================================
    Oben rechts im Chat: nur das Chat-Symbol (öffnet den Chatverlauf); Darstellung ist dort weg
@@ -7280,33 +7219,10 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .stk-mini-s { grid-row: 1 / 3; grid-column: 2; display: grid; place-items: center; }
 @media (max-width: 520px) { .stk-mini-s { display: none; } .stk-mini { grid-template-columns: 1fr; } }
 
-/* Inbox in der Seitenleiste: Zahl der ungelesenen Nachrichten rechts im Eintrag */
 .sidebar .nav-item .nav-badge { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: #fff;
   font-size: 11px; font-weight: 600; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
 .sidebar .nav-item .nav-badge[hidden] { display: none; }
 
-/* Inbox: Nachrichten des Börsen-Bären (Chancen-Radar) als ruhige Karte – Muster, Zahlen im Raster, Begründung, Schlagzeilen, Aktion */
-.ib-av-dog { background: #1f1f1f; }
-.ib-stock { display: flex; flex-direction: column; gap: 16px; }
-.ib-stock-head { display: flex; align-items: center; gap: 8px; }
-.ib-tag { padding: 3px 9px; border-radius: 999px; background: #1f2a22; color: #4fcf8a; font-size: 12px; font-weight: 600; }
-.ib-sym { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
-.ib-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 1px; overflow: hidden; border: 1px solid #262626; border-radius: 12px; background: #262626; }
-.ib-k { display: flex; flex-direction: column; gap: 3px; padding: 11px 14px; background: #1a1a1a; }
-.ib-k span { color: var(--text-4); font-size: 11.5px; }
-.ib-k b { color: var(--text); font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.ib-k b small { color: var(--text-4); font-size: 11px; font-weight: 500; }
-.ib-k.pos b { color: #4fcf8a; } .ib-k.neg b { color: #f07a6e; }
-.ib-why { margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 1.65; }
-.ib-news { display: flex; flex-direction: column; gap: 2px; }
-.ib-news-h { margin-bottom: 4px; color: var(--text-4); font-size: 11.5px; font-weight: 600; }
-.ib-news a { display: block; padding: 7px 10px; margin: 0 -10px; border-radius: 8px; color: var(--text-2); font-size: 13px; line-height: 1.45; text-decoration: none; }
-.ib-news a[href]:hover { background: #1c1c1c; }
-.ib-news a i { color: var(--text-4); font-style: normal; font-size: 12px; }
-.ib-ask { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 10px; border: 1px solid #333; border-radius: 10px;
-  background: #222; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color 120ms ease; }
-.ib-ask:hover { background: #2a2a2a; }
-.ib-note { margin: 0; color: var(--text-4); font-size: 11.5px; }
 
 /* Einstellungen → Agenten: Planspiel-Börse-Zugang (Benutzername + Passwort/Code in der Zeile) */
 .st-ps .st-ps-user, .st-ps .st-ps-code { flex: 1; min-width: 0; }
@@ -7314,71 +7230,14 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .st-row.st-ps-note.err { color: #f07a6e; }
 .st-hint { margin: 8px 2px 28px; color: var(--text-4); font-size: 12px; line-height: 1.5; }
 @media (max-width: 720px) { .st-ps { flex-wrap: wrap; } .st-ps .st-ps-user, .st-ps .st-ps-code { flex-basis: 40%; } }
-/* Inbox ist jetzt über die Seitenleiste erreichbar: Kopf unter dem Knopf zum Ein-/Ausklappen der Seitenleiste */
-.ib-side { padding-top: 56px; }
-.ib-read-in { padding-top: 22px; }
 /* Zahlen der Börsen-Karte: Zellen füllen jede Reihe ganz (keine leeren Felder) */
-.ib-grid { display: flex; flex-wrap: wrap; }
-.ib-k { flex: 1 1 120px; }
 
-/* ===== Inbox, Überarbeitung: Lesebereich abgesetzt, Scrollleiste am Rand, Löschen in der Absenderzeile ===== */
 /* links die Liste auf der Fläche der Seitenleiste, rechts die Nachricht auf dem Hauptkasten – zwei klar getrennte Flächen */
-.ib-view { background: var(--sidebar-bg, #141414); }
-.ib-side { width: 340px; padding: 56px 0 0 12px; border-right: 1px solid #232323; background: var(--sidebar-bg, #141414); }
-.ib-head, .ib-search { margin-right: 12px; }
 /* Liste läuft bis an den Strich: die Leiste sitzt ganz rechts, schmale runde Pille wie im Chat, ohne Pfeile */
-.ib-list { padding: 0 2px 12px 0; scrollbar-width: auto; }
-.ib-list::-webkit-scrollbar { width: 14px; }
-.ib-list::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
-.ib-list::-webkit-scrollbar-track { margin: 2px 0 10px; background: transparent; }
-.ib-list::-webkit-scrollbar-thumb { min-height: 40px; border: 5px solid transparent; border-radius: 999px; background: rgba(255, 255, 255, 0.12) padding-box; }
-.ib-list::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.24); }
-.ib-item:hover { background: #1b1b1b; }
-.ib-item.on { background: #222; }
-.ib-subject { display: flex; align-items: center; gap: 6px; }
-.ib-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: #6e6e6e; }
-.ib-dot.buy { background: #4fcf8a; }
-.ib-av-dog { background: #232323; }
-.ib-av-dog svg { image-rendering: pixelated; }
 /* rechts: der Hauptkasten mit runder Ecke oben links, Nachricht mittig */
-.ib-read { background: var(--main-bg, #171717); }
-.ib-read-in { max-width: 720px; padding: 56px 44px 64px; }
-.ib-meta { display: flex; align-items: center; gap: 11px; margin: 0 0 14px; padding: 0; border: 0; }
-.ib-meta-text { flex: 1; min-width: 0; }
-.ib-meta .ib-act { flex: none; }
-.ib-act:hover { background: #1f1f1f; color: var(--text-3); }
-.ib-act.confirm { background: rgba(239, 107, 95, 0.12); color: #f07a6e; }
-.ib-read h1 { margin: 0 0 20px; padding-bottom: 18px; border-bottom: 1px solid #232323; font-size: 22px; font-weight: 600; letter-spacing: -0.3px; line-height: 1.3; }
-.ib-empty { color: var(--text-4); font-size: 12.5px; line-height: 1.6; }
 
 /* Fazit oben: Etikett Kaufen (grün) / Abwarten (grau) + ein Satz */
-.ib-verdict { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px; background: #1d1d1d; color: var(--text-2); font-size: 13.5px; line-height: 1.55; }
-.ib-verdict.buy { background: rgba(52, 199, 120, 0.12); }
-.ib-vtag { flex: none; margin-top: 1px; padding: 2px 9px; border-radius: 999px; background: #262626; color: #b5b5b5; font-size: 12px; font-weight: 600; }
-.ib-verdict.buy .ib-vtag { background: rgba(52, 199, 120, 0.16); color: #4fcf8a; }
-.ib-mood { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.5; }
-.ib-mood b { color: var(--text-2); font-weight: 500; }
 /* Kandidaten des Tages */
-.ib-picks { display: flex; flex-direction: column; gap: 10px; }
-.ib-pick { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border: 1px solid #262626; border-radius: 12px; background: #1d1d1d; }
-.ib-pick.buy { border-color: rgba(79, 207, 138, 0.28); }
-.ib-pick-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.ib-pick-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.ib-pick-name b { color: var(--text); font-size: 14px; font-weight: 600; }
-.ib-pick-name small { color: var(--text-4); font-size: 12px; }
-.ib-badge { flex: none; padding: 3px 10px; border-radius: 999px; background: #262626; color: #b5b5b5; font-size: 12px; font-weight: 600; }
-.ib-badge.buy { background: rgba(52, 199, 120, 0.12); color: #4fcf8a; }
-.ib-pick-nums { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; color: var(--text); font-variant-numeric: tabular-nums; }
-.ib-pick-nums span { display: flex; flex-direction: column; gap: 1px; }
-.ib-pick-nums i { color: var(--text-4); font-size: 11px; font-style: normal; }
-.ib-pick-nums em { font-style: normal; }
-.ib-pick-nums .pos { color: #4fcf8a; } .ib-pick-nums .neg { color: #f07a6e; }
-.ib-pick-why { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
-.ib-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: -4px 0 -4px -8px; padding: 0 8px; border: 0; border-radius: 7px; background: none;
-  color: var(--text-3); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
-.ib-link:hover { background: #262626; color: var(--text); }
-.ib-k { background: #1d1d1d; }
-@media (max-width: 760px) { .ib-side { width: 100%; } .ib-read-in { padding: 24px 18px 48px; } }
 
 /* ===== Depot-Grafik im Chat (```depot, depot-card.js): Depot live aus dem Planspiel Börse ===== */
 .dpt { margin: 14px 0 18px; padding: 14px 16px 12px; border: 1px solid #2c2c2c; border-radius: 14px; background: #212121; max-width: 760px; }
@@ -7427,25 +7286,39 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 @keyframes dpt-pulse { from { opacity: 0.55; } to { opacity: 1; } }
 @media (max-width: 560px) { .dpt-w { display: none; } .dpt-stats { flex-wrap: wrap; } }
 @media (prefers-reduced-motion: reduce) { .dpt *, .dpt { animation: none !important; transition: none !important; } }
-/* Inbox: Betreff ist die Hauptzeile (Absender ist immer der Bär), rechts die Nachricht als abgesetzte Karte */
-.ib-view { background: var(--main-bg, #171717); }
-.ib-side { background: none; border-right: 0; }
-.ib-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font-size: 13px; font-weight: 500; }
-.ib-item.unread .ib-title { color: var(--text); font-weight: 600; }
-.ib-item-top { align-items: center; }
-.ib-snippet { display: flex; align-items: center; gap: 6px; }
-.ib-snippet .ib-dot { margin-left: 1px; }
-.ib-item .ib-av { margin-top: 2px; }
-.ib-read { margin: 8px 8px 8px 0; border: 1px solid #262626; border-radius: 14px; background: #1d1d1d; }
-.ib-read-in { padding-top: 40px; }
-.ib-read h1 { border-bottom-color: #2a2a2a; }
-.ib-av-dog, .ib-act:hover, .ib-link:hover { background: #262626; }
-.ib-verdict, .ib-pick, .ib-k { background: #232323; }
-.ib-pick { border-color: #2c2c2c; }
-.ib-grid { border-color: #2c2c2c; background: #2c2c2c; }
-.ib-vtag, .ib-badge { background: #2c2c2c; }
-.ib-ask { background: #262626; border-color: #343434; }
-.ib-ask:hover { background: #2b2b2b; }
-.ib-news a[href]:hover { background: #232323; }
-.ib-none svg { color: #343434; }
-@media (max-width: 760px) { .ib-read { margin: 0; border-radius: 0; border: 0; } }
+
+
+/* ===== Chancen-Übersicht im Chat (```chancen, chancen-card.js): Kästchen Kaufen (grün) / Beobachten (grau) / Nicht kaufen (rot) ===== */
+.chn { margin: 14px 0 18px; padding: 14px 16px 12px; border: 1px solid #2c2c2c; border-radius: 14px; background: #212121; max-width: 760px; }
+.chn-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.chn-av { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 50%; background: #2b2b2b; }
+.chn-av svg { image-rendering: pixelated; }
+.chn-title { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.chn-title strong { color: var(--text); font-size: 15px; font-weight: 600; }
+.chn-sub { color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.chn-verdict { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; padding: 12px 14px; border-radius: 12px; background: #1d1d1d; color: var(--text-2); font-size: 13px; line-height: 1.55; }
+.chn-verdict.kaufen { background: rgba(52, 199, 120, 0.12); }
+.chn-vtag, .chn-badge { flex: none; padding: 2px 10px; border-radius: 999px; background: #2c2c2c; color: #b5b5b5; font-size: 12px; font-weight: 600; }
+.chn-verdict.kaufen .chn-vtag, .chn-badge.kaufen { background: rgba(52, 199, 120, 0.12); color: #4fcf8a; }
+.chn-badge.meiden { background: rgba(239, 107, 95, 0.12); color: #f07a6e; }
+.chn-list { display: flex; flex-direction: column; gap: 8px; }
+.chn-pick { display: flex; flex-direction: column; gap: 9px; padding: 12px 14px; border: 1px solid #2c2c2c; border-radius: 12px; background: #1d1d1d; }
+.chn-pick.kaufen { border-color: rgba(79, 207, 138, 0.28); }
+.chn-pick.meiden { border-color: rgba(240, 122, 110, 0.22); }
+.chn-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.chn-name { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.chn-name b { color: var(--text); font-size: 14px; font-weight: 600; }
+.chn-name small { color: var(--text-4); font-size: 12px; }
+.chn-nums { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--text); font-size: 13px; font-variant-numeric: tabular-nums; }
+.chn-nums span { display: flex; flex-direction: column; gap: 1px; }
+.chn-nums i { color: var(--text-4); font-size: 11px; font-style: normal; }
+.chn-nums em { font-style: normal; }
+.chn-nums .pos { color: #4fcf8a; } .chn-nums .neg { color: #f07a6e; }
+.chn-why { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.55; }
+.chn-link { align-self: flex-start; display: inline-flex; align-items: center; gap: 4px; height: 26px; margin: -4px 0 -4px -8px; padding: 0 8px; border: 0; border-radius: 7px; background: none;
+  color: var(--text-3); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.chn-link:hover { background: #2b2b2b; color: var(--text); }
+.chn-empty { padding: 12px 14px; border-radius: 12px; background: #1d1d1d; color: var(--text-3); font-size: 13px; }
+.chn-note { margin: 10px 0 0; color: var(--text-4); font-size: 11.5px; }
+.md .chn p { margin: 0; }
+.md .chn .chn-note { margin-top: 10px; }

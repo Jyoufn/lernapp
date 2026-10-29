@@ -102,3 +102,17 @@ test('Planspiel-Zugang: verschlüsselt gespeichert, Status ohne Passwort, Trenne
   await P.remove(store, 'u1');
   assert.deepEqual(await P.status(store, 'u1'), { connected: false });
 });
+
+test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, schwache Charts = Nicht kaufen', () => {
+  const R2 = require('../lib/radar');
+  const o = R2.overview({ asOf: '2026-10-29T10:00:00Z', checked: 427, mood: { score: 3 }, picks: [
+    { symbol: 'A.DE', name: 'A', type: 'ruecksetzer', price: 100, entry: 100, stop: 95, target: 110, score: 82 },
+    { symbol: 'B.DE', name: 'B', type: 'ausbruch', price: 100, entry: 101, stop: 95, target: 115, score: 90 },
+    { symbol: 'C.DE', name: 'C', type: 'nachrichten', price: 100, entry: 100, stop: 95, target: 104, score: 80 },
+  ], scan: { weak: [{ symbol: 'D.DE', name: 'D', price: 10, score: 12, change1m: -9.5 }] } });
+  const v = Object.fromEntries(o.picks.map((p) => [p.symbol, p.verdict]));
+  assert.deepEqual(v, { 'A.DE': 'kaufen', 'B.DE': 'beobachten', 'C.DE': 'beobachten', 'D.DE': 'meiden' });
+  assert.equal(o.picks[0].symbol, 'A.DE');
+  assert.equal(o.picks.at(-1).symbol, 'D.DE');
+  assert.equal(o.mood, 'positiv');
+});

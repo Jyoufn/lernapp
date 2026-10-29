@@ -709,3 +709,14 @@ test('Rückfragen: kein Limit von 2 mehr, zweite Runde erlaubt', async () => {
   assert.equal(r.result.status, 'asked');
   assert.equal(JSON.parse(/```ask\n([\s\S]*?)\n```/.exec(r.text())[1]).questions.length, 5, 'alle 5 Fragen auf einmal');
 });
+
+test('Überlastung (503): dasselbe Modell wird kurz danach noch einmal gefragt, bevor ein Fehler kommt', async () => {
+  let n = 0;
+  const ctx = { attempts: [{ kind: 'gemini', model: 'm1', name: 'M1' }], env: { GEMINI_API_KEY: 'k' }, signal: new AbortController().signal };
+  const f = M.installFetch([{ match: M.is.geminiStream, respond: () => (++n === 1 ? M.json({ error: { message: 'overloaded' } }, 503) : M.sseResponse(M.geminiChunks(['Hallo']))) }]);
+  try {
+    const text = await W.generate(ctx, { system: 's', messages: [{ role: 'user', text: 'Hi' }], cfg: { maxTokens: 100, busyRetryMs: 1, continuations: 0 } });
+    assert.equal(text, 'Hallo');
+    assert.equal(n, 2);
+  } finally { f.restore(); }
+});
