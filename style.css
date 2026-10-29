@@ -7482,3 +7482,6 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
   .sb-head { margin-top: 10px; }
   .titlebar-controls { top: max(0px, calc(env(safe-area-inset-top) - 6px)); }
 }
+
+/* Zeitleiste: Zusatz hinter einem Unterpunkt („· 5 sources“, „· no issues found“) – leiser als der Unterpunkt selbst */
+.step-line .ph-x { color: var(--text-4); }

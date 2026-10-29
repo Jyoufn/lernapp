@@ -975,7 +975,10 @@ const Docs = (() => {
       w.work.classList.add('active');
       const act = w.head.querySelector('.act'), title = w.head.querySelector('.work-title'), tEl = w.head.querySelector('.t');
       const setAct = (kind, text) => { if (over) return; if (act.dataset.kind !== kind) { act.dataset.kind = kind; act.innerHTML = ACT_MARKUP[kind] || ACT_MARKUP.work; } title.classList.add('sweep'); swapText(title, text); };
-      setAct(pic ? 'work' : 'think', pic ? label : 'Planning');
+      // gleicher Denk-Ablauf wie im Haupt-Chat (thinking.js), je nach Agent
+      const P = (k) => window.Thinking ? Thinking.of(a.dataset.dog || window.PixelDogs?.mode || 'general', k) : { main: 'Working', sub: k, kind: 'work' };
+      const ph = (k) => setAct(P(k).kind, P(k).main);
+      if (pic) setAct('work', label); else ph('start');
       a.prepend(w.work); list.scrollTop = list.scrollHeight;
       const tick = setInterval(() => { tEl.textContent = sec(); }, 250);
       const rows = {};
@@ -991,16 +994,16 @@ const Docs = (() => {
         if (over) return; over = true; clearInterval(tick);
         if ((Date.now() - from) < 1000 && !keep && !w.steps.children.length) { w.work.remove(); return; }
         w.work.classList.remove('active'); title.classList.remove('sweep');
-        if (thoughtEl) finishStep(thoughtEl, '<strong>Thought</strong>');
+        if (thoughtEl) finishStep(thoughtEl, P('thoughts').sub);
         Object.values(rows).forEach((r) => { if (r.querySelector('.spinner')) finishStep(r); });
         clearTimeout(title._swap); title.getAnimations?.().forEach((an) => an.cancel());
-        title.textContent = pic ? doneLabel : 'Worked for'; tEl.classList.remove('live'); tEl.textContent = sec();
+        title.textContent = pic ? doneLabel : P('done').main; tEl.classList.remove('live'); tEl.textContent = sec();
         if (!w.steps.children.length) w.work.classList.add('collapsed');
         else setTimeout(() => { if (w.work.isConnected && !w.work.classList.contains('collapsed')) toggleWork(w.work, true); }, 700);
       }, thought(text) {
         if (over || !text) return;
         if (!thoughtEl) {
-          thoughtEl = step('thought', '<span class="shimmer">Thinking</span>', true);
+          thoughtEl = step('thought', `<span class="shimmer">${P('thoughts').sub}</span>`, true); ph('thoughts');
           thoughtEl.classList.add('foldable', 'open', 'has-box');
           thoughtEl.insertAdjacentHTML('beforeend', '<div class="fold"><div class="fold-in"><div class="thought-text"></div></div></div>');
           thoughtEl.querySelector('.step-line').addEventListener('click', () => thoughtEl.classList.toggle('open'));
@@ -1010,18 +1013,19 @@ const Docs = (() => {
         if (over) return;
         const done = d.status !== 'active', m = d.meta || {};
         const live = (txt) => `<span class="shimmer">${txt}</span>`;
-        if (d.stage === 'material') step('material', done ? (m.relevant === true ? 'Analyzed your sources – <strong>answering from them</strong>' : m.relevant === false ? 'Analyzed your sources – nothing on this topic' : 'Analyzed your sources') : live('Analyzing your sources'), !done);
+        const x = (k, extra) => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}`;
+        if (d.stage === 'material') { step('material', done ? x('material', m.relevant === true ? 'answering from them' : m.relevant === false ? 'nothing on this topic' : '') : live(P('material').sub), !done); if (!done) ph('material'); }
         else if (d.stage === 'thinking') {
-          const r = step('plan', done ? (m.analysisFailed ? 'Planning not available' : 'Planned the answer') : live('Planning'), !done);
-          if (done) { if (!pic) setAct('work', 'Working'); }
+          const r = step('plan', done ? x('plan', m.analysisFailed ? 'not available' : '') : live(P('plan').sub), !done);
+          if (!done && !pic) ph('plan');
           if (done && Array.isArray(m.points) && m.points.length && !r.querySelector('.plan-list')) {
             r.classList.add('foldable', 'open', 'has-box');
             r.insertAdjacentHTML('beforeend', `<div class="fold"><div class="fold-in"><div class="plan-list">${m.points.map((p) => `<div class="plan-item" data-state="done"><span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${esc(p)}</span></div>`).join('')}</div></div></div>`);
             r.querySelector('.step-line').addEventListener('click', () => r.classList.toggle('open'));
           }
-        } else if (d.stage === 'browsing' || d.stage === 'searching_sources') { step('src', done ? 'Searched sources' : live('Searching sources'), !done); if (!done) setAct('search', 'Searching the web'); }
-        else if (d.stage === 'verifying') { step('check', done ? (m.corrected ? `Checked – corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : 'Checked facts') : live('Checking facts'), !done); if (!done) setAct('check', 'Checking facts'); }
-        else if (d.stage === 'answering') { step('write', done ? 'Wrote the answer' : live('Writing the answer'), !done); if (!done) setAct('write', 'Writing'); }
+        } else if (d.stage === 'browsing' || d.stage === 'searching_sources') { step('src', done ? x('gather') : live(P('search').sub), !done); if (!done) ph('search'); }
+        else if (d.stage === 'verifying') { step('check', done ? x('review', m.corrected ? `corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : '') : live(P('review').sub), !done); if (!done) ph('review'); }
+        else if (d.stage === 'answering') { step('write', done ? x('work') : live(P('work').sub), !done); if (!done && !pic) ph('work'); }
       }, drop() { over = true; clearInterval(tick); w.work.remove(); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
     }
     // Bildwunsch? Dann steht oben von Anfang an „Generating picture“ statt „Thinking“
