@@ -1185,6 +1185,15 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) keep.set(raw, tagViz(StockChart.figure(spec), 'stock', raw));
     pre.replaceWith(keep.get(raw));
   });
+  // „Meine Käufe“ (```bestand): Übersicht mit Live-Kursen und Empfehlung – Karte bleibt beim Weiterschreiben dieselbe; ```merken: Bestätigung „Notiert …“
+  target.querySelectorAll('pre:has(code.language-bestand)').forEach((pre, i) => {
+    if (i || !window.BoerseBestand) { pre.remove(); return; }
+    pre.replaceWith(target._bstFig ||= BoerseBestand.figure());
+  });
+  target.querySelectorAll('pre:has(code.language-merken)').forEach((pre) => {
+    if (!window.BoerseBestand) { pre.remove(); return; }
+    pre.replaceWith(BoerseBestand.note(pre.querySelector('code').textContent));
+  });
   // ```depot gibt es nicht mehr (kein Zugriff aufs Planspiel) – alte Blöcke ausblenden
   target.querySelectorAll('pre:has(code.language-depot)').forEach((pre) => pre.remove());
 

@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'boerse-bestand.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -37,7 +37,8 @@ const TTS = require('./lib/tts');
 const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
 const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
-const RADAR = require('./lib/radar'); // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
+const RADAR = require('./lib/radar');
+const HOLD = require('./lib/holdings'); // „Meine Käufe“ des Börsen-Bären (im Chat genannt, je Konto) // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -102,10 +103,12 @@ function startSse(res) {
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
 async function handleChat(req, res, user = null) {
   const body = await readBody(req);
-  delete body.radarStore;
+  delete body.radarStore; delete body.holdingsCtl;
   if (body.agent === 'boerse') {
     const store = accountStore();
     Object.defineProperty(body, 'radarStore', { value: store, enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
+    // „Meine Käufe“: lesen und – wenn der Bär im Chat etwas notiert – ändern (nur das eigene Konto)
+    if (user?.id && store) Object.defineProperty(body, 'holdingsCtl', { value: { list: () => HOLD.list(store, user.id), apply: (c) => HOLD.apply(store, user.id, c) }, enumerable: false });
   }
   const sse = startSse(res);
   const controller = new AbortController();
@@ -1252,6 +1255,12 @@ async function handle(req, res) {
     // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
     if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
     if (req.method === 'GET' && urlPath === '/api/boerse/radar') return sendJson(res, 200, await RADAR.latest(store));
+    // „Meine Käufe“: Übersicht mit Kurs, Plus/Minus und Empfehlung (Karte ```bestand und Hinweise) – reine Rechnung; DELETE nimmt einen Wert aus der Liste
+    if (urlPath === '/api/boerse/bestand') {
+      const q = new URL(req.url, 'http://x').searchParams;
+      if (req.method === 'DELETE' && q.get('symbol')) { await HOLD.apply(store, user.id, { remove: [q.get('symbol')] }); return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: 0 })); }
+      if (req.method === 'GET') return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: q.get('fresh') ? 20000 : 120000 }));
+    }
     // Chancen-Übersicht für die Karte im Chat (```chancen): NUR der gespeicherte Radar – hier wird nichts neu gerechnet
     if (req.method === 'GET' && urlPath === '/api/boerse/chancen') return sendJson(res, 200, RADAR.overview(await RADAR.latest(store, { stored: true }).catch(() => null)) || { picks: [] });
     // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort

@@ -310,3 +310,69 @@ test('Börsen-Agent: „In was kann ich aktuell am besten investieren?“ → Sc
   assert.deepEqual(data.picks.map((p) => `${p.symbol}:${p.verdict}`), ['RHM.DE:kaufen', 'FTNT:kaufen']);
 });
 
+
+test('Meine Käufe: notieren, Teilverkauf, löschen; Übersicht mit Plus/Minus und Empfehlung (nie mit Verlust verkaufen)', async () => {
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  const d1 = await H.apply(store, 'u1', { add: [{ symbol: 'SAP.DE', name: 'SAP', qty: 40, price: 200, date: '2026-10-02' }, { symbol: 'SAP.DE', qty: 10, price: 210 }, { symbol: '<b>', qty: 1, price: 1 }, { symbol: 'RHM.DE', qty: 0, price: 5 }] });
+  assert.equal(d1.added.length, 2, 'ungültige Einträge fallen raus');
+  const m = H.merged(await H.list(store, 'u1'));
+  assert.equal(m.length, 1);
+  assert.equal(m[0].qty, 50);
+  assert.equal(m[0].price, 202, 'Durchschnittskurs');
+  await H.apply(store, 'u1', { sell: [{ symbol: 'SAP.DE', qty: 45 }] });
+  assert.equal(H.merged(await H.list(store, 'u1'))[0].qty, 5, 'älteste Käufe zuerst verkauft');
+  const b = bars(400, -0.002, 0.01, 200), shift = Date.now() - b.at(-1).t;
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b.map((x) => ({ ...x, t: x.t + shift }))) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
+  ]);
+  const o = await H.overview(store, 'u1', { maxAgeMs: 0 });
+  assert.equal(o.items.length, 1);
+  const x = o.items[0];
+  assert.ok(x.plus < 0, 'fallender Kurs → im Minus');
+  assert.notEqual(x.action, 'verkaufen', 'mit Verlust nie „Verkaufen“');
+  assert.ok(['beobachten', 'halten'].includes(x.action));
+  await H.apply(store, 'u1', { remove: ['SAP.DE'] });
+  assert.equal((await H.list(store, 'u1')).length, 0);
+});
+
+test('Börsen-Agent: „Ich habe 40 SAP zu 231 € gekauft“ – der Bär notiert es (```merken), die App übernimmt es ins Konto', async () => {
+  const b = bars(400, 0.0015);
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+    { match: (c) => c.url.includes('news.google.com'), respond: () => new Response('<rss></rss>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Notiert! SAP behalten.\n\n```merken\n{"add":[{"symbol":"SAP.DE","name":"SAP","qty":40,"price":231,"date":"2026-10-02"}]}\n```'])) },
+  ]);
+  const body = { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Ich habe 40 SAP zu 231 € am 2.10. gekauft' }] };
+  Object.defineProperty(body, 'holdingsCtl', { value: { list: () => H.list(store, 'u1'), apply: (c) => H.apply(store, 'u1', c) }, enumerable: false });
+  const out = M.collect();
+  await W.runChat({ env: M.ENV, body, send: out.send, signal: new AbortController().signal });
+  assert.match(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /MEINE KÄUFE: noch nichts notiert/);
+  const saved = await H.list(store, 'u1');
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].qty, 40);
+  assert.ok(out.of('bestand').some((e) => e.added?.length === 1), 'Bestätigung an die App');
+  // Danach: „Übersicht meiner Käufe“ → Käufe im Prompt, Karte ```bestand hängt an
+  fx.restore();
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+    { match: (c) => c.url.includes('news.google.com'), respond: () => new Response('<rss></rss>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Du liegst im Plus.**'])) },
+  ]);
+  const body2 = { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Gib mir eine Übersicht über meine Käufe' }] };
+  Object.defineProperty(body2, 'holdingsCtl', { value: { list: () => H.list(store, 'u1'), apply: (c) => H.apply(store, 'u1', c) }, enumerable: false });
+  const out2 = M.collect();
+  await W.runChat({ env: M.ENV, body: body2, send: out2.send, signal: new AbortController().signal });
+  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+  assert.match(sys, /MEINE KÄUFE \(vom Nutzer im Chat genannt/);
+  assert.match(sys, /EIGENE POSITION: 40 Stück/);
+  assert.match(out2.text(), /```bestand/);
+});
