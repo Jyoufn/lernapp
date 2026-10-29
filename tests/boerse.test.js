@@ -41,10 +41,15 @@ test('Signale: Aufwärtstrend → Kaufen mit Stopp unter und Ziel über dem Kurs
   assert.ok(down.score < 35);
 });
 
-test('Position: unter dem Stopp → Verkaufen; Gewinn nach Gebühren (0,3 %, mind. 15 €)', () => {
+test('Position: unter dem Stopp, aber im Minus → nie verkaufen, nur beobachten; Verkaufen erst ab +100 € nach Gebühren', () => {
   const b = bars(500, -0.002);
   const a = B.analyze({ symbol: 'DN.DE', name: 'Fällt', currency: 'EUR', bars: b }, { holding: { qty: 10, buyPrice: b[400].c, buyDate: new Date(b[400].t).toISOString() } });
-  assert.equal(a.holding.signal, 'verkaufen');
+  assert.equal(a.holding.signal, 'beobachten', 'mit Verlust wird nicht verkaufen empfohlen');
+  assert.match(a.holding.reasons[0], /nicht verkaufen/);
+  // gleiche Lage, aber billig eingekauft (deutlich im Plus) → Verkaufen ist erlaubt
+  const cheap = B.analyze({ symbol: 'DN.DE', name: 'Fällt', currency: 'EUR', bars: b }, { holding: { qty: 100, buyPrice: b.at(-1).c * 0.5, buyDate: new Date(b[400].t).toISOString() } });
+  assert.equal(cheap.holding.signal, 'verkaufen');
+  assert.ok(cheap.holding.gainEur >= 100);
   assert.ok(a.holding.gainEur < 0);
   const value = a.price * 10;
   assert.ok(Math.abs(a.holding.gainEur - (value - b[400].c * 10 - 15 - 15)) < 0.05, 'Mindestgebühr bei Kauf und Verkauf');

@@ -182,7 +182,7 @@ const StockChart = (() => {
       }
       plot.querySelector('svg')?.remove();
       plot.prepend(svg);
-      st.geo = { xOf, step, n, W };
+      st.geo = { xOf, yOf, step, n, W };
     }
 
     async function show(range) {
@@ -258,14 +258,22 @@ const StockChart = (() => {
       st.hover = i; draw();
       const b = st.data.bars[i];
       const when = new Date(b.t).toLocaleString('de-DE', ['1T', '1W'].includes(st.range) ? { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', year: 'numeric' });
-      tip.innerHTML = `<b>${esc(when)}</b><span>Eröffnung <em>${nf(b.o, dec(b.o))}</em></span><span>Hoch <em>${nf(b.h, dec(b.h))}</em></span><span>Tief <em>${nf(b.l, dec(b.l))}</em></span><span>Schluss <em class="${b.c >= b.o ? 'up' : 'down'}">${nf(b.c, dec(b.c))}</em></span>${b.v ? `<span>Umsatz <em>${vol(b.v)}</em></span>` : ''}`;
+      // kleine Marke direkt über dem Punkt: Zeit, Schlusskurs mit Veränderung zur Eröffnung, darunter Hoch/Tief/Umsatz in einer Zeile
+      const ch = b.o ? ((b.c - b.o) / b.o) * 100 : 0;
+      tip.innerHTML = `<span class="stk-tip-t">${esc(when)}</span><b>${nf(b.c, dec(b.c))} €<em class="${b.c >= b.o ? 'up' : 'down'}">${ch >= 0 ? '+' : '−'}${nf(Math.abs(ch), 2)} %</em></b>`
+        + `<span class="stk-tip-s">H ${nf(b.h, dec(b.h))} · T ${nf(b.l, dec(b.l))}${b.v ? ` · ${vol(b.v)}` : ''}</span>`;
       tip.hidden = false;
-      tip.classList.toggle('right', st.geo.xOf(i) < st.geo.W / 2);
+      const px = st.geo.xOf(i), py = st.geo.yOf ? st.geo.yOf(Math.max(b.h, b.c)) : 0;
+      const w = tip.offsetWidth, h = tip.offsetHeight;
+      tip.style.left = `${Math.max(2, Math.min(st.geo.W - AXIS_R - w, px - w / 2))}px`;
+      tip.style.top = `${py - h - 12 >= 2 ? py - h - 12 : py + 14}px`; // oben kein Platz → unter den Punkt
     };
     const leave = () => { if (st.hover == null) return; st.hover = null; tip.hidden = true; draw(); };
     plot.addEventListener('pointermove', hoverAt);
     plot.addEventListener('pointerdown', hoverAt);
-    plot.addEventListener('pointerleave', leave);
+    // Finger (iPad): Marke bleibt nach dem Tippen stehen; Tippen außerhalb blendet sie aus
+    plot.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') leave(); });
+    document.addEventListener('pointerdown', (e) => { if (fig.isConnected && !plot.contains(e.target)) leave(); });
 
     paintBar();
     requestAnimationFrame(() => { show(st.range); loadMinis(); });

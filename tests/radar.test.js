@@ -111,9 +111,11 @@ test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, sc
     { symbol: 'C.DE', name: 'C', type: 'nachrichten', price: 100, entry: 100, stop: 95, target: 104, score: 80 },
   ], scan: { weak: [{ symbol: 'D.DE', name: 'D', price: 10, score: 12, change1m: -9.5 }] } });
   const v = Object.fromEntries(o.picks.map((p) => [p.symbol, p.verdict]));
-  assert.deepEqual(v, { 'A.DE': 'kaufen', 'B.DE': 'beobachten', 'C.DE': 'beobachten', 'D.DE': 'meiden' });
+  assert.deepEqual(v, { 'A.DE': 'kaufen', 'B.DE': 'beobachten', 'C.DE': 'beobachten' }, '„Nicht kaufen“ kommt nicht in die Karte');
   assert.equal(o.picks[0].symbol, 'A.DE');
-  assert.equal(o.picks.at(-1).symbol, 'D.DE');
+  assert.deepEqual(o.avoid, ['D']);
+  const many = R2.overview({ picks: Array.from({ length: 15 }, (_, i) => ({ symbol: `W${i}`, name: `W${i}`, type: 'ausbruch', price: 10, entry: 10.5, stop: 9, target: 13, score: 60 + i })), scan: {} });
+  assert.equal(many.picks.length, 10, 'höchstens 10 zum Beobachten');
   assert.equal(o.mood, 'positiv');
   const o2 = R2.overview({ picks: [], scan: { checked: 427, now: [{ symbol: 'FTNT', name: 'Fortinet', price: 80, entry: 80, stop: 76, target: 88, score: 78, signal: 'kaufen', reasons: ['Trend'], history: { cases: 8, winRate: 62 } }],
     soon: [{ symbol: 'SAP.DE', name: 'SAP', price: 240, trigger: 244, stop: 233, target: 262, score: 70, signal: 'bald', setup: 'ausbruch', reasons: ['Ausbruch'] }], weak: [] } });

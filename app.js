@@ -1179,17 +1179,24 @@ function renderMarkdown(target, text, opts = {}) {
   // Aktienchart (```stock): Kerzen, Umsatz, Zeiträume, Echtzeitkurs – wie in einer Börsen-App (stock-chart.js)
   target.querySelectorAll('pre:has(code.language-stock)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, spec = window.StockChart?.parse(raw);
-    if (spec) pre.replaceWith(tagViz(StockChart.figure(spec), 'stock', raw)); else pre.remove();
+    if (!spec) { pre.remove(); return; }
+    // gleicher Chart bleibt beim Weiterschreiben erhalten (kein Neuladen, kein Flackern)
+    const keep = (target._stk ||= new Map());
+    if (!keep.has(raw)) keep.set(raw, tagViz(StockChart.figure(spec), 'stock', raw));
+    pre.replaceWith(keep.get(raw));
   });
   // Depot-Grafik (```depot): das echte Depot aus dem Planspiel Börse, live vom Server (depot-card.js) – höchstens eine je Antwort
+  // dieselbe Karte bleibt erhalten, während die Antwort weitergeschrieben wird (sonst flackert sie bei jedem neuen Wort)
   target.querySelectorAll('pre:has(code.language-depot)').forEach((pre, i) => {
     if (i || !window.DepotCard) { pre.remove(); return; }
-    pre.replaceWith(DepotCard.figure());
+    pre.replaceWith(target._depotFig ||= DepotCard.figure());
   });
   // Chancen-Übersicht (```chancen): Kästchen Kaufen / Beobachten / Nicht kaufen (chancen-card.js) – höchstens eine je Antwort
   target.querySelectorAll('pre:has(code.language-chancen)').forEach((pre, i) => {
     if (i || !window.ChancenCard) { pre.remove(); return; }
-    pre.replaceWith(ChancenCard.figure(pre.querySelector('code').textContent));
+    const raw = pre.querySelector('code').textContent;
+    if (!target._chnFig || target._chnRaw !== raw) { target._chnFig = ChancenCard.figure(raw); target._chnRaw = raw; }
+    pre.replaceWith(target._chnFig);
   });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
@@ -1952,6 +1959,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], browsing: ['search', news ? 'Reading the news' : 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
     if (head) queueMicrotask(() => setActivity(...head));
     if (s.stage === 'browsing') { stages.browsing.pages = []; stages.browsing.chips = el('div', 'chips'); step.append(stages.browsing.chips); }
+    if (s.stage === 'market') step.hidden = true; // steht schon oben im Kopf – Zeile erst mit dem Ergebnis zeigen
     ensureWork().steps.append(step);
     scrollToBottom();
   };
@@ -1963,6 +1971,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
     if (s.stage === 'browsing' || s.stage === 'searching_sources') markerIcon(st.step, 'search');
+    st.step.hidden = false;
     if (s.status === 'cancelled') { line.innerHTML = `${STAGE_TEXT[s.stage]} – stopped`; return; }
     if (s.status === 'failed') { line.innerHTML = `${STAGE_TEXT[s.stage]} – not completed`; st.step.classList.add('warn'); return; }
     if (s.stage === 'browsing') {
@@ -1979,12 +1988,15 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
     } else if (s.stage === 'market') {
       const m = s.meta || {}, n = m.count || 0;
-      const extra = [m.frames ? `${m.frames} × day/week/month` : '', m.headlines ? `${m.headlines} headlines` : '', m.radar != null ? `radar: ${m.radar} ${m.radar === 1 ? 'chance' : 'chances'}` : ''].filter(Boolean).join(' · ');
-      // nur das zeigen, was wirklich gerechnet wurde: Depot, gefragte Werte oder (bei Ideen) der Scan über alle Planspiel-Werte
-      const dep = m.depot != null ? `Read your <strong>Planspiel depot</strong> (${m.depot} ${m.depot === 1 ? 'position' : 'positions'})` : '';
-      const main = n ? `Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong>` : dep ? '' : m.indices ? 'Checked the <strong>market indices</strong>' : '';
-      line.innerHTML = main || dep ? `${[dep, main].filter(Boolean).join(' · ')}${extra ? ` · ${extra}` : ''} ${dur}` : `Market data not reachable ${dur}`;
-      if (!main && !dep) st.step.classList.add('warn');
+      // eine kurze Zeile: was wirklich gerechnet wurde – Depot, gefragte Werte, Scan über alle Planspiel-Werte oder nur die Marktlage
+      const parts = [];
+      if (m.depot != null) parts.push(`Read your <strong>depot</strong> · ${m.depot} ${m.depot === 1 ? 'position' : 'positions'}`);
+      if (n && (m.mode === 'ideas' || m.mode === 'both')) parts.push(`Scanned <strong>${n} stocks</strong>${m.radar ? ` · ${m.radar} ${m.radar === 1 ? 'chance' : 'chances'}` : ''}`);
+      else if (n && m.mode !== 'depot') parts.push(`Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong>`);
+      if (!parts.length && m.indices) parts.push('Checked the <strong>market</strong>');
+      if (m.headlines) parts.push(`${m.headlines} headlines`);
+      line.innerHTML = parts.length ? `${parts.join(' · ')} ${dur}` : `Market data not reachable ${dur}`;
+      if (!parts.length) st.step.classList.add('warn');
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
       line.innerHTML = m.relevant === true ? `Analyzed your sources – <strong>answering from them</strong> ${dur}`
@@ -4170,7 +4182,7 @@ window.renderSideChats = () => {
     const inner = el('div', 'sb-sec-in');
     body.append(inner);
     inner.append(...items.map(({ tab, c }) => {
-      const a = el('a', `nav-item sb-chat${tab.classList.contains('active') && !chatsView.open ? ' active' : ''}`, `${chatAvatar(tab, 'sb-av')}<span class="sb-chat-t"></span>${runOf(tab) ? '<svg class="sb-busy" width="13" height="13" aria-label="Antwortet gerade"><use href="#i-half"/></svg>' : ''}`
+      const a = el('a', `nav-item sb-chat${tab.classList.contains('active') && !chatsView.open ? ' active' : ''}`, `${chatAvatar(tab, 'sb-av')}<span class="sb-chat-t"></span>${runOf(tab) ? '<span class="spinner sb-busy" role="img" aria-label="Antwortet gerade"></span>' : ''}`
         + `<span class="sb-chat-acts"><span class="sb-chat-act${c.pinned ? ' on' : ''}" data-sbc="pin" role="button" aria-label="${c.pinned ? 'Lösen' : 'Anheften'}" title="${c.pinned ? 'Lösen' : 'Anheften'}">${icon('f-pin', 13)}</span>`
         + `<span class="sb-chat-act" data-sbc="more" role="button" aria-label="Mehr" title="Mehr">${icon('f-more', 13)}</span></span>`);
       a.href = '#';
