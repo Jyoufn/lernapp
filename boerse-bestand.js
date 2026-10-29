@@ -38,7 +38,7 @@ const BoerseBestand = (() => {
     const sold = d.sold || [];
     if (!items.length && !sold.length) return '<div class="bst-none">Noch keine Käufe.</div>';
     const soldRows = sold.length ? `<div class="bst-sec">Verkauft</div>${sold.map((x) => `<div class="bst-row sold"><div class="bst-line static">
-          <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · ${eur(x.buyPrice)} → ${eur(x.sellPrice)} · ${day(x.date)}</small></span>
+          <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · ${x.noBuy ? 'Kauf fehlt noch' : eur(x.buyPrice)} → ${eur(x.sellPrice)} · ${day(x.date)}</small></span>
           <span class="bst-grow"></span>
           <span class="bst-p ${tone(x.plus)}"><b>${signed(x.plus)}</b><small>${signed(x.plusPct, ' %')}</small></span>
           <span class="bst-act muted">Verkauft</span></div></div>`).join('')}` : '';

@@ -2,12 +2,15 @@
 <html lang="de">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Agenten</title>
   <!-- App-Name und Icon (Hund) für Browser-Tab und Home-Bildschirm auf dem iPad -->
   <meta name="application-name" content="Agenten" />
   <meta name="apple-mobile-web-app-title" content="Agenten" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <!-- Home-Bildschirm (iPad/iPhone): Statusleiste durchsichtig über dem App-Hintergrund statt eigenem Streifen; Uhrzeit/Akku malt iOS selbst -->
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#141414" />
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="icon" type="image/png" sizes="32x32" href="favicon.png?v=2" />
   <link rel="apple-touch-icon" sizes="180x180" href="icon-180.png?v=2" />
@@ -28,7 +31,7 @@
     <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m10.25 10.25 3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
     <symbol id="i-updown" viewBox="0 0 16 16"><path d="M5.5 6 8 3.5 10.5 6M5.5 10 8 12.5 10.5 10" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-inbox" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4.5 3h7A2.5 2.5 0 0 1 14 5.5v5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 10.5v-5A2.5 2.5 0 0 1 4.5 3zm-1 5.5h2.75a1.75 1.75 0 0 0 3.5 0h2.75v-3a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1z"/></symbol>
-    <symbol id="i-tasks" viewBox="0 0 16 16"><g fill="currentColor"><circle cx="8" cy="3.5" r="2"/><circle cx="3.5" cy="8" r="2"/><circle cx="12.5" cy="8" r="2"/><circle cx="8" cy="12.5" r="2"/></g></symbol>
+    <symbol id="i-tasks" viewBox="0 0 16 16"><mask id="i-tasks-m"><rect width="16" height="16" fill="#fff"/><g stroke="#000" stroke-width="1.6" stroke-linecap="round"><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></mask><rect x="1" y="1" width="14" height="14" rx="4.25" fill="currentColor" mask="url(#i-tasks-m)"/></symbol>
     <symbol id="i-calendar" viewBox="0 0 16 16"><path fill="currentColor" fill-rule="evenodd" d="M4.5 2.5h7A2.5 2.5 0 0 1 14 5v6.5a2.5 2.5 0 0 1-2.5 2.5h-7A2.5 2.5 0 0 1 2 11.5V5a2.5 2.5 0 0 1 2.5-2.5zm-1 4v5a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-5z"/></symbol>
     <symbol id="i-analytics" viewBox="0 0 16 16"><g fill="currentColor"><rect x="2" y="8" width="3" height="6" rx="1"/><rect x="6.5" y="4.5" width="3" height="9.5" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/></g></symbol>
     <symbol id="i-chevron-down" viewBox="0 0 16 16"><path d="M4.5 6.5 8 10l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
@@ -83,7 +86,7 @@
     <symbol id="o-search" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></g></symbol>
     <symbol id="o-chat" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.25 13.25A5.75 5.75 0 1 0 2.75 10.75L2.25 13.75z"/></g></symbol>
     <symbol id="o-library" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 2.75v10.5M6 4.75v8.5M9.25 4.75v8.5M11.5 4.75l2.25 8.5"/></g></symbol>
-    <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="6" width="4" height="4" rx="1.1"/><rect x="10.25" y="1.75" width="4" height="4" rx="1.1"/><rect x="10.25" y="10.25" width="4" height="4" rx="1.1"/><path d="M5.75 8H8M10.25 3.75h-1.1A1.15 1.15 0 0 0 8 4.9v6.2a1.15 1.15 0 0 0 1.15 1.15h1.1"/></g></symbol>
+    <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></symbol><!-- Aufgaben: kleines Board – drei Spalten unterschiedlich voll -->
     <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2.5"/><path d="M5.5 1.75v3M10.5 1.75v3M2.25 6.75h11.5"/></g><g fill="currentColor"><circle cx="5.5" cy="9.25" r=".85"/><circle cx="8" cy="9.25" r=".85"/><circle cx="10.5" cy="9.25" r=".85"/><circle cx="5.5" cy="11.5" r=".85"/><circle cx="8" cy="11.5" r=".85"/></g></symbol>
     <symbol id="o-inbox" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 9.25 3.9 3.9a1.6 1.6 0 0 1 1.53-1.15h5.14A1.6 1.6 0 0 1 12.1 3.9l1.65 5.35v2.5a2 2 0 0 1-2 2h-7.5a2 2 0 0 1-2-2z"/><path d="M2.25 9.25h3l.75 1.5h4l.75-1.5h3"/></g></symbol>
     <symbol id="o-trend" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 11.75 6 8l2.75 2.75 5-5"/><path d="M10.75 5.75h3v3"/></g></symbol>
@@ -110,8 +113,8 @@
       <div class="sidebar-inner">
         <!-- oben: Workspace (vorerst nur Anzeige), Suche -->
         <div class="sb-head">
-          <button type="button" class="sb-ws" title="Workspace"><span class="sb-ws-name">Julian</span><svg class="sb-ws-chev" width="14" height="14"><use href="#o-chev"/></svg></button>
-          <button type="button" class="sb-head-btn" id="sbSearch" aria-label="Chats durchsuchen" title="Chats durchsuchen"><svg width="16" height="16"><use href="#o-search"/></svg></button>
+          <button type="button" class="sb-ws" title="Workspace" aria-haspopup="menu" aria-expanded="false"><span class="sb-ws-av" aria-hidden="true"></span><span class="sb-ws-name">Julian</span><svg class="sb-ws-chev" width="14" height="14"><use href="#o-chev"/></svg></button>
+          <button type="button" class="sb-head-btn" id="sbSearch" aria-label="Suchen" title="Suchen (⌘K)"><svg width="16" height="16"><use href="#o-search"/></svg></button>
           <button type="button" class="sb-head-btn" id="sbSettings" aria-label="Einstellungen" title="Einstellungen"><svg width="16" height="16"><use href="#o-gear"/></svg></button>
         </div>
         <nav class="nav sb-main" aria-label="Hauptnavigation">
@@ -257,6 +260,7 @@
     <script src="boerse-bestand.js"></script><!-- „Meine Käufe“ des Börsen-Bären: Übersicht, Notiz-Bestätigung, einmalige Hinweise -->
     <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
     <script src="app.js"></script>
+    <script src="search.js"></script><!-- Suchfeld (⌘K): Aktionen, Agenten-Chats, Dokumente; Workspace-Menü -->
     <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
     <script src="pixel-dogs.js"></script><!-- Pixel-Hunde: Modus-Icons oben, Begleiter am Eingabefeld -->
     <script src="music.js"></script>

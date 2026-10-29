@@ -114,7 +114,7 @@ document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) 
   } else if (k === 'history') openChatsFromAnywhere();
   else if (VIEW_TABS[k]) openViewTab(k);
 }));
-$('sbSearch')?.addEventListener('click', () => openChatsFromAnywhere());
+// Lupe oben: Suchfeld (search.js)
 
 function closeTab(tab) {
   const tabs = [...tabsEl.querySelectorAll('.tab:not([hidden])')];

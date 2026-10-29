@@ -7413,3 +7413,72 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
    der aktive Agent hat nur einen etwas helleren Rand */
 .dcc-form .ap-card[data-agent] .ap-actions { display: none; }
 .dcc-form .ap-card.current { border-color: #3c3c3c; }
+
+/* Börsen-Karten in EINEM Grau – wie der Aktienchart (.stk: Fläche #212121, Rand #2c2c2c, Radius 14):
+   jede Chancen-Karte einzeln und die ganze Karte „Mein Depot“ */
+.chn-pick { background: #212121; border-color: #2c2c2c; border-radius: 14px; }
+.chn-pick:hover { border-color: #363636; }
+.bst { background: #212121; border-color: #2c2c2c; border-radius: 14px; }
+.bst .bst-sec, .bst .bst-row { border-color: rgba(255, 255, 255, 0.06); }
+
+/* ===== Suchfeld (⌘K) – Befehlspalette im Menü-Stil: Fläche --menu-bg, feiner Rand, Radius 14, Zeilen 34 px ===== */
+.cmdk { position: fixed; inset: 0; z-index: 1200; display: flex; justify-content: center; align-items: flex-start; padding: min(14vh, 120px) 16px 16px;
+  background: rgba(0, 0, 0, 0.32); opacity: 0; transition: opacity 160ms ease; }
+.cmdk.open { opacity: 1; }
+.cmdk-box { display: flex; flex-direction: column; width: min(600px, 100%); max-height: min(560px, calc(100vh - 140px)); overflow: hidden;
+  border: 1px solid var(--menu-border); border-radius: 14px; background: var(--menu-bg); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  transform: translateY(-6px) scale(0.985); transition: transform 300ms var(--spring); }
+.cmdk.open .cmdk-box { transform: none; }
+.cmdk-in { display: flex; align-items: center; gap: 10px; height: 50px; padding: 0 14px 0 16px; border-bottom: 1px solid var(--menu-border); color: var(--text-3); }
+.cmdk-in input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: none; color: var(--text); font: inherit; font-size: 14.5px; }
+.cmdk-in input::placeholder { color: var(--text-4); }
+.cmdk kbd { flex: none; padding: 1px 6px; border: 1px solid #333; border-radius: 5px; color: var(--text-4); font: inherit; font-size: 11px; line-height: 16px; }
+.cmdk-list { flex: 1; overflow-y: auto; padding: 4px 6px 8px; scrollbar-width: thin; }
+.cmdk-g { padding: 12px 10px 5px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.cmdk-row { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 5px 10px; border-radius: 8px; color: var(--text-2); font-size: 13.5px; cursor: pointer; }
+.cmdk-row.on { background: var(--menu-hover); color: var(--text); }
+.cmdk-ic { display: grid; place-items: center; flex: none; width: 18px; height: 18px; color: var(--text-3); }
+.cmdk-dog svg, .cmdk-ic .cmdk-dog svg { width: 18px; height: 18px; image-rendering: pixelated; display: block; }
+.cmdk-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cmdk-l, .cmdk-s { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cmdk-l b, .cmdk-s b { color: var(--text); font-weight: 600; }
+.cmdk-s { color: var(--text-4); font-size: 12px; }
+.cmdk-m { flex: none; color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.cmdk-empty { padding: 26px 12px; color: var(--text-4); font-size: 13px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .cmdk, .cmdk-box { transition: none; } }
+
+/* ===== Workspace oben links: stark abgerundetes Kästchen mit dem Hund, Klick öffnet das Workspace-Menü ===== */
+.sb-head { position: relative; }
+.sb-ws { padding-left: 8px; }
+.sb-ws.on { background: #1c1c1c; }
+.sb-ws-av { display: grid; place-items: center; flex: none; width: 22px; height: 22px; border-radius: 7px; background: #262626; overflow: hidden; }
+.sb-ws-av svg { width: 18px; height: 18px; image-rendering: pixelated; }
+.ws-menu { position: absolute; left: 2px; top: calc(100% + 6px); z-index: 60; width: 248px; padding: 4px; border: 1px solid var(--menu-border); border-radius: 12px; background: var(--menu-bg);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35); opacity: 0; visibility: hidden; transform: translateY(-4px) scale(0.98); transform-origin: top left;
+  transition: opacity 160ms ease, transform 300ms var(--spring), visibility 0s linear 300ms; }
+.ws-menu.open { opacity: 1; visibility: visible; transform: none; transition: opacity 160ms ease, transform 300ms var(--spring), visibility 0s; }
+.ws-cur { display: flex; align-items: center; gap: 10px; padding: 8px 10px; color: var(--text); }
+.ws-av { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 9px; background: #262626; }
+.ws-av svg { width: 24px; height: 24px; image-rendering: pixelated; }
+.ws-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.ws-t b { overflow: hidden; font-size: 13.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.ws-t small { color: var(--text-4); font-size: 11.5px; }
+.ws-cur > svg { flex: none; color: var(--accent); }
+.ws-sep { height: 1px; margin: 4px 6px; background: var(--menu-border); }
+.ws-mi { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--text-2); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.ws-mi:hover { background: var(--menu-hover); color: var(--text); }
+.ws-mi svg { flex: none; color: var(--text-3); }
+.ws-mi span { flex: 1; }
+.ws-mi kbd { color: var(--text-4); font: inherit; font-size: 11.5px; }
+.ws-mi em { padding: 1px 7px; border-radius: 6px; background: #262626; color: var(--text-4); font-size: 11px; font-style: normal; }
+.ws-mi[aria-disabled="true"] { cursor: default; }
+.ws-mi[aria-disabled="true"]:hover { background: none; color: var(--text-2); }
+@media (prefers-reduced-motion: reduce) { .ws-menu { transition: none; } }
+
+/* Vom Home-Bildschirm gestartet (iPad/iPhone): Statusleiste liegt durchsichtig auf dem App-Hintergrund (#141414).
+   Die App rückt nur so weit nach unten, wie die Statusleiste hoch ist – minus 6 px, dafür startet die Seitenleiste etwas höher */
+@media (display-mode: standalone) {
+  .app { box-sizing: border-box; padding-top: max(0px, calc(env(safe-area-inset-top) - 6px)); }
+  .sb-head { margin-top: 10px; }
+  .titlebar-controls { top: max(0px, calc(env(safe-area-inset-top) - 6px)); }
+}

@@ -426,3 +426,23 @@ test('Mein Depot aus dem Orderbuch: Bargeld = 50.000 − Käufe + Verkäufe (mit
   assert.equal(o.depot.trades, 3);
   assert.match(H.text(await H.list(store, 'u1'), await H.book(store, 'u1')), /SCHON VERKAUFT:[\s\S]*BARGELD/);
 });
+
+test('Orderbuch: exakt gleiche Buchungen (ohne Order-Nr.) nicht doppelt, Verkauf vor dem Kauf hochgeladen stimmt trotzdem, Gebühren 0,3 %/mind. 15 €', async () => {
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  const sellFirst = { sell: [{ symbol: 'SAP.DE', qty: 10, price: 220, date: '2026-10-20T11:00' }] };
+  await H.apply(store, 'u1', sellFirst); // Verkauf zuerst (Kauf kommt im zweiten Screenshot)
+  const buys = { add: [{ symbol: 'SAP.DE', qty: 30, price: 200, date: '2026-10-02T10:00' }, { symbol: 'RHM.DE', qty: 2, price: 1500, date: '2026-10-03T09:30' }] };
+  await H.apply(store, 'u1', buys);
+  const again = await H.apply(store, 'u1', { ...buys, ...sellFirst }); // alles noch einmal
+  assert.equal(again.skipped, 3);
+  const r = H.replay(await H.book(store, 'u1'));
+  assert.deepEqual(r.items.map((x) => `${x.symbol}:${x.qty}`), ['SAP.DE:20', 'RHM.DE:2'], 'Verkauf nimmt den (später hochgeladenen) Kauf');
+  assert.equal(r.sells[0].basis, 2000);
+  // Gebühren: 6.000 → 18 €, 3.000 → 15 € (Minimum), Verkauf 2.200 → 15 €
+  assert.equal(r.fees, 48);
+  assert.equal(r.cash, 50000 - 6018 - 3015 + 2200 - 15);
+  // „alles verkauft“ ohne Stückzahl
+  await H.apply(store, 'u1', { sell: [{ symbol: 'RHM.DE', price: 1600, date: '2026-10-25T10:00' }] });
+  assert.deepEqual(H.replay(await H.book(store, 'u1')).items.map((x) => x.symbol), ['SAP.DE']);
+});

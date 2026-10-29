@@ -142,7 +142,7 @@ const StockChart = (() => {
       bars.forEach((b, i) => {
         if (!b.v) return;
         const h = Math.max(1, (b.v / vMax) * H_VOL);
-        svg.append(svgEl('rect', { x: xOf(i) - Math.max(0.5, step * 0.32), y: vTop + H_VOL - h, width: Math.max(1, step * 0.64), height: h, fill: b.c >= b.o ? UP : DOWN, opacity: 0.32 }));
+        svg.append(svgEl('rect', { x: xOf(i) - Math.max(0.5, step * 0.32), y: vTop + H_VOL - h, width: Math.max(1, step * 0.64), height: h, fill: '#8a8a8a', opacity: b.c >= b.o ? 0.28 : 0.18 })); // Umsatz grau – sonst wirkt der ganze Chart grünlich
       });
       // Kurs
       if (st.type === 'candle') {
@@ -156,7 +156,10 @@ const StockChart = (() => {
       } else {
         const c = upAll ? UP : DOWN;
         const pts = bars.map((b, i) => `${xOf(i).toFixed(1)},${yOf(b.c).toFixed(1)}`);
-        svg.append(svgEl('path', { d: `M${pts[0]} L${pts.join(' L')} L${xOf(n - 1).toFixed(1)},${H_PRICE} L${xOf(0).toFixed(1)},${H_PRICE} Z`, fill: c, opacity: 0.09 }));
+        const defs = svgEl('defs', {});
+        defs.innerHTML = '<linearGradient id="stk-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.07"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>';
+        svg.append(defs);
+        svg.append(svgEl('path', { d: `M${pts[0]} L${pts.join(' L')} L${xOf(n - 1).toFixed(1)},${H_PRICE} L${xOf(0).toFixed(1)},${H_PRICE} Z`, fill: 'url(#stk-fade)' })); // Fläche unter der Linie: neutrales Grau, nach unten auslaufend (nicht grün/rot getönt)
         svg.append(svgEl('path', { d: `M${pts.join(' L')}`, fill: 'none', stroke: c, 'stroke-width': 1.8, 'stroke-linejoin': 'round', 'stroke-linecap': 'round', class: 'stk-line' }));
       }
       // 20/50-Tage-Linie

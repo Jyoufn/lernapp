@@ -9,7 +9,7 @@ const FadeIcons = (() => {
   const I = {
     home: { b: '<path d="M7.2 1.85a1.25 1.25 0 0 1 1.6 0l5.25 4.4c.3.25.45.6.45.98v5.77A1.5 1.5 0 0 1 13 14.5h-2.5v-3.75a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v3.75H3A1.5 1.5 0 0 1 1.5 13V7.23c0-.38.17-.73.45-.98z"/>' },
     inbox: { b: '<rect x="1.5" y="2.5" width="13" height="11" rx="3"/>', c: '<path d="M3.5 8.5h2.75a1.75 1.75 0 0 0 3.5 0h2.75v-3a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1z"/>' },
-    tasks: { b: '<rect x="1.5" y="1.5" width="13" height="13" rx="4"/>', cl: '<path d="m5 8.2 2 2 4-4.4"/>' },
+    tasks: { b: '<rect x="1.5" y="1.5" width="13" height="13" rx="4"/>', cl: '<path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/>' }, // kleines Board: drei Spalten
     calendar: { b: '<rect x="1.5" y="2.5" width="13" height="12" rx="3"/>', c: '<rect x="3" y="6.5" width="10" height="6.5" rx="1.25"/>', s: '<rect x="9" y="9.25" width="2.5" height="2.5" rx=".7"/>' },
     analytics: { b: '<rect x="2" y="8" width="3" height="6" rx="1"/><rect x="6.5" y="4.5" width="3" height="9.5" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/>' },
     chart: { b: '<path d="M7.25 1.8A6.5 6.5 0 1 0 14.2 8.75H7.25z"/><path d="M8.75 1.55v5.7h5.7a6.5 6.5 0 0 0-5.7-5.7z"/>' },
