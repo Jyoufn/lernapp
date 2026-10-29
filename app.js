@@ -1972,7 +1972,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     inner.append(list);
     fold.append(inner);
     step.append(fold);
-    step.classList.add('foldable', 'open', 'has-box');
+    step.classList.add('foldable', 'has-box'); // Plan eingeklappt – Klick auf „Identifying requirements“ klappt ihn auf
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`);
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
     updatePlan();
@@ -1988,7 +1988,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       // Die Antwort folgt dem Plan: ist ein späterer Punkt behandelt, war der erste Punkt (oft „Definition …“, direkt erklärt)
       // bzw. ein Punkt ohne eigene Kernbegriffe schon dran
       const later = covered.slice(i + 1).some(Boolean);
-      const done = covered[i] || ((i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200);
+      const done = covered[i] || ((i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has));
       const state = done ? 'done' : !final && answerR && !active ? ((active = true), 'active') : 'todo';
       if (state === it.state) return;
       it.state = state;
@@ -4528,7 +4528,7 @@ function savedThoughts(h) {
     inner.append(list);
     fold.append(inner);
     step.append(fold);
-    step.classList.add('foldable', 'open', 'has-box');
+    step.classList.add('foldable', 'has-box');
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', '<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>');
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
     w.steps.append(step);

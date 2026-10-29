@@ -1022,7 +1022,7 @@ const Docs = (() => {
           const r = step('plan', done ? x('plan', m.analysisFailed ? 'not available' : '') : live(P('plan').sub), !done);
           if (!done && !pic) ph('plan');
           if (done && Array.isArray(m.points) && m.points.length && !r.querySelector('.plan-list')) {
-            r.classList.add('foldable', 'open', 'has-box');
+            r.classList.add('foldable', 'has-box');
             r.insertAdjacentHTML('beforeend', `<div class="fold"><div class="fold-in"><div class="plan-list">${m.points.map((p) => `<div class="plan-item" data-state="done"><span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${esc(p)}</span></div>`).join('')}</div></div></div>`);
             r.querySelector('.step-line').addEventListener('click', () => r.classList.toggle('open'));
           }
