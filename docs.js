@@ -826,6 +826,7 @@ const Docs = (() => {
     /* ---------- Der Chat ändert das Dokument ----------
        Die KI schlägt eine Änderung mit [[ÄNDERN: …]] vor → /api/doc-ai schreibt das neue Dokument →
        Karte mit Akzeptieren / Ablehnen. Erst beim Akzeptieren wird geändert, vorher wird ein Checkpoint gemerkt. */
+    const WANTS_EDIT = /(füg\w*\s.*(ein|hinzu|dazu)|einfüg|einbau|hinzufüg|ins dokument|in das dokument|in mein dokument|übernimm|übernehm|ergänz|änder|umschreib|schreib\w*\s.*(rein|dazu|ins)|pack\w*\s.*(rein|dazu|ins)|nimm\w*\s.*(rein|auf)|kürz|korrigier|ersetz|lösch|entfern|umstell|formatier)/i;
     const EDIT_MARK = /\[\[\s*ÄNDERN\s*:\s*([\s\S]*?)\s*(?:\]\]|$)/i;
     const visible = (t) => t.replace(/\[\[\s*ÄNDERN\s*:[\s\S]*?(?:\]\]|$)/gi, '').replace(/\[\[?[A-ZÄÖÜ]{0,6}$/i, '').trimEnd();
     const words = (h) => plain(h || '').split(/\s+/).filter(Boolean).length;
@@ -874,7 +875,11 @@ const Docs = (() => {
         const o = await docAi({ mode: adding ? 'append' : 'edit', instruction: e.instruction, chat: ctx, source, doc: { title: d.title, html: d.content || '' }, uploads: ups.length });
         if (m.edit !== e) return;
         o.html = fillUploads(o.html, ups);
-        if (adding) o.html = insertInto(d.content || '', clean(o.html), String(o.after || '')); // nur das Neue kam zurück → einsetzen, Rest bleibt
+        // nur das Neue kam zurück → einsetzen, Rest bleibt. Schickt die KI doch das ganze Dokument zurück (fängt mit dem alten Text an),
+        // wird es als Ganzes genommen – sonst stünde alles doppelt drin
+        const oldText = plain(d.content || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+        const whole = oldText.length > 40 && plain(o.html).replace(/\s+/g, ' ').includes(oldText);
+        if (adding && !whole) o.html = insertInto(d.content || '', clean(o.html), String(o.after || ''));
         Object.assign(e, { state: 'pending', html: o.html, title: o.title || '', summary: String(o.reply || '').trim().slice(0, 400), stat: diffStat(d.content, o.html) });
       } catch (err) {
         if (m.edit !== e) return;
@@ -920,12 +925,15 @@ const Docs = (() => {
     // Chat-Symbol oben rechts: die Liste erscheint direkt im Seitenfenster (wie „Alle Chats“ im Hauptteil)
     function wireChatList(p) {
       const btn = p.querySelector('.dcc-chats'), view = p.querySelector('.dcc-listview'), box = view.querySelector('.cl-list');
-      const row = (title, sub, attrs, ic, active = false) => `<div class="cl-row${active ? ' active' : ''}" tabindex="0" ${attrs}><svg class="cl-ic" width="14" height="14"><use href="#f-${ic}"/></svg><span class="cl-title">${esc(title)}</span><span class="cl-time">${esc(sub)}</span></div>`;
+      // davor der Hund des zuletzt genutzten Agenten – wie in der Chat-Liste der Seitenleiste
+      const dogOf = (id) => { const dogs = window.PixelDogs?.DOGS; const d = dogs?.[id] ? id : 'general'; return dogs ? `<span class="chat-av cl-av" data-dog="${d}">${window.PixelDogs.svg(d, 24)}</span>` : ''; };
+      const lastDog = (c) => [...(c.messages || [])].reverse().find((m) => m.role === 'assistant' && m.dog)?.dog;
+      const row = (title, sub, attrs, dogId, active = false) => `<div class="cl-row${active ? ' active' : ''}" tabindex="0" ${attrs}>${dogOf(dogId)}<span class="cl-title">${esc(title)}</span><span class="cl-time">${esc(sub)}</span></div>`;
       const render = () => {
         const list = [...dChats(doc)].sort((a, b) => b.updated - a.updated);
         const src = sourceChats(doc);
-        box.innerHTML = (list.length ? `<div class="cl-label">In diesem Dokument</div>${list.map((c) => row(c.title || 'Chat', relTime(c.updated), `data-dcc-chat="${c.id}"`, 'chat', !viewSrc && c.id === doc.chatId)).join('')}` : '')
-          + (src.length ? `<div class="cl-label">Erstellt aus</div>${src.map((t) => row(chatOf(t).title, relTime(chatOf(t).updated || Date.now()), `data-dcc-src="${t.dataset.cid || ''}"`, 'chats', t.dataset.cid === viewSrc)).join('')}` : '')
+        box.innerHTML = (list.length ? `<div class="cl-label">In diesem Dokument</div>${list.map((c) => row(c.title || 'Chat', relTime(c.updated), `data-dcc-chat="${c.id}"`, lastDog(c), !viewSrc && c.id === doc.chatId)).join('')}` : '')
+          + (src.length ? `<div class="cl-label">Erstellt aus</div>${src.map((t) => row(chatOf(t).title, relTime(chatOf(t).updated || Date.now()), `data-dcc-src="${t.dataset.cid || ''}"`, chatOf(t).agent, t.dataset.cid === viewSrc)).join('')}` : '')
           || '<div class="cl-empty">Noch keine Chats zu diesem Dokument</div>';
       };
       const show = (open) => { view.hidden = !open; p.querySelector('.dcc')?.classList.toggle('listing', open); btn.setAttribute('aria-expanded', String(open)); btn.classList.toggle('on', open); if (open) render(); };
@@ -958,44 +966,63 @@ const Docs = (() => {
        wird daraus „Done thinking Xs“ (sehr schnelle Antworten zeigen gar nichts).
        thought(): echte Gedanken des Modells live darunter; danach „Thought for Xs“, ein Klick klappt sie auf */
     function dccThink(a, list, label = 'Thinking', doneLabel = 'Done thinking') {
-      const from = Date.now(), line = el('div', 'dcc-think', `${/picture/.test(label) ? '<span class="shimmer ill-ico"></span>' : ''}<span class="shimmer">${label}</span><span class="t">1s</span>`);
-      a.prepend(line); list.scrollTop = list.scrollHeight;
-      if (/picture/.test(label)) window.sweepRow?.(line); // Bild-Icon und Text: ein durchgehender Lichtstreifen
-      const t = setInterval(() => { line.querySelector('.t').textContent = `${Math.max(1, Math.round((Date.now() - from) / 1000))}s`; }, 1000);
-      // darunter (aufklappbar): was die KI gemacht hat – wie die Zeitleiste im großen Chat – und ihre Gedanken
-      const det = el('div', 'dcc-details open'), steps = el('div', 'dcc-steps');
-      det.append(steps); line.after(det);
+      // GENAU die Zeitleiste des Haupt-Chats (createWork/stepLine aus app.js): Kopf „Planning“ → „Working“ → „Worked for Xs“,
+      // darunter die Schritte mit Punkten und Plan-Kasten; im Seitenfenster nur etwas kleiner (style.css .dcc-a .work)
+      const from = Date.now(), pic = /picture/.test(label);
+      let over = false, thoughtEl = null, raw = '';
+      const sec = () => `${Math.max(1, Math.round((Date.now() - from) / 1000))}s`;
+      const w = createWork();
+      w.work.classList.add('active');
+      const act = w.head.querySelector('.act'), title = w.head.querySelector('.work-title'), tEl = w.head.querySelector('.t');
+      const setAct = (kind, text) => { if (over) return; if (act.dataset.kind !== kind) { act.dataset.kind = kind; act.innerHTML = ACT_MARKUP[kind] || ACT_MARKUP.work; } title.classList.add('sweep'); swapText(title, text); };
+      setAct(pic ? 'work' : 'think', pic ? label : 'Planning');
+      a.prepend(w.work); list.scrollTop = list.scrollHeight;
+      const tick = setInterval(() => { tEl.textContent = sec(); }, 250);
       const rows = {};
       const step = (key, html, live) => {
-        const r = rows[key] || (rows[key] = steps.appendChild(el('div', 'dcc-step')));
-        r.classList.toggle('live', !!live);
-        r.innerHTML = `<span class="dcc-dot">${live ? '<span class="spinner"></span>' : ''}</span><span class="dcc-step-t">${html}</span>`;
+        let r = rows[key];
+        if (!r) { r = rows[key] = stepLine(live ? 'spin' : 'dot', html); w.steps.append(r); }
+        else if (live) r.querySelector('.step-line').innerHTML = html;
+        else finishStep(r, html);
         list.scrollTop = list.scrollHeight;
         return r;
       };
-      line.addEventListener('click', () => { if (over && (steps.children.length || box)) det.classList.toggle('open'); });
-      let over = false, box = null, raw = '';
       return { end(keep = false) {
-        if (over) return; over = true; clearInterval(t);
-        const s = Math.round((Date.now() - from) / 1000);
-        if (s < 1 && !keep && !box && !steps.children.length) { line.remove(); det.remove(); return; }
-        line.classList.add('done');
-        line.innerHTML = `${box ? 'Thought for' : doneLabel} <span class="t">${Math.max(1, s)}s</span><svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`;
-        det.classList.remove('open'); // zu – ein Klick auf die Zeile klappt alles auf
+        if (over) return; over = true; clearInterval(tick);
+        if ((Date.now() - from) < 1000 && !keep && !w.steps.children.length) { w.work.remove(); return; }
+        w.work.classList.remove('active'); title.classList.remove('sweep');
+        if (thoughtEl) finishStep(thoughtEl, '<strong>Thought</strong>');
+        Object.values(rows).forEach((r) => { if (r.querySelector('.spinner')) finishStep(r); });
+        clearTimeout(title._swap); title.getAnimations?.().forEach((an) => an.cancel());
+        title.textContent = pic ? doneLabel : 'Worked for'; tEl.classList.remove('live'); tEl.textContent = sec();
+        if (!w.steps.children.length) w.work.classList.add('collapsed');
+        else setTimeout(() => { if (w.work.isConnected && !w.work.classList.contains('collapsed')) toggleWork(w.work, true); }, 700);
       }, thought(text) {
         if (over || !text) return;
-        if (!box) { box = el('div', 'thought-text dcc-thought open'); det.append(box); }
-        raw += text; box.textContent = raw.replace(/\*\*/g, '').trim(); box.scrollTop = box.scrollHeight; list.scrollTop = list.scrollHeight;
+        if (!thoughtEl) {
+          thoughtEl = step('thought', '<span class="shimmer">Thinking</span>', true);
+          thoughtEl.classList.add('foldable', 'open', 'has-box');
+          thoughtEl.insertAdjacentHTML('beforeend', '<div class="fold"><div class="fold-in"><div class="thought-text"></div></div></div>');
+          thoughtEl.querySelector('.step-line').addEventListener('click', () => thoughtEl.classList.toggle('open'));
+        }
+        raw += text; const box = thoughtEl.querySelector('.thought-text'); box.textContent = raw.replace(/\*\*/g, '').trim(); box.scrollTop = box.scrollHeight; list.scrollTop = list.scrollHeight;
       }, status(d) {
+        if (over) return;
         const done = d.status !== 'active', m = d.meta || {};
-        if (d.stage === 'material') step('material', done ? (m.relevant === true ? 'Analyzed your sources – <strong>answering from them</strong>' : m.relevant === false ? 'Analyzed your sources – nothing on this topic' : 'Analyzed your sources') : 'Analyzing your sources', !done);
+        const live = (txt) => `<span class="shimmer">${txt}</span>`;
+        if (d.stage === 'material') step('material', done ? (m.relevant === true ? 'Analyzed your sources – <strong>answering from them</strong>' : m.relevant === false ? 'Analyzed your sources – nothing on this topic' : 'Analyzed your sources') : live('Analyzing your sources'), !done);
         else if (d.stage === 'thinking') {
-          const r = step('plan', done ? (m.analysisFailed ? 'Planning not available' : 'Planned the answer') : 'Planning', !done);
-          if (done && Array.isArray(m.points) && m.points.length) r.insertAdjacentHTML('beforeend', `<ul class="dcc-plan">${m.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`);
-        } else if (d.stage === 'browsing' || d.stage === 'searching_sources') step('src', done ? 'Searched sources' : 'Searching sources', !done);
-        else if (d.stage === 'verifying') step('check', done ? (m.corrected ? `Checked – corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : 'Checked facts') : 'Checking facts', !done);
-        else if (d.stage === 'answering') step('write', done ? 'Wrote the answer' : 'Writing the answer', !done);
-      }, drop() { over = true; clearInterval(t); line.remove(); det.remove(); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
+          const r = step('plan', done ? (m.analysisFailed ? 'Planning not available' : 'Planned the answer') : live('Planning'), !done);
+          if (done) { if (!pic) setAct('work', 'Working'); }
+          if (done && Array.isArray(m.points) && m.points.length && !r.querySelector('.plan-list')) {
+            r.classList.add('foldable', 'open', 'has-box');
+            r.insertAdjacentHTML('beforeend', `<div class="fold"><div class="fold-in"><div class="plan-list">${m.points.map((p) => `<div class="plan-item" data-state="done"><span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${esc(p)}</span></div>`).join('')}</div></div></div>`);
+            r.querySelector('.step-line').addEventListener('click', () => r.classList.toggle('open'));
+          }
+        } else if (d.stage === 'browsing' || d.stage === 'searching_sources') { step('src', done ? 'Searched sources' : live('Searching sources'), !done); if (!done) setAct('search', 'Searching the web'); }
+        else if (d.stage === 'verifying') { step('check', done ? (m.corrected ? `Checked – corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : 'Checked facts') : live('Checking facts'), !done); if (!done) setAct('check', 'Checking facts'); }
+        else if (d.stage === 'answering') { step('write', done ? 'Wrote the answer' : live('Writing the answer'), !done); if (!done) setAct('write', 'Writing'); }
+      }, drop() { over = true; clearInterval(tick); w.work.remove(); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
     }
     // Bildwunsch? Dann steht oben von Anfang an „Generating picture“ statt „Thinking“
     // Bildwunsch? Nur wenn ausdrücklich ein Bild erstellt/gezeigt werden soll (nicht schon, wenn das Wort „Bild“ vorkommt)
@@ -1057,8 +1084,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
-          if (event === 'text') { answer += data.text; if (!pic) think.end(); rv.append(data.text); }
-          else if (event === 'status') { think.status?.(data); if (data.stage === 'thinking' && data.status !== 'active' && !pic) think.end(); }
+          if (event === 'text') { answer += data.text; rv.append(data.text); } // Zeitleiste läuft weiter („Working“) bis alles fertig ist – wie im Haupt-Chat
+          else if (event === 'status') think.status?.(data);
           else if (event === 'error') throw new Error(data.message);
         }
         await rv.finish();
@@ -1075,8 +1102,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (answer) {
           const m = { role: 'assistant', text: visible(answer), dog: a.dataset.dog };
           const mk = EDIT_MARK.exec(answer);
-          if (mk && mk[1].trim()) {
-            m.edit = { id: newId('e'), docId: d.id, state: 'work', instruction: mk[1].trim().slice(0, 2000) };
+          // Die KI vergisst die [[ÄNDERN]]-Zeile manchmal, obwohl ausdrücklich eine Änderung gewünscht war („füg das ein“) –
+          // dann gilt die Frage selbst als Anweisung, damit die Änderung trotzdem kommt (der Nutzer muss sie ja noch akzeptieren)
+          const lastQ = [...chat.messages].reverse().find((x) => x.role === 'user')?.text || '';
+          const instruction = mk?.[1]?.trim() || (WANTS_EDIT.test(lastQ) && !window.parseAskBlock?.(answer)?.length ? lastQ : '');
+          if (instruction) {
+            m.edit = { id: newId('e'), docId: d.id, state: 'work', instruction: instruction.slice(0, 2000) };
             const ups = [...images, ...chat.messages.slice(-6).flatMap((x) => editUploads.get(x) || [])].map((x) => (typeof x === 'string' ? x : `data:${x.mime};base64,${x.data}`));
             if (ups.length) editUploads.set(m.edit.id, [...new Set(ups)].slice(0, 12));
           }
@@ -1108,8 +1139,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
-          if (event === 'text') { answer += data.text; if (!pic) think.end(); rv.append(data.text); }
-          else if (event === 'status') { think.status?.(data); if (data.stage === 'thinking' && data.status !== 'active' && !pic) think.end(); }
+          if (event === 'text') { answer += data.text; rv.append(data.text); } // Zeitleiste läuft weiter („Working“) bis alles fertig ist – wie im Haupt-Chat
+          else if (event === 'status') think.status?.(data);
           else if (event === 'error') throw new Error(data.message);
         }
         await rv.finish();
@@ -2352,10 +2383,20 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     update(id, { content: `${doc.content || ''}${extra}` });
     open(id);
   }
+  // Dokumente, die auf dem Server entstanden sind (z. B. Ergebnis einer Agenten-Aufgabe), in die Liste übernehmen
+  async function sync() {
+    if (!ready) return;
+    try {
+      const r = await fetch('/api/docs'); if (!r.ok) return;
+      const fresh = ((await r.json()).docs || []).filter((d) => d?.id && !docOf(d.id) && !deletedIds.has(d.id));
+      fresh.forEach((d) => { docs.unshift(d); sentDocs.set(d.id, JSON.stringify(d)); });
+      if (fresh.length) { renderSide(); if (list.open) list.render(); }
+    } catch {}
+  }
   function discard(id) { const d = docOf(id); if (d && isEmpty(d)) { docs = docs.filter((x) => x !== d); deletedIds.add(id); save(); renderSide(); if (list.open) list.render(); } }
 
   return {
-    list, editor, open, create, add, update, discard, remove, makeForm, offer, make, clean, appendTo,
+    list, editor, open, create, add, update, discard, sync, remove, makeForm, offer, make, clean, appendTo,
     get: (id) => docOf(id),
     isEmpty: (id) => { const d = docOf(id); return !d || isEmpty(d); },
     titleOf: (id) => docOf(id)?.title || 'Unbenannt',

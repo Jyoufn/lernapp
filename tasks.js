@@ -5,7 +5,9 @@
    - Anlegen/Bearbeiten in einem flachen Fenster oben (Titel, Notizen, darunter Pillen
      für Status, Priorität, Datum und Tags – jede öffnet ihr Menü direkt darunter)
    - Tags legt man selbst an und wählt die Farbe; gespeichert im Browser (localStorage)
-   - später: Aufgaben an die KI übergeben (noch nicht eingebaut)
+   - Aufgaben an die Agenten: im Fenster den Agenten wählen (und ob das Ergebnis ein Chat oder ein Dokument wird).
+     Der Server arbeitet die Aufgabe ab – auch wenn die App geschlossen ist (lib/agenttasks.js). Die Karte wandert
+     von selbst: Offen → In Arbeit (Agent arbeitet) → Prüfen (Ergebnis öffnen). Kein „+“ je Spalte mehr.
    =================================================================== */
 const Tasks = (() => {
   const KEY = 'tasks.v1';
@@ -83,7 +85,10 @@ const Tasks = (() => {
   /* ---------- Board: dieselbe Ansicht für „Tasks“ (Browser) und für Dokument-Blöcke (Speicher im Dokument)
      store = { load() → Liste, save(liste) } ---------- */
   // cols = nur diese Spalten (z. B. im Dokument ohne „Prüfen“); Aufgaben aus fehlenden Spalten landen in „In Arbeit“
-  function createBoard(store, { title = 'Aufgaben', cls = '', cols = null } = {}) {
+  // agents = Aufgaben können an einen Agenten gehen (nur das Haupt-Board „Aufgaben“)
+  const AGENT_NAMES = { general: 'Allgemein', learn: 'Lernen', research: 'Research', boerse: 'Börse' };
+  const dog = (id, s = 20) => (window.PixelDogs?.svg ? window.PixelDogs.svg(id, s) : '');
+  function createBoard(store, { title = 'Aufgaben', cls = '', cols = null, agents = false } = {}) {
   const COLS = cols ? ALL_COLS.filter((c) => cols.includes(c.id)) : ALL_COLS;
   let tasks = store.load() || [];
   tasks.forEach((t) => { if (!Array.isArray(t.tags)) t.tags = t.tag ? [t.tag] : []; delete t.tag; if (!COLS.some((c) => c.id === t.status)) t.status = COLS.some((c) => c.id === 'doing') ? 'doing' : COLS[0].id; });
@@ -148,8 +153,21 @@ const Tasks = (() => {
         ${prog}
         ${prio.id !== 'none' ? `<span class="tk-prio${prio.id === 'urgent' ? ' urgent' : ''}" title="Priorität: ${prio.name}">${prioIcon(prio.id, 13)}<span class="tk-pn">${prio.name}</span></span>` : ''}
       </div>`;
+    if (agents && t.agent && AGENT_NAMES[t.agent]) el.querySelector('.tk-title-row').after(agentRow(t));
     if (!el.querySelector('.tk-foot').children.length) el.querySelector('.tk-foot').remove();
     return el;
+  }
+  // Zeile auf der Karte: welcher Agent, was er gerade tut, und am Ende der Knopf zum Ergebnis
+  function agentRow(t) {
+    const r = t.run || {}, row = document.createElement('div');
+    row.className = `tk-agent ${r.state || 'idle'}`;
+    const what = t.output === 'doc' ? 'Dokument' : 'Chat';
+    const state = r.state === 'done' ? `<button type="button" class="tk-res" data-result="${t.id}">${fi(t.output === 'doc' ? 'file' : 'chat', 12)}${what} öffnen</button>`
+      : r.state === 'failed' ? `<span class="tk-ast">${esc(r.error || 'Hat nicht geklappt')}</span><button type="button" class="tk-res" data-retry="${t.id}">Nochmal</button>`
+      : r.state === 'queued' || r.state === 'running' ? '<span class="tk-ast"><span class="spinner"></span>Arbeitet …</span>'
+      : '';
+    row.innerHTML = `<span class="tk-dog">${dog(t.agent, 20)}</span><span class="tk-an">${AGENT_NAMES[t.agent]}</span>${state}`;
+    return row;
   }
   function render() {
     const any = filter.q || filter.tags.size || filter.prios.size || filter.due;
@@ -159,7 +177,7 @@ const Tasks = (() => {
       const c = document.createElement('div');
       c.className = 'tk-col';
       c.dataset.col = col.id;
-      c.innerHTML = `<div class="tk-col-head"><i style="background:${col.c}"></i><span>${col.name}</span><span class="tk-count">${any ? `${list.length}/${all.length}` : all.length}</span><button type="button" class="tk-add" data-add="${col.id}" aria-label="Aufgabe in „${col.name}“ anlegen" title="Neue Aufgabe">${fi('plus', 12)}</button></div><div class="tk-list"></div>`;
+      c.innerHTML = `<div class="tk-col-head"><i style="background:${col.c}"></i><span>${col.name}</span><span class="tk-count">${any ? `${list.length}/${all.length}` : all.length}</span>${agents ? '' : `<button type="button" class="tk-add" data-add="${col.id}" aria-label="Aufgabe in „${col.name}“ anlegen" title="Neue Aufgabe">${fi('plus', 12)}</button>`}</div><div class="tk-list"></div>`;
       c.querySelector('.tk-list').append(...list.map(card));
       return c;
     }));
@@ -196,7 +214,9 @@ const Tasks = (() => {
 
   function edit(id, status = 'backlog') {
     const t0 = tasks.find((x) => x.id === id);
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: '', progress: 0, comments: [] };
+    const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
+    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: '', progress: 0, comments: [], ...(agents ? { agent: startAgent, output: 'chat' } : {}) };
+    const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
@@ -211,6 +231,8 @@ const Tasks = (() => {
         ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
+        ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([id, n]) => `<button type="button" class="tk-mi" data-tagent="${id}"><span class="tk-mi-ic">${dog(id, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : ''}
+        ${agents && !locked ? pill('output', `<button type="button" class="tk-mi" data-toutput="chat">${fi('chat', 13)}<span>Ergebnis als Chat</span>${fi('check', 12)}</button><button type="button" class="tk-mi" data-toutput="doc">${fi('file', 13)}<span>Ergebnis als Dokument</span>${fi('check', 12)}</button>`) : ''}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" placeholder="Kommentar schreiben …" maxlength="500" aria-label="Kommentar schreiben" /><button type="button" class="tk-tag-plus" data-cm-send aria-label="Kommentar senden" title="Senden">' + fi('arrow-up', 12) + '</button></div>', 'comments')}
       </div>
       <div class="tk-form-foot">
@@ -238,6 +260,16 @@ const Tasks = (() => {
       ['date', 'tags'].forEach((k) => form.querySelector(`[data-open="${k}"]`).classList.toggle('empty', k === 'date' ? !t.date : !ts.length));
       form.querySelectorAll('[data-status]').forEach((b) => b.classList.toggle('on', b.dataset.status === t.status));
       form.querySelectorAll('[data-prio]').forEach((b) => b.classList.toggle('on', b.dataset.prio === t.prio));
+      const ap = form.querySelector('[data-open="agent"]'), op = form.querySelector('[data-open="output"]');
+      if (ap) {
+        ap.innerHTML = t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}` : `${fi('user', 13)}Agent`;
+        ap.classList.toggle('empty', !t.agent);
+        op.closest('.tk-pop').hidden = !t.agent;
+        op.innerHTML = `${fi(t.output === 'doc' ? 'file' : 'chat', 13)}${t.output === 'doc' ? 'Dokument' : 'Chat'}`;
+        form.querySelectorAll('[data-tagent]').forEach((b) => b.classList.toggle('on', b.dataset.tagent === (t.agent || '')));
+        form.querySelectorAll('[data-toutput]').forEach((b) => b.classList.toggle('on', b.dataset.toutput === t.output));
+        form.querySelector('.tk-create').textContent = t0 ? 'Speichern' : t.agent ? 'An Agent geben' : 'Aufgabe erstellen';
+      }
     };
 
     /* Fortschritt: Regler in 5er-Schritten, folgt der Maus und rastet ein */
@@ -363,6 +395,10 @@ const Tasks = (() => {
       if (cdel) { t.comments.splice(+cdel.dataset.cmDel, 1); drawComments(); draw(); return; }
       const st = e.target.closest('[data-status]');
       if (st) { t.status = st.dataset.status; if (t.status === 'done' && !t.progress) setProg(100); draw(); st.closest('.tk-pop').classList.remove('open'); return; }
+      const ag = e.target.closest('[data-tagent]');
+      if (ag) { t.agent = ag.dataset.tagent; if (!t.output) t.output = 'chat'; draw(); ag.closest('.tk-pop').classList.remove('open'); return; }
+      const ou = e.target.closest('[data-toutput]');
+      if (ou) { t.output = ou.dataset.toutput; draw(); ou.closest('.tk-pop').classList.remove('open'); return; }
       const pr = e.target.closest('[data-prio]');
       if (pr) { t.prio = pr.dataset.prio; draw(); pr.closest('.tk-pop').classList.remove('open'); return; }
       const cal = e.target.closest('[data-cal]');
@@ -388,7 +424,7 @@ const Tasks = (() => {
       if (!e.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') close();
-      if (act === 'delete') { tasks = tasks.filter((x) => x.id !== t.id); save(); render(); close(); }
+      if (act === 'delete') { tasks = tasks.filter((x) => x.id !== t.id); if (t.agent) forget([t.id]); save(); render(); close(); }
     });
     form.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -412,9 +448,15 @@ const Tasks = (() => {
         Object.assign(t0, t);
       } else {
         t.id = newId(); t.order = -1; t.created = Date.now();
+        if (!t.agent) { delete t.agent; delete t.output; }
         tasks.push(t);
       }
+      // neue Aufgabe mit Agent (oder ein Agent wurde nachträglich gewählt) → sofort an den Agenten
+      const target = t0 || t;
+      const go = agents && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
+      if (go) { target.status = 'doing'; target.order = -1; target.run = { state: 'queued', updated: Date.now() }; }
       normalize(); save();
+      if (go) startRun(target);
       // weich speichern: Knopf zeigt kurz einen Haken, dann schließt das Fenster und die Karte blendet ein
       const btn = form.querySelector('.tk-create');
       form.classList.add('saving');
@@ -468,12 +510,65 @@ const Tasks = (() => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'new') { edit(null); return; }
     if (act === 'filter') { e.stopPropagation(); drawFilter(); view.querySelector('.tk-filter-wrap').classList.toggle('open'); return; }
+    const res = e.target.closest('[data-result]');
+    if (res) { openResult(tasks.find((x) => x.id === res.dataset.result)); return; }
+    const rt = e.target.closest('[data-retry]');
+    if (rt) { const t = tasks.find((x) => x.id === rt.dataset.retry); if (t) { t.status = 'doing'; t.run = { state: 'queued', updated: Date.now() }; normalize(); save(); render(); startRun(t); } return; }
     const add = e.target.closest('[data-add]');
     if (add) { edit(null, add.dataset.add); return; }
     const c = e.target.closest('.tk-card');
     if (c) edit(c.dataset.id);
   });
   board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card')) edit(e.target.dataset.id); });
+
+  /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
+  function startRun(t) {
+    if (!agents) return;
+    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent, output: t.output } });
+    // keepalive: die Anfrage geht auch raus, wenn die App gleich geschlossen wird – der Server arbeitet dann allein weiter
+    fetch('/api/agent-tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true })
+      .then(() => pull()).catch(() => {});
+    setTimeout(pull, 1500);
+  }
+  function forget(ids) { if (agents && ids.length) fetch('/api/agent-tasks', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids }) }).catch(() => {}); }
+  async function openResult(t) {
+    const r = t?.run; if (!r) return;
+    if (r.docId) { await window.Docs?.sync?.(); window.Docs?.open(r.docId); return; }
+    if (r.chatId && !(await window.openSavedChat?.(r.chatId))) { r.state = 'failed'; r.error = 'Chat nicht mehr da'; save(); render(); }
+  }
+  let pullT = 0, pulling = false;
+  async function pull() {
+    if (!agents || pulling) return;
+    clearTimeout(pullT);
+    pulling = true;
+    let map = null;
+    try { const r = await fetch('/api/agent-tasks', { cache: 'no-store' }); if (r.ok) map = await r.json(); } catch {}
+    pulling = false;
+    if (map) {
+      let changed = false;
+      tasks.filter((t) => t.agent).forEach((t) => {
+        const s = map[t.id];
+        // noch nicht beim Server angekommen (z. B. offline beim Anlegen) → nochmal losschicken
+        if (!s) { if (t.run?.state === 'queued' && Date.now() - (t.run.updated || 0) > 20000) { t.run.updated = Date.now(); startRun(t); } return; }
+        if ((s.updated || 0) <= (t.run?.updated || 0) && t.run?.state === s.state) return;
+        const was = t.run?.state;
+        t.run = { state: s.state, chatId: s.chatId || '', docId: s.docId || '', error: s.error || '', updated: s.updated };
+        if (s.state === 'running' && t.status === 'backlog') { t.status = 'doing'; t.order = -1; }
+        if (s.state === 'done' && was !== 'done') {
+          if (t.status !== 'done') { t.status = 'review'; t.order = -1; }
+          t.progress = 100;
+          t.comments = [...(t.comments || []), { text: `${AGENT_NAMES[t.agent] || 'Agent'}: fertig – ${t.output === 'doc' ? 'Dokument' : 'Chat'} „${s.title || t.title}“ ist bereit.`, at: s.finished || Date.now() }];
+        }
+        changed = true;
+      });
+      if (changed) { normalize(); save(); render(); }
+    }
+    if (tasks.some((t) => t.agent && (t.run?.state === 'queued' || t.run?.state === 'running'))) pullT = setTimeout(pull, 5000);
+  }
+  if (agents) {
+    setTimeout(pull, 1200);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); });
+  }
   render();
   // für den Sprach-Agenten: Aufgabe per Titel finden (genau, sonst Teil des Titels), anlegen, ändern, löschen
   const find = (q) => { q = String(q || '').toLowerCase().trim(); return q ? tasks.find((t) => t.title.toLowerCase() === q) || tasks.find((t) => t.title.toLowerCase().includes(q)) : null; };
@@ -488,15 +583,15 @@ const Tasks = (() => {
     tasks.push(t); normalize(); save(); render(); return t;
   }
   function update(q, a = {}) { const t = find(q); if (!t) return null; const p = clean(a, t); if (p.status && p.status !== t.status) t.order = -1; Object.assign(t, p); normalize(); save(); render(); return t; }
-  function remove(q) { const t = find(q); if (!t) return null; tasks = tasks.filter((x) => x !== t); save(); render(); return t; }
-  return { view, render, add, update, remove, get tasks() { return tasks.slice(); } };
+  function remove(q) { const t = find(q); if (!t) return null; tasks = tasks.filter((x) => x !== t); if (t.agent) forget([t.id]); save(); render(); return t; }
+  return { view, render, add, update, remove, pull, get tasks() { return tasks.slice(); } };
   }
 
   // Haupt-Board „Tasks“: im Browser gespeichert
   const main = createBoard({
     load: () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } },
     save: (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} },
-  });
+  }, { agents: true });
   const view = main.view, render = main.render;
   view.hidden = true;
   let open = false;
@@ -507,6 +602,7 @@ const Tasks = (() => {
     if (panel && !view.isConnected) panel.append(view);
     open = true;
     render();
+    main.pull();
     view.hidden = false;
     panel?.classList.add('view-tasks');
   }

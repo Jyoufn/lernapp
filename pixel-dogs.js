@@ -818,7 +818,8 @@ const PixelDogs = (() => {
     for (let r = 0; r < ROWS; r++) {
       for (let x = W - oy - SIZE; x > -SIZE; x -= SIZE + GAP) out += `<rect x="${x}" y="${oy + r * (SIZE + GAP)}" width="${SIZE}" height="${SIZE}" rx="3"/>`;
     }
-    return `<svg class="ap-tiles" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMaxYMid slice" aria-hidden="true"><g fill="#fff" fill-opacity="0.09">${out}</g></svg>`;
+    // Maske liegt auf einem HTML-Element (nicht auf dem SVG): Safari auf iOS malt maskierte SVGs sonst als schwarze Fläche
+    return `<span class="ap-tiles" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMaxYMid slice"><g fill="#fff" fill-opacity="0.09">${out}</g></svg></span>`;
   })();
   const ico = (n) => (window.FadeIcons ? FadeIcons.svg(n, 12) : '');
   const heroDog = (id) => art(id);
@@ -840,6 +841,7 @@ const PixelDogs = (() => {
     host.prepend(picker);
     const paint = (current = mode) => picker.querySelectorAll('.ap-pick[data-mode]').forEach((b) => {
       const on = b.dataset.mode === current;
+      b.closest('.ap-card')?.classList.toggle('current', on);
       b.classList.toggle('on', on);
       b.innerHTML = on ? `${ico('check')}Aktiv` : 'Auswählen';
     });

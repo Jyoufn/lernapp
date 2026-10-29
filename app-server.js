@@ -39,6 +39,7 @@ const ACC = require('./lib/accounts');
 const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
 const RADAR = require('./lib/radar');
 const HOLD = require('./lib/holdings'); // „Meine Käufe“ des Börsen-Bären (im Chat genannt, je Konto) // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
+const AGT = require('./lib/agenttasks'); // Aufgaben, die ein Agent im Hintergrund abarbeitet (Tab „Aufgaben“)
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -101,15 +102,18 @@ function startSse(res) {
 }
 
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
-async function handleChat(req, res, user = null) {
-  const body = await readBody(req);
+// Was ein Agent zusätzlich braucht (nicht vom Browser setzbar): Börse → gespeicherter Chancen-Radar und „Meine Käufe“ des Kontos
+function withAgentData(body, user) {
   delete body.radarStore; delete body.holdingsCtl;
   if (body.agent === 'boerse') {
     const store = accountStore();
-    Object.defineProperty(body, 'radarStore', { value: store, enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
-    // „Meine Käufe“: lesen und – wenn der Bär im Chat etwas notiert – ändern (nur das eigene Konto)
+    Object.defineProperty(body, 'radarStore', { value: store, enumerable: false });
     if (user?.id && store) Object.defineProperty(body, 'holdingsCtl', { value: { list: () => HOLD.list(store, user.id), book: () => HOLD.book(store, user.id), apply: (c) => HOLD.apply(store, user.id, c) }, enumerable: false });
   }
+  return body;
+}
+async function handleChat(req, res, user = null) {
+  const body = withAgentData(await readBody(req), user);
   const sse = startSse(res);
   const controller = new AbortController();
   res.on('close', () => controller.abort()); // Stopp-Button → alle laufenden Anfragen abbrechen
@@ -962,16 +966,23 @@ async function handleDocAi(req, res) {
     body.selection ? `Markierter Text:\n${cut(body.selection, 8000)}` : '',
   ].filter(Boolean).join('\n\n');
   const ok = (o) => o && typeof o.html === 'string' && o.html.trim();
+  // Hauptmodell, bei Überlastung/Fehler das nächste Gemini-Modell, dann NVIDIA – Fehler werden protokolliert (früher still verschluckt)
+  const errs = [];
   if (env.GEMINI_API_KEY) {
-    try {
-      const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model: P.GEMINI_MODEL, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: { budget: 0 }, json: true, signal: AbortSignal.timeout(240000) }));
-      if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
-    } catch {}
+    for (const model of [P.GEMINI_MODEL, P.GEMINI_NEXT]) {
+      try {
+        const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: model === P.GEMINI_MODEL ? { budget: 0 } : { level: 'low' }, json: true, signal: AbortSignal.timeout(120000) }));
+        if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
+        errs.push(`${model}: kein HTML`);
+      } catch (err) { errs.push(`${model}: ${err.message}`); }
+    }
   }
   try {
-    const o = await P.smallJsonTask(env, { system: DOC_SYSTEM, user, maxTokens: 32768, timeoutMs: 240000 });
+    const o = await P.smallJsonTask(env, { system: DOC_SYSTEM, user, maxTokens: 32768, timeoutMs: 120000 });
     if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
-  } catch {}
+    errs.push('ersatz: kein HTML');
+  } catch (err) { errs.push(`ersatz: ${err.message}`); }
+  console.log(`[doc-ai ${mode}] fehlgeschlagen · ${errs.join('; ')}`);
   sendJson(res, 502, { error: 'Die KI hat gerade nicht geantwortet.' });
 }
 
@@ -1279,6 +1290,13 @@ async function handle(req, res) {
     // Planspiel-Zugang gibt es nicht mehr (kein Login beim Spiel): früher gespeicherte, verschlüsselte Zugangsdaten einmal löschen
     if (user && store && !planspielCleaned.has(user.id)) { planspielCleaned.add(user.id); Promise.all(['planspiel', 'planspiel-token', 'planspiel-fail'].map((k) => store.del(`u:${user.id}:${k}`))).catch(() => {}); }
     if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
+    // Aufgaben für die Agenten: Zustand holen / Aufgabe abarbeiten (läuft weiter, auch wenn die App geschlossen wird) / Zustand entfernen
+    if (req.method === 'GET' && urlPath === '/api/agent-tasks') return sendJson(res, 200, await AGT.list(store, user.id));
+    if (req.method === 'POST' && urlPath === '/api/agent-tasks/run') {
+      const b = await readBody(req, 20000);
+      return sendJson(res, 200, await AGT.run({ store, uid: user.id, task: b.task || {}, env: readEnv(), prepareBody: (x) => withAgentData(x, user) }));
+    }
+    if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 20000); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {

@@ -1,7 +1,7 @@
 /* ===================================================================
    Chancen-Übersicht im Chat (Block ```chancen, vom Börsen-Bären bei „welche Aktien …“ / Empfehlungen):
    je Wert ein Kästchen mit Etikett Kaufen (grün) · Beobachten (grau) · Nicht kaufen (rot), Muster, Kurs, Einstieg, Stopp, Ziel,
-   Chance:Risiko, Trefferquote, Begründung und „Mit dem Bären besprechen“.
+   Chance:Risiko, Trefferquote und Begründung – jede Karte einzeln, ohne Sammelkasten.
    Daten: stehen im Block (vom Server angehängt) – sonst aus dem GESPEICHERTEN Radar (/api/boerse/chancen, ohne Neu-Rechnen, ohne KI).
    Es gibt keine automatischen Abfragen im Hintergrund: Chancen kommen nur, wenn man danach fragt.
    =================================================================== */
@@ -9,8 +9,7 @@ const ChancenCard = (() => {
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nf = (x, d = 2) => (x == null || !Number.isFinite(+x) ? '–' : (+x).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }));
   const eur = (x) => (x == null ? '–' : `${nf(x)} €`);
-  const fi = (n, s = 11) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
-  const LABEL = { kaufen: 'Kaufen', beobachten: 'Beobachten', meiden: 'Nicht kaufen' };
+    const LABEL = { kaufen: 'Kaufen', beobachten: 'Beobachten', meiden: 'Nicht kaufen' };
   const crvOf = (p) => (p.entry && p.stop && p.target && p.entry > p.stop ? (p.target - p.entry) / (p.entry - p.stop) : null);
 
   function parse(raw) {
@@ -24,49 +23,28 @@ const ChancenCard = (() => {
   };
 
   function row(p) {
-    const crv = crvOf(p), v = LABEL[p.verdict] ? p.verdict : 'beobachten';
-    const nums = v === 'meiden'
-      ? `<span><i>Kurs</i>${eur(p.price)}</span>${p.score != null ? `<span><i>Score</i>${p.score}/100</span>` : ''}`
-      : `<span><i>Kurs</i>${eur(p.price)}</span><span><i>Einstieg</i>${eur(p.entry)}</span><span><i>Stopp</i><em class="neg">${eur(p.stop)}</em></span><span><i>Ziel</i><em class="pos">${eur(p.target)}</em></span>${crv ? `<span><i>Chance : Risiko</i>${nf(crv, 1)} : 1</span>` : ''}${p.hit ? `<span><i>Treffer</i>${esc(p.hit)}</span>` : ''}`;
-    const ask = `Schau dir ${p.name} (${p.symbol}) genauer an${p.type ? `: ${p.type}` : ''} – jetzt kaufen oder nicht?`;
+    const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
+    const nums = `<span><i>Kurs</i>${eur(p.price)}</span><span><i>Einstieg</i>${eur(p.entry)}</span><span><i>Stopp</i><em class="neg">${eur(p.stop)}</em></span><span><i>Ziel</i><em class="pos">${eur(p.target)}</em></span>${crv ? `<span><i>Chance : Risiko</i>${nf(crv, 1)} : 1</span>` : ''}${p.hit ? `<span><i>Treffer</i>${esc(p.hit)}</span>` : ''}`;
     return `<div class="chn-pick ${v}">
         <div class="chn-top"><span class="chn-name"><b>${esc(p.name)}</b><small>${esc(p.type || '')}${p.sector ? ` · ${esc(p.sector)}` : ''}</small></span>
           <span class="chn-badge ${v}">${LABEL[v]}</span></div>
         <div class="chn-nums">${nums}</div>
         ${p.reason ? `<p class="chn-why">${esc(p.reason)}</p>` : ''}
-        <button type="button" class="chn-link" data-q="${esc(ask)}">Mit dem Bären besprechen ${fi('chevron-right')}</button>
       </div>`;
   }
+  // Nur die Karten, einzeln untereinander – erst alle „Kaufen“, dann höchstens 10 „Beobachten“. Kein Rahmen, keine Überschrift.
   function body(d) {
     const picks = (d.picks || []).filter((p) => p.verdict !== 'meiden');
     if (!picks.length) return '<div class="chn-empty">Gerade erfüllt kein Wert alle Bedingungen – heute lieber abwarten.</div>';
-    return `${[['kaufen', 'Jetzt kaufen'], ['beobachten', 'Beobachten']].map(([v, h]) => {
-        const l = picks.filter((p) => (p.verdict === 'kaufen' ? 'kaufen' : 'beobachten') === v).slice(0, v === 'kaufen' ? 99 : 10);
-        return l.length ? `<div class="chn-group"><span class="chn-gh">${h} <i>${l.length}</i></span><div class="chn-list">${l.map(row).join('')}</div></div>` : '';
-      }).join('')}`;
+    const buy = picks.filter((p) => p.verdict === 'kaufen'), watch = picks.filter((p) => p.verdict !== 'kaufen').slice(0, 10);
+    return [...buy, ...watch].map(row).join('');
   }
 
   function figure(raw) {
     const spec = parse(raw);
-    const fig = document.createElement('figure');
+    const fig = document.createElement('div');
     fig.className = 'chn';
-    const bear = window.PixelDogs?.svg ? window.PixelDogs.svg('boerse', 24) : '';
-    fig.innerHTML = `<div class="chn-head"><span class="chn-av">${bear}</span><span class="chn-title"><strong>Chancen-Radar</strong><span class="chn-sub">wird geladen …</span></span></div><div class="chn-body"></div>`;
-    const draw = (d) => {
-      const t = d.asOf ? new Date(d.asOf).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
-      fig.querySelector('.chn-sub').textContent = [d.checked ? `${d.checked} Planspiel-Werte geprüft` : 'Planspiel-Werte', d.mood ? `Markt ${d.mood}` : '', t ? `Stand ${t} Uhr` : ''].filter(Boolean).join(' · ');
-      fig.querySelector('.chn-body').innerHTML = body(d);
-    };
-    if (Array.isArray(spec.picks)) draw(spec); else load().then(draw);
-    // „Mit dem Bären besprechen“ → Frage ins Eingabefeld dieses Chats und abschicken
-    fig.addEventListener('click', (e) => {
-      const b = e.target.closest('.chn-link'); if (!b) return;
-      const input = document.getElementById('input'), form = document.getElementById('composer');
-      if (!input || !form) return;
-      input.value = b.dataset.q;
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      form.requestSubmit?.();
-    });
+    if (Array.isArray(spec.picks)) fig.innerHTML = body(spec); else load().then((d) => { fig.innerHTML = body(d); });
     return fig;
   }
   return { figure };

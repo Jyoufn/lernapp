@@ -1936,7 +1936,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     inner.append(list);
     fold.append(inner);
     step.append(fold);
-    step.classList.add('foldable', 'open');
+    step.classList.add('foldable', 'open', 'has-box');
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`);
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
     updatePlan();
@@ -1989,21 +1989,39 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const list = el('div', 'plan-list branch');
     const fold = el('div', 'fold'), inner = el('div', 'fold-in');
     inner.append(list); fold.append(inner); st.step.append(fold);
-    st.step.classList.add('foldable', 'open');
+    st.step.classList.add('foldable', 'open', 'has-box');
     st.step.querySelector('.step-line').addEventListener('click', () => st.step.classList.toggle('open'));
     st.list = list;
     return list;
   };
   const tick = (row) => { if (row && row.dataset.state !== 'done') { row.dataset.state = 'done'; row.querySelector('.pi-mark').innerHTML = FadeIcons.svg('check-circle', 13); } };
+  /* Suchen: NICHT im Plan-Kasten. Je Suche ein schmaler Kasten mit Lupe und dem Suchtext, darunter ihre Quellen als kleine Kästchen
+     (links das Logo der Website, rechts der Titel) in einer Reihe + „+N“. */
+  const searchList = (st) => {
+    if (st.list) return st.list;
+    const list = el('div', 'dq-list');
+    const fold = el('div', 'fold'), inner = el('div', 'fold-in');
+    inner.append(list); fold.append(inner); st.step.append(fold);
+    st.step.classList.add('foldable', 'open', 'has-box');
+    st.step.querySelector('.step-line').addEventListener('click', () => st.step.classList.toggle('open'));
+    st.list = list;
+    return list;
+  };
   const queryRow = (key, q) => {
     if (deep.queries.has(q)) return deep.queries.get(q);
-    const row = el('div', 'plan-item q-item', `<span class="pi-mark"></span><div class="q-body"><span class="pi-text"></span><div class="chips one-row"></div></div>`);
-    row.querySelector('.pi-text').textContent = q;
+    const row = el('div', 'dq', `<div class="dq-q"><span class="dq-ico"><span class="spinner"></span></span><span class="dq-text"></span></div><div class="chips one-row"></div>`);
+    row.querySelector('.dq-text').textContent = q;
     row.dataset.state = 'active';
-    branchOf(deep.steps[key]).append(row);
+    searchList(deep.steps[key]).append(row);
     const item = { row, chips: row.querySelector('.chips'), list: [] };
     deep.queries.set(q, item);
     return item;
+  };
+  // Suche fertig → Lupe statt Ladekreis
+  const settle = (it, state = 'done') => {
+    if (!it || it.row.dataset.state === state) return;
+    it.row.dataset.state = state;
+    it.row.querySelector('.dq-ico').innerHTML = FadeIcons.svg('search', 12);
   };
   const onDeep = (e) => {
     if (e.phase === 'plan' && !e.done) { deepStep('plan', 'Planning the research'); setActivity('think', 'Planning the research'); }
@@ -2023,7 +2041,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (e.phase === 'search' && e.query) {
       if (key === 'search') { deepStep('search', 'Searching the web'); setActivity('search', 'Searching the web'); }
       const it = queryRow(key, e.query);
-      if (e.results === 0 && !it.list.length) it.row.dataset.state = 'todo';
+      if (e.results != null) settle(it, e.results || it.list.length ? 'done' : 'empty');
     }
     if (e.phase === 'read' && e.source) {
       if (key === 'search') setActivity('read', 'Reading sources');
@@ -2033,23 +2051,23 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (!deep.steps[key]) deepStep(key, 'Searching the web');
       const it = queryRow(key, q);
       it.list.push(src);
-      fillChips(it.chips, it.list, () => openSourcesModal(deep.all, null), 1);
-      tick(it.row);
+      fillChips(it.chips, it.list, () => openSourcesModal(it.list, null), 1);
+      settle(it);
       (e.source.subs || []).forEach((id) => tick(deep.subs.get(id)));
     }
     if (e.phase === 'read' && e.done && !deep.steps.gaps) {
       deepStep('search', 'Searching the web');
       const nq = deep.queries.size, ns = deep.all.length;
       deepDone('search', ns ? `Searched for <strong>${nq} ${nq === 1 ? 'thing' : 'things'}</strong> · ${ns} ${ns === 1 ? 'source' : 'sources'}` : 'No suitable sources found');
-      deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') it.row.dataset.state = 'todo'; });
+      deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') settle(it, it.list.length ? 'done' : 'empty'); });
       if (!ns) deep.steps.search.step.classList.add('warn');
     }
     if (e.phase === 'compare' && !e.done) { deepStep('compare', 'Comparing the sources'); setActivity('think', 'Comparing the sources'); }
     if (e.phase === 'compare' && e.done) deepDone('compare', 'Compared the sources');
     if (e.phase === 'deepen' && e.done) {
-      const n = [...deep.queries.values()].filter((it) => it.row.closest('.plan-list') === deep.steps.gaps?.list).reduce((t, it) => t + it.list.length, 0);
+      const n = [...deep.queries.values()].filter((it) => it.row.parentElement === deep.steps.gaps?.list).reduce((t, it) => t + it.list.length, 0);
       deepDone('gaps', n ? `Searched again for gaps · <strong>+${n} ${n === 1 ? 'source' : 'sources'}</strong>` : 'Searched again for gaps · nothing new');
-      deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') it.row.dataset.state = 'todo'; });
+      deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') settle(it, it.list.length ? 'done' : 'empty'); });
     }
     if (e.phase === 'write') setActivity('write', 'Writing the report');
     scrollToBottom();
@@ -2350,7 +2368,11 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Hat die KI Rückfragen gestellt? → Eingabefeld wird zum Fragefeld
   const questions = answerR && !signal.aborted ? parseAskBlock(answerR.text) : null;
   if (answerR && !questions && answerR.text.trim()) {
-    const loose = placeSourceStack(answer, mainSources(renderOpts.sources.filter(Boolean), citations));
+    // Tiefen-Recherche: Quellen immer unten zeigen – ohne Belegzählung alle gelesenen Quellen
+    const allSrc = renderOpts.sources.filter(Boolean);
+    let main = mainSources(allSrc, citations);
+    if (!main.length && deep.all.length) main = allSrc;
+    const loose = placeSourceStack(answer, main);
     const footer = messageFooter(msgEl, answerR.text);
     if (loose) footer.append(loose);
     msgEl.append(footer);
@@ -4499,6 +4521,34 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
   chatScroll.scrollTop = chatScroll.scrollHeight;
   restoreLayout();
 })();
+
+/* Chat öffnen, der auf dem Server entstanden ist (z. B. Ergebnis einer Agenten-Aufgabe): schon als Tab da → aktivieren,
+   sonst aus dem Konto laden und als Tab anlegen */
+async function openSavedChat(id) {
+  let tab = tabsEl.querySelector(`.tab[data-cid="${id}"]`);
+  if (!tab) {
+    let s = null;
+    try { const r = await fetch('/api/chats'); if (r.ok) s = (await r.json()).chats?.find((c) => c.id === id); } catch {}
+    if (!s) return false;
+    tab = tabsEl.querySelector(`.tab[data-cid="${id}"]`); // inzwischen angelegt?
+    if (!tab) {
+      tab = createTab(s.title);
+      tab.dataset.cid = s.id;
+      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent };
+      tab.querySelector('.tab-title').textContent = s.title;
+      chat.replaceChildren();
+      history.length = 0;
+      history.push(...(s.history || []));
+      renderSavedHistory(s.history || []);
+      sentChats.set(s.id, JSON.stringify(chatItems(true).find((c) => c.id === s.id) || {}));
+      markDrafts(); renderBookmarks();
+    }
+  }
+  activateTab(tab);
+  chatScroll.scrollTop = 0;
+  return true;
+}
+window.openSavedChat = openSavedChat;
 
 /* ---------- Offene Tabs merken: welche Tabs (Chats, Kalender, Aufgaben, Inbox, Dokumente …) offen waren,
    in welcher Reihenfolge und welcher aktiv war – nach dem Neustart wieder genauso ---------- */
