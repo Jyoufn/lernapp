@@ -1260,7 +1260,19 @@ async function handle(req, res) {
       const q = new URL(req.url, 'http://x').searchParams;
       if (req.method === 'DELETE' && q.get('symbol')) { await HOLD.apply(store, user.id, { remove: [q.get('symbol')] }); return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: 0 })); }
       if (req.method === 'GET') return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: q.get('fresh') ? 20000 : 120000 }));
+      // Hinzufügen aus der Karte: Aktie, Zeitpunkt, Stückzahl – den Kaufkurs sucht die App zu diesem Zeitpunkt (oder der Nutzer gibt ihn an)
+      if (req.method === 'POST') {
+        const b = await readBody(req, 4000);
+        const symbol = String(b.symbol || '').trim();
+        if (!/^[\w.^=-]{1,20}$/.test(symbol) || !(+b.qty > 0)) return sendJson(res, 400, { error: 'Aktie und Stückzahl angeben.' });
+        let price = +b.price > 0 ? +b.price : null, info = null;
+        if (!price) { try { info = await HOLD.priceAt(symbol, b.at); price = info.price; } catch { return sendJson(res, 400, { error: 'Zu diesem Zeitpunkt gibt es keinen Kurs – bitte den Kaufkurs selbst eintragen.' }); } }
+        await HOLD.apply(store, user.id, { add: [{ symbol, name: b.name || info?.name, qty: +b.qty, price, date: String(b.at || '').slice(0, 16) }] });
+        return sendJson(res, 200, { ...(await HOLD.overview(store, user.id, { maxAgeMs: 0 })), added: { symbol, price, how: info?.how || 'eigener Kurs' } });
+      }
     }
+    // Aktie suchen (Name, Kürzel, ISIN) – für „Hinzufügen“
+    if (req.method === 'GET' && urlPath === '/api/boerse/search') return sendJson(res, 200, await BOERSE.search(new URL(req.url, 'http://x').searchParams.get('q') || ''));
     // Chancen-Übersicht für die Karte im Chat (```chancen): NUR der gespeicherte Radar – hier wird nichts neu gerechnet
     if (req.method === 'GET' && urlPath === '/api/boerse/chancen') return sendJson(res, 200, RADAR.overview(await RADAR.latest(store, { stored: true }).catch(() => null)) || { picks: [] });
     // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
