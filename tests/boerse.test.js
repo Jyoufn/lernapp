@@ -376,3 +376,30 @@ test('Börsen-Agent: „Ich habe 40 SAP zu 231 € gekauft“ – der Bär notie
   assert.match(sys, /EIGENE POSITION: 40 Stück/);
   assert.match(out2.text(), /```bestand/);
 });
+
+test('Handelstagebuch/Screenshot: Aktie über ISIN oder Namen zugeordnet, nochmal hochgeladen → nichts doppelt, Verkauf trifft den Kauf', async () => {
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('/v1/finance/search') && /Fortinet/i.test(decodeURIComponent(c.url)), respond: () => M.json({ quotes: [{ symbol: 'FTNT', quoteType: 'EQUITY', longname: 'Fortinet, Inc.', exchange: 'NMS' }] }) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+  ]);
+  const journal = {
+    add: [
+      { name: 'SAP SE', isin: B.ISIN['SAP.DE'], qty: 40, price: 231.2, date: '2026-10-02T10:15', ref: '1001' },
+      { name: 'Fortinet Inc.', qty: 60, price: 78, date: '2026-10-14T15:40', ref: '1002' },
+      { name: 'Unbekannt AG', qty: 1, price: 1, ref: '1003' },
+    ],
+    sell: [{ name: 'Fortinet Inc.', qty: 20, price: 84.5, date: '2026-10-22T11:00', ref: '1004' }],
+  };
+  const d1 = await H.apply(store, 'u1', journal);
+  assert.equal(d1.added.length, 2);
+  assert.deepEqual(d1.unknown, ['Unbekannt AG'], 'nicht zuordenbar → nicht geraten');
+  assert.equal(d1.sold.length, 1);
+  const m = Object.fromEntries(H.merged(await H.list(store, 'u1')).map((x) => [x.symbol, x.qty]));
+  assert.deepEqual(m, { 'SAP.DE': 40, FTNT: 40 });
+  const d2 = await H.apply(store, 'u1', journal); // dasselbe Tagebuch noch einmal
+  assert.equal(d2.added.length + d2.sold.length, 0);
+  assert.equal(d2.skipped, 3);
+  assert.deepEqual(Object.fromEntries(H.merged(await H.list(store, 'u1')).map((x) => [x.symbol, x.qty])), { 'SAP.DE': 40, FTNT: 40 });
+});
