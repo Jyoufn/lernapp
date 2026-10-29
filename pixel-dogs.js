@@ -1039,16 +1039,19 @@ const PixelDogs = (() => {
   const fur = (id) => ({ ...APAL, F: (FUR[id] || FUR.general)[0], f: (FUR[id] || FUR.general)[1] });
   const P2 = (rows, x, y, pal = APAL) => ({ rows, x, y, pal });
   // Denkwolke: runde Wolke mit Buckeln oben und unten, darin erscheinen die Punkte nacheinander; zwei kleine Wölkchen führen zum Kopf
-  const CLOUD = (n) => [
-    '..KKK.KKK..',
-    '.KLLLKLLLK.',
-    'KLLLLLLLLLK',
-    `KL${[0, 1, 2].map((i) => (i < n ? 'NL' : 'LL')).join('')}LLK`.slice(0, 10) + 'K',
-    'KLLLLLLLLLK',
-    '.KLLKLLLLK.',
-    '..KK.KKKK..',
-  ];
-  const PUFF = [P2(['.K.', 'KLK', '.K.'], 6, 7), P2(['K'], 9, 9)];
+  // Denkwolke: richtige Wolke mit runden Buckeln (oben drei, unten zwei), schwebt über dem Kopf; darin erscheinen die drei Punkte
+  // nacheinander und der jeweils neueste ist dunkler (wie „schreibt gerade“). Zwei kleine runde Wölkchen führen zum Kopf.
+  const CLOUD_SHAPE = (() => { // Wolke aus vier sich überlappenden Kreisen (16 × 10): drei Buckel oben, voller Bauch unten
+    const W = 16, H = 10, C = [[4.2, 5.2, 3.4], [8, 3.6, 3.7], [11.8, 5, 3.4], [8, 6.6, 3.2]];
+    const inside = (x, y) => C.some(([cx, cy, r]) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r);
+    return Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => {
+      if (!inside(x, y)) return '.';
+      const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !inside(x + dx, y + dy));
+      return edge ? 'K' : 'L';
+    }).join(''));
+  })();
+  const CLOUD = (n) => CLOUD_SHAPE.map((r, y) => (y !== 5 ? r : [...r].map((ch, x) => { const i = [4, 7, 10].indexOf(x); return i < 0 ? ch : i < n ? (i === n - 1 ? 'K' : 'D') : ch; }).join('')));
+  const PUFF = [P2(['.KK.', 'KLLK', 'KLLK', '.KK.'], 4, 4), P2(['KK', 'KK'], 7, 7)];
   // Lupe: runder Rahmen (Metall), helles Glas mit Glanz, Griff schräg nach rechts unten zur Pfote
   const LENS_S = [
     '..KKKKK...',
@@ -1125,6 +1128,15 @@ const PixelDogs = (() => {
     return ['.KKKKKKKKKKKK.', '.KCCCCCCCCCCK.', ...scr, '.KCCCCCCCCCCK.', 'KKKKKKKKKKKKKK', 'KMMMMMMMMMMMMK', '.KKKKKKKKKKKK.'];
   };
   const SCROLL = [[6, 4, 7, 3], [4, 7, 3, 6], [7, 3, 6, 4], [3, 6, 4, 7]];
+  // Laptop des Bären: auf dem Bildschirm zeichnet sich eine Kurslinie (grün), vorn der helle Punkt = aktueller Kurs
+  const LCH = [3, 3, 2, 3, 1, 2, 1, 0, 1, 0];
+  const laptopChart = (k) => {
+    const g = Array.from({ length: 4 }, () => Array(9).fill('Z'));
+    const n = Math.min(8, k);
+    for (let j = 0; j <= n; j++) { const a = LCH[j], b = j < n ? LCH[j + 1] : a; for (let y = Math.min(a, b); y <= Math.max(a, b); y++) g[y][j] = 'X'; }
+    g[LCH[n]][n] = 'H';
+    return ['.KKKKKKKKKKKK.', '.KCCCCCCCCCCK.', ...g.map((r) => `.KC${r.join('')}CK.`), '.KCCCCCCCCCCK.', 'KKKKKKKKKKKKKK', 'KMMMMMMMMMMMMK', '.KKKKKKKKKKKK.'];
+  };
   const TYPED = [[7], [7, 2], [7, 4], [7, 6], [7, 6, 3], [7, 6, 5]];
   // Diagramm-Karte (hell wie die Zeitung): Achsen, Balken wachsen nacheinander, der letzte am höchsten (grün), einer rot
   const BARS = [[2, 3, 'X'], [4, 2, 'R'], [6, 4, 'X'], [8, 6, 'X']];
@@ -1153,7 +1165,8 @@ const PixelDogs = (() => {
     const chin = P2(['.KK.', 'KFFK', 'KfFK', '.KK.'], AX + 3, AY + 15, pf); // Pfote am Kinn
     const paw = (x, y) => P2(['.KK.', 'KFFK', 'KfFK'], x, y, pf);
     return {
-      think: { frames: [0, 1, 2, 3].map((n) => [P2(CLOUD(n), 0, 0), ...PUFF, chin]), loop: [[0, 320], [1, 320], [2, 320], [3, 760]] },
+      // denkt: Wolke schwebt leicht auf und ab (über dem Kopf), Punkte erscheinen nacheinander, Pfote am Kinn
+      think: { frames: [0, 1, 2, 3, 3].map((n, i) => [P2(CLOUD(n), -2, i % 2 ? -8 : -7), ...PUFF, chin]), loop: [[0, 360], [1, 300], [2, 300], [3, 300], [4, 600]] },
       // sucht: Lupe wandert, ein Lichtreflex huscht über das Glas, ab und zu blitzt ein Fund auf
       search: { frames: [[0, 9, 0], [1, 10, 1], [2, 9, 2], [1, 8, 3], [0, 9, 4], [1, 10, 0]].map(([x, y, g]) => [P2(LENS_S, x, y), ...(g < 3 ? [P2(['H', 'H'].slice(0, 2 - (g === 2)), x + 3 + g, y + 2 + g)] : []), ...(g === 4 ? [P2(SPARK, x + 6, y - 3)] : []), paw(x + 8, y + 9)]),
         loop: [[0, 260], [1, 260], [2, 260], [3, 340], [4, 260], [5, 300]] },
@@ -1166,6 +1179,7 @@ const PixelDogs = (() => {
       quill: { frames: Array.from({ length: 19 }, (_, k) => { const { rows, tip } = parchment(k); return [P2(rows, 0, 11), P2(QUILL, tip[0] - 0, 11 + tip[1] - 4)]; }), loop: [...seq(19, 140), [18, 900]], glasses: true },
       board: { frames: Array.from({ length: 19 }, (_, k) => [P2(boardRows(k), 0, 9)]), loop: [...seq(19, 120), [18, 1000]] },
       plan: { frames: [0, 1, 2, 3].map((n) => [P2(PAD(n), 0, 9), P2(PENCIL, 8, 15), paw(11, 19)]), loop: [[0, 520], [1, 420], [2, 420], [3, 1000]] },
+      chartop: { frames: Array.from({ length: 9 }, (_, k) => [P2(laptopChart(k), 0, 13), ...(k % 2 ? [paw(3, 20), paw(9, 21)] : [paw(3, 21), paw(9, 20)])]), loop: [...seq(9, 160), [8, 1000]] },
       laptop: { frames: SCROLL.map((l, i) => [P2(laptopRows(l, i % 2 ? 3 : -1), 0, 13), P2(['qqqqqqqqqq'], 2, 12)]), loop: seq(4, 320), glasses: true },
       type: { frames: TYPED.map((l, i) => [P2(laptopRows(l, l.length - 1), 0, 13), ...(i % 2 ? [paw(3, 20), paw(9, 21)] : [paw(3, 21), paw(9, 20)])]), loop: [...seq(TYPED.length, 260), [TYPED.length - 1, 600]], glasses: true },
       chart: { frames: Array.from({ length: 13 }, (_, k) => [P2(chartRows(k), 0, 12), paw(11, 19)]), loop: [...seq(13, 120), [12, 1100]] },
