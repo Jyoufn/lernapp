@@ -1185,12 +1185,9 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) keep.set(raw, tagViz(StockChart.figure(spec), 'stock', raw));
     pre.replaceWith(keep.get(raw));
   });
-  // Depot-Grafik (```depot): das echte Depot aus dem Planspiel Börse, live vom Server (depot-card.js) – höchstens eine je Antwort
-  // dieselbe Karte bleibt erhalten, während die Antwort weitergeschrieben wird (sonst flackert sie bei jedem neuen Wort)
-  target.querySelectorAll('pre:has(code.language-depot)').forEach((pre, i) => {
-    if (i || !window.DepotCard) { pre.remove(); return; }
-    pre.replaceWith(target._depotFig ||= DepotCard.figure());
-  });
+  // ```depot gibt es nicht mehr (kein Zugriff aufs Planspiel) – alte Blöcke ausblenden
+  target.querySelectorAll('pre:has(code.language-depot)').forEach((pre) => pre.remove());
+
   // Chancen-Übersicht (```chancen): Kästchen Kaufen / Beobachten / Nicht kaufen (chancen-card.js) – höchstens eine je Antwort
   target.querySelectorAll('pre:has(code.language-chancen)').forEach((pre, i) => {
     if (i || !window.ChancenCard) { pre.remove(); return; }

@@ -87,22 +87,6 @@ test('Planspiel-Universum: alle Aktien-Indizes des Planspiels, ohne doppelte Wer
   assert.ok(U.LIST.every((u) => u.symbol && u.name && u.sector));
 });
 
-test('Planspiel-Zugang: verschlüsselt gespeichert, Status ohne Passwort, Trennen löscht', async () => {
-  const P = require('../lib/planspiel');
-  const store = STORE.memoryStore();
-  await assert.rejects(P.save(store, {}, 'u1', { user: 'julian', code: '' }), /fehlen/);
-  const st = await P.save(store, { PLANSPIEL_SECRET: 'geheim' }, 'u1', { user: 'julian08', code: 'Code-1234' });
-  assert.deepEqual({ connected: st.connected, user: st.user }, { connected: true, user: 'julian08' });
-  assert.equal(JSON.stringify(st).includes('Code-1234'), false, 'Status ohne Passwort');
-  const raw = await store.get(P.KEY('u1'));
-  assert.equal(raw.includes('Code-1234'), false, 'nicht im Klartext gespeichert');
-  assert.deepEqual(await P.credentials(store, { PLANSPIEL_SECRET: 'geheim' }, 'u1'), { user: 'julian08', code: 'Code-1234' });
-  assert.equal(await P.credentials(store, { PLANSPIEL_SECRET: 'falsch' }, 'u1'), null, 'falscher Schlüssel → nichts');
-  assert.deepEqual(await P.status(store, 'u2'), { connected: false }, 'andere Konten sehen nichts');
-  await P.remove(store, 'u1');
-  assert.deepEqual(await P.status(store, 'u1'), { connected: false });
-});
-
 test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, schwache Charts = Nicht kaufen', () => {
   const R2 = require('../lib/radar');
   const o = R2.overview({ asOf: '2026-10-29T10:00:00Z', checked: 427, mood: { score: 3 }, picks: [
@@ -121,4 +105,11 @@ test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, sc
     soon: [{ symbol: 'SAP.DE', name: 'SAP', price: 240, trigger: 244, stop: 233, target: 262, score: 70, signal: 'bald', setup: 'ausbruch', reasons: ['Ausbruch'] }], weak: [] } });
   assert.deepEqual(o2.picks.map((p) => `${p.symbol}:${p.verdict}`), ['FTNT:kaufen', 'SAP.DE:beobachten'], 'Kaufsignale aus dem Scan über alle Werte kommen dazu');
   assert.equal(o2.checked, 427);
+});
+
+test('Kein Zugriff aufs Planspiel: es gibt keine Planspiel-Schnittstelle mehr, die App liest kein Depot', () => {
+  const fs = require('fs'), path = require('path');
+  assert.ok(!fs.existsSync(path.join(__dirname, '..', 'lib', 'planspiel.js')));
+  const server = fs.readFileSync(path.join(__dirname, '..', 'app-server.js'), 'utf8');
+  assert.ok(!/trading\.planspiel-boerse\.de|\/api\/planspiel/.test(server));
 });

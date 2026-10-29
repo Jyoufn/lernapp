@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'depot-card.js', 'chancen-card.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -38,7 +38,6 @@ const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
 const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
 const RADAR = require('./lib/radar'); // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
-const PLANSPIEL = require('./lib/planspiel'); // Zugang zum Planspiel Börse (verschlüsselt je Konto)
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -103,12 +102,10 @@ function startSse(res) {
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
 async function handleChat(req, res, user = null) {
   const body = await readBody(req);
-  delete body.radarStore; delete body.loadDepot;
+  delete body.radarStore;
   if (body.agent === 'boerse') {
     const store = accountStore();
     Object.defineProperty(body, 'radarStore', { value: store, enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
-    // Depot live aus dem Planspiel Börse (nur wenn in den Einstellungen verbunden) – der Server meldet sich selbst an
-    if (user?.id && store) Object.defineProperty(body, 'loadDepot', { value: (opts) => PLANSPIEL.depot(store, serverEnv(), user.id, opts), enumerable: false });
   }
   const sse = startSse(res);
   const controller = new AbortController();
@@ -1224,6 +1221,7 @@ async function adoptLegacyData(store, uid) {
   } catch (e) { console.log('[Anmeldung] Übernahme alter Daten:', e.message); }
 }
 
+const planspielCleaned = new Set();
 function sameHost(req) { try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; } }
 function handler(req, res) { return requestKeys.run(deviceKeysOf(req), () => handle(req, res)); }
 async function handle(req, res) {
@@ -1257,19 +1255,8 @@ async function handle(req, res) {
     // Chancen-Übersicht für die Karte im Chat (```chancen): NUR der gespeicherte Radar – hier wird nichts neu gerechnet
     if (req.method === 'GET' && urlPath === '/api/boerse/chancen') return sendJson(res, 200, RADAR.overview(await RADAR.latest(store, { stored: true }).catch(() => null)) || { picks: [] });
     // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
-    // Depot aus dem Planspiel (Grafik ```depot im Chat): Werte, Bargeld, Positionen – nie Zugangsdaten
-    if (req.method === 'GET' && urlPath === '/api/planspiel/depot') {
-      const q = new URL(req.url, 'http://x').searchParams;
-      return sendJson(res, 200, await PLANSPIEL.depotFull(store, serverEnv(), user.id, { maxAgeMs: q.get('fresh') ? 5000 : 60000 }));
-    }
-    if (urlPath === '/api/planspiel') {
-      if (req.method === 'GET') return sendJson(res, 200, await PLANSPIEL.status(store, user.id));
-      if (req.method === 'DELETE') return sendJson(res, 200, await PLANSPIEL.remove(store, user.id));
-      if (req.method === 'POST') {
-        try { return sendJson(res, 200, await PLANSPIEL.save(store, serverEnv(), user.id, await readBody(req, 4000))); }
-        catch (e) { return sendJson(res, e.status || 500, { error: e.status ? e.message : 'Konnte nicht gespeichert werden.' }); }
-      }
-    }
+    // Planspiel-Zugang gibt es nicht mehr (kein Login beim Spiel): früher gespeicherte, verschlüsselte Zugangsdaten einmal löschen
+    if (user && store && !planspielCleaned.has(user.id)) { planspielCleaned.add(user.id); Promise.all(['planspiel', 'planspiel-token', 'planspiel-fail'].map((k) => store.del(`u:${user.id}:${k}`))).catch(() => {}); }
     if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
