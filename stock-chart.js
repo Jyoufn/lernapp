@@ -1,11 +1,12 @@
 /* ===================================================================
    Aktienchart (Block ```stock im Chat, z. B. vom Börsen-Agenten) – wie in einer Börsen-App:
    - Kopf: Name, Kürzel, großer Kurs, Veränderung (grün/rot), „Echtzeit · 10:31:07“ mit pulsierendem Punkt
+   - darunter Tag · Woche · Monat nebeneinander (Richtung, Prozent, kleiner Verlauf) – Klick zeigt den Zeitraum groß
    - Zeiträume 1T · 1W · 1M · 6M · 1J · 5J (gleitende Fläche), Umschalter Kerzen / Linie (gemerkt)
    - Kerzen mit Dochten, darunter Umsatz-Balken; 20- und 50-Tage-Linie (ab 1M); Vortageskurs gestrichelt (1T);
      Preis-Achse rechts mit Marke für den aktuellen Kurs; Zeit-Achse unten
    - Fadenkreuz mit Eröffnung/Hoch/Tief/Schluss/Umsatz (Maus und Finger)
-   - Kurs wird alle 5 s nachgeladen, solange der Chart zu sehen ist (Server: /api/boerse/chart, /api/boerse/quote)
+   - immer live: Kurs alle 3 s (neue Kerzen entstehen), Verlauf jede Minute, sofort nach dem Zurückkommen (Server: /api/boerse/chart, /api/boerse/quote)
    Farben: Grün #4fcf8a, Rot #f07a6e, 20er #6aa8ff, 50er #fb9a52 (README 3.1)
    =================================================================== */
 const StockChart = (() => {
@@ -52,6 +53,7 @@ const StockChart = (() => {
         <div class="stk-title"><strong>${esc(spec.name || spec.symbol)}</strong><span>${esc(spec.symbol)}</span></div>
         <div class="stk-quote"><span class="stk-price shimmer">Kurs wird geladen</span><span class="stk-chg"></span><span class="stk-time"></span></div>
       </div>
+      <div class="stk-tf">${[['1T', 'Tag'], ['1W', 'Woche'], ['1M', 'Monat']].map(([r, l]) => `<button type="button" class="stk-mini" data-range="${r}"><span class="stk-mini-l">${l}</span><span class="stk-mini-c">–</span><span class="stk-mini-s"></span></button>`).join('')}</div>
       <div class="stk-bar">
         <div class="stk-seg" role="tablist">${RANGES.map((r) => `<button type="button" role="tab" data-range="${r}">${r}</button>`).join('')}<span class="stk-seg-bg"></span></div>
         <div class="stk-legend"><span class="s20">20 Tage</span><span class="s50">50 Tage</span></div>
@@ -64,9 +66,21 @@ const StockChart = (() => {
     const plot = fig.querySelector('.stk-plot');
 
     const paintBar = () => {
+      fig.querySelectorAll('.stk-mini').forEach((b) => b.classList.toggle('on', b.dataset.range === st.range));
       fig.querySelectorAll('.stk-seg [data-range]').forEach((b, i) => { const on = b.dataset.range === st.range; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); if (on) fig.querySelector('.stk-seg').style.setProperty('--i', i); });
       fig.querySelectorAll('.stk-type [data-type]').forEach((b) => b.classList.toggle('on', b.dataset.type === st.type));
     };
+    // Tag, Woche, Monat nebeneinander: Richtung, Prozent, kleiner Verlauf – Klick zeigt den Zeitraum groß
+    const mini = (range, d) => {
+      const b = fig.querySelector(`.stk-mini[data-range="${range}"]`); if (!b || !d?.bars?.length) return;
+      const v = d.bars.map((x) => x.c), base = range === '1T' && d.prevClose ? d.prevClose : v[0], last = v[v.length - 1];
+      const ch = (last / base - 1) * 100, up = ch >= 0, lo = Math.min(...v, base), hi = Math.max(...v, base), r = hi - lo || 1, W = 72, H = 24;
+      const pts = v.map((x, i) => `${((i / (v.length - 1)) * (W - 2) + 1).toFixed(1)},${(H - 2 - ((x - lo) / r) * (H - 4)).toFixed(1)}`).join(' ');
+      b.querySelector('.stk-mini-c').textContent = `${up ? '▲' : '▼'} ${up ? '+' : '−'}${nf(Math.abs(ch), 2)} %`;
+      b.querySelector('.stk-mini-c').className = `stk-mini-c ${up ? 'up' : 'down'}`;
+      b.querySelector('.stk-mini-s').innerHTML = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${up ? UP : DOWN}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+    };
+    const loadMinis = () => ['1T', '1W', '1M'].forEach((r) => load(st.spec.symbol, r).then((d) => mini(r, r === st.range && st.data ? st.data : d)).catch(() => {}));
     const paintHead = () => {
       const d = st.data; if (!d) return;
       const p = fig.querySelector('.stk-price');
@@ -108,7 +122,7 @@ const StockChart = (() => {
       const yNow = yOf(d.price);
       ticks.forEach((v) => {
         const y = yOf(v);
-        if (Math.abs(y - yNow) < 12) { svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' })); return; } // Marke des aktuellen Kurses verdeckt sonst die Zahl
+        if (Math.abs(y - yNow) < 15) { svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' })); return; } // Marke des aktuellen Kurses verdeckt sonst die Zahl
         svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' }));
         const t = svgEl('text', { x: W - AXIS_R + 8, y: y + 4, class: 'stk-ax' }); t.textContent = nf(v, v >= 1000 ? 0 : dec(v)); svg.append(t);
       });
@@ -163,7 +177,7 @@ const StockChart = (() => {
         svg.append(svgEl('line', { x1: x, x2: x, y1: 0, y2: vTop + H_VOL, class: 'stk-cross' }));
         svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-cross' }));
         svg.append(svgEl('circle', { cx: x, cy: y, r: 3, fill: '#fff' }));
-        svg.append(svgEl('rect', { x: W - AXIS_R + 2, y: y - 9, width: AXIS_R - 4, height: 18, rx: 4, fill: '#3a3a3a' }));
+        svg.append(svgEl('rect', { x: W - AXIS_R + 2, y: y - 9, width: AXIS_R - 4, height: 18, rx: 4, fill: '#4a4a4a' }));
         const t = svgEl('text', { x: W - AXIS_R + 8, y: y + 4, class: 'stk-ax tag' }); t.textContent = nf(b.c, dec(b.c)); svg.append(t);
       }
       plot.querySelector('svg')?.remove();
@@ -188,25 +202,43 @@ const StockChart = (() => {
       } finally { if (my === st.seq) plot.classList.remove('loading'); }
     }
 
-    // Echtzeit: alle 5 s den Kurs holen, solange der Chart zu sehen ist
-    let visible = false;
+    // Immer live: alle 3 s der Kurs (neue Kerze, wenn ein neuer Abschnitt beginnt), jede Minute der ganze Verlauf neu.
+    // Läuft, solange der Chart zu sehen ist; wird er wieder sichtbar (anderer Tab, App wieder vorn), sofort aktualisieren.
+    const STEP = { '1T': 300000, '1W': 900000 };
+    let visible = false, lastFull = Date.now(), busyTick = false;
     const tick = async () => {
       if (!fig.isConnected) { clearInterval(st.timer); return; }
-      if (!visible || document.hidden || !st.data) return;
+      if (!visible || document.hidden || !st.data || busyTick) return;
+      busyTick = true;
       try {
+        if (Date.now() - lastFull > 60000) { // ganzer Verlauf (z. B. neue Tageskerze, frische 20/50-Tage-Linie)
+          lastFull = Date.now();
+          memo.delete(`${st.spec.symbol}|${st.range}`);
+          const d = await load(st.spec.symbol, st.range).catch(() => null);
+          if (d) st.data = structuredClone(d);
+        }
         const q = await (await fetch(`/api/boerse/quote?symbol=${encodeURIComponent(st.spec.symbol)}`)).json();
         if (!q?.price || !st.data) return;
         const d = st.data, last = d.bars[d.bars.length - 1];
-        d.bars[d.bars.length - 1] = { ...last, c: q.price, h: Math.max(last.h, q.price), l: Math.min(last.l, q.price) };
+        const step = STEP[st.range] || 86400000;
+        const now = q.time || Date.now();
+        const newBar = step < 86400000 ? Math.floor(now / step) > Math.floor(last.t / step) : new Date(now).toDateString() !== new Date(last.t).toDateString() && ['1M', '6M', '1J'].includes(st.range);
+        if (newBar) {
+          d.bars.push({ t: now, o: last.c, h: Math.max(last.c, q.price), l: Math.min(last.c, q.price), c: q.price, v: 0 });
+          if (d.bars.length > 400) d.bars.shift();
+          ['sma20', 'sma50'].forEach((k) => { if (d[k]) { d[k].push(d[k][d[k].length - 1]); if (d[k].length > d.bars.length) d[k].shift(); } });
+        } else d.bars[d.bars.length - 1] = { ...last, c: q.price, h: Math.max(last.h, q.price), l: Math.min(last.l, q.price) };
         const base = st.range === '1T' ? (q.prevClose || d.prevClose) : d.prevClose;
         Object.assign(d, { price: q.price, time: q.time, realtime: q.realtime, bid: q.bid ?? d.bid, ask: q.ask ?? d.ask });
         if (base) { d.change = q.price - base; d.changePct = (q.price / base - 1) * 100; }
-        paintHead(); draw();
-      } catch {}
+        paintHead(); draw(); mini(st.range, d);
+        if (Date.now() - lastFull < 4000) loadMinis();
+      } catch {} finally { busyTick = false; }
     };
-    st.timer = setInterval(tick, 5000);
-    if ('IntersectionObserver' in window) new IntersectionObserver((e) => { visible = e[0].isIntersecting; }).observe(fig);
+    st.timer = setInterval(tick, 3000);
+    if ('IntersectionObserver' in window) new IntersectionObserver((e) => { const was = visible; visible = e[0].isIntersecting; if (visible && !was) tick(); }).observe(fig);
     else visible = true;
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
     if ('ResizeObserver' in window) { let w = 0; new ResizeObserver(() => { const nw = plot.clientWidth; if (nw && Math.abs(nw - w) > 2) { w = nw; draw(); } }).observe(plot); }
 
     // Bedienung
@@ -236,7 +268,7 @@ const StockChart = (() => {
     plot.addEventListener('pointerleave', leave);
 
     paintBar();
-    requestAnimationFrame(() => show(st.range));
+    requestAnimationFrame(() => { show(st.range); loadMinis(); });
     return fig;
   }
 

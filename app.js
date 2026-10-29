@@ -1445,6 +1445,7 @@ const THINK_HOLD_MS = 700;    // geschriebenes Vorgehen kurz stehen lassen, dann
 const STAGE_TEXT = {
   material: 'Analyzing your sources', // angehängte Fotos/PDFs: passt das Material zur Frage?
   market: 'Checking the charts', // Börsen-Agent: Live-Kurse, Signale, Depot, Marktscan
+  debate: 'Weighing bull vs. bear', // Börsen-Agent: zwei Analysten (dafür / dagegen), danach die Entscheidung
   browsing: 'Searching sources',
   searching_sources: 'Searching sources',
   processing: 'Drafting the answer',
@@ -1921,7 +1922,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const from = Date.now();
     const step = stepLine('spin', `<span class="shimmer">${STAGE_TEXT[s.stage]}</span><span class="t live" data-from="${from}">1s</span>`);
     stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null };
-    const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], browsing: ['search', 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
+    const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], debate: ['think', 'Weighing bull vs. bear'], browsing: ['search', 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
     if (head) queueMicrotask(() => setActivity(...head));
     if (s.stage === 'browsing') { stages.browsing.pages = []; stages.browsing.chips = el('div', 'chips'); step.append(stages.browsing.chips); }
     ensureWork().steps.append(step);
@@ -1948,6 +1949,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st.step.append(chips);
         fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
       }
+    } else if (s.stage === 'debate') {
+      line.innerHTML = s.meta?.bull || s.meta?.bear ? `Weighed bull vs. bear ${dur}` : `Bull vs. bear not available ${dur}`;
     } else if (s.stage === 'market') {
       const n = s.meta?.count || 0;
       line.innerHTML = n ? `Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong> ${dur}` : `Market data not reachable ${dur}`;

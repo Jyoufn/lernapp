@@ -7225,7 +7225,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 /* =====================================================================
    AKTIENCHART (```stock, stock-chart.js) – wie in einer Börsen-App: Kurs groß, Zeiträume, Kerzen/Linie, Umsatz, Fadenkreuz
    ===================================================================== */
-.stk { margin: 14px 0 18px; padding: 14px 14px 10px; border: 1px solid #262626; border-radius: 14px; background: #161616; max-width: 760px; }
+.stk { margin: 14px 0 18px; padding: 14px 14px 10px; border: 1px solid #2c2c2c; border-radius: 14px; background: #212121; max-width: 760px; } /* grau wie die Karten der App, nicht schwarz */
 .stk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
 .stk-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .stk-title strong { color: var(--text); font-size: 15px; font-weight: 600; }
@@ -7241,26 +7241,26 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .stk-live { width: 6px; height: 6px; border-radius: 50%; background: #4fcf8a; animation: stk-pulse 1.6s ease-in-out infinite; }
 @keyframes stk-pulse { 50% { opacity: 0.35; } }
 .stk-bar { display: flex; align-items: center; gap: 10px; margin: 12px 0 6px; flex-wrap: wrap; }
-.stk-seg { position: relative; display: inline-flex; padding: 2px; border-radius: 8px; background: #1f1f1f; --i: 3; }
+.stk-seg { position: relative; display: inline-flex; padding: 2px; border-radius: 8px; background: #2a2a2a; --i: 3; }
 .stk-seg button { position: relative; z-index: 1; width: 34px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: color 160ms ease; }
 .stk-seg button.on { color: var(--text); }
-.stk-seg-bg { position: absolute; top: 2px; left: 2px; width: 34px; height: 24px; border-radius: 6px; background: #303030; transform: translateX(calc(var(--i) * 34px)); transition: transform 320ms var(--spring); }
+.stk-seg-bg { position: absolute; top: 2px; left: 2px; width: 34px; height: 24px; border-radius: 6px; background: #3a3a3a; transform: translateX(calc(var(--i) * 34px)); transition: transform 320ms var(--spring); }
 .stk-legend { display: inline-flex; gap: 12px; color: var(--text-4); font-size: 11px; }
 .stk-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .stk-legend span::before { content: ''; width: 12px; height: 2px; border-radius: 1px; background: currentColor; }
 .stk-legend .s20::before { background: #6aa8ff; } .stk-legend .s50::before { background: #fb9a52; }
-.stk-type { margin-left: auto; display: inline-flex; padding: 2px; border-radius: 8px; background: #1f1f1f; }
+.stk-type { margin-left: auto; display: inline-flex; padding: 2px; border-radius: 8px; background: #2a2a2a; }
 .stk-type button { display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
-.stk-type button.on { background: #303030; color: var(--text); }
+.stk-type button.on { background: #3a3a3a; color: var(--text); }
 .stk-plot { position: relative; touch-action: pan-y; user-select: none; -webkit-user-select: none; min-height: 326px; transition: opacity 200ms ease; }
 .stk-plot.loading { opacity: 0.45; }
 .stk-svg { display: block; overflow: visible; }
-.stk-grid { stroke: #232323; stroke-width: 1; } .stk-grid.v { stroke: #1d1d1d; }
+.stk-grid { stroke: #2e2e2e; stroke-width: 1; } .stk-grid.v { stroke: #282828; }
 .stk-prev { stroke: #6e6e6e; stroke-width: 1; stroke-dasharray: 4 4; }
 .stk-cross { stroke: #8a8a8a; stroke-width: 1; stroke-dasharray: 3 3; }
-.stk-ax { fill: #7a7a7a; font-size: 10.5px; font-family: inherit; font-variant-numeric: tabular-nums; }
+.stk-ax { fill: #8a8a8a; font-size: 10.5px; font-family: inherit; font-variant-numeric: tabular-nums; }
 .stk-ax.mid { text-anchor: middle; } .stk-ax.tag { fill: #fff; font-weight: 600; }
-.stk-tip { position: absolute; top: 6px; left: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 8px 10px; border: 1px solid #343434; border-radius: 10px; background: rgba(32, 32, 32, 0.94); color: var(--text-3); font-size: 11.5px; pointer-events: none; font-variant-numeric: tabular-nums; }
+.stk-tip { position: absolute; top: 6px; left: 10px; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 8px 10px; border: 1px solid #3a3a3a; border-radius: 10px; background: rgba(44, 44, 44, 0.95); color: var(--text-3); font-size: 11.5px; pointer-events: none; font-variant-numeric: tabular-nums; }
 .stk-tip.right { left: auto; right: 72px; }
 .stk-tip b { color: var(--text); font-weight: 500; margin-bottom: 2px; }
 .stk-tip span { display: flex; justify-content: space-between; gap: 14px; }
@@ -7269,3 +7269,13 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .stk-foot { margin-top: 4px; color: var(--text-4); font-size: 11px; }
 .dc-content .dc-viz .stk { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .stk *, .stk { animation: none !important; transition: none !important; } }
+/* Aktienchart: Tag · Woche · Monat nebeneinander (Klick → groß) */
+.stk-tf { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 12px; }
+.stk-mini { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px; row-gap: 2px; min-width: 0; padding: 7px 9px; border: 1px solid #2e2e2e; border-radius: 10px; background: #262626; font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease; }
+.stk-mini:hover { background: #2b2b2b; }
+.stk-mini.on { border-color: #444; background: #2e2e2e; }
+.stk-mini-l { color: var(--text-3); font-size: 11.5px; font-weight: 500; }
+.stk-mini-c { grid-row: 2; color: var(--text-2); font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.stk-mini-c.up { color: #4fcf8a; } .stk-mini-c.down { color: #f07a6e; }
+.stk-mini-s { grid-row: 1 / 3; grid-column: 2; display: grid; place-items: center; }
+@media (max-width: 520px) { .stk-mini-s { display: none; } .stk-mini { grid-template-columns: 1fr; } }

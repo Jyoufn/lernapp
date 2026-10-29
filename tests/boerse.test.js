@@ -200,3 +200,45 @@ test('Börsen-Agent: liest Nachrichten/Ausblick zu den Werten (Websuche) und den
   assert.match(sys, /```stock/);
   assert.match(sys, /MARKTLAGE: DAX/);
 });
+
+test('Zeitebenen: Tag, Woche und Monat zusammen – Rücksetzer im Aufwärtstrend wird erkannt', async () => {
+  const up = bars(300, 0.003, 0.004, 100);
+  const weekUp = bars(60, 0.0015, 0.002, 100).map((x, i) => ({ ...x, t: Date.now() - (60 - i) * 1800000 }));
+  const dayDown = bars(80, -0.0006, 0.0005, 110).map((x, i) => ({ ...x, t: Date.now() - (80 - i) * 300000 }));
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('interval=5m'), respond: () => yahoo(dayDown) },
+    { match: (c) => c.url.includes('interval=30m'), respond: () => yahoo(weekUp) },
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(up) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
+  ]);
+  const ctx = await B.contextFor({ question: 'Soll ich SAP kaufen?' });
+  assert.match(ctx.text, /ZEITEBENEN: Tag abwärts .* \| Woche aufwärts .* \| Monat aufwärts/);
+  assert.match(ctx.text, /heute ein Rücksetzer – im Aufwärtstrend oft eine Kaufgelegenheit/);
+  assert.equal(ctx.charts[0].symbol, 'SAP.DE');
+});
+
+test('Chart-Block wird angehängt, wenn die Antwort einen Wert bespricht und keinen Chart hat', () => {
+  const list = [{ symbol: 'SAP.DE', name: 'SAP' }, { symbol: 'RHM.DE', name: 'Rheinmetall' }];
+  assert.equal(B.chartBlocksFor('Rheinmetall ist stark.', list), '\n\n```stock\n{"symbol":"RHM.DE","name":"Rheinmetall"}\n```');
+  assert.equal(B.chartBlocksFor('Nichts dazu.', list), '');
+  assert.equal(B.chartBlocksFor('SAP\n```stock\n{"symbol":"SAP.DE"}\n```', list), '');
+});
+
+test('Börsen-Agent: Bulle und Bär schreiben vorher ihren Fall, die Antwort entscheidet (Risiko-Manager)', async () => {
+  const b = bars(400, 0.0015);
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes(':generateContent') && /BULLEN-Analyst/.test(c.body?.systemInstruction?.parts?.[0]?.text || ''), respond: () => M.json({ candidates: [{ content: { parts: [{ text: 'DAFÜR: Aufwärtstrend auf allen Ebenen.' }] } }] }) },
+    { match: (c) => c.url.includes(':generateContent') && /BÄREN-Analyst/.test(c.body?.systemInstruction?.parts?.[0]?.text || ''), respond: () => M.json({ candidates: [{ content: { parts: [{ text: 'DAGEGEN: RSI hoch.' }] } }] }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**SAP kaufen.** Rheinmetall eher nicht.'])) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
+  ]);
+  const c = M.collect();
+  await W.runChat({ env: M.ENV, body: { log: false, effort: 'auto', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich SAP oder Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
+  assert.ok(c.stages().includes('debate:done'));
+  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+  assert.match(sys, /BULLEN-ANALYST \(dafür\):\nDAFÜR: Aufwärtstrend/);
+  assert.match(sys, /BÄREN-ANALYST \(dagegen\):\nDAGEGEN: RSI hoch/);
+  assert.match(sys, /IMMER ALLE ZEITEBENEN ZUSAMMEN/);
+  assert.match(c.text(), /```stock\n\{"symbol":"(SAP\.DE|RHM\.DE)"/, 'Chart wurde angehängt');
+});
