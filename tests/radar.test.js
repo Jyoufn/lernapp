@@ -115,4 +115,8 @@ test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, sc
   assert.equal(o.picks[0].symbol, 'A.DE');
   assert.equal(o.picks.at(-1).symbol, 'D.DE');
   assert.equal(o.mood, 'positiv');
+  const o2 = R2.overview({ picks: [], scan: { checked: 427, now: [{ symbol: 'FTNT', name: 'Fortinet', price: 80, entry: 80, stop: 76, target: 88, score: 78, signal: 'kaufen', reasons: ['Trend'], history: { cases: 8, winRate: 62 } }],
+    soon: [{ symbol: 'SAP.DE', name: 'SAP', price: 240, trigger: 244, stop: 233, target: 262, score: 70, signal: 'bald', setup: 'ausbruch', reasons: ['Ausbruch'] }], weak: [] } });
+  assert.deepEqual(o2.picks.map((p) => `${p.symbol}:${p.verdict}`), ['FTNT:kaufen', 'SAP.DE:beobachten'], 'Kaufsignale aus dem Scan über alle Werte kommen dazu');
+  assert.equal(o2.checked, 427);
 });

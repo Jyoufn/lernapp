@@ -43,8 +43,11 @@ const ChancenCard = (() => {
     const buy = picks.filter((p) => p.verdict === 'kaufen');
     return `<div class="chn-verdict ${buy.length ? 'kaufen' : 'beobachten'}"><span class="chn-vtag">${buy.length ? 'Kaufen' : 'Abwarten'}</span><span>${buy.length
         ? `${esc(buy.map((p) => p.name).join(', '))} ${buy.length === 1 ? 'erfüllt' : 'erfüllen'} alle Bedingungen.`
-        : 'Keine Chance ist stark genug für einen Kauf jetzt – die Werte unten im Blick behalten.'}</span></div>
-      <div class="chn-list">${picks.map(row).join('')}</div>`;
+        : 'Gerade passt bei keinem Wert alles für einen Kauf – diese Werte im Blick behalten.'}</span></div>
+      ${[['kaufen', 'Jetzt kaufen'], ['beobachten', 'Beobachten'], ['meiden', 'Nicht kaufen']].map(([v, h]) => {
+        const l = picks.filter((p) => (LABEL[p.verdict] ? p.verdict : 'beobachten') === v);
+        return l.length ? `<div class="chn-group"><span class="chn-gh">${h} <i>${l.length}</i></span><div class="chn-list">${l.map(row).join('')}</div></div>` : '';
+      }).join('')}`;
   }
 
   function figure(raw) {

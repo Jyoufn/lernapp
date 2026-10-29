@@ -271,6 +271,10 @@ test('Frage-Art: Scan über alle Werte nur bei Ideen/Empfehlungen – Depot, ein
   assert.equal(m('Soll ich SAP kaufen?', ['SAP.DE']), 'stocks');
   assert.equal(m('Gibt es eine bessere Alternative zu SAP?', ['SAP.DE']), 'ideas');
   assert.equal(m('Wie läuft der DAX heute?'), 'market');
+  assert.equal(m('In was kann ich aktuell am besten investieren?'), 'ideas');
+  assert.equal(m('Was sind gerade gute Aktien?'), 'ideas');
+  assert.equal(m('Wo kann ich mein Geld anlegen?'), 'ideas');
+  assert.equal(m('Was ist eine Aktie?'), 'market', 'Wissensfrage → kein Scan');
 });
 
 test('Planspiel: Depot aus Portfolio und Buchungen – Stück, Kaufkurs, Gewinn nach Gebühr, Anteil', () => {
@@ -353,4 +357,30 @@ test('Börsen-Agent: „Überblick von meinem Depot“ liest das Planspiel-Depot
   assert.ok(yahooCalls.every((u) => /SAP\.DE|\^GDAXI|\^STOXX50E|\^NDX|EURUSD|=X/.test(u)), `nur eigene Werte und Indizes: ${yahooCalls.filter((u) => !/SAP\.DE|\^/.test(u)).slice(0, 3)}`);
   const text = out.events.filter((e) => e.event === 'text').map((e) => e.data.text).join('');
   assert.match(text, /```depot/);
+});
+
+test('Börsen-Agent: „In was kann ich aktuell am besten investieren?“ → Scan über alle Werte und die Chancen-Kästchen hängen an', async () => {
+  const b = bars(400, 0.0015);
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => c.url.includes('stooq.com'), respond: () => stooqCsv(b) },
+    { match: (c) => c.url.includes('/v1/finance/search'), respond: () => M.json({ quotes: [] }) },
+    { match: (c) => c.url.includes('news.google.com'), respond: () => new Response('<rss></rss>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Heute kaufen: Fortinet.**'])) },
+  ]);
+  const store = require('../lib/store').memoryStore();
+  const R = require('../lib/radar');
+  await store.set(R.KEY, JSON.stringify({ asOf: new Date().toISOString(), checked: 427, sectors: [], mood: { score: 0, top: [] }, record: null,
+    picks: [{ type: 'ruecksetzer', symbol: 'RHM.DE', name: 'Rheinmetall', sector: 'Rüstung', price: 100, entry: 100, stop: 95, target: 110, score: 82, reason: 'Rücksetzer', history: { cases: 5, winRate: 60 }, news: [] }],
+    scan: { checked: 427, now: [{ symbol: 'FTNT', name: 'Fortinet', price: 80, entry: 80, stop: 76, target: 88, score: 78, signal: 'kaufen', reasons: ['Trend'], history: { cases: 8, winRate: 62 } }], soon: [], weak: [] } }));
+  const body = { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'In was kann ich aktuell am besten investieren?' }] };
+  Object.defineProperty(body, 'radarStore', { value: store, enumerable: false });
+  const out = M.collect();
+  await W.runChat({ env: M.ENV, body, send: out.send, signal: new AbortController().signal });
+  assert.match(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /FRAGE-ART: Ideen/);
+  const text = out.text();
+  const m = text.match(/```chancen\n([\s\S]*?)\n```/);
+  assert.ok(m, 'Chancen-Block hängt an');
+  const data = JSON.parse(m[1]);
+  assert.deepEqual(data.picks.map((p) => `${p.symbol}:${p.verdict}`), ['RHM.DE:kaufen', 'FTNT:kaufen']);
 });

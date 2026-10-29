@@ -7322,3 +7322,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .chn-note { margin: 10px 0 0; color: var(--text-4); font-size: 11.5px; }
 .md .chn p { margin: 0; }
 .md .chn .chn-note { margin-top: 10px; }
+.chn-group { margin-top: 12px; }
+.chn-group:first-of-type { margin-top: 4px; }
+.chn-gh { display: block; margin: 0 2px 6px; color: var(--text-3); font-size: 12px; font-weight: 600; }
+.chn-gh i { color: var(--text-4); font-style: normal; font-weight: 500; }
