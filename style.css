@@ -7289,22 +7289,26 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 
 @media (prefers-reduced-motion: reduce) { .chn *, .chn { animation: none !important; transition: none !important; } }
 
-/* ===== „Meine Käufe“ des Börsen-Bären (boerse-bestand.js) – genau wie die Einstellungen: Überschrift, darunter eine schlichte Karte
-   (.st-card) mit Zeilen (.st-row) und feinen Trennlinien, rechts der Status als Text, Knöpfe .st-btn. Keine zusätzlichen Farbflächen;
-   Farbe nur für Plus (grün) und Minus (rot). */
-.bst { margin: 16px 0 20px; max-width: 760px; font-feature-settings: "tnum" 1; }
-.bst-top { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.md .bst h3, .bst h3 { margin: 0; color: var(--text); font-size: 15.5px; font-weight: 600; letter-spacing: -0.005em; }
-.bst-top .grow { flex: 1; }
+/* ===== „Meine Käufe“ des Börsen-Bären (boerse-bestand.js): EIN Kasten mit feinem Rand auf dem Chat-Hintergrund (keine eigene Fläche),
+   oben „Meine Käufe“ mit den Zahlen, rechts Aktualisieren und „Hinzufügen“; darunter die Käufe als Zeilen mit feinen Trennlinien.
+   Farbe nur für Plus (grün) und Minus (rot). Formular: je Angabe eine Zeile wie in den Einstellungen. */
+.bst { margin: 16px 0 20px; max-width: 760px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; background: none; font-feature-settings: "tnum" 1; }
+.bst-top { display: flex; align-items: center; gap: 6px; min-height: 58px; padding: 10px 12px 10px 16px; }
+.bst-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.bst-title b { color: var(--text); font-size: 14px; font-weight: 600; }
+.bst-sub { color: var(--text-4); font-size: 12.5px; font-feature-settings: "tnum" 1, "ss01" 1; }
+.bst-sub:empty { display: none; }
 .bst-icon { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-4); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
 .bst-icon:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-2); }
 .bst.busy .bst-icon svg { animation: dpt-spin 900ms cubic-bezier(.45, .05, .55, .95) infinite; }
 @keyframes dpt-spin { to { transform: rotate(360deg); } }
-.md .bst .bst-sub, .bst-sub { margin: 0 0 12px; color: var(--text-4); font-size: 12.5px; font-feature-settings: "tnum" 1, "ss01" 1; }
+.bst .st-btn { height: 30px; padding: 0 14px; font-size: 13px; }
 .bst .up { color: #4fcf8a; } .bst .down { color: #f07a6e; }
-.bst-row + .bst-row, .bst-form:not([hidden]) + .bst-rows .bst-row:first-child, .bst-form:not([hidden]) + .bst-rows .bst-none { border-top: 1px solid rgba(255, 255, 255, 0.06); }
-.bst-line { width: 100%; height: 58px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease; }
+.bst-row, .bst-none, .bst-add { border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.bst-none { padding: 16px; color: var(--text-4); font-size: 13.5px; }
+.bst-line { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 0 16px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color 120ms ease; }
 .bst-line:hover { background: rgba(255, 255, 255, 0.025); }
+.bst-grow { flex: 1; }
 .bst-n { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .bst-n b { overflow: hidden; color: var(--text); font-size: 14px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
 .bst-n small { overflow: hidden; color: var(--text-4); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; font-feature-settings: "tnum" 1, "ss01" 1; }
@@ -7314,21 +7318,21 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .bst-act.strong { color: var(--text); font-weight: 600; }
 .bst-d { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 320ms var(--spring, ease), opacity 220ms ease; }
 .bst-row.open .bst-d { grid-template-rows: 1fr; opacity: 1; }
-.bst-d-in { min-height: 0; overflow: hidden; padding: 0 14px; }
-.bst-row.open .bst-d-in { padding-bottom: 12px; }
+.bst-d-in { min-height: 0; overflow: hidden; padding: 0 16px; }
+.bst-row.open .bst-d-in { padding-bottom: 14px; }
 .md .bst .bst-d-in p, .bst-d-in p { margin: 0 0 4px; color: var(--text-3); font-size: 13px; line-height: 1.55; }
 .md .bst .bst-d-in p.bst-meta, .bst-d-in p.bst-meta { color: var(--text-4); font-size: 12px; }
-.bst-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.bst-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .bst-acts .st-btn.danger { color: #e5705f; background: rgba(239, 107, 95, 0.09); border-color: rgba(239, 107, 95, 0.2); }
-.bst-none { height: 54px; }
-.bst-muted { color: var(--text-4); font-size: 13.5px; }
-/* Hinzufügen: Felder wie in den Einstellungen, Vorschläge wie ein Menü (#202020, Rand #343434, ohne Schatten) */
-.bst-add { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; padding: 12px 14px; animation: st-in 160ms ease both; }
-.bst-f { position: relative; display: flex; flex-direction: column; gap: 5px; flex: 1 1 160px; min-width: 0; }
-.bst-f.wide { flex: 2 1 240px; } .bst-f.small { flex: 0 1 110px; }
-.bst-f label { color: var(--text-4); font-size: 12px; }
-.bst-f .st-field { width: 100%; box-sizing: border-box; color-scheme: dark; }
-.bst-f-btns { display: flex; align-items: center; gap: 8px; flex-basis: 100%; justify-content: flex-end; }
+/* Hinzufügen: Zeilen „Bezeichnung – Feld“ wie in den Einstellungen */
+.bst-add { display: flex; flex-direction: column; animation: st-in 160ms ease both; }
+.bst-fr { display: flex; align-items: center; gap: 12px; min-height: 50px; padding: 0 16px; }
+.bst-fr + .bst-fr { border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.bst-fr.end { justify-content: flex-end; gap: 8px; }
+.bst-fl { flex: none; width: 104px; color: var(--text-2); font-size: 13.5px; font-weight: 500; }
+.bst-fi { position: relative; flex: 1; min-width: 0; display: flex; gap: 8px; }
+.bst-fi .st-field { flex: 1; min-width: 0; width: 100%; box-sizing: border-box; color-scheme: dark; }
+.bst-fi.two .st-field[type="time"] { flex: 0 0 110px; }
 .bst-err { flex: 1; color: var(--text-4); font-size: 12.5px; }
 .bst-sug { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5; display: flex; flex-direction: column; padding: 3px; border: 1px solid #343434; border-radius: 10px; background: #202020; }
 .bst-sug button { display: flex; align-items: baseline; gap: 8px; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
@@ -7351,21 +7355,25 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .bst-go:hover { background: #343434; }
 .bst-x { display: grid; place-items: center; flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-4); cursor: pointer; }
 .bst-x:hover { background: #2b2b2b; color: var(--text-2); }
-@media (max-width: 600px) { .bst-act { width: 78px; font-size: 12.5px; } .bst-n small { white-space: normal; } }
+@media (max-width: 600px) { .bst-act { width: 78px; font-size: 12.5px; } .bst-n small { white-space: normal; } .bst-fl { width: 84px; } .bst-fi.two { flex-wrap: wrap; } .bst-fi.two .st-field[type="time"] { flex: 1 1 90px; } }
 @media (prefers-reduced-motion: reduce) { .bst *, .bst, .bst-toast { animation: none !important; transition: none !important; } }
 
 
-/* Plan in der Zeitleiste als Abzweig (wie ein Seitenast der Linie): kein Kasten – eine feine Linie biegt von der Zeitleiste ab,
-   läuft an den Punkten entlang und mündet wieder ein. Punkte: offen = Kreis, gerade dran = Ladekreis, erledigt = blauer Haken. */
-.steps .step > .fold > .fold-in { margin-left: -22px; padding-left: 22px; } /* Abzweig darf bis an die Zeitleiste reichen */
-.steps .plan-list { position: relative; gap: 10px; margin: 10px 0 8px; padding: 0; border: 0; border-radius: 0; background: none; }
-.steps .plan-list::before { content: ""; position: absolute; left: -17px; top: -7px; bottom: -7px; width: 32px; border: 1px solid #2e2e2e; border-left: 0; border-radius: 0 12px 12px 0; pointer-events: none; }
-.steps .plan-list .pi-mark { position: relative; background: var(--main-bg); box-shadow: 0 0 0 3px var(--main-bg); }
-.steps .plan-item { gap: 10px; }
+/* Plan in der Zeitleiste als Abzweig (wie ein Seitenast der Linie): kein Kasten – eine feine, enge Linie biegt kurz von der Zeitleiste ab,
+   läuft an den Punkten entlang und mündet wieder ein (Ecken nur leicht gerundet). Die Texte bleiben in derselben Spalte wie die übrigen Schritte.
+   Punkte auf dem Ast: offen = Kreis, gerade dran = Ladekreis, erledigt = blauer Haken. */
+.steps .step > .fold > .fold-in { margin-left: -22px; padding-left: 22px; } /* Ast darf bis an die Zeitleiste reichen */
+.steps .plan-list { position: relative; display: grid; gap: 6px; max-width: none; margin: 6px 0 4px; padding: 0; border: 0; border-radius: 0; background: none; }
+.steps .plan-list::before { content: ""; position: absolute; left: -17px; top: -3px; bottom: -3px; width: 9px; border: 1px solid #333; border-left: 0; border-radius: 0 5px 5px 0; pointer-events: none; }
+.steps .plan-item { position: relative; display: flex; gap: 0; padding: 2px 0; border-radius: 0; background: none !important; align-items: flex-start; }
+/* auf dem Ast: kleine Punkte (wie im Vorbild) – offen = Ring, gerade dran = kleiner Ladekreis, erledigt = blauer Punkt */
+.steps .plan-list .pi-mark { position: absolute; left: -12.5px; top: 7.5px; width: 7px; height: 7px; margin: 0; border: 1.5px solid #4a4a4a; box-sizing: border-box;
+  background: var(--main-bg); box-shadow: 0 0 0 2px var(--main-bg); }
+.steps .plan-list .pi-mark svg { display: none; }
+.steps .plan-item[data-state="active"] .pi-mark { left: -13.5px; top: 6.5px; width: 9px; height: 9px; border-color: #3a3a3a; border-top-color: var(--accent); }
+.steps .plan-item[data-state="done"] .pi-mark { border: 0; background: var(--accent); }
 /* Tiefen-Recherche: Suchen im Abzweig – Suchtext, darunter ihre Quellen in genau einer Reihe (+N öffnet alle) */
 .q-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .q-body .pi-text { color: var(--text-2); }
 .q-body .chips { margin-top: 0; }
 .q-body .chips:empty { display: none; }
-.steps .plan-item.q-item { align-items: flex-start; }
-.steps .plan-item.q-item .pi-mark { margin-top: 2px; }

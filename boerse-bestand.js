@@ -35,11 +35,11 @@ const BoerseBestand = (() => {
   const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
   function rows(d, open) {
     const items = [...(d.items || [])].sort((a, b) => (ORDER[a.action] ?? 5) - (ORDER[b.action] ?? 5) || (b.value || 0) - (a.value || 0));
-    if (!items.length) return '<div class="st-row bst-none"><span class="bst-muted">Noch nichts hinzugefügt.</span></div>';
+    if (!items.length) return '<div class="bst-none">Noch keine Käufe.</div>';
     return items.map((x) => `<div class="bst-row${open === x.symbol ? ' open' : ''}">
-        <button type="button" class="st-row bst-line" data-sym="${esc(x.symbol)}" aria-expanded="${open === x.symbol}">
+        <button type="button" class="bst-line" data-sym="${esc(x.symbol)}" aria-expanded="${open === x.symbol}">
           <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · gekauft zu ${eur(x.buyPrice)} · ${day(x.date)}</small></span>
-          <span class="grow"></span>
+          <span class="bst-grow"></span>
           <span class="bst-p ${tone(x.plus)}"><b>${signed(x.plus)}</b><small>${signed(x.plusPct, ' %')}</small></span>
           <span class="bst-act${x.action === 'verkaufen' ? ' strong' : ''}">${ACT_TEXT[x.action] || '–'}</span>
         </button>
@@ -51,30 +51,30 @@ const BoerseBestand = (() => {
         </div></div>
       </div>`).join('');
   }
-  // Hinzufügen: Aktie (Suche), Zeitpunkt, Stückzahl – Kaufkurs optional (sonst Kurs zu diesem Zeitpunkt)
+  // Hinzufügen: je Angabe eine Zeile wie in den Einstellungen – Aktie (Suche), Datum, Uhrzeit, Stück; Kaufkurs optional (sonst Kurs zu diesem Zeitpunkt)
+  const todayIso = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+  const timeNow = () => new Date().toTimeString().slice(0, 5);
   const form = () => `<form class="bst-add" autocomplete="off">
-      <div class="bst-f wide"><label>Aktie</label><input class="st-field" name="q" placeholder="Name, Kürzel oder ISIN" spellcheck="false" /><div class="bst-sug" hidden></div></div>
-      <div class="bst-f"><label>Gekauft am</label><input class="st-field" name="at" type="datetime-local" value="${nowLocal()}" max="${nowLocal()}" /></div>
-      <div class="bst-f small"><label>Stück</label><input class="st-field" name="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="z. B. 40" /></div>
-      <div class="bst-f small"><label>Kaufkurs</label><input class="st-field" name="price" type="number" min="0" step="any" inputmode="decimal" placeholder="automatisch" /></div>
-      <div class="bst-f-btns"><span class="bst-err"></span><button type="button" class="st-btn dark" data-cancel>Abbrechen</button><button type="submit" class="st-btn light">Hinzufügen</button></div>
+      <div class="bst-fr"><span class="bst-fl">Aktie</span><div class="bst-fi"><input class="st-field" name="q" placeholder="Name, Kürzel oder ISIN" spellcheck="false" /><div class="bst-sug" hidden></div></div></div>
+      <div class="bst-fr"><span class="bst-fl">Gekauft am</span><div class="bst-fi two"><input class="st-field" name="day" type="date" value="${todayIso()}" max="${todayIso()}" /><input class="st-field" name="time" type="time" value="${timeNow()}" /></div></div>
+      <div class="bst-fr"><span class="bst-fl">Stück</span><div class="bst-fi"><input class="st-field" name="qty" type="number" min="0" step="any" inputmode="decimal" placeholder="z. B. 40" /></div></div>
+      <div class="bst-fr"><span class="bst-fl">Kaufkurs</span><div class="bst-fi"><input class="st-field" name="price" type="number" min="0" step="any" inputmode="decimal" placeholder="leer lassen – wird zum Zeitpunkt ermittelt" /></div></div>
+      <div class="bst-fr end"><span class="bst-err"></span><button type="button" class="st-btn dark" data-cancel>Abbrechen</button><button type="submit" class="st-btn light">Hinzufügen</button></div>
     </form>`;
   function figure() {
     const fig = document.createElement('figure');
     fig.className = 'bst';
-    fig.innerHTML = `<div class="bst-top"><h3>Meine Käufe</h3><span class="grow"></span>
+    fig.innerHTML = `<div class="bst-top"><span class="bst-title"><b>Meine Käufe</b><span class="bst-sub"></span></span>
         <button type="button" class="bst-icon" data-reload title="Aktualisieren" aria-label="Aktualisieren"><svg width="16" height="16" aria-hidden="true"><use href="#i-refresh"/></svg></button>
-        <button type="button" class="st-btn dark" data-add>Hinzufügen</button></div>
-      <p class="bst-sub">wird geladen …</p>
-      <div class="st-card bst-card"><div class="bst-form" hidden></div><div class="bst-rows"></div></div>`;
+        <button type="button" class="st-btn dark bst-addbtn" data-add>Hinzufügen</button></div>
+      <div class="bst-form" hidden></div><div class="bst-rows"></div>`;
     const st = { open: null, d: null, pick: null };
     const sub = fig.querySelector('.bst-sub'), list = fig.querySelector('.bst-rows'), fbox = fig.querySelector('.bst-form');
     const paint = () => {
       const d = st.d; if (!d) return;
       const pct = d.invested ? (d.plus / d.invested) * 100 : null;
-      sub.innerHTML = d.error ? 'Gerade nicht erreichbar.' : (d.items || []).length
-        ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>`
-        : 'Füge hinzu, was du gekauft hast – der Bär sagt dir dann, was du damit machen solltest.';
+      sub.innerHTML = d.error ? 'Gerade nicht erreichbar' : (d.items || []).length
+        ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
       list.innerHTML = rows(d, st.open);
     };
     const draw = async (fresh) => {
@@ -109,7 +109,7 @@ const BoerseBestand = (() => {
       if (!st.pick) { err.textContent = 'Bitte eine Aktie aus der Liste wählen.'; f.q.focus(); return; }
       if (!(qty > 0)) { err.textContent = 'Wie viele Stück?'; f.qty.focus(); return; }
       err.textContent = 'Wird hinzugefügt …';
-      const at = f.at.value ? new Date(f.at.value).toISOString() : new Date().toISOString();
+      const at = f.day.value ? new Date(`${f.day.value}T${f.time.value || '12:00'}`).toISOString() : new Date().toISOString();
       const r = await fetch('/api/boerse/bestand', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol: st.pick.symbol, name: st.pick.name, qty, price, at }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) { err.textContent = j.error || 'Hat nicht geklappt.'; return; }
@@ -141,21 +141,8 @@ const BoerseBestand = (() => {
     return fig;
   }
 
-  /* ---------- Bestätigung ```merken ---------- */
-  function note(raw) {
-    let c = {};
-    try { c = JSON.parse(String(raw || '').trim() || '{}'); } catch {}
-    const parts = [
-      ...(c.add || []).map((x) => `${nf(x.qty, x.qty % 1 ? 2 : 0)} × ${esc(x.name || x.symbol)} zu ${eur(x.price)}${x.date ? ` (${day(x.date)})` : ''}`),
-      ...(c.sell || []).map((x) => `verkauft: ${x.qty ? `${nf(x.qty, x.qty % 1 ? 2 : 0)} × ` : ''}${esc(x.name || x.symbol)}`),
-      ...(c.remove || []).map((x) => `entfernt: ${esc(x.symbol || x)}`),
-    ];
-    const el = document.createElement('div');
-    el.className = 'bst-note';
-    el.innerHTML = parts.length ? `${fi('check-circle', 13)}<span>Notiert: ${parts.join(' · ')}</span>` : '';
-    if (!parts.length) el.hidden = true;
-    return el;
-  }
+  /* ---------- ```merken: wird still im Hintergrund gespeichert (Server) – im Chat nichts anzeigen ---------- */
+  function note() { const el = document.createElement('span'); el.hidden = true; return el; }
 
   /* ---------- Hinweise: einmal aufploppen, nur bei eigenen Werten ---------- */
   const SEEN = 'bestand.hinweise';

@@ -300,7 +300,7 @@ composer.addEventListener('submit', (e) => {
   const run = runOf(); if (run) { run.abort(); return; } // während der Antwort dieses Chats: Stopp-Button
   const text = input.value.trim();
   if (!text && attachments.length === 0) return;
-  if (listening) stopListening();
+  if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
   const images = attachments.map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf })); // URLs bleiben für den Chat erhalten
   input.value = '';
   attachments = [];
@@ -439,6 +439,7 @@ function startListening() {
   recognition.interimResults = true;
 
   recognition.onresult = (e) => {
+    if (!listening && !input.value) return; // schon abgeschickt → nichts mehr hineinschreiben
     // nur Ergebnisse ab „consumed“ – was davor lag, steckt schon in baseText (bzw. wurde vom Nutzer gelöscht)
     let fin = '', interim = '';
     for (let i = consumed; i < e.results.length; i++) {
@@ -474,9 +475,13 @@ function startListening() {
   showListening('Listening');
 }
 
-function stopListening() {
+// hard: beim Abschicken – sofort abbrechen, nichts mehr nachliefern lassen (sonst schreibt die Erkennung Reste ins geleerte Feld)
+function stopListening(hard = false) {
   listening = false;
-  if (recognition) recognition.stop();
+  if (recognition) {
+    if (hard) { recognition.onresult = null; recognition.onend = null; recognition.onerror = null; try { recognition.abort(); } catch {} recognition = null; }
+    else recognition.stop();
+  }
   setMicUI(false);
   hideListening();
 }
