@@ -1805,9 +1805,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Rückfrage statt Antwort → „Asked a question“ (bzw. „Asked 2 questions“) statt „Wrote the answer“
   const wroteLabel = () => {
     const n = /```ask/.test(answerR?.text || '') ? parseAskBlock(answerR.text)?.length || 1 : 0;
-    return n ? `Asked ${n === 1 ? 'a question' : `${n} questions`}` : P('work').sub;
+    return n ? `Asked ${n === 1 ? 'a question' : `${n} questions`}` : P(workKey).sub;
   };
   let work = null;
+  let workKey = 'work';
   let citations = null;
   let failed = false;
   let interrupted = false; // Antwort mitten im Text abgebrochen (Fehler/Verbindung) → Karte „weiterschreiben?“
@@ -2227,10 +2228,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (s.stage === 'answering' && s.status === 'active' && work) {
       noteAnalyze();
       if (deep.steps.synth && !deep.steps.synth.done) deepDone('synth', doneLine('synthesize'));
-      if (!thought || thought.done) phase('work');
+      const wk = s.meta?.extract ? 'extract' : 'work'; // Bär: Käufe/Verkäufe aus Tagebuch/Nachricht auslesen
+      workKey = wk;
+      if (!thought || thought.done) phase(wk);
       if (!stages.answering && !pendingAskStep()) {
         const from = Date.now();
-        const step = stepLine('spin', live('work', from));
+        const step = stepLine('spin', live(wk, from));
         stages.answering = { step, from, serverFrom: Date.parse(s.ts) || null };
         if (thought && !thought.done) step.hidden = true; // das Modell denkt noch – „Writing“ erst, wenn Text kommt
         work.steps.append(step);
@@ -2352,6 +2355,11 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'research') onResearch(data);
       else if (event === 'web') onWeb(data);
       else if (event === 'deep') onDeep(data);
+      else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
+        const a = data.added?.length || 0, so = data.sold?.length || 0, sk = data.skipped || 0, un = data.unknown?.length || 0;
+        const parts = [a ? `${a} ${a === 1 ? 'buy' : 'buys'}` : '', so ? `${so} ${so === 1 ? 'sale' : 'sales'}` : '', sk ? `${sk} already there` : '', un ? `${un} not recognized` : ''].filter(Boolean);
+        if (parts.length || data.removed?.length) { noteStep('saveDepot', parts.join(' · ') || 'updated'); phase('saveDepot'); }
+      }
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort

@@ -7607,3 +7607,13 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 @keyframes pa-breathe { 0%, 100% { transform: none; } 50% { transform: translateY(-0.5px); } }
 @media (prefers-reduced-motion: reduce) { .stk, .bst, .chn-pick, .bst-row, .bst-toast { animation: none !important; } .stk .stk-line { stroke-dasharray: none; animation: none; } }
 .stk.shown, .bst.shown, .chn-pick.shown, .bst-row.shown { animation: none; }
+
+/* Chancen-Karte: Klick klappt den Aktienchart weich auf (ohne eigenen Rahmen, er gehört zur Karte) */
+.chn-pick { cursor: pointer; outline: none; }
+.chn-pick:focus-visible { border-color: rgba(255, 255, 255, 0.18); }
+.chn-chart { display: grid; grid-template-rows: 0fr; opacity: 0; margin-top: -8px; transition: grid-template-rows 420ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease, margin-top 420ms cubic-bezier(0.16, 1, 0.3, 1); cursor: default; }
+.chn-pick.open .chn-chart { grid-template-rows: 1fr; opacity: 1; margin-top: 0; }
+.chn-chart-in { min-height: 0; overflow: hidden; }
+.chn-chart .stk { margin: 4px 0 0; padding: 10px 0 0; border: 0; border-top: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0; background: none; max-width: none; animation: none; }
+@media (prefers-reduced-motion: reduce) { .chn-chart { transition: none; } }
+.chn-chart .stk-title { visibility: hidden; } /* Name steht schon oben auf der Karte */

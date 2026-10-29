@@ -68,7 +68,9 @@ const Thinking = (() => {
     boerse: {
       start: F('Understanding', 'Understanding market request', 'read', 'think'),
       plan: F('Understanding', 'Understanding market request', 'think', 'think'),
-      material: F('Portfolio analysis', 'Reading your trade journal', 'read', 'news'),
+      material: F('Portfolio analysis', 'Reviewing your files', 'read', 'news'),
+      extract: F('Portfolio analysis', 'Extracting your trades', 'read', 'news'),
+      saveDepot: F('Portfolio analysis', 'Adding to your depot', 'write', 'laptop'),
       depot: F('Portfolio analysis', 'Checking your depot', 'read', 'news'),
       depotAnalysis: F('Portfolio analysis', 'Analyzing your depot', 'think', 'news'),
       chartsLoad: F('Market charts', 'Loading price charts', 'read', 'news'),

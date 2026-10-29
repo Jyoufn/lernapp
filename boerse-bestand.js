@@ -34,8 +34,10 @@ const BoerseBestand = (() => {
   const ACT_TEXT = { verkaufen: 'Verkaufen', teilgewinn: 'Teilgewinn', beobachten: 'Beobachten', halten: 'Behalten', nachkaufen: 'Nachkaufen' };
   const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
   function rows(d, open) {
-    const items = [...(d.items || [])].sort((a, b) => (ORDER[a.action] ?? 5) - (ORDER[b.action] ?? 5) || (b.value || 0) - (a.value || 0));
-    const sold = d.sold || [];
+    // nach Gewinn sortiert: meistes Plus oben, größtes Minus unten (offen und verkauft je für sich; ohne Kurs ganz unten)
+    const byPlus = (a, b) => (b.plus ?? -Infinity) - (a.plus ?? -Infinity);
+    const items = [...(d.items || [])].sort(byPlus);
+    const sold = [...(d.sold || [])].sort(byPlus); // Verkauftes bleibt fest: Kauf- und Verkaufskurs, kein Live-Kurs
     if (!items.length && !sold.length) return '<div class="bst-none">Noch keine Käufe.</div>';
     const soldRows = sold.length ? `<div class="bst-sec">Verkauft</div>${sold.map((x) => `<div class="bst-row sold"><div class="bst-line static">
           <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · ${x.noBuy ? 'Kauf fehlt noch' : eur(x.buyPrice)} → ${eur(x.sellPrice)} · ${day(x.date)}</small></span>

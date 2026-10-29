@@ -452,3 +452,9 @@ test('Börse: „Zeig mir die Graphen meiner Depot-Aktien“ = nur Charts – ke
   assert.ok(it.chartsOnly && it.depot);
   assert.ok(!B.intentOf('Soll ich SAP verkaufen? Zeig mir den Chart', []).chartsOnly, 'mit Empfehlungswunsch: volle Analyse');
 });
+
+test('Börse: „Füg die Käufe aus meinem Handelstagebuch hinzu“ = nur eintragen (Depot), keine Ideen, kein Nur-Chart', () => {
+  const it = B.intentOf('Füg bitte die Käufe aus dem Handelstagebuch zu meinem Depot hinzu', []);
+  assert.ok(it.adding && !it.ideas && !it.chartsOnly);
+  assert.ok(!B.intentOf('Welche Aktien kann ich kaufen?', []).adding);
+});

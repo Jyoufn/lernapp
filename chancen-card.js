@@ -1,7 +1,7 @@
 /* ===================================================================
    Chancen-Übersicht im Chat (Block ```chancen, vom Börsen-Bären bei „welche Aktien …“ / Empfehlungen):
    je Wert ein Kästchen mit Etikett Kaufen (grün) · Beobachten (grau) · Nicht kaufen (rot), Muster, Kurs, Einstieg, Stopp, Ziel,
-   Chance:Risiko, Trefferquote und Begründung – jede Karte einzeln, ohne Sammelkasten.
+   Chance:Risiko, Trefferquote und Begründung – jede Karte einzeln, ohne Sammelkasten. Klick auf eine Karte klappt ihren Aktienchart auf.
    Daten: stehen im Block (vom Server angehängt) – sonst aus dem GESPEICHERTEN Radar (/api/boerse/chancen, ohne Neu-Rechnen, ohne KI).
    Es gibt keine automatischen Abfragen im Hintergrund: Chancen kommen nur, wenn man danach fragt.
    =================================================================== */
@@ -25,11 +25,12 @@ const ChancenCard = (() => {
   function row(p) {
     const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
     const nums = `<span><i>Kurs</i>${eur(p.price)}</span><span><i>Einstieg</i>${eur(p.entry)}</span><span><i>Stopp</i><em class="neg">${eur(p.stop)}</em></span><span><i>Ziel</i><em class="pos">${eur(p.target)}</em></span>${crv ? `<span><i>Chance : Risiko</i>${nf(crv, 1)} : 1</span>` : ''}${p.hit ? `<span><i>Treffer</i>${esc(p.hit)}</span>` : ''}`;
-    return `<div class="chn-pick ${v}">
+    return `<div class="chn-pick ${v}" data-sym="${esc(p.symbol)}" data-name="${esc(p.name)}" role="button" tabindex="0" aria-expanded="false" title="Chart anzeigen">
         <div class="chn-top"><span class="chn-name"><b>${esc(p.name)}</b><small>${esc(p.type || '')}${p.sector ? ` · ${esc(p.sector)}` : ''}</small></span>
           <span class="chn-badge ${v}">${LABEL[v]}</span></div>
         <div class="chn-nums">${nums}</div>
         ${p.reason ? `<p class="chn-why">${esc(p.reason)}</p>` : ''}
+        <div class="chn-chart"><div class="chn-chart-in"></div></div>
       </div>`;
   }
   // Nur die Karten, einzeln untereinander – erst alle „Kaufen“, dann höchstens 10 „Beobachten“. Kein Rahmen, keine Überschrift.
@@ -45,6 +46,16 @@ const ChancenCard = (() => {
     const fig = document.createElement('div');
     fig.className = 'chn';
     if (Array.isArray(spec.picks)) fig.innerHTML = body(spec); else load().then((d) => { fig.innerHTML = body(d); });
+    // Klick auf eine Karte: darunter klappt der Aktienchart auf (Kursdaten per Rechnung, keine KI); nochmal Klick klappt zu
+    const toggle = (card) => {
+      const open = !card.classList.contains('open');
+      card.classList.toggle('open', open);
+      card.setAttribute('aria-expanded', String(open));
+      const host = card.querySelector('.chn-chart-in');
+      if (open && !host.firstChild && window.StockChart) host.append(StockChart.figure({ symbol: card.dataset.sym, name: card.dataset.name, range: '6M' }));
+    };
+    fig.addEventListener('click', (e) => { const c = e.target.closest('.chn-pick'); if (c && !e.target.closest('.chn-chart')) toggle(c); });
+    fig.addEventListener('keydown', (e) => { const c = e.target.closest('.chn-pick'); if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(c); } });
     return fig;
   }
   return { figure };
