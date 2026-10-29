@@ -1,5 +1,5 @@
 /* =====================================================================
-   Pixel-Hunde – fünf Modi (Allgemein, Research, Lernen, Coden, Börse = Bulle)
+   Pixel-Hunde – fünf Modi (Allgemein, Research, Lernen, Coden, Börse = Bär)
    - oben mittig im leeren Chat: alle Gesichter und das Plus zusammen in einer runden Leiste (Gesichter scrollbar),
      gewählter Hund hinterlegt; Plus öffnet die Liste mit Namen; nach dem ersten Senden verschwindet die Leiste
    - klein oben rechts am Eingabefeld: der gewählte Hund schaut über den Rand (Pfoten auf dem Rand, atmet, blinzelt) und holt
@@ -386,97 +386,97 @@ const PixelDogs = (() => {
         ],
       },
     },
-    // Börse: Bulle (selbst gezeichnet im selben 32er-Pixelstil, Generator scratch/bull.py) – Hörner, Nasenring, freundliche Augen
+    // Börse: Bär im Anzug (grüne Krawatte = Börse im Plus) – selbst gezeichnet im selben 32er-Pixelstil, Generator scratch/bear.py
     boerse: {
       32: {
-        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#f2f2f2'},
         rows: [
-          '.....a....................a.....',
-          '....aHa..................aHa....',
-          '...aHa....................aHa...',
-          '...ahha..................ahha...',
-          '...ahhha......aaaa......ahhha...',
-          '....ahha...aaabbebaaa...ahha....',
-          '....ahhhaaabbbeebeebbaaahhha....',
-          '.....aHhhhbcceceeebebbhhhHa.....',
-          '...aaaaHHhhdddccebbbbhhHHaaaa...',
-          '.aacccaabHddddccccbbbbHbaacccaa.',
-          'acccccccbccdddccccbbbbbbccccccca',
-          'acppppcbbcccccccccbbbbbbbcppppca',
-          '.acccccbbbcccccccbbbbbbbbccccca.',
-          '..aaaaabbbbwaccbbbbwabbbbaaaaa..',
-          '......abbbbaabbbbbbaabbbba......',
-          '......abbbbbbbeeeebbbbbbba......',
-          '......abbbbeeemmmmeeebbbba......',
-          '......abbbemmmmmmmmmmebbba......',
-          '.......abemmmmmmmmmmmmeba.......',
-          '.......aemmmnmmmmmnmmmmea.......',
-          '.......ammmnnnmmmnnnmmmma.......',
-          '.......ammmmmmymmymmmmmma.......',
-          '........ammmmmymmYmmmmma........',
-          '........ammMMMYyyYMMMmma........',
-          '........aaMMMMMMMMMMMMaa........',
-          '.......abbbbMMMMMMMMbbbba.......',
-          '.......abbbbbbbbbbbbbbbba.......',
-          '......abbbbbccccccccbbbbba......',
-          '.....abbbbbbccccccccbbbbbba.....',
-          '.....abbbbbbccccccccbbbbbba.....',
-          '....abbbbbbccccccccccbbbbbba....',
-          '...abbbbbbbccccccccccbbbbbbba...',
+          '................................',
+          '.....aaaaa............aaaaa.....',
+          '....abbbbba..........abbbbba....',
+          '...abbbbbbba.aaaaaa.abbbbbbba...',
+          '...abbpppbbaabbbbbbaabbpppbba...',
+          '...abpppppbbbbbbbbbbbbpppppba...',
+          '...abpqqqbbbbbbbbbbbbbbqqqpba...',
+          '...abbpqbccddccbbbbbbbbbqpbba...',
+          '....abbbbcdddcccbbbbbbbbbbba....',
+          '.....abbbcccccccbbbbbbbbbba.....',
+          '.....abbbbcccccbbbbbbbbbbba.....',
+          '....abbbbbbbbbbbbbbbbbbbbbba....',
+          '....abbbbbbwabbbbbbbwabbbbba....',
+          '....abbbbbbaabbbbbbbaabbbbba....',
+          '....abbbbbbbbbbbbbbbbbbbbbba....',
+          '....abbbbbbbmmmnnmmmbbbbbbba....',
+          '....abbbbbbmmmwnnnmmmbbbbbba....',
+          '....abbbbbmmmmnnnnmmmmbbbbba....',
+          '.....abbbbmmmmmmeemmmmbbbba.....',
+          '......abbbmmmmmemmemmmbbba......',
+          '......abbbmmmMMMMMMmmmbbba......',
+          '.......abbbMMMMMMMMMMbbba.......',
+          '........aabbMMMMMMMMbbaa........',
+          '.......aaaaabbbbbbbbaaaaa.......',
+          '......aeebbbbbbbbbbbbbbeea......',
+          '.....abbbbbbbbbggbbbbbbbbba.....',
+          '.....abbbbbbbbbggbbbbbbbbba.....',
+          '....abbbbbbbbbbgGbbbbbbbbbba....',
+          '...abbbbbbbbbbbgGbbbbbbbbbbba...',
+          '...abbbbbbbbbbggGGbbbbbbbbbba...',
+          '..abbbbbbbbbbbggGGbbbbbbbbbbba..',
+          '..abbbbbbbbbbbggGGbbbbbbbbbbba..',
         ],
       },
       24: {
-        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#f2f2f2'},
         rows: [
-          '...a................a...',
-          '..aHa..............aHa..',
-          '..aHha............ahHa..',
-          '..ahha...aaaaaa...ahha..',
-          '..ahhha.abeeeeea.ahhha..',
-          '...ahhhabceeeeebahhha...',
-          '.aaaHHhhhdccebbhhhHaaaa.',
-          'acccccHHdddccbbbHHccccca',
-          'acpppbbccccccbbbbbbpppca',
-          '.acccbbcwacccbwabbbccca.',
-          '..aaabbbaabbbbaabbbaaa..',
-          '....abbbbbeeeebbbbba....',
-          '....abbbeemmmmeebbba....',
-          '....abbemmmmmmmmebba....',
-          '.....aemmmmmmmmmmea.....',
-          '.....ammnnmmmnnmmma.....',
-          '.....ammmmymmymmmma.....',
-          '......ammMyMMYMmma......',
-          '......aaMMYyyYMMaa......',
-          '.....abbbbbMMbbbbba.....',
-          '....abbbbccccccbbbba....',
-          '....abbbbccccccbbbba....',
-          '...abbbbbccccccbbbbba...',
-          '..abbbbbccccccccbbbbba..',
+          '.....a............a.....',
+          '...aabaa........aabaa...',
+          '..abbbbbaaaaaaaabbbbba..',
+          '..abpppbabbbbbbabpppba..',
+          '..abpqpbbbbbbbbbbpqpba..',
+          '..abpqbcdccbbbbbbbqpba..',
+          '...abbbcddccbbbbbbbba...',
+          '...abbbcccccbbbbbbbba...',
+          '...abbbbbbbbbbbbbbbba...',
+          '...abbbbwabbbbbwabbba...',
+          '...abbbbaabbbbbaabbba...',
+          '...abbbbbbmnnmbbbbbba...',
+          '...abbbbmmnwnnmmbbbba...',
+          '...abbbbmmmmmmmmbbbba...',
+          '....abbbmmmmeemmbbba....',
+          '.....abbmMMeMMembba.....',
+          '......abbMMMMMMbba......',
+          '.....aaaabbmmbbaaaa.....',
+          '....aeebbbbbbbbbbeea....',
+          '...abbbbbbbggbbbbbbba...',
+          '...abbbbbbbgGbbbbbbba...',
+          '..abbbbbbbbgGbbbbbbbba..',
+          '..abbbbbbbbgGbbbbbbbba..',
+          '.abbbbbbbbggGGbbbbbbbba.',
         ],
       },
       20: {
-        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        pal: {a: '#000000', b: '#6e4426', c: '#8c5a33', d: '#a8713f', e: '#47290f', m: '#d8b38a', M: '#bb9168', n: '#1b120c', w: '#ffffff', p: '#c98d6b', q: '#a9715a', g: '#3fb877', G: '#2b8a57', W: '#f2f2f2'},
         rows: [
-          '...a............a...',
-          '..aHa..........aHa..',
-          '..ahha...aa...ahha..',
-          '..ahhaaaabeaaaahha..',
-          '..ahhhbbeeeeebhhha..',
-          '.aaaHhhhdcebhhhHaaa.',
-          'accccHHddccbbHHcccca',
-          'acppbbcccccbbbbbppca',
-          '.aaabbbwabbbwabbaaa.',
-          '...abbbaaeeeaabba...',
-          '...abbeemmmmeebba...',
-          '....aemmmmmmmmea....',
-          '....ammnmmmnmmma....',
-          '....ammmymmymmma....',
-          '.....amMyMMYMma.....',
-          '.....abMYyyYMba.....',
-          '....abbccccccbba....',
-          '...abbbccccccbbba...',
-          '...abbbccccccbbba...',
-          '..abbbbccccccbbbba..',
+          '...aaa........aaa...',
+          '..abbba......abbba..',
+          '.abbpbbaaaaaabbpbba.',
+          '.abpppbbbbbbbbpppba.',
+          '.abbqbcccbbbbbbqbba.',
+          '..abbccdccbbbbbbba..',
+          '...abbcccbbbbbbba...',
+          '..abbbbbbbbbbbbbba..',
+          '..abbbbwabbbwabbba..',
+          '..abbbbaammmaabbba..',
+          '..abbbbmmnnmmbbbba..',
+          '...abbmmmmmmmmbba...',
+          '...abbmmmmmmmmbba...',
+          '....abbMMMMMMbba....',
+          '....aaabbmmbbaaa....',
+          '...aeebbbbbbbbeea...',
+          '...abbbbbggbbbbba...',
+          '..abbbbbbgGbbbbbba..',
+          '.abbbbbbbgGbbbbbbba.',
+          '.abbbbbbbgGbbbbbbba.',
         ],
       },
     },
@@ -518,7 +518,7 @@ const PixelDogs = (() => {
     O: '#a24b3b', o: '#7a3328', y: '#d9a441', w: '#f2f2f2', v: '#c4c4c4', Z: '#151b24', X: '#4fcf8a',
     R: '#e0552b', P: '#ff9a2e', Y: '#ffd447', C: '#3a3f46', c: '#545b64',
     A: 'rgba(185, 210, 228, 0.42)', a: 'rgba(255, 255, 255, 0.75)', L: '#d9d9d9', N: '#4a4a4a', q: 'rgba(122, 180, 255, 0.35)' };
-  const FUR = { general: ['#f0f0e4', '#d0c3b4'], research: ['#e2a868', '#c98a4c'], learn: ['#f5f5f5', '#b2b2b2'], code: ['#cc4520', '#b23718'], boerse: ['#9a5b30', '#7a4524'] }; // Coden: Tentakelspitzen in Rot-Orange
+  const FUR = { general: ['#f0f0e4', '#d0c3b4'], research: ['#e2a868', '#c98a4c'], learn: ['#f5f5f5', '#b2b2b2'], code: ['#cc4520', '#b23718'], boerse: ['#8c5a33', '#6e4426'] }; // Coden: Tentakelspitzen in Rot-Orange
   const part = (rows, x, y, pal = PROP) => ({ rows, x, y, pal });
   const pawPal = (id) => ({ ...PROP, F: FUR[id][0], f: FUR[id][1] });
   const PAW = ['.KKKKK.', 'KFKFKFK', 'KFKFKFK', 'KfFFFfK'];       // liegt auf dem Rand: drei Zehen, unten etwas Schatten
@@ -533,11 +533,12 @@ const PixelDogs = (() => {
     research: [part(['fff', 'aaa', 'fff'], DX + 10, 8, DOGS.research[32].pal), part(['ddd', 'aaa', 'ddd'], DX + 19, 8, DOGS.research[32].pal)],
     learn: [part(['nnn'], DX + 10, 13, DOGS.learn[32].pal), part(['nn'], DX + 20, 13, DOGS.learn[32].pal)],
     code: [part(['.jj.', 'jjjj', 'KKKK', '.ss.'], DX + 10, 12, DOGS.code[32].pal), part(['.ll.', 'llll', 'KKKK', '.ss.'], DX + 18, 12, DOGS.code[32].pal)],
-    boerse: [part(['bb', 'aa'], DX + 11, 13, DOGS.boerse[32].pal), part(['bb', 'aa'], DX + 19, 13, DOGS.boerse[32].pal)],
+    boerse: [part(['bb', 'aa'], DX + 11, 12, DOGS.boerse[32].pal), part(['bb', 'aa'], DX + 20, 12, DOGS.boerse[32].pal)],
   };
   const blinkTrack = (id) => ({ frames: [[], BLINK[id]], seq: [[0, 3600], [1, 130], [0, 2900], [1, 130], [0, 260], [1, 110]] });
   // Blick (liegt im atmenden Kopf, wird per Klasse gezeigt): Research schaut nach links zur Lupe, Allgemein nach links unten in die Pfanne
   const LOOK = {
+    boerse: [part(['bb', 'wa', 'aa'], DX + 11, 12, DOGS.boerse[32].pal), part(['bb', 'wa', 'aa'], DX + 20, 12, DOGS.boerse[32].pal)], // Bär: Blick nach unten aufs Tablet
     research: [part(['aaaf', 'ahaf', 'aaaf'], DX + 9, 8, DOGS.research[32].pal), part(['aaad', 'ahad', 'aaad'], DX + 18, 8, DOGS.research[32].pal)],
     general: [part(['..fff', '...af', 'aab.f', '.aaa.'], DX + 8, 12, DOGS.general[32].pal), part(['.fff.', 'a.aff', 'ab...', 'aaa..'], DX + 18, 12, DOGS.general[32].pal)],
   };
@@ -664,36 +665,53 @@ const PixelDogs = (() => {
     const exit = [[4, 80], [3, 80], [2, 80], [1, 80], [0, 600]];
     return run(frames, [[0, 5000], ...enter, ...type, ...type, ...type, ...type, ...exit, [0, 3400]], enter, loop, exit);
   }
-  // Börse: hält eine kleine Chart-Tafel hoch (von vorn: dunkler Bildschirm mit Rahmen) – die Kerzen laufen nach links weiter,
-  // der Kurs steigt (grüne Kerzen), zwischendurch eine rote; solange die KI arbeitet, tickt der Chart durchgehend
-  const BOARD_W = 18, BOARD_H = 12;
-  const LEVELS = [3, 2, 3, 4, 3, 5, 6, 5, 4, 6, 7, 6, 8, 7, 9, 8, 7, 8, 9, 10, 9, 8, 6, 5, 4, 3, 4, 3, 2, 3]; // Schlusskurse (0 = unten); läuft im Kreis
-  function boardRows(k) {
-    const inner = BOARD_H - 2, n = 8; // 8 Kerzen, je 1 Spalte breit, 1 Spalte Abstand
-    const grid = Array.from({ length: inner }, () => Array(BOARD_W - 2).fill('Z'));
-    const lv = (j) => LEVELS[(k + j) % LEVELS.length];
-    for (let j = 0; j < n; j++) {
-      const a = lv(j), b = lv(j + 1), lo = Math.min(a, b), hi = Math.max(a, b), x = 1 + j * 2;
-      const col = b >= a ? 'X' : 'R';
-      for (let v = lo; v <= hi; v++) grid[inner - 1 - Math.min(v, inner - 1)][x] = col;
-      const wick = Math.min(hi + 1, inner - 1);
-      if (grid[inner - 1 - wick][x] === 'Z') grid[inner - 1 - wick][x] = 'c';
+  // Börse (Bär): holt ein Tablet hoch und schaut darauf – eine Kurslinie zeichnet sich Punkt für Punkt von links nach rechts,
+  // läuft dann weiter (neue Kurse kommen rechts dazu), vorn ein heller Punkt = aktueller Kurs; grün, solange es seit links bergauf geht, sonst rot.
+  // Dazu wackelt er ab und zu mit den Ohren (earsTrack). Solange die KI arbeitet, bleibt er am Tablet.
+  const TAB_W = 20, TAB_H = 12;
+  const LINE = [6, 5, 6, 4, 5, 3, 4, 4, 2, 3, 2, 3, 1, 2, 3, 2, 4, 3, 5, 4, 5, 6, 5, 7, 6, 4, 5, 3, 2, 3]; // Kurs je Spalte (0 = oben); läuft im Kreis
+  function tabletRows(off, shown) {
+    const iw = TAB_W - 2, ih = TAB_H - 3; // Rahmen + unten Leiste
+    const g = Array.from({ length: ih }, () => Array(iw).fill('Z'));
+    for (let y = 0; y < ih; y++) if (y % 3 === 2) for (let x = 0; x < iw; x += 2) g[y][x] = 'C'; // feines Raster
+    const v = (j) => Math.min(ih - 1, LINE[(off + j) % LINE.length] + 1);
+    const n = Math.min(iw - 1, shown);
+    const col = v(n) <= v(0) ? 'X' : 'R'; // kleiner Wert = weiter oben = gestiegen
+    for (let j = 0; j <= n; j++) {
+      const a = v(j), b = j < n ? v(j + 1) : a;
+      for (let y = Math.min(a, b); y <= Math.max(a, b); y++) g[y][j] = col;
     }
-    return ['K'.repeat(BOARD_W), ...grid.map((r) => `K${r.join('')}K`), 'K'.repeat(BOARD_W)];
+    g[v(n)][n] = 'H';
+    return ['.' + 'K'.repeat(TAB_W - 2) + '.', ...g.map((r) => `K${r.join('')}K`), `K${'c'.repeat(TAB_W - 2)}K`, `K${'c'.repeat(8)}NN${'c'.repeat(8)}K`, '.' + 'K'.repeat(TAB_W - 2) + '.'];
   }
-  function chartTrack() {
-    const bx = DX + 7;
-    const at = (y, k = 0) => [
-      part(boardRows(k), bx, y),
-      ...holdPaw('boerse', bx - 3, y + 7), ...holdPaw('boerse', bx + BOARD_W - 2, y + 7),
-    ];
-    const T = 6; // Tick-Bilder
-    const frames = [restPaws('boerse'), at(29), at(26), at(23), at(20), ...Array.from({ length: T }, (_, k) => at(20, k + 1))]; // Tafel unter dem Nasenring – das Maul bleibt zu sehen
-    const enter = [[1, 80], [2, 80], [3, 80], [4, 600]];
-    const tick = Array.from({ length: T }, (_, k) => [5 + k, 260]);
-    const loop = [...tick, [4, 420]]; // Chart läuft durchgehend weiter
+  function tabletTrack() {
+    const bx = DX + 6, Y = 20;
+    const at = (y, off = 0, shown = TAB_W - 3) => [part(tabletRows(off, shown), bx, y), ...holdPaw('boerse', bx - 3, y + 6), ...holdPaw('boerse', bx + TAB_W - 2, y + 6)];
+    const draw = Array.from({ length: 9 }, (_, k) => at(Y, 0, 1 + k * 2)); // Linie zeichnet sich
+    const scroll = Array.from({ length: 8 }, (_, k) => at(Y, k + 1)); // neue Kurse laufen rechts herein
+    const frames = [restPaws('boerse'), at(29, 0, 0), at(26, 0, 0), at(23, 0, 0), ...draw, ...scroll];
+    const D = 4, S = D + draw.length;
+    const enter = [[1, 80], [2, 80], [3, 80], [D, 260]];
+    const drawing = draw.map((_, k) => [D + k, 110]);
+    const ticking = scroll.map((_, k) => [S + k, 300]);
+    const loop = [...ticking, ...ticking, [D, 200], ...drawing]; // arbeitet: Linie läuft, wird neu gezeichnet
     const exit = [[3, 80], [2, 80], [1, 80], [0, 600]];
-    return run(frames, [[0, 5000], ...enter, ...tick, ...tick, ...exit, [0, 3600]], enter, loop, exit);
+    const looking = frames.map((_, i) => i).filter((i) => i >= D);
+    return run(frames, [[0, 4800], ...enter, ...drawing, [D + draw.length - 1, 600], ...ticking, ...ticking, ...exit, [0, 3800]], enter, loop, exit, looking);
+  }
+  // Ohren: die oberen Ohrspitzen kippen kurz nach außen bzw. innen (Zeilen 1–4)
+  const EAR_ROWS = [1, 4], EAR_COLS = { L: [3, 11], R: [20, 28] };
+  const earPart = (side, dx) => {
+    const { rows, pal } = DOGS.boerse[32], [y0, y1] = EAR_ROWS, [x0, x1] = EAR_COLS[side];
+    const out = [];
+    for (let y = y0; y <= y1; y++) { const sh = y <= y0 + 1 ? dx : 0; let r = ''; for (let x = x0 - 1; x <= x1 + 1; x++) { const sx = x - sh; r += sx >= x0 && sx <= x1 ? rows[y][sx] : '.'; } out.push(r); }
+    return part(out, DX + x0 - 1, y0, pal);
+  };
+  function earsTrack() {
+    const base = [earPart('L', 0), earPart('R', 0)];
+    const frames = [base, [earPart('L', -1), earPart('R', 0)], [earPart('L', 0), earPart('R', 1)], [earPart('L', -1), earPart('R', 1)]];
+    const twitch = [[1, 120], [0, 90], [1, 120], [0, 0]];
+    return { frames, seq: [[0, 3200], ...twitch, [0, 4200], [2, 140], [0, 100], [2, 140], [0, 5200], [3, 160], [0, 2400]], busy: { enter: [[0, 200]], loop: [[0, 2600], [3, 140], [0, 1800], [1, 120], [0, 120], [1, 120]], exit: [[0, 200]] }, inHead: true };
   }
 
   // die beiden oberen Arme (eingerollte Enden links und rechts neben dem Kopf) schwingen: Zeilen 6–11 eine Spalte nach außen bzw. innen
@@ -712,7 +730,7 @@ const PixelDogs = (() => {
   }
 
   function sceneTracks(id) {
-    return [blinkTrack(id), { general: panTrack, research: lensTrack, learn: bookTrack, boerse: chartTrack }[id]?.() || laptopTrack(), ...(id === 'code' ? [armsTrack()] : [])];
+    return [blinkTrack(id), { general: panTrack, research: lensTrack, learn: bookTrack, boerse: tabletTrack }[id]?.() || laptopTrack(), ...(id === 'code' ? [armsTrack()] : []), ...(id === 'boerse' ? [earsTrack()] : [])];
   }
   const partsSvg = (parts) => parts.map((p) => rects(p, p.x, p.y)).join('');
   function scene(id) {
@@ -721,7 +739,9 @@ const PixelDogs = (() => {
     // Kopf, Blinzeln und Blick atmen gemeinsam; Pfoten und Gegenstände bleiben stehen
     const look = LOOK[id] ? `<g class="pd-look">${partsSvg(LOOK[id])}</g>` : '';
     // Oktopus: die Arm-Enden zeichnet die Arm-Spur (sie schwingen) – im Grund-Raster bleiben sie leer
-    const base = id === 'code' ? { ...DOGS.code[32], rows: DOGS.code[32].rows.map((r, y) => (y >= ARM_ROWS[0] && y <= ARM_ROWS[1] ? r.split('').map((ch, x) => ((x >= ARM_COLS.L[0] && x <= ARM_COLS.L[1]) || (x >= ARM_COLS.R[0] && x <= ARM_COLS.R[1]) ? '.' : ch)).join('') : r)) } : DOGS[id][32];
+    const blank = (rows, [y0, y1], cols) => rows.map((r, y) => (y >= y0 && y <= y1 ? r.split('').map((ch, x) => ((x >= cols.L[0] && x <= cols.L[1]) || (x >= cols.R[0] && x <= cols.R[1]) ? '.' : ch)).join('') : r));
+    const base = id === 'code' ? { ...DOGS.code[32], rows: blank(DOGS.code[32].rows, ARM_ROWS, ARM_COLS) }
+      : id === 'boerse' ? { ...DOGS.boerse[32], rows: blank(DOGS.boerse[32].rows, EAR_ROWS, EAR_COLS) } : DOGS[id][32]; // Bär: Ohrspitzen zeichnet die Ohren-Spur
     const head = tracks.map((t, i) => (i === 0 || t.inHead ? g(t, i) : '')).join('');
     const body = `<g class="pd-breathe">${rects(base, DX, 0)}${look}${head}</g>${tracks.map((t, i) => (i === 0 || t.inHead ? '' : g(t, i))).join('')}`;
     return { html: `<svg class="pd pd-scene" width="${SCENE_W}" height="${SCENE_H}" viewBox="0 0 ${SCENE_W} ${SCENE_H}" shape-rendering="crispEdges" aria-hidden="true">${body}</svg>`, tracks };
@@ -779,7 +799,7 @@ const PixelDogs = (() => {
     research: { icon: 'search', tint: 'rgba(226, 168, 104, 0.08)', text: 'Recherchiert gründlich – nur auf vertrauenswürdigen Seiten.' },
     learn: { icon: 'book', tint: 'rgba(255, 255, 255, 0.05)', text: 'Erklärt Schulstoff verständlich, auch mit deinem Material.' },
     code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Hilft beim Programmieren. Projekte mit Vorschau folgen.' },
-    boerse: { icon: 'trend', tint: 'rgba(154, 91, 48, 0.10)', text: 'Nur Aktien: Kurse, Charts, wann rein, wann raus – fürs Planspiel Börse, mit Depot.' },
+    boerse: { icon: 'trend', tint: 'rgba(140, 90, 51, 0.10)', text: 'Nur Aktien: Echtzeitkurse, Charts, Nachrichten – wann rein, wann raus fürs Planspiel Börse.' },
   };
   const fine = (id) => (DOGS[id][64] ? 64 : 32); // feineres Raster für die großen Ansichten
   const art = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;

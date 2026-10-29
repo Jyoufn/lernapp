@@ -119,7 +119,6 @@
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-library"/></svg>Bibliothek</a>
           <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-tasks"/></svg>Aufgaben</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
-          <a class="nav-item" href="#" data-nav="boerse"><svg width="16" height="16"><use href="#o-trend"/></svg>Depot</a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -252,6 +251,7 @@
   <template id="appScripts">
     <script src="icons.js"></script><!-- gefüllte Icons (#f-…), siehe README.md -->
     <script src="chat-visuals.js"></script>
+    <script src="stock-chart.js"></script><!-- Aktienchart (```stock) für den Börsen-Agenten -->
     <script src="settings.js"></script><!-- Einstellungen; vor app.js: hängt die Schlüssel vom Gerät an /api-Anfragen -->
     <script src="app.js"></script>
     <script src="code-agent.js"></script><!-- Coding-Agent: Dateien, Code-Fenster, Vorschau -->
@@ -264,7 +264,6 @@
     <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
     <script src="docs.js"></script>
     <script src="inbox.js"></script>
-    <script src="boerse.js"></script><!-- Depot + Signale des Börsen-Agenten (Bulle) -->
   </template>
   <script src="auth.js?v=4"></script><!-- Anmeldung + Konto (Daten ins Konto), lädt danach die App -->
 </body>

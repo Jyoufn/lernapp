@@ -132,3 +132,71 @@ test('Börsen-Agent: Stufe „market“ in der Zeitleiste, auch wenn keine Kurse
   assert.equal(done.meta.count, 0);
   assert.match(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /nicht erreichbar/);
 });
+
+test('Echtzeit: Tradegate-Kurs (auch mit deutschem Komma) ersetzt den letzten Kurs; ING prüft gegen; falsche ISIN wird verworfen', async () => {
+  const b = bars(300, 0.001, 0.01, 100);
+  const last = b[b.length - 1].c;
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('tradegate'), respond: () => M.json({ bid: '1.0,00', ask: String(last * 1.01).replace('.', ','), last: String((last * 1.01).toFixed(2)).replace('.', ','), delta: '+1,00%', high: last * 1.02, low: last * 0.99, stueck: 5000 }) },
+    { match: (c) => c.url.includes('wertpapiere.ing.de'), respond: () => M.json({ price: last * 1.011, currency: 'EUR', priceChangeDate: new Date().toISOString(), exchangeName: 'Tradegate' }) },
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+  ]);
+  const a = (await B.check({ watch: ['SAP.DE'] })).watch[0];
+  assert.equal(a.realtime, true);
+  assert.ok(Math.abs(a.price - last * 1.01) < 0.02, `${a.price}`);
+  assert.equal(a.sources[0], 'Tradegate (Echtzeit)');
+  assert.ok(a.sources.some((s) => s.startsWith('ING')));
+  assert.match(B.stockLine(a), /um \d{2}:\d{2}:\d{2} Uhr \(Echtzeit/);
+  // Echtzeitkurs weit weg vom Verlauf (z. B. falsche ISIN) → nicht verwenden
+  const off = B.withLive({ bars: b, sources: ['Yahoo Finance'] }, { price: last * 3, time: Date.now(), sources: ['Tradegate (Echtzeit)'] }, 1);
+  assert.equal(off.bars[off.bars.length - 1].c, last);
+});
+
+test('Aktienchart: Zeiträume, Euro, 20/50-Tage-Linie und Echtzeitkurs als letzter Punkt', async () => {
+  const day = bars(400, 0.001, 0.01, 50);
+  const intraday = bars(100, 0, 0.002, 50).map((x, i) => ({ ...x, t: Date.now() - (100 - i) * 300000 }));
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('USDEUR'), respond: () => yahoo(bars(30, 0, 0, 0.9), 'EUR') },
+    { match: (c) => c.url.includes('finance.yahoo.com/v8') && c.url.includes('interval=5m'), respond: () => yahoo(intraday, 'USD', 'Nvidia') },
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(day, 'USD', 'Nvidia') },
+    { match: (c) => c.url.includes('tradegate'), respond: () => M.json({ bid: 45.1, ask: 45.2, last: 45.15, delta: '+0,50%' }) },
+  ]);
+  const six = await B.chartData('NVDA', '6M');
+  assert.equal(six.currency, 'EUR');
+  assert.ok(six.sma20 && six.sma50 && six.sma20.length === six.bars.length);
+  const one = await B.chartData('NVDA', '1T');
+  assert.equal(one.interval, '5m');
+  assert.equal(one.realtime, true);
+  assert.equal(one.price, 45.15);
+  assert.equal(one.bars[one.bars.length - 1].c, 45.15);
+  assert.ok(Math.abs(one.prevClose - 45.15 / 1.005) < 0.01);
+  await assert.rejects(B.chartData('<script>', '1T'));
+});
+
+test('Order-Vorschlag: Limit/Stop-Buy, Stückzahl nach Risiko und 20-%-Regel, Chance:Risiko', () => {
+  const p = B.orderPlan({ signal: 'kaufen', price: 100, ask: 100.2, stop: 94, target: 109, entry: 100 }, 50000, 50000);
+  assert.match(p.type, /^Limit 100,20/);
+  assert.equal(p.qty, 100); // 750 € Risiko / 6 € = 125 → max. 20 % = 10.000 € → 100 Stück
+  assert.equal(p.crv, 1.5);
+  const sb = B.orderPlan({ signal: 'bald', price: 98, trigger: 100.5, stop: 95, target: 110 }, 50000, 50000);
+  assert.match(sb.type, /^Stop-Buy 100,50/);
+});
+
+test('Börsen-Agent: liest Nachrichten/Ausblick zu den Werten (Websuche) und denkt mindestens auf Medium nach', async () => {
+  const b = bars(400, 0.0015);
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(b) },
+    { match: (c) => /stooq|tradegate|wertpapiere\.ing|news\.google|finance\/search/.test(c.url), respond: () => new Response('weg', { status: 503 }) },
+    { match: (c) => c.url.includes('duckduckgo') || c.url.includes('bing.com') || c.url.includes('search'), respond: () => new Response('<html></html>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Rheinmetall halten.**'])) },
+  ]);
+  const c = M.collect();
+  await W.runChat({ env: M.ENV, body: { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Soll ich Rheinmetall kaufen?' }] }, send: c.send, signal: new AbortController().signal });
+  assert.ok(c.stages().includes('browsing:active'), 'Websuche zu Rheinmetall');
+  const gen = fx.calls.filter(M.is.geminiStream).pop();
+  assert.ok(gen.body.generationConfig.thinkingConfig.thinkingBudget >= 4096, 'mindestens Medium mit Denkphase');
+  const sys = M.systemOf(gen);
+  assert.match(sys, /Bulle gegen Bär/);
+  assert.match(sys, /```stock/);
+  assert.match(sys, /MARKTLAGE: DAX/);
+});

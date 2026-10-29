@@ -80,7 +80,6 @@ const VIEW_TABS = {
   inbox: { title: 'Inbox', icon: 'i-inbox', view: () => window.Inbox },
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
-  boerse: { title: 'Depot', icon: 'o-trend', view: () => window.Boerse },
   docs: { title: 'Library', icon: 'f-file', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
@@ -102,7 +101,7 @@ window.setTabIcon = (tab, ic) => {
   old.outerHTML = ic ? docTabIcon(ic) : `<svg width="14" height="14" style="color:var(--text-3)"><use href="#${VIEW_TABS.doc.icon}"/></svg>`;
 };
 window.setTabTitle = (tab, title) => { if (!tab) return; tab.querySelector('.tab-title').textContent = title; snapToPixels([tab]); };
-// Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender, Depot (Börsen-Agent).
+// Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender.
 // Die Lupe oben öffnet den Chatverlauf (Suchfeld bekommt den Fokus).
 document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault();
@@ -1177,6 +1176,11 @@ function renderMarkdown(target, text, opts = {}) {
   });
   // Hefteintrag (```heft): nur das, was ins Heft kommt – auf Karopapier, Zeile für Zeile, Formeln schon gesetzt
   target.querySelectorAll('pre:has(code.language-heft)').forEach((pre) => pre.replaceWith(heftFigure(pre.querySelector('code'))));
+  // Aktienchart (```stock): Kerzen, Umsatz, Zeiträume, Echtzeitkurs – wie in einer Börsen-App (stock-chart.js)
+  target.querySelectorAll('pre:has(code.language-stock)').forEach((pre) => {
+    const raw = pre.querySelector('code').textContent, spec = window.StockChart?.parse(raw);
+    if (spec) pre.replaceWith(tagViz(StockChart.figure(spec), 'stock', raw)); else pre.remove();
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -1228,6 +1232,7 @@ function illustrationFigure(data) {
 }
 // Grafiken in Dokumenten: aus dem gespeicherten Quelltext neu zeichnen (gleiche Darstellung wie im Chat)
 window.renderDocViz = (kind, raw, host) => {
+  if (kind === 'stock') { const spec = window.StockChart?.parse(raw); return spec ? StockChart.figure(spec) : null; }
   const make = { chart: chartFigure, mindmap: mindmapFigure, timeline: timelineFigure, illustration: illustrationFigure }[kind];
   const data = make && ChatVisuals[kind]?.(String(raw || ''));
   if (!data) return null;
@@ -2079,7 +2084,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(window.PixelDogs?.mode === 'boerse' && window.Boerse ? { depot: window.Boerse.forAgent() } : {}), ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);

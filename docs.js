@@ -106,7 +106,7 @@ const Docs = (() => {
         const keep = (c.tagName === 'A' && a.name === 'href' && /^https?:\/\//i.test(a.value))
           || (a.name === 'style' && /^\s*((color|text-align)\s*:\s*[#\w(),.%\s-]+;?\s*)+$/i.test(a.value))
           || (c.tagName === 'FONT' && a.name === 'color' && /^#?[\w]+$/.test(a.value))
-          || (c.tagName === 'DIV' && ((a.name === 'data-viz' && /^(chart|mindmap|timeline|illustration)$/.test(a.value)) || a.name === 'data-spec'))
+          || (c.tagName === 'DIV' && ((a.name === 'data-viz' && /^(chart|mindmap|timeline|illustration|stock)$/.test(a.value)) || a.name === 'data-spec'))
           || (c.tagName === 'DIV' && ((a.name === 'data-blk' && window.DocBlocks?.TYPES.includes(a.value)) || a.name === 'data-cfg' || a.name === 'data-callout' || a.name === 'data-solid' || (a.name === 'data-radius' && /^\d{1,2}$/.test(a.value))))
           || (c.tagName === 'UL' && a.name === 'data-todo') || (c.tagName === 'LI' && a.name === 'data-done')
           || (c.tagName === 'TABLE' && ((a.name === 'data-name' && a.value.length <= 80) || (a.name === 'data-icon' && /^d:[\w-]{1,30}$/.test(a.value))))

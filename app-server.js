@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'boerse.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -36,7 +36,7 @@ const WEB = require('./lib/web');
 const TTS = require('./lib/tts');
 const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
-const BOERSE = require('./lib/boerse'); // Börsen-Agent: Kurse, Signale, Planspiel-Regeln
+const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -1233,10 +1233,9 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
     if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res);
-    // Börsen-Agent (Depot-Ansicht): Positionen/Beobachtungsliste prüfen, Marktscan, Suche
-    if (req.method === 'POST' && urlPath === '/api/boerse/check') return sendJson(res, 200, await BOERSE.check(await readBody(req, 200000)));
-    if (req.method === 'GET' && urlPath === '/api/boerse/scan') return sendJson(res, 200, await BOERSE.scan({ extra: String(new URL(req.url, 'http://x').searchParams.get('extra') || '').split(',').filter(Boolean).slice(0, 30) }));
-    if (req.method === 'GET' && urlPath === '/api/boerse/search') return sendJson(res, 200, await BOERSE.search(new URL(req.url, 'http://x').searchParams.get('q')));
+    // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
+    if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
+    if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {
