@@ -218,7 +218,7 @@ test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf), liest nur Nachrichten
   assert.ok(fx.calls.some((x) => x.url.includes('handelsblatt.com')), 'Handelsblatt wird gelesen');
   assert.ok(!fx.calls.some(M.is.analyze), 'kein Planungs-Aufruf');
   const plan = c.of('status').find((s) => s.stage === 'thinking' && s.status === 'done');
-  assert.deepEqual(plan.meta.points, ['Marktlage und Stimmung', 'Tag, Woche und Monat je Wert', 'Nachrichten und Chancen-Radar', 'Risiko-Check und Order-Plan']);
+  assert.deepEqual(plan.meta.points, ['Kurs und Charts: Tag, Woche, Monat', 'Nachrichten zum Wert', 'Chancen und Risiken', 'Einstieg, Stopp und Ziel'], 'Plan passt zur Frage (bestimmte Aktie)');
   const gen = fx.calls.filter(M.is.geminiStream).pop();
   assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192, 'High');
   assert.equal(gen.body.tools, undefined, 'keine Google-Suche im Modell');
@@ -445,4 +445,10 @@ test('Orderbuch: exakt gleiche Buchungen (ohne Order-Nr.) nicht doppelt, Verkauf
   // „alles verkauft“ ohne Stückzahl
   await H.apply(store, 'u1', { sell: [{ symbol: 'RHM.DE', price: 1600, date: '2026-10-25T10:00' }] });
   assert.deepEqual(H.replay(await H.book(store, 'u1')).items.map((x) => x.symbol), ['SAP.DE']);
+});
+
+test('Börse: „Zeig mir die Graphen meiner Depot-Aktien“ = nur Charts – keine Marktlage, keine Nachrichten, passende Schritte', () => {
+  const it = B.intentOf('Kannst du mir bitte alle Graphen von den Aktien zeigen, die in meinem Depot sind?', []);
+  assert.ok(it.chartsOnly && it.depot);
+  assert.ok(!B.intentOf('Soll ich SAP verkaufen? Zeig mir den Chart', []).chartsOnly, 'mit Empfehlungswunsch: volle Analyse');
 });

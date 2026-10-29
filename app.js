@@ -2139,7 +2139,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     }
     const from = Date.now();
     const news = s.stage === 'browsing' && s.meta?.news; // Börsen-Agent: liest nur Nachrichten seriöser Finanzseiten
-    const key = stageKey(s.stage, news);
+    const key = s.stage === 'market' && s.meta?.first ? s.meta.first : stageKey(s.stage, news); // Börse: erster Schritt passend zur Frage
     if (key === 'work') noteAnalyze(); // nach einer Recherche: erst auswerten, dann schreiben
     const step = stepLine('spin', live(key, from));
     stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null, news, key };
@@ -2179,7 +2179,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (s.stage === 'market') {
       // Börse: aus dem, was wirklich gerechnet wurde, die einzelnen Analyse-Schritte (nur die, die zur Frage gehören)
       const m = s.meta || {}, n = m.count || 0;
-      const notes = [];
+      const notes = Array.isArray(m.steps) ? m.steps.map(([k, x]) => [k, x || '']) : []; // vom Server: genau die Schritte dieser Frage
+      if (!Array.isArray(m.steps)) {
       if (m.depot != null) {
         notes.push(['portfolio', `${m.depot} ${m.depot === 1 ? 'position' : 'positions'}`]);
         if (m.depot > 1) notes.push(['allocation', '']);
@@ -2189,6 +2190,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (m.fundamentals) notes.push(['fundamentals', '']);
       if (n && (m.mode === 'ideas' || m.mode === 'both')) notes.push(['opportunities', m.radar ? `${m.radar} ${m.radar === 1 ? 'chance' : 'chances'}` : 'none right now']);
       if (n || m.depot) notes.push(['risk', '']);
+      }
       if (!notes.length) { line.innerHTML = `${P('market').sub} <span class="ph-x">· market data not reachable</span> ${dur}`; st.step.classList.add('warn'); }
       else {
         const [k0, x0] = notes.shift();
