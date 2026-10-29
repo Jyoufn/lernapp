@@ -7245,7 +7245,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 /* ===== Chancen-Radar im Chat (```chancen) – gleich ruhig wie der Aktienchart =====
    Eine Fläche (#212121, Rand #2c2c2c, Radius 14); Inhalte darin NICHT dunkler, sondern nur durch feine Ränder (#2e2e2e) getrennt.
    Farbe nur als Bedeutung: Grün = Plus/Kaufen, Rot = Minus, Orange = Beobachten. Zahlen in Inter mit gleich breiten, offenen Ziffern. */
-.chn { --line: #2e2e2e; margin: 14px 0 18px; padding: 14px 16px 16px; border: 1px solid #2c2c2c; border-radius: 14px; background: #212121; max-width: 760px;
+.chn { --line: rgba(255, 255, 255, 0.07); margin: 14px 0 18px; padding: 14px 16px 16px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; background: var(--main-bg); max-width: 760px;
   font-feature-settings: "tnum" 1; }
 /* Zahlen in allen Börsen-Karten (auch Aktienchart): gleich breite, offene Ziffern von Inter – ruhiger zu lesen */
 .chn-nums, .stk-price, .stk-chg, .stk-mini-c, .stk-tip, .stk-plot text { font-feature-settings: "tnum" 1, "ss01" 1; }
@@ -7265,6 +7265,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .chn-verdict.kaufen .chn-vtag, .chn-badge.kaufen { background: rgba(52, 199, 120, 0.12); color: #4fcf8a; }
 .chn-badge.beobachten { background: rgba(251, 146, 60, 0.12); color: #fb9a52; }
 .chn-group { margin-top: 14px; }
+.chn-head + .chn-body .chn-group:first-child { margin-top: 12px; }
 .chn-gh { display: block; margin: 0 2px 6px; color: var(--text-3); font-size: 12px; font-weight: 600; }
 .chn-gh i { color: var(--text-4); font-style: normal; font-weight: 500; }
 .chn-list { display: flex; flex-direction: column; gap: 6px; }
@@ -7292,7 +7293,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 /* ===== „Meine Käufe“ des Börsen-Bären (boerse-bestand.js): EIN Kasten mit feinem Rand auf dem Chat-Hintergrund (keine eigene Fläche),
    oben „Meine Käufe“ mit den Zahlen, rechts Aktualisieren und „Hinzufügen“; darunter die Käufe als Zeilen mit feinen Trennlinien.
    Farbe nur für Plus (grün) und Minus (rot). Formular: je Angabe eine Zeile wie in den Einstellungen. */
-.bst { margin: 16px 0 20px; max-width: 760px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; background: none; font-feature-settings: "tnum" 1; }
+.bst { margin: 16px 0 20px; max-width: 760px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; background: var(--main-bg); font-feature-settings: "tnum" 1; }
 .bst-top { display: flex; align-items: center; gap: 6px; min-height: 58px; padding: 10px 12px 10px 16px; }
 .bst-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .bst-title b { color: var(--text); font-size: 14px; font-weight: 600; }
@@ -7366,3 +7367,10 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .q-body .pi-text { color: var(--text-2); }
 .q-body .chips { margin-top: 0; }
 .q-body .chips:empty { display: none; }
+
+/* Mein Depot: Abschnitt „Verkauft“ – gleiche Zeilen, nicht klickbar, Status als graue Schrift */
+.bst-sec { padding: 14px 16px 6px; border-top: 1px solid rgba(255, 255, 255, 0.07); color: var(--text-4); font-size: 12px; font-weight: 600; }
+.bst-sec + .bst-row { border-top: 0; }
+.bst-line.static { cursor: default; }
+.bst-line.static:hover { background: none; }
+.bst-act.muted { color: var(--text-4); font-weight: 500; }

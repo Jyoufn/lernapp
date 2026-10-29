@@ -125,3 +125,19 @@ test('feste Zugangsdaten aus Vercel: LOGIN_EMAIL/LOGIN_PASSWORD, direkt ohne Cod
   assert.equal(d2.mode, 'direct');
   assert.equal((await A.sessionUser(store, d2.session.token)).id, uid);
 });
+
+test('Löschen ist endgültig: kein Papierkorb, auch aus Rettungs-Kopien entfernt, kommt von anderen Geräten nicht zurück', async () => {
+  const ACC = require('../lib/accounts');
+  const store = require('../lib/store').memoryStore();
+  await store.hset('u:u9:chats:papierkorb', { alt: '{"id":"calt01"}' }); // Rest aus einer früheren Version
+  await ACC.storeChats(store, 'u9', { chats: [{ id: 'cabcde1', title: 'Geheim', history: [{ role: 'user', text: 'x' }], updated: 1 }, { id: 'cabcde2', title: 'Bleibt', history: [], updated: 1 }] });
+  await ACC.addRecovery(store, 'u9', { chats: [{ id: 'cabcde1', title: 'Geheim' }, { id: 'cabcde2', title: 'Bleibt' }] });
+  await ACC.storeChats(store, 'u9', { chats: [], deleted: ['cabcde1'] });
+  const { chats } = await ACC.loadChats(store, 'u9');
+  assert.deepEqual(chats.map((c) => c.id), ['cabcde2']);
+  assert.deepEqual(await store.hgetall('u:u9:chats:papierkorb'), {}, 'kein Papierkorb');
+  const rec = Object.values(await store.hgetall('u:u9:wiederherstellung')).map((v) => JSON.parse(v));
+  assert.ok(rec.every((b) => !b.chats.some((c) => c.id === 'cabcde1')), 'auch aus der Rettungs-Kopie entfernt');
+  await ACC.storeChats(store, 'u9', { chats: [{ id: 'cabcde1', title: 'Geheim', history: [], updated: 9 }] }); // altes Gerät schickt ihn noch
+  assert.deepEqual((await ACC.loadChats(store, 'u9')).chats.map((c) => c.id), ['cabcde2'], 'gelöscht bleibt gelöscht');
+});

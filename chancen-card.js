@@ -40,11 +40,7 @@ const ChancenCard = (() => {
   function body(d) {
     const picks = (d.picks || []).filter((p) => p.verdict !== 'meiden');
     if (!picks.length) return '<div class="chn-empty">Gerade erfüllt kein Wert alle Bedingungen – heute lieber abwarten.</div>';
-    const buy = picks.filter((p) => p.verdict === 'kaufen');
-    return `<div class="chn-verdict ${buy.length ? 'kaufen' : 'beobachten'}"><span class="chn-vtag">${buy.length ? 'Kaufen' : 'Abwarten'}</span><span>${buy.length
-        ? `${esc(buy.map((p) => p.name).join(', '))} ${buy.length === 1 ? 'erfüllt' : 'erfüllen'} alle Bedingungen.`
-        : 'Gerade passt bei keinem Wert alles für einen Kauf – diese Werte im Blick behalten.'}</span></div>
-      ${[['kaufen', 'Jetzt kaufen'], ['beobachten', 'Beobachten']].map(([v, h]) => {
+    return `${[['kaufen', 'Jetzt kaufen'], ['beobachten', 'Beobachten']].map(([v, h]) => {
         const l = picks.filter((p) => (p.verdict === 'kaufen' ? 'kaufen' : 'beobachten') === v).slice(0, v === 'kaufen' ? 99 : 10);
         return l.length ? `<div class="chn-group"><span class="chn-gh">${h} <i>${l.length}</i></span><div class="chn-list">${l.map(row).join('')}</div></div>` : '';
       }).join('')}`;
@@ -59,7 +55,7 @@ const ChancenCard = (() => {
     const draw = (d) => {
       const t = d.asOf ? new Date(d.asOf).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
       fig.querySelector('.chn-sub').textContent = [d.checked ? `${d.checked} Planspiel-Werte geprüft` : 'Planspiel-Werte', d.mood ? `Markt ${d.mood}` : '', t ? `Stand ${t} Uhr` : ''].filter(Boolean).join(' · ');
-      fig.querySelector('.chn-body').innerHTML = body(d) + '<p class="chn-note">Signale aus dem Chancen-Radar (Algorithmus) – Wahrscheinlichkeiten, keine Garantie.</p>';
+      fig.querySelector('.chn-body').innerHTML = body(d);
     };
     if (Array.isArray(spec.picks)) draw(spec); else load().then(draw);
     // „Mit dem Bären besprechen“ → Frage ins Eingabefeld dieses Chats und abschicken

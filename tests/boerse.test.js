@@ -372,7 +372,7 @@ test('Börsen-Agent: „Ich habe 40 SAP zu 231 € gekauft“ – der Bär notie
   const out2 = M.collect();
   await W.runChat({ env: M.ENV, body: body2, send: out2.send, signal: new AbortController().signal });
   const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
-  assert.match(sys, /MEINE KÄUFE \(vom Nutzer im Chat genannt/);
+  assert.match(sys, /MEINE KÄUFE \(vom Nutzer genannt/);
   assert.match(sys, /EIGENE POSITION: 40 Stück/);
   assert.match(out2.text(), /```bestand/);
 });
@@ -402,4 +402,27 @@ test('Handelstagebuch/Screenshot: Aktie über ISIN oder Namen zugeordnet, nochma
   assert.equal(d2.added.length + d2.sold.length, 0);
   assert.equal(d2.skipped, 3);
   assert.deepEqual(Object.fromEntries(H.merged(await H.list(store, 'u1')).map((x) => [x.symbol, x.qty])), { 'SAP.DE': 40, FTNT: 40 });
+});
+
+test('Mein Depot aus dem Orderbuch: Bargeld = 50.000 − Käufe + Verkäufe (mit Gebühren), Verkäufe mit Plus, Depotwert und Performance', async () => {
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  await H.apply(store, 'u1', {
+    add: [{ symbol: 'SAP.DE', qty: 40, price: 200, date: '2026-10-02T10:00', fee: 24, ref: 'a' }, { symbol: 'RHM.DE', qty: 5, price: 1600, date: '2026-10-03T10:00', ref: 'b' }],
+    sell: [{ symbol: 'RHM.DE', qty: 5, price: 1700, date: '2026-10-20T10:00', fee: 25.5, ref: 'c' }],
+  });
+  const raw = bars(400, 0.001, 0.005, 200), shift = Date.now() - raw.at(-1).t;
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('finance.yahoo.com/v8'), respond: () => yahoo(raw.map((x) => ({ ...x, t: x.t + shift }))) },
+    { match: () => true, respond: () => new Response('weg', { status: 503 }) },
+  ]);
+  const o = await H.overview(store, 'u1', { maxAgeMs: 0 });
+  // Käufe: 8.000 + 24 und 8.000 + 24 (0,3 %) – Verkauf: 8.500 − 25,5
+  assert.equal(o.depot.cash, 50000 - 8024 - 8024 + 8500 - 25.5);
+  assert.equal(o.sold.length, 1);
+  assert.equal(o.sold[0].plus, 500, 'Plus ohne Gebühren');
+  assert.equal(o.items.length, 1, 'nur SAP noch offen');
+  assert.equal(o.depot.value, +(o.depot.cash + o.items[0].value).toFixed(2));
+  assert.equal(o.depot.trades, 3);
+  assert.match(H.text(await H.list(store, 'u1'), await H.book(store, 'u1')), /SCHON VERKAUFT:[\s\S]*BARGELD/);
 });

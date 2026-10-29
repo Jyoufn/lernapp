@@ -108,7 +108,7 @@ async function handleChat(req, res, user = null) {
     const store = accountStore();
     Object.defineProperty(body, 'radarStore', { value: store, enumerable: false }); // Börsen-Agent: gespeicherter Chancen-Radar
     // „Meine Käufe“: lesen und – wenn der Bär im Chat etwas notiert – ändern (nur das eigene Konto)
-    if (user?.id && store) Object.defineProperty(body, 'holdingsCtl', { value: { list: () => HOLD.list(store, user.id), apply: (c) => HOLD.apply(store, user.id, c) }, enumerable: false });
+    if (user?.id && store) Object.defineProperty(body, 'holdingsCtl', { value: { list: () => HOLD.list(store, user.id), book: () => HOLD.book(store, user.id), apply: (c) => HOLD.apply(store, user.id, c) }, enumerable: false });
   }
   const sse = startSse(res);
   const controller = new AbortController();

@@ -35,7 +35,14 @@ const BoerseBestand = (() => {
   const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
   function rows(d, open) {
     const items = [...(d.items || [])].sort((a, b) => (ORDER[a.action] ?? 5) - (ORDER[b.action] ?? 5) || (b.value || 0) - (a.value || 0));
-    if (!items.length) return '<div class="bst-none">Noch keine Käufe.</div>';
+    const sold = d.sold || [];
+    if (!items.length && !sold.length) return '<div class="bst-none">Noch keine Käufe.</div>';
+    const soldRows = sold.length ? `<div class="bst-sec">Verkauft</div>${sold.map((x) => `<div class="bst-row sold"><div class="bst-line static">
+          <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · ${eur(x.buyPrice)} → ${eur(x.sellPrice)} · ${day(x.date)}</small></span>
+          <span class="bst-grow"></span>
+          <span class="bst-p ${tone(x.plus)}"><b>${signed(x.plus)}</b><small>${signed(x.plusPct, ' %')}</small></span>
+          <span class="bst-act muted">Verkauft</span></div></div>`).join('')}` : '';
+    if (!items.length) return `<div class="bst-none">Gerade keine offenen Positionen.</div>${soldRows}`;
     return items.map((x) => `<div class="bst-row${open === x.symbol ? ' open' : ''}">
         <button type="button" class="bst-line" data-sym="${esc(x.symbol)}" aria-expanded="${open === x.symbol}">
           <span class="bst-n"><b>${esc(x.name)}</b><small>${nf(x.qty, x.qty % 1 ? 2 : 0)} Stk · gekauft zu ${eur(x.buyPrice)} · ${day(x.date)}</small></span>
@@ -49,7 +56,7 @@ const BoerseBestand = (() => {
           <div class="bst-acts"><button type="button" class="st-btn dark" data-ask="${esc(`Schau dir meine Position ${x.name} (${x.symbol}) an: verkaufen, behalten oder beobachten?`)}">Mit dem Bären besprechen</button>
             <button type="button" class="st-btn dark" data-del="${esc(x.symbol)}">Entfernen</button></div>
         </div></div>
-      </div>`).join('');
+      </div>`).join('') + soldRows;
   }
   // Hinzufügen: je Angabe eine Zeile wie in den Einstellungen – Aktie (Suche), Datum, Uhrzeit, Stück; Kaufkurs optional (sonst Kurs zu diesem Zeitpunkt)
   const todayIso = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
@@ -64,7 +71,7 @@ const BoerseBestand = (() => {
   function figure() {
     const fig = document.createElement('figure');
     fig.className = 'bst';
-    fig.innerHTML = `<div class="bst-top"><span class="bst-title"><b>Meine Käufe</b><span class="bst-sub"></span></span>
+    fig.innerHTML = `<div class="bst-top"><span class="bst-title"><b>Mein Depot</b><span class="bst-sub"></span></span>
         <button type="button" class="bst-icon" data-reload title="Aktualisieren" aria-label="Aktualisieren"><svg width="16" height="16" aria-hidden="true"><use href="#i-refresh"/></svg></button>
         <button type="button" class="st-btn dark bst-addbtn" data-add>Hinzufügen</button></div>
       <div class="bst-form" hidden></div><div class="bst-rows"></div>`;
@@ -73,8 +80,10 @@ const BoerseBestand = (() => {
     const paint = () => {
       const d = st.d; if (!d) return;
       const pct = d.invested ? (d.plus / d.invested) * 100 : null;
-      sub.innerHTML = d.error ? 'Gerade nicht erreichbar' : (d.items || []).length
-        ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
+      const dp = d.depot;
+      sub.innerHTML = d.error ? 'Gerade nicht erreichbar'
+        : dp ? `Depotwert ${eur(dp.value)} · Bargeld ${eur(dp.cash)} · <span class="${tone(dp.perf)}">${signed(dp.perf)} (${signed(dp.perfPct, ' %')})</span> · ${dp.trades} Orders`
+        : (d.items || []).length ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
       list.innerHTML = rows(d, st.open);
     };
     const draw = async (fresh) => {
