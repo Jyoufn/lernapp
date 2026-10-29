@@ -1947,8 +1947,76 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     });
   };
 
+  /* Tiefen-Recherche (Research-Agent): eigener Bereich in der Zeitleiste statt einzelner Zeilen –
+     Phasen (Plan · Search · Read · Compare · Write), Teilfragen mit Anzahl Quellen, gelesene Quellen als Chips, Vergleich als Balken */
+  let deepUI = null;
+  const DEEP_PHASES = [['plan', 'Plan'], ['search', 'Search'], ['read', 'Read'], ['compare', 'Compare'], ['write', 'Write']];
+  const deepPanel = () => {
+    if (deepUI) return deepUI;
+    const root = el('div', 'step dr');
+    root.innerHTML = `<div class="dr-phases">${DEEP_PHASES.map(([k, l]) => `<span class="dr-ph" data-ph="${k}"><i></i>${l}</span>`).join('<span class="dr-line"></span>')}</div>
+      <div class="dr-sec dr-subs" hidden><div class="dr-h">Questions</div><ol></ol></div>
+      <div class="dr-sec dr-src" hidden><div class="dr-h">Sources <span class="dr-n"></span></div><div class="chips"></div></div>
+      <div class="dr-sec dr-cmp" hidden><div class="dr-h">Comparison</div><div class="dr-bar"></div><div class="dr-legend"></div></div>`;
+    ensureWork().steps.append(root);
+    deepUI = { root, sources: [], subs: new Map(), found: 0, failed: 0, phase: null };
+    return deepUI;
+  };
+  const deepPhase = (ph) => {
+    const ui = deepPanel(), idx = DEEP_PHASES.findIndex(([k]) => k === (ph === 'deepen' ? 'read' : ph));
+    if (idx < 0) return;
+    ui.root.querySelectorAll('.dr-ph').forEach((x, i) => { x.classList.toggle('done', i < idx); x.classList.toggle('on', i === idx); });
+    const act = { plan: ['think', 'Planning the research'], search: ['search', 'Searching sources'], read: ['read', 'Reading sources'], deepen: ['search', 'Filling the gaps'], compare: ['think', 'Comparing sources'], write: ['write', 'Writing the report'] }[ph];
+    if (act && ui.phase !== ph) setActivity(...act);
+    ui.phase = ph;
+  };
+  const onDeep = (e) => {
+    const ui = deepPanel();
+    const late = ['deepen', 'compare'].includes(ui.phase) && ['search', 'read'].includes(e.phase); // Lücken schließen: Anzeige springt nicht zurück
+    if ((!e.done || e.phase === 'write') && !late) deepPhase(e.phase);
+    if (e.phase === 'plan' && e.subs) {
+      const ol = ui.root.querySelector('.dr-subs ol');
+      ol.replaceChildren(...e.subs.map((x) => {
+        const li = el('li', 'dr-sub');
+        li.innerHTML = `<span class="spinner"></span><span class="dr-q"></span><span class="dr-c"></span>`;
+        li.querySelector('.dr-q').textContent = x.q;
+        ui.subs.set(x.id, { li, n: 0 });
+        return li;
+      }));
+      ui.root.querySelector('.dr-subs').hidden = false;
+    }
+    if (e.phase === 'search' && e.results != null) ui.found += e.results;
+    if (e.phase === 'read' && e.source) {
+      ui.sources.push({ n: e.source.n, title: e.source.title, domain: e.source.domain, url: e.source.url });
+      (e.source.subs || []).forEach((id) => { const s = ui.subs.get(id); if (s) { s.n++; s.li.querySelector('.dr-c').textContent = `${s.n} ${s.n === 1 ? 'source' : 'sources'}`; } });
+      const box = ui.root.querySelector('.dr-src');
+      box.hidden = false;
+      fillChips(box.querySelector('.chips'), ui.sources, () => openSourcesModal(ui.sources, null));
+    }
+    if (e.phase === 'read' && e.failed) ui.failed++;
+    if (e.phase === 'read' || e.phase === 'search') {
+      const n = ui.root.querySelector('.dr-n');
+      n.textContent = ui.sources.length ? `${ui.sources.length} read${ui.found ? ` · ${ui.found} found` : ''}` : ui.found ? `${ui.found} found` : '';
+    }
+    if ((e.phase === 'read' && e.done) || e.phase === 'compare') ui.subs.forEach((s) => s.li.classList.add('done'));
+    if (e.phase === 'compare' && e.done && e.stats) {
+      const st = e.stats, box = ui.root.querySelector('.dr-cmp');
+      box.querySelector('.dr-bar').innerHTML = [['agree', st.agree], ['conflict', st.conflict], ['single', st.single]].filter(([, v]) => v)
+        .map(([k, v]) => `<span class="${k}" style="flex:${v}" title="${v}"></span>`).join('');
+      box.querySelector('.dr-legend').innerHTML = `<b>${st.claims}</b> claims checked · <span class="agree">${st.agree} confirmed by several sources</span>`
+        + (st.conflict ? ` · <span class="conflict">${st.conflict} contradicting</span>` : '') + (st.single ? ` · <span class="single">${st.single} single source</span>` : '');
+      box.hidden = false;
+    }
+    scrollToBottom();
+  };
   const startStage = (s) => {
     if (s.stage === 'searching_sources' && stages.browsing) stages.browsing.step.remove();
+    if (s.stage === 'searching_sources' && s.meta?.deep) { // Tiefen-Recherche: eigener Bereich (siehe onDeep)
+      stages[s.stage] = { step: deepPanel().root, from: Date.now(), serverFrom: Date.parse(s.ts) || null, deep: true };
+      deepPhase('plan');
+      scrollToBottom();
+      return;
+    }
     const from = Date.now();
     const news = s.stage === 'browsing' && s.meta?.news; // Börsen-Agent: liest nur Nachrichten seriöser Finanzseiten
     const step = stepLine('spin', `<span class="shimmer">${news ? 'Reading the news' : STAGE_TEXT[s.stage]}</span><span class="t live" data-from="${from}">1s</span>`);
@@ -1964,6 +2032,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const st = stages[s.stage];
     if (!st || st.ended) return;
     st.ended = true;
+    if (st.deep) { deepUI?.subs.forEach((x) => x.li.classList.add('done')); return; } // Tiefen-Recherche: Bereich bleibt, Phase „Write“ läuft weiter
     const dur = `<span class="t">${st.serverFrom && s.ts ? secs(st.serverFrom, Date.parse(s.ts)) : secs(st.from)}</span>`;
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
@@ -2135,6 +2204,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (event === 'status') await onStatus(data);
       else if (event === 'research') onResearch(data);
       else if (event === 'web') onWeb(data);
+      else if (event === 'deep') onDeep(data);
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort
@@ -2182,6 +2252,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     else if (err.name !== 'AbortError') { errorText = err.message || 'Verbindung unterbrochen'; msgEl.append(errorCard(msgEl, errorText, null)); scrollToBottom(); } // gestoppt: kein Hinweis – unten erscheint „Neu starten“
   } finally {
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
+    if (deepUI) { deepUI.root.querySelectorAll('.dr-ph').forEach((x) => { x.classList.remove('on'); if (!signal.aborted && !failed) x.classList.add('done'); }); deepUI.root.querySelectorAll('.dr-sub .spinner').forEach((x) => x.remove()); }
     clearInterval(timer);
     removePending();
     endThought();

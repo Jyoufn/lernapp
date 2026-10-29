@@ -720,3 +720,30 @@ test('Überlastung (503): dasselbe Modell wird kurz danach noch einmal gefragt, 
     assert.equal(n, 2);
   } finally { f.restore(); }
 });
+
+test('Research-Agent: Tiefen-Recherche statt einfacher Suche – Phasen gehen an die App, Quellenvergleich steht im Prompt', async () => {
+  const DEEP = require('../lib/deepresearch');
+  const orig = DEEP.run;
+  DEEP.run = async ({ emit }) => {
+    emit({ phase: 'plan', done: true, subs: [{ id: 1, q: 'Was ist die Lichtreaktion?' }] });
+    emit({ phase: 'read', source: { n: 1, title: 'Lexikon', domain: 'bpb.de', url: 'https://bpb.de/a', subs: [1] } });
+    return { status: 'ok', subs: [{ id: 1, q: 'Was ist die Lichtreaktion?' }], counts: { queries: 3, found: 9, fetched: 3, failed: 0, evaluated: 3, used: 3, cited: 0 }, failures: [],
+      sources: [1, 2, 3].map((n) => ({ id: `s${n}`, n, title: `Quelle ${n}`, domain: `q${n}.de`, url: `https://q${n}.de`, type: 'web', text: `Text ${n} zur Lichtreaktion`, publisher: `q${n}.de` })),
+      comparison: { subs: [{ id: 1, claims: [{ claim: 'ATP entsteht in den Thylakoiden', sources: [1, 3], status: 'agree', note: '' }], gaps: [] }], quality: [], followUp: [], stats: { claims: 1, agree: 1, conflict: 0, single: 0, high: 0 } } };
+  };
+  fx = M.installFetch([
+    { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
+    { match: M.is.verify, respond: () => M.nvidiaJson({ verdict: 'ok', issues: [] }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Kurzfazit:** Licht wird zu ATP [1][3].'])) },
+  ]);
+  try {
+    const r = await run({ ...msg('Recherchiere gründlich: Wie funktioniert die Lichtreaktion?'), agent: 'research', effort: 'high' });
+    assert.equal(r.result.status, 'completed');
+    assert.ok(r.of('deep').some((e) => e.phase === 'plan' && e.subs?.length === 1), 'Phasen kommen bei der App an');
+    const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+    assert.match(sys, /TIEFEN-RECHERCHE: 3 Quellen gelesen und verglichen/);
+    assert.match(sys, /\[ÜBEREINSTIMMEND\] ATP entsteht in den Thylakoiden \(Quellen \[1\] \[3\]\)/);
+    assert.match(sys, /<quelle n="3"/);
+    assert.ok(r.of('research').some((e) => e.status === 'done' && e.sources.length === 3));
+  } finally { DEEP.run = orig; }
+});
