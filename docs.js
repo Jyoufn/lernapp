@@ -90,9 +90,9 @@ const Docs = (() => {
   const docIcon = (d) => (d?.icon && window.DocIcons?.has(d.icon.name) && /^#[\da-f]{6}$/i.test(d.icon.c || '') ? d.icon : null);
   const plain = (html) => { const d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent || ''; };
   // leer = kein Titel, keine Beschreibung, kein Text → erscheint weder als Tab noch in Listen
-  const isEmpty = (d) => !d.title.trim() && !(d.subtitle || '').trim() && !plain(d.content).trim() && !/data-blk|<hr|data-doclink|<table|data-todo|data-callout/i.test(d.content || '');
+  const isEmpty = (d) => !d.title.trim() && !(d.subtitle || '').trim() && !plain(d.content).trim() && !/data-blk|<hr|data-doclink|<table|data-todo|data-callout|data-math/i.test(d.content || '');
   // KI-HTML säubern: nur einfache Textauszeichnung, keine Skripte/Styles außer Farbe und Ausrichtung
-  const ALLOWED = new Set(['H1', 'H2', 'H3', 'H4', 'P', 'UL', 'OL', 'LI', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'BLOCKQUOTE', 'BR', 'A', 'SPAN', 'DIV', 'FONT', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'HR']);
+  const ALLOWED = new Set(['H1', 'H2', 'H3', 'H4', 'P', 'UL', 'OL', 'LI', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'BLOCKQUOTE', 'BR', 'A', 'SPAN', 'DIV', 'FONT', 'TABLE', 'THEAD', 'TBODY', 'TR', 'TH', 'TD', 'HR', 'PRE', 'CODE', 'SUP', 'SUB']); // PRE/CODE: Code aus dem Chat, SUP/SUB: x², H₂O
   function clean(html) {
     const t = document.createElement('template'); t.innerHTML = String(html || '');
     const walk = (n) => [...n.childNodes].forEach((c) => {
@@ -110,15 +110,40 @@ const Docs = (() => {
           || (c.tagName === 'DIV' && ((a.name === 'data-blk' && window.DocBlocks?.TYPES.includes(a.value)) || a.name === 'data-cfg' || a.name === 'data-callout' || a.name === 'data-solid' || (a.name === 'data-radius' && /^\d{1,2}$/.test(a.value))))
           || (c.tagName === 'UL' && a.name === 'data-todo') || (c.tagName === 'LI' && a.name === 'data-done')
           || (c.tagName === 'TABLE' && ((a.name === 'data-name' && a.value.length <= 80) || (a.name === 'data-icon' && /^d:[\w-]{1,30}$/.test(a.value))))
-          || (c.tagName === 'A' && a.name === 'data-doclink' && /^[\w-]{1,40}$/.test(a.value));
+          || (c.tagName === 'A' && a.name === 'data-doclink' && /^[\w-]{1,40}$/.test(a.value))
+          || (c.tagName === 'SPAN' && (a.name === 'data-math' || a.name === 'data-display')); // Formel (TeX) – wird im Dokument mit KaTeX gesetzt
         if (!keep) c.removeAttribute(a.name);
       });
       if (c.tagName === 'A' && !c.hasAttribute('data-doclink')) { c.setAttribute('target', '_blank'); c.setAttribute('rel', 'noopener'); }
       if (c.tagName === 'DIV' && c.hasAttribute('data-viz')) { c.className = 'dc-viz'; c.replaceChildren(); }
       if (c.tagName === 'DIV' && c.hasAttribute('data-blk')) { c.className = 'dc-blk'; c.replaceChildren(); }
+      if (c.tagName === 'SPAN' && c.hasAttribute('data-math')) c.replaceChildren();
     });
     walk(t.content);
     return t.innerHTML;
+  }
+
+  // Stelle zum Ergänzen: Ende des Abschnitts unter der Überschrift „after“ (bis zur nächsten Überschrift gleicher oder höherer Ebene);
+  // ohne passende Überschrift → null (= ans Ende)
+  function sectionEnd(root, after) {
+    const norm = (t) => String(t || '').toLowerCase().replace(/^[\d.\s]+/, '').replace(/\s+/g, ' ').trim();
+    const want = norm(after);
+    if (!want) return null;
+    const heads = [...root.children].filter((n) => /^H[1-4]$/.test(n.tagName));
+    const head = heads.find((h) => norm(h.textContent) === want) || heads.find((h) => norm(h.textContent).includes(want) || (want.length > 3 && want.includes(norm(h.textContent))));
+    if (!head) return null;
+    const lv = +head.tagName[1];
+    let ref = head.nextElementSibling;
+    while (ref && !(/^H[1-4]$/.test(ref.tagName) && +ref.tagName[1] <= lv)) ref = ref.nextElementSibling;
+    return ref;
+  }
+  // Neues HTML in vorhandenes einsetzen (ohne Editor), z. B. für eine Änderung, die erst noch akzeptiert wird
+  function insertInto(content, html, after = '') {
+    const root = document.createElement('div'); root.innerHTML = content || '';
+    const ref = sectionEnd(root, after);
+    const tmp = document.createElement('div'); tmp.innerHTML = html || '';
+    [...tmp.childNodes].forEach((n) => root.insertBefore(n, ref));
+    return root.innerHTML;
   }
 
   /* ---------- Cover-Motive als Vektorgrafik (scharf in jeder Größe) ----------
@@ -839,9 +864,17 @@ const Docs = (() => {
       e.state = 'work'; delete e.error; refreshMsg(m);
       try {
         const ups = editUploads.get(e.id) || [];
-        const o = await docAi({ mode: 'edit', instruction: e.instruction, doc: { title: d.title, html: d.content || '' }, uploads: ups.length });
+        // Gesprächsverlauf mitgeben: was eingefügt werden soll, steht meist in der Antwort davor – sonst schreibt die KI etwas Eigenes (Kürzeres)
+        const chat = dChats(d).find((c) => c.messages.includes(m));
+        const msgs = chat ? chat.messages.slice(0, chat.messages.indexOf(m) + 1) : [m];
+        const ctx = msgs.slice(-12).map((x) => `${x.role === 'user' ? 'Nutzer' : 'KI'}: ${x.text || ''}`).join('\n\n');
+        const prevAnswer = [...msgs].reverse().find((x) => x.role === 'assistant' && x !== m && (x.text || '').length > 200)?.text || '';
+        const source = (m.text || '').length > 300 ? m.text : prevAnswer;
+        const adding = window.docWantsAppend?.(e.instruction);
+        const o = await docAi({ mode: adding ? 'append' : 'edit', instruction: e.instruction, chat: ctx, source, doc: { title: d.title, html: d.content || '' }, uploads: ups.length });
         if (m.edit !== e) return;
         o.html = fillUploads(o.html, ups);
+        if (adding) o.html = insertInto(d.content || '', clean(o.html), String(o.after || '')); // nur das Neue kam zurück → einsetzen, Rest bleibt
         Object.assign(e, { state: 'pending', html: o.html, title: o.title || '', summary: String(o.reply || '').trim().slice(0, 400), stat: diffStat(d.content, o.html) });
       } catch (err) {
         if (m.edit !== e) return;
@@ -1226,6 +1259,13 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     }
     // Grafiken: im Dokument steht nur der Platzhalter mit Quelltext, gezeichnet wird beim Anzeigen
     function renderViz(root) {
+      // Formeln (aus dem Chat übernommen): mit KaTeX setzen, nicht direkt bearbeitbar – gespeichert wird nur der TeX-Text
+      root?.querySelectorAll('[data-math]').forEach((m) => {
+        if (m.firstChild) return;
+        m.classList.add('dc-math'); m.contentEditable = 'false';
+        try { m.innerHTML = window.katex ? katex.renderToString(m.dataset.math, { displayMode: m.hasAttribute('data-display'), throwOnError: false }) : esc(m.dataset.math); }
+        catch { m.textContent = m.dataset.math; }
+      });
       root?.querySelectorAll('[data-viz]').forEach((v) => {
         if (v.firstElementChild) return;
         v.classList.add('dc-viz', 'md'); v.contentEditable = 'false';
@@ -1255,6 +1295,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const x = c.cloneNode(true);
       window.DocBlocks?.strip(x);
       x.querySelectorAll('[data-viz]').forEach((v) => { v.replaceChildren(); v.className = 'dc-viz'; v.removeAttribute('contenteditable'); });
+      x.querySelectorAll('[data-math]').forEach((m) => { m.replaceChildren(); m.removeAttribute('class'); m.removeAttribute('contenteditable'); });
       x.querySelectorAll('.dc-in').forEach((n) => n.classList.remove('dc-in'));
       return x.innerHTML;
     }
@@ -2062,11 +2103,29 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       for (const b of blocks) {
         if (!(api.open && doc?.id === id)) return;
         c.append(b);
-        if (b.nodeType === 1) { b.classList.add('dc-in'); renderViz(b.matches?.('[data-viz]') ? c : b); }
+        if (b.nodeType === 1) { b.classList.add('dc-in'); renderViz(b.matches?.('[data-viz], [data-math]') ? c : b); }
         await new Promise((r) => setTimeout(r, b.nodeType === 1 && /^(H[1-4])$/.test(b.tagName) ? 140 : 70));
       }
       await new Promise((r) => setTimeout(r, 450));
       c.querySelectorAll('.dc-in').forEach((n) => n.classList.remove('dc-in'));
+      commit();
+    }
+
+    // Ergänzen: neue Blöcke einsetzen, ohne das Vorhandene anzufassen – ans Ende des Abschnitts unter der Überschrift „after“
+    // (bis zur nächsten Überschrift gleicher oder höherer Ebene), sonst ans Ende des Dokuments; erscheinen nacheinander wie bei typeIn
+    async function insertBlocks(id, html, after = '') {
+      const d = docOf(id); if (!d) return;
+      const live = api.open && doc?.id === id && content();
+      if (!live) { d.content = insertInto(d.content, html, after); touch(d); return; }
+      const ref = sectionEnd(live, after);
+      const tmp = document.createElement('div'); tmp.innerHTML = html;
+      wrapTables(tmp);
+      for (const b of [...tmp.childNodes]) {
+        live.insertBefore(b, ref);
+        if (b.nodeType === 1) { b.classList.add('dc-in'); renderViz(b.matches?.('[data-viz], [data-math]') ? live : b); await new Promise((r) => setTimeout(r, 70)); }
+      }
+      await new Promise((r) => setTimeout(r, 450));
+      live.querySelectorAll('.dc-in').forEach((n) => n.classList.remove('dc-in'));
       commit();
     }
 
@@ -2187,7 +2246,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       hide() { if (!api.open) return; api.open = false; view.hidden = true; hideFmt(); if (!list.open) panel()?.classList.remove('view-docs'); drawPane(); },
       redraw() { if (tab) { doc = docOf(tab.dataset.doc); draw(); } },
       isShowing: (id) => api.open && doc?.id === id,
-      typeIn, setWriting, remember: (prev, next) => remember(prev, next),
+      typeIn, insertBlocks, setWriting, remember: (prev, next) => remember(prev, next),
       refreshMeta() { if (!doc) return; const t = view.querySelector('.dc-title-in'), s2 = view.querySelector('.dc-sub-in'); if (t && document.activeElement !== t) { t.value = doc.title; grow(t); } if (s2 && document.activeElement !== s2) { s2.value = doc.subtitle || ''; grow(s2); s2.classList.add('dc-in'); setTimeout(() => s2.classList.remove('dc-in'), 500); } },
     });
     return api;

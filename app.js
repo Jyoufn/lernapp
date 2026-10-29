@@ -80,6 +80,7 @@ const VIEW_TABS = {
   inbox: { title: 'Inbox', icon: 'i-inbox', view: () => window.Inbox },
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
+  boerse: { title: 'Depot', icon: 'o-trend', view: () => window.Boerse },
   docs: { title: 'Library', icon: 'f-file', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
@@ -101,7 +102,7 @@ window.setTabIcon = (tab, ic) => {
   old.outerHTML = ic ? docTabIcon(ic) : `<svg width="14" height="14" style="color:var(--text-3)"><use href="#${VIEW_TABS.doc.icon}"/></svg>`;
 };
 window.setTabTitle = (tab, title) => { if (!tab) return; tab.querySelector('.tab-title').textContent = title; snapToPixels([tab]); };
-// Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender.
+// Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender, Depot (Börsen-Agent).
 // Die Lupe oben öffnet den Chatverlauf (Suchfeld bekommt den Fokus).
 document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault();
@@ -592,8 +593,8 @@ function userBubble(text, cls) {
 const ASK_BLOCK = /```ask\s*([\s\S]*?)(```|$)/;
 /* Agent-Empfehlung der KI (```agent {"agent":"code"}```) – erscheint als Karte zum Wechseln, nicht als Text */
 const AGENT_BLOCK = /```agent\s*([\s\S]*?)(```|$)/g;
-const AGENT_NAMES = { general: 'Allgemein', research: 'Research', learn: 'Lernen', code: 'Coden' };
-const AGENT_ROLE = { research: 'Recherche mit Quellen', learn: 'Erklären und Lernen', code: 'Programmieren' };
+const AGENT_NAMES = { general: 'Allgemein', research: 'Research', learn: 'Lernen', code: 'Coden', boerse: 'Börse' };
+const AGENT_ROLE = { research: 'Recherche mit Quellen', learn: 'Erklären und Lernen', code: 'Programmieren', boerse: 'Aktien und Planspiel Börse' };
 function parseAgentBlock(text) {
   const m = String(text || '').match(/```agent\s*([\s\S]*?)```/);
   if (!m) return null;
@@ -622,6 +623,7 @@ function agentSuggestCard(msgEl, id) {
 const AGENT_HINTS = {
   code: /(programmier|\bcod(e|en|ing)\b|skript|script|quellcode|\bbug|fehler im code|debug|javascript|typescript|python|\bhtml\b|\bcss\b|\bjava\b|c\+\+|c#|\bsql\b|\bapi\b|\blua\b|roblox studio|unity|godot|\bapp (bauen|programmieren|entwickeln)|website (bauen|programmieren|erstellen)|spiel (programmieren|bauen|entwickeln)|game (programmieren|bauen|entwickeln)|funktion schreiben|kompilier|syntax)/i,
   research: /(recherchier|quellen|studien?\b|wissenschaftlich|belege|forschung|aktuelle (daten|zahlen|lage)|statistik zu|faktencheck|stimmt es, dass)/i,
+  boerse: /(\baktien?\b|-aktie\b|börse|boerse|mein depot|planspiel|\bdax\b|nasdaq|\betf\b|kursziel|stop-?loss|investier|einsteigen|aussteigen|dividende|charts?\b.*(aktie|kurs))/i,
   learn: /(hausaufgabe|arbeitsblatt|klausur|klassenarbeit|prüfung|lernzettel|abfragen|üben|erklär(e|en)? mir|versteh(e)? (ich )?nicht|schulstoff|lerne?n? für)/i,
 };
 function agentFor(text, current) {
@@ -1437,6 +1439,7 @@ const THINK_SHOW_DELAY = 900; // Thinking erst zeigen, wenn die Analyse nicht so
 const THINK_HOLD_MS = 700;    // geschriebenes Vorgehen kurz stehen lassen, dann „Planned the answer“
 const STAGE_TEXT = {
   material: 'Analyzing your sources', // angehängte Fotos/PDFs: passt das Material zur Frage?
+  market: 'Checking the charts', // Börsen-Agent: Live-Kurse, Signale, Depot, Marktscan
   browsing: 'Searching sources',
   searching_sources: 'Searching sources',
   processing: 'Drafting the answer',
@@ -1913,7 +1916,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const from = Date.now();
     const step = stepLine('spin', `<span class="shimmer">${STAGE_TEXT[s.stage]}</span><span class="t live" data-from="${from}">1s</span>`);
     stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null };
-    const head = { material: ['search', 'Analyzing your sources'], browsing: ['search', 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
+    const head = { material: ['search', 'Analyzing your sources'], market: ['search', 'Checking the charts'], browsing: ['search', 'Searching the web'], searching_sources: ['search', 'Searching sources'], processing: ['write', 'Drafting the answer'], verifying: ['check', 'Checking facts'] }[s.stage];
     if (head) queueMicrotask(() => setActivity(...head));
     if (s.stage === 'browsing') { stages.browsing.pages = []; stages.browsing.chips = el('div', 'chips'); step.append(stages.browsing.chips); }
     ensureWork().steps.append(step);
@@ -1940,6 +1943,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st.step.append(chips);
         fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
       }
+    } else if (s.stage === 'market') {
+      const n = s.meta?.count || 0;
+      line.innerHTML = n ? `Checked <strong>${n} ${n === 1 ? 'stock' : 'stocks'}</strong> ${dur}` : `Market data not reachable ${dur}`;
+      if (!n) st.step.classList.add('warn');
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
       line.innerHTML = m.relevant === true ? `Analyzed your sources – <strong>answering from them</strong> ${dur}`
@@ -2072,7 +2079,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(window.PixelDogs?.mode === 'boerse' && window.Boerse ? { depot: window.Boerse.forAgent() } : {}), ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);
@@ -2560,6 +2567,16 @@ async function docIntentAsk(text) {
 function chatContext(list) {
   return list.filter((h) => h.text && !h.doc).slice(-14).map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${stripAskBlock(h.text)}`).join('\n\n');
 }
+// die letzte richtige KI-Antwort (vollständig) – das, was mit „schreib das ins Dokument“ meistens gemeint ist
+function lastAnswerText(list) {
+  const a = [...list].reverse().find((h) => h.role === 'assistant' && !h.doc && h.text && h.text !== '(keine Antwort)');
+  return a ? stripAskBlock(a.text).replace(AGENT_BLOCK, '').trim() : '';
+}
+// Bearbeiten-Wunsch, der nur etwas HINZUFÜGT („füg das hinzu“, „ergänze …“, „schreib das ins Dokument“) → nur das Neue schreiben lassen,
+// das vorhandene Dokument bleibt unangetastet (früher schrieb die KI das ganze Dokument neu und ließ dabei Teile weg)
+const DOC_ADD = /(füg|hinzu|ergänz|erweiter|übernimm|übertrag|pack|schreib\w*\b[^.?!]{0,30}\b(rein|hinein|dazu|ins|in das)\b|ins (dokument|doc|notiz)|anhäng|häng)/i;
+const DOC_CHANGE = /(lösch|entfern|kürz|änder|umschreib|schreib\w*[^.?!]{0,30}\bum\b|überarbeit|korrigier|verschieb|tausch|formulier|verbesser|ersetz|sortier|struktur|gliedere)/i;
+window.docWantsAppend = (t) => DOC_ADD.test(String(t || '')) && !DOC_CHANGE.test(String(t || '')); // auch für den Dokument-Chat (docs.js)
 const chatTitleOf = (tab) => { const t = chatOf(tab)?.title || ''; return DEFAULT_TITLES.has(t) ? '' : t; };
 async function docAiCall(body) {
   const r = await fetch('/api/doc-ai', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -2610,7 +2627,8 @@ function renderDocCard(msgEl, entry, tab = activeTab()) {
 function runDocCreate(msgEl, entry, tab, v) {
   const d = entry.doc, c = chatOf(tab);
   const ctx = chatContext(historyOf(tab));
-  const { doc, done } = window.Docs.make({ ...v, describe: () => docMeta(tab), generate: () => docAiCall({ mode: 'create', instruction: `${d.instruction}${v.title ? `\nTitel: ${v.title}` : ''}`, chat: ctx }).then((o) => o.html) });
+  const source = lastAnswerText(historyOf(tab));
+  const { doc, done } = window.Docs.make({ ...v, describe: () => docMeta(tab), generate: () => docAiCall({ mode: 'create', instruction: `${d.instruction}${v.title ? `\nTitel: ${v.title}` : ''}`, chat: ctx, source }).then((o) => o.html) });
   c.docId = doc.id;
   Object.assign(d, { state: 'work', id: doc.id, title: v.title });
   renderDocCard(msgEl, entry, tab); saveChats();
@@ -2627,8 +2645,10 @@ async function runDocEdit(msgEl, entry, tab) {
     if (!linked) throw new Error('Das Dokument gibt es nicht mehr.');
     window.Docs.open(linked.id);
     window.Docs.editor.setWriting(linked.id, true);
-    const o = await docAiCall({ mode: 'edit', instruction: d.instruction, chat: chatContext(historyOf(tab)), doc: { title: linked.title, html: linked.content } });
-    await window.Docs.editor.typeIn(linked.id, window.Docs.clean(o.html));
+    const adding = DOC_ADD.test(d.instruction) && !DOC_CHANGE.test(d.instruction);
+    const o = await docAiCall({ mode: adding ? 'append' : 'edit', instruction: d.instruction, chat: chatContext(historyOf(tab)), source: lastAnswerText(historyOf(tab)), doc: { title: linked.title, html: linked.content } });
+    if (adding) await window.Docs.editor.insertBlocks(linked.id, window.Docs.clean(o.html), String(o.after || ''));
+    else await window.Docs.editor.typeIn(linked.id, window.Docs.clean(o.html));
     d.state = 'done';
     entry.text = String(o.reply || '').slice(0, 400);
   } catch (err) {
@@ -2638,19 +2658,50 @@ async function runDocEdit(msgEl, entry, tab) {
   renderDocCard(msgEl, entry, tab);
   saveChats();
 }
-// Knopf „Ins Dokument“ unter einer Antwort: die Antwort so, wie sie dasteht (mit Tabellen), wird ein Dokument
+// Knopf „Ins Dokument“ unter einer Antwort: die Antwort VOLLSTÄNDIG so, wie sie dasteht, wird ein Dokument –
+// mit Tabellen, Formeln (als data-math, das Dokument setzt sie neu), Hefteintrag (als Kasten), Code, Hoch-/Tiefstellung und Grafiken
+const texOf = (k) => k.querySelector('annotation[encoding="application/x-tex"]')?.textContent ?? k.textContent;
+function mathToDoc(root) {
+  // erst die abgesetzten Formeln (Wrapper .katex-display), dann die übrigen im Fließtext
+  root.querySelectorAll('.katex-display').forEach((k) => {
+    const m = document.createElement('span'); m.dataset.math = texOf(k); m.dataset.display = ''; k.replaceWith(m);
+  });
+  root.querySelectorAll('.katex').forEach((k) => {
+    const m = document.createElement('span'); m.dataset.math = texOf(k); k.replaceWith(m);
+  });
+}
+function heftToDoc(fig) {
+  // Hefteintrag → Hervorhebungs-Kasten mit Überschrift und jeder Zeile als Absatz (Formeln bleiben Formeln)
+  const box = document.createElement('div');
+  box.dataset.callout = '#4fcf8a'; box.dataset.radius = '12';
+  const head = document.createElement('p'); head.innerHTML = '<b>So kommt es ins Heft</b>'; box.append(head);
+  fig.querySelectorAll('.heft-page > *').forEach((n) => {
+    if (n.classList.contains('heft-gap')) return;
+    const p = document.createElement('p');
+    const c = n.cloneNode(true); mathToDoc(c);
+    p.innerHTML = c.innerHTML.replace(/^(&nbsp;)+/, '');
+    if (n.classList.contains('heft-title')) p.innerHTML = `<b>${p.innerHTML}</b>`;
+    else if (n.classList.contains('heft-note')) p.innerHTML = `<i>${p.innerHTML}</i>`;
+    box.append(p);
+  });
+  return box;
+}
 function answerHtml(msgEl) {
-  const a = msgEl.querySelector('.answer'); if (!a) return '';
-  const x = a.cloneNode(true);
+  const answers = [...msgEl.querySelectorAll('.answer')]; if (!answers.length) return '';
+  const x = document.createElement('div');
+  answers.forEach((a) => x.append(...a.cloneNode(true).childNodes)); // alle Teile der Antwort, nicht nur den ersten
+  x.querySelectorAll('figure.heft, [data-viz="heft"]').forEach((f) => f.replaceWith(heftToDoc(f)));
+  mathToDoc(x); // vor dem Entfernen von aria-hidden (KaTeX zeichnet die sichtbare Formel als aria-hidden)
   // Diagramme, Mindmaps, Zeitstrahlen, Bilder: als Platzhalter mit Quelltext – das Dokument zeichnet sie selbst
   x.querySelectorAll('[data-viz]').forEach((f) => {
     const v = document.createElement('div');
     v.className = 'dc-viz'; v.dataset.viz = f.dataset.viz; v.dataset.spec = f.dataset.raw || '';
     f.replaceWith(v);
   });
-  x.querySelectorAll('.msg-actions, .src-stack, .cite, .citation, sup, button, svg, img, figure, canvas, [aria-hidden="true"]').forEach((n) => n.remove());
+  x.querySelectorAll('.msg-actions, .src-stack, .cite, .citation, button, svg, img, figure, canvas, [aria-hidden="true"]').forEach((n) => n.remove());
   // fett gesetzte Zwischenzeilen („**Erläuterung:**“) werden echte Überschriften → im Dokument ein-/ausklapp- und verschiebbar
   x.querySelectorAll('p').forEach((p) => {
+    if (p.closest('[data-callout]')) return;
     const only = p.children.length === 1 && /^(B|STRONG)$/.test(p.firstElementChild.tagName) && p.textContent.trim() === p.firstElementChild.textContent.trim();
     if (!only || p.textContent.length > 90) return;
     const h = document.createElement('h2');

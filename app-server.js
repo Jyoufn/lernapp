@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'inbox.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'boerse.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -36,6 +36,7 @@ const WEB = require('./lib/web');
 const TTS = require('./lib/tts');
 const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
+const BOERSE = require('./lib/boerse'); // Börsen-Agent: Kurse, Signale, Planspiel-Regeln
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -835,7 +836,10 @@ async function handleTts(req, res) {
    mode "rewrite": markierten Text umschreiben (Ask AI im Auswahl-Menü). Antwort immer JSON. */
 const DOC_SYSTEM = `Du bist der Schreib-Assistent einer Lern-App und arbeitest in Dokumenten (wie Notion).
 Schreibe auf Deutsch, klar gegliedert und lernfreundlich. Kein Quellenverzeichnis, keine Emojis.
-Erlaubtes HTML: <h1>, <h2>, <h3>, <h4>, <p>, <ul>, <ol>, <li>, <b>, <i>, <u>, <s>, <blockquote>, <table>, <thead>, <tbody>, <tr>, <th>, <td>. Tabellen aus dem Gespräch übernimmst du vollständig als <table>. Keine Klassen, keine Styles, kein Markdown.
+Erlaubtes HTML: <h1>, <h2>, <h3>, <h4>, <p>, <ul>, <ol>, <li>, <b>, <i>, <u>, <s>, <sup>, <sub>, <blockquote>, <pre><code>, <table>, <thead>, <tbody>, <tr>, <th>, <td>. Tabellen aus dem Gespräch übernimmst du vollständig als <table>. Keine Klassen, keine Styles, kein Markdown.
+Formeln (im Gespräch als $…$ bzw. $$…$$) schreibst du als <span data-math="TeX-Formel"></span>, abgesetzte Formeln mit data-display: <span data-math="…" data-display></span> (TeX unverändert, Anführungszeichen als &quot;). Code als <pre><code>…</code></pre> (Zeilen unverändert, < als &lt;).
+Ein Hefteintrag (Block heft) wird ein Kasten: <div data-callout="#4fcf8a" data-radius="12"><p><b>So kommt es ins Heft</b></p><p>Zeile</p>…</div>.
+VOLLSTÄNDIG ÜBERNEHMEN: Sollen Inhalte aus dem Gespräch ins Dokument (z. B. „mach daraus ein Dokument“, „schreib das ins Dokument“, „füge das hinzu“), übernimmst du sie KOMPLETT – jeden Abschnitt, jeden Stichpunkt, alle Tabellen, Beispiele, Rechenwege, Formeln, Code, Hefteinträge und Diagramme. Nichts kürzen, nichts zusammenfassen, nichts weglassen – außer die Anweisung verlangt es ausdrücklich. Nur Gesprächsfloskeln („Gern!“, Rückfragen) lässt du weg.
 Gliedere streng in Ebenen, damit man jeden Abschnitt einklappen und verschieben kann:
 - <h2> = Kapitel, <h3> = Unterkapitel, <h4> = Unterpunkt. Nie tiefer als <h4> (tiefere Punkte als Liste darunter).
 - Jede Zwischenüberschrift ist ein echtes <h2>/<h3>/<h4> – nie ein fett gedruckter Absatz (<p><b>…</b></p>) und nie loser Text.
@@ -860,7 +864,9 @@ Bestehende Blöcke (data-blk, data-todo, data-callout, data-doclink) behältst d
 Antworte NUR mit JSON.`;
 const DOC_FORMAT = {
   create: 'Erstelle ein neues Dokument aus dem Gespräch nach der Anweisung. JSON: {"title": "kurzer Titel", "subtitle": "ein Satz Beschreibung", "html": "Inhalt", "reply": "ein kurzer Satz an den Nutzer, was du angelegt hast"}',
-  edit: 'Bearbeite das vorhandene Dokument nach der Anweisung. Behalte alles bei, was nicht geändert werden soll. JSON: {"title": "Titel (ggf. unverändert)", "html": "kompletter neuer Inhalt", "reply": "ein kurzer Satz, was du geändert hast"}',
+  edit: 'Bearbeite das vorhandene Dokument nach der Anweisung. Behalte ALLES unverändert bei, was nicht geändert werden soll – jeden Abschnitt, jede Tabelle, jeden Block; der Inhalt darf nur kürzer werden, wenn die Anweisung das verlangt. JSON: {"title": "Titel (ggf. unverändert)", "html": "kompletter neuer Inhalt", "reply": "ein kurzer Satz, was du geändert hast"}',
+  // Ergänzen: nur das Neue schreiben – das vorhandene Dokument bleibt, wie es ist (die App fügt es ein); so geht nichts verloren
+  append: 'Ergänze das vorhandene Dokument nach der Anweisung. Schreibe NUR den NEUEN Inhalt, der hinzukommt – wiederhole das vorhandene Dokument NICHT (es bleibt vollständig erhalten, die App fügt dein HTML ein). Geht es um Inhalte aus dem Gespräch (meist die letzte Antwort unter „Zu übernehmen“), übernimm sie vollständig. Gehört das Neue unter eine vorhandene Überschrift, nenne deren Text genau in "after"; sonst "" (dann kommt es ans Ende). JSON: {"html": "nur der neue Inhalt", "after": "Überschrift oder leer", "reply": "ein kurzer Satz, was du ergänzt hast"}',
   meta: 'Schlage für ein Dokument aus diesem Inhalt einen kurzen Titel (höchstens 6 Wörter) und eine Beschreibung (ein Satz, höchstens 18 Wörter) vor. Ist ein Chat-Titel angegeben, übernimm ihn als Titel, wenn er passt. JSON: {"title": "…", "subtitle": "…", "html": "-"}',
   rewrite: 'Bearbeite NUR den markierten Text nach der Anweisung. JSON: {"html": "Ersatz für den markierten Text (Inline-HTML oder Absätze)"}',
 };
@@ -917,6 +923,16 @@ async function resolveBlocks(html) {
   return String(html).replace(/<div\b[^>]*\bdata-blk=["'](\w+)["'][^>]*>/gi, () => done[i++]);
 }
 
+// Ergänzen: das Dokument nur als Gliederung (Überschriften + Anfang jedes Abschnitts) – die KI muss es nicht wiederholen, nur wissen, wohin das Neue gehört
+function docOutline(html) {
+  const out = [];
+  String(html || '').replace(/<(h[1-4])[^>]*>([\s\S]*?)<\/\1>([\s\S]*?)(?=<h[1-4][^>]*>|$)/gi, (m, tag, head, body) => {
+    const text = (x) => x.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    out.push(`<${tag}>${text(head)}</${tag}> ${text(body).slice(0, 200)}${text(body).length > 200 ? ' …' : ''}`);
+    return m;
+  });
+  return out.length ? out.join('\n').slice(0, 30000) : String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 4000);
+}
 async function handleDocAi(req, res) {
   const body = await readBody(req, 2 * 1024 * 1024);
   const env = readEnv();
@@ -929,20 +945,22 @@ async function handleDocAi(req, res) {
     `Heute ist ${today}.`,
     uploads ? `Der Nutzer hat ${uploads} Bild(er) hochgeladen: im Block als "upload:1" bis "upload:${uploads}" verwenden.` : '',
     `Anweisung: ${cut(body.instruction, 2000)}`,
-    body.chat ? `Gespräch (Auszug):\n${cut(body.chat, 24000)}` : '',
-    body.doc ? `Vorhandenes Dokument – Titel: ${cut(body.doc.title, 200)}\nInhalt (HTML):\n${cut(body.doc.html, 60000)}` : '',
+    // Gespräch: das ENDE zählt (dort steht die Antwort, die ins Dokument soll) – deshalb von hinten kürzen, nicht von vorn
+    body.chat ? `Gespräch (Auszug):\n${String(body.chat).slice(-60000)}` : '',
+    body.source ? `Zu übernehmen (letzte Antwort im Chat, vollständig):\n${cut(body.source, 80000)}` : '',
+    body.doc ? `Vorhandenes Dokument – Titel: ${cut(body.doc.title, 200)}\nInhalt (HTML):\n${mode === 'append' ? docOutline(body.doc.html) : cut(body.doc.html, 200000)}` : '',
     body.chatTitle ? `Chat-Titel: ${cut(body.chatTitle, 120)}` : '',
     body.selection ? `Markierter Text:\n${cut(body.selection, 8000)}` : '',
   ].filter(Boolean).join('\n\n');
   const ok = (o) => o && typeof o.html === 'string' && o.html.trim();
   if (env.GEMINI_API_KEY) {
     try {
-      const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model: P.GEMINI_MODEL, system: DOC_SYSTEM, user, maxTokens: 32768, thinking: { budget: 0 }, json: true, signal: AbortSignal.timeout(150000) }));
+      const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model: P.GEMINI_MODEL, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: { budget: 0 }, json: true, signal: AbortSignal.timeout(240000) }));
       if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
     } catch {}
   }
   try {
-    const o = await P.smallJsonTask(env, { system: DOC_SYSTEM, user, maxTokens: 32768, timeoutMs: 150000 });
+    const o = await P.smallJsonTask(env, { system: DOC_SYSTEM, user, maxTokens: 32768, timeoutMs: 240000 });
     if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
   } catch {}
   sendJson(res, 502, { error: 'Die KI hat gerade nicht geantwortet.' });
@@ -1215,6 +1233,10 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
     if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res);
+    // Börsen-Agent (Depot-Ansicht): Positionen/Beobachtungsliste prüfen, Marktscan, Suche
+    if (req.method === 'POST' && urlPath === '/api/boerse/check') return sendJson(res, 200, await BOERSE.check(await readBody(req, 200000)));
+    if (req.method === 'GET' && urlPath === '/api/boerse/scan') return sendJson(res, 200, await BOERSE.scan({ extra: String(new URL(req.url, 'http://x').searchParams.get('extra') || '').split(',').filter(Boolean).slice(0, 30) }));
+    if (req.method === 'GET' && urlPath === '/api/boerse/search') return sendJson(res, 200, await BOERSE.search(new URL(req.url, 'http://x').searchParams.get('q')));
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {

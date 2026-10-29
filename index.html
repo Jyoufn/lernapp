@@ -85,6 +85,7 @@
     <symbol id="o-library" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 2.75v10.5M6 4.75v8.5M9.25 4.75v8.5M11.5 4.75l2.25 8.5"/></g></symbol>
     <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="6" width="4" height="4" rx="1.1"/><rect x="10.25" y="1.75" width="4" height="4" rx="1.1"/><rect x="10.25" y="10.25" width="4" height="4" rx="1.1"/><path d="M5.75 8H8M10.25 3.75h-1.1A1.15 1.15 0 0 0 8 4.9v6.2a1.15 1.15 0 0 0 1.15 1.15h1.1"/></g></symbol>
     <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2.5"/><path d="M5.5 1.75v3M10.5 1.75v3M2.25 6.75h11.5"/></g><g fill="currentColor"><circle cx="5.5" cy="9.25" r=".85"/><circle cx="8" cy="9.25" r=".85"/><circle cx="10.5" cy="9.25" r=".85"/><circle cx="5.5" cy="11.5" r=".85"/><circle cx="8" cy="11.5" r=".85"/></g></symbol>
+    <symbol id="o-trend" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 11.75 6 8l2.75 2.75 5-5"/><path d="M10.75 5.75h3v3"/></g></symbol>
     <symbol id="o-doc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7.5z"/><path d="M14 2.5v4a1.5 1.5 0 0 0 1.5 1.5h4"/></g></symbol>
     <symbol id="o-gear" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></g></symbol>
     <symbol id="o-user" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="5.25" r="2.75"/><path d="M2.75 13.75c.55-2.45 2.6-3.9 5.25-3.9s4.7 1.45 5.25 3.9"/></g></symbol>
@@ -118,6 +119,7 @@
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-library"/></svg>Bibliothek</a>
           <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-tasks"/></svg>Aufgaben</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
+          <a class="nav-item" href="#" data-nav="boerse"><svg width="16" height="16"><use href="#o-trend"/></svg>Depot</a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -262,6 +264,7 @@
     <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
     <script src="docs.js"></script>
     <script src="inbox.js"></script>
+    <script src="boerse.js"></script><!-- Depot + Signale des Börsen-Agenten (Bulle) -->
   </template>
   <script src="auth.js?v=4"></script><!-- Anmeldung + Konto (Daten ins Konto), lädt danach die App -->
 </body>

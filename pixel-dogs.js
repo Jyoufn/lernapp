@@ -1,5 +1,5 @@
 /* =====================================================================
-   Pixel-Hunde – vier Modi (Allgemein, Research, Lernen, Coden)
+   Pixel-Hunde – fünf Modi (Allgemein, Research, Lernen, Coden, Börse = Bulle)
    - oben mittig im leeren Chat: alle Gesichter und das Plus zusammen in einer runden Leiste (Gesichter scrollbar),
      gewählter Hund hinterlegt; Plus öffnet die Liste mit Namen; nach dem ersten Senden verschwindet die Leiste
    - klein oben rechts am Eingabefeld: der gewählte Hund schaut über den Rand (Pfoten auf dem Rand, atmet, blinzelt) und holt
@@ -386,6 +386,100 @@ const PixelDogs = (() => {
         ],
       },
     },
+    // Börse: Bulle (selbst gezeichnet im selben 32er-Pixelstil, Generator scratch/bull.py) – Hörner, Nasenring, freundliche Augen
+    boerse: {
+      32: {
+        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        rows: [
+          '.....a....................a.....',
+          '....aHa..................aHa....',
+          '...aHa....................aHa...',
+          '...ahha..................ahha...',
+          '...ahhha......aaaa......ahhha...',
+          '....ahha...aaabbebaaa...ahha....',
+          '....ahhhaaabbbeebeebbaaahhha....',
+          '.....aHhhhbcceceeebebbhhhHa.....',
+          '...aaaaHHhhdddccebbbbhhHHaaaa...',
+          '.aacccaabHddddccccbbbbHbaacccaa.',
+          'acccccccbccdddccccbbbbbbccccccca',
+          'acppppcbbcccccccccbbbbbbbcppppca',
+          '.acccccbbbcccccccbbbbbbbbccccca.',
+          '..aaaaabbbbwaccbbbbwabbbbaaaaa..',
+          '......abbbbaabbbbbbaabbbba......',
+          '......abbbbbbbeeeebbbbbbba......',
+          '......abbbbeeemmmmeeebbbba......',
+          '......abbbemmmmmmmmmmebbba......',
+          '.......abemmmmmmmmmmmmeba.......',
+          '.......aemmmnmmmmmnmmmmea.......',
+          '.......ammmnnnmmmnnnmmmma.......',
+          '.......ammmmmmymmymmmmmma.......',
+          '........ammmmmymmYmmmmma........',
+          '........ammMMMYyyYMMMmma........',
+          '........aaMMMMMMMMMMMMaa........',
+          '.......abbbbMMMMMMMMbbbba.......',
+          '.......abbbbbbbbbbbbbbbba.......',
+          '......abbbbbccccccccbbbbba......',
+          '.....abbbbbbccccccccbbbbbba.....',
+          '.....abbbbbbccccccccbbbbbba.....',
+          '....abbbbbbccccccccccbbbbbba....',
+          '...abbbbbbbccccccccccbbbbbbba...',
+        ],
+      },
+      24: {
+        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        rows: [
+          '...a................a...',
+          '..aHa..............aHa..',
+          '..aHha............ahHa..',
+          '..ahha...aaaaaa...ahha..',
+          '..ahhha.abeeeeea.ahhha..',
+          '...ahhhabceeeeebahhha...',
+          '.aaaHHhhhdccebbhhhHaaaa.',
+          'acccccHHdddccbbbHHccccca',
+          'acpppbbccccccbbbbbbpppca',
+          '.acccbbcwacccbwabbbccca.',
+          '..aaabbbaabbbbaabbbaaa..',
+          '....abbbbbeeeebbbbba....',
+          '....abbbeemmmmeebbba....',
+          '....abbemmmmmmmmebba....',
+          '.....aemmmmmmmmmmea.....',
+          '.....ammnnmmmnnmmma.....',
+          '.....ammmmymmymmmma.....',
+          '......ammMyMMYMmma......',
+          '......aaMMYyyYMMaa......',
+          '.....abbbbbMMbbbbba.....',
+          '....abbbbccccccbbbba....',
+          '....abbbbccccccbbbba....',
+          '...abbbbbccccccbbbbba...',
+          '..abbbbbccccccccbbbbba..',
+        ],
+      },
+      20: {
+        pal: {a: '#000000', b: '#7a4524', c: '#9a5b30', d: '#b7713e', e: '#4f2a14', m: '#e2ae86', M: '#c98e66', n: '#3a1d10', h: '#f2e6cc', H: '#c8b48c', w: '#ffffff', y: '#f2c14e', Y: '#b8862a', p: '#d98f7a'},
+        rows: [
+          '...a............a...',
+          '..aHa..........aHa..',
+          '..ahha...aa...ahha..',
+          '..ahhaaaabeaaaahha..',
+          '..ahhhbbeeeeebhhha..',
+          '.aaaHhhhdcebhhhHaaa.',
+          'accccHHddccbbHHcccca',
+          'acppbbcccccbbbbbppca',
+          '.aaabbbwabbbwabbaaa.',
+          '...abbbaaeeeaabba...',
+          '...abbeemmmmeebba...',
+          '....aemmmmmmmmea....',
+          '....ammnmmmnmmma....',
+          '....ammmymmymmma....',
+          '.....amMyMMYMma.....',
+          '.....abMYyyYMba.....',
+          '....abbccccccbba....',
+          '...abbbccccccbbba...',
+          '...abbbccccccbbba...',
+          '..abbbbccccccbbbba..',
+        ],
+      },
+    },
   };
 
   const MODES = [
@@ -393,6 +487,7 @@ const PixelDogs = (() => {
     { id: 'learn', name: 'Lernen' },
     { id: 'research', name: 'Research' },
     { id: 'code', name: 'Coden' },
+    { id: 'boerse', name: 'Börse' },
   ];
   // vorerst nicht verfügbar (ausgegraut, nicht wählbar, wird nicht vorgeschlagen) – der Coding-Agent ist noch nicht gut genug
   const UNAVAILABLE = new Set(['code']);
@@ -423,7 +518,7 @@ const PixelDogs = (() => {
     O: '#a24b3b', o: '#7a3328', y: '#d9a441', w: '#f2f2f2', v: '#c4c4c4', Z: '#151b24', X: '#4fcf8a',
     R: '#e0552b', P: '#ff9a2e', Y: '#ffd447', C: '#3a3f46', c: '#545b64',
     A: 'rgba(185, 210, 228, 0.42)', a: 'rgba(255, 255, 255, 0.75)', L: '#d9d9d9', N: '#4a4a4a', q: 'rgba(122, 180, 255, 0.35)' };
-  const FUR = { general: ['#f0f0e4', '#d0c3b4'], research: ['#e2a868', '#c98a4c'], learn: ['#f5f5f5', '#b2b2b2'], code: ['#cc4520', '#b23718'] }; // Coden: Tentakelspitzen in Rot-Orange
+  const FUR = { general: ['#f0f0e4', '#d0c3b4'], research: ['#e2a868', '#c98a4c'], learn: ['#f5f5f5', '#b2b2b2'], code: ['#cc4520', '#b23718'], boerse: ['#9a5b30', '#7a4524'] }; // Coden: Tentakelspitzen in Rot-Orange
   const part = (rows, x, y, pal = PROP) => ({ rows, x, y, pal });
   const pawPal = (id) => ({ ...PROP, F: FUR[id][0], f: FUR[id][1] });
   const PAW = ['.KKKKK.', 'KFKFKFK', 'KFKFKFK', 'KfFFFfK'];       // liegt auf dem Rand: drei Zehen, unten etwas Schatten
@@ -438,6 +533,7 @@ const PixelDogs = (() => {
     research: [part(['fff', 'aaa', 'fff'], DX + 10, 8, DOGS.research[32].pal), part(['ddd', 'aaa', 'ddd'], DX + 19, 8, DOGS.research[32].pal)],
     learn: [part(['nnn'], DX + 10, 13, DOGS.learn[32].pal), part(['nn'], DX + 20, 13, DOGS.learn[32].pal)],
     code: [part(['.jj.', 'jjjj', 'KKKK', '.ss.'], DX + 10, 12, DOGS.code[32].pal), part(['.ll.', 'llll', 'KKKK', '.ss.'], DX + 18, 12, DOGS.code[32].pal)],
+    boerse: [part(['bb', 'aa'], DX + 11, 13, DOGS.boerse[32].pal), part(['bb', 'aa'], DX + 19, 13, DOGS.boerse[32].pal)],
   };
   const blinkTrack = (id) => ({ frames: [[], BLINK[id]], seq: [[0, 3600], [1, 130], [0, 2900], [1, 130], [0, 260], [1, 110]] });
   // Blick (liegt im atmenden Kopf, wird per Klasse gezeigt): Research schaut nach links zur Lupe, Allgemein nach links unten in die Pfanne
@@ -568,6 +664,38 @@ const PixelDogs = (() => {
     const exit = [[4, 80], [3, 80], [2, 80], [1, 80], [0, 600]];
     return run(frames, [[0, 5000], ...enter, ...type, ...type, ...type, ...type, ...exit, [0, 3400]], enter, loop, exit);
   }
+  // Börse: hält eine kleine Chart-Tafel hoch (von vorn: dunkler Bildschirm mit Rahmen) – die Kerzen laufen nach links weiter,
+  // der Kurs steigt (grüne Kerzen), zwischendurch eine rote; solange die KI arbeitet, tickt der Chart durchgehend
+  const BOARD_W = 18, BOARD_H = 12;
+  const LEVELS = [3, 2, 3, 4, 3, 5, 6, 5, 4, 6, 7, 6, 8, 7, 9, 8, 7, 8, 9, 10, 9, 8, 6, 5, 4, 3, 4, 3, 2, 3]; // Schlusskurse (0 = unten); läuft im Kreis
+  function boardRows(k) {
+    const inner = BOARD_H - 2, n = 8; // 8 Kerzen, je 1 Spalte breit, 1 Spalte Abstand
+    const grid = Array.from({ length: inner }, () => Array(BOARD_W - 2).fill('Z'));
+    const lv = (j) => LEVELS[(k + j) % LEVELS.length];
+    for (let j = 0; j < n; j++) {
+      const a = lv(j), b = lv(j + 1), lo = Math.min(a, b), hi = Math.max(a, b), x = 1 + j * 2;
+      const col = b >= a ? 'X' : 'R';
+      for (let v = lo; v <= hi; v++) grid[inner - 1 - Math.min(v, inner - 1)][x] = col;
+      const wick = Math.min(hi + 1, inner - 1);
+      if (grid[inner - 1 - wick][x] === 'Z') grid[inner - 1 - wick][x] = 'c';
+    }
+    return ['K'.repeat(BOARD_W), ...grid.map((r) => `K${r.join('')}K`), 'K'.repeat(BOARD_W)];
+  }
+  function chartTrack() {
+    const bx = DX + 7;
+    const at = (y, k = 0) => [
+      part(boardRows(k), bx, y),
+      ...holdPaw('boerse', bx - 3, y + 7), ...holdPaw('boerse', bx + BOARD_W - 2, y + 7),
+    ];
+    const T = 6; // Tick-Bilder
+    const frames = [restPaws('boerse'), at(29), at(26), at(23), at(20), ...Array.from({ length: T }, (_, k) => at(20, k + 1))]; // Tafel unter dem Nasenring – das Maul bleibt zu sehen
+    const enter = [[1, 80], [2, 80], [3, 80], [4, 600]];
+    const tick = Array.from({ length: T }, (_, k) => [5 + k, 260]);
+    const loop = [...tick, [4, 420]]; // Chart läuft durchgehend weiter
+    const exit = [[3, 80], [2, 80], [1, 80], [0, 600]];
+    return run(frames, [[0, 5000], ...enter, ...tick, ...tick, ...exit, [0, 3600]], enter, loop, exit);
+  }
+
   // die beiden oberen Arme (eingerollte Enden links und rechts neben dem Kopf) schwingen: Zeilen 6–11 eine Spalte nach außen bzw. innen
   const ARM_ROWS = [6, 11], ARM_COLS = { L: [0, 7], R: [24, 31] };
   const armPart = (side, dx) => {
@@ -584,7 +712,7 @@ const PixelDogs = (() => {
   }
 
   function sceneTracks(id) {
-    return [blinkTrack(id), { general: panTrack, research: lensTrack, learn: bookTrack }[id]?.() || laptopTrack(), ...(id === 'code' ? [armsTrack()] : [])];
+    return [blinkTrack(id), { general: panTrack, research: lensTrack, learn: bookTrack, boerse: chartTrack }[id]?.() || laptopTrack(), ...(id === 'code' ? [armsTrack()] : [])];
   }
   const partsSvg = (parts) => parts.map((p) => rects(p, p.x, p.y)).join('');
   function scene(id) {
@@ -644,13 +772,14 @@ const PixelDogs = (() => {
 
   /* ---------- Agenten-Feld (Haupt-Chat und Dokument-Chat) ----------
      Fährt über dem Eingabefeld heraus (gleiche Breite und Rundung). Karten wie in der Vorlage: Hund auf getönter Fläche mit
-     Kachel-Bild rechts, Etikett, Beschreibung, Auswählen/Aktiv – nur die vier festen Agenten.
+     Kachel-Bild rechts, Etikett, Beschreibung, Auswählen/Aktiv – nur die festen Agenten.
      Auswahl: Haken → Feld fährt zurück → erst dann wechselt der Hund. */
   const INFO = {
     general: { icon: 'sparkle', tint: 'rgba(240, 232, 212, 0.07)', text: 'Für alles – fragt nach, erklärt, recherchiert, schreibt und programmiert.' },
     research: { icon: 'search', tint: 'rgba(226, 168, 104, 0.08)', text: 'Recherchiert gründlich – nur auf vertrauenswürdigen Seiten.' },
     learn: { icon: 'book', tint: 'rgba(255, 255, 255, 0.05)', text: 'Erklärt Schulstoff verständlich, auch mit deinem Material.' },
     code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Hilft beim Programmieren. Projekte mit Vorschau folgen.' },
+    boerse: { icon: 'trend', tint: 'rgba(154, 91, 48, 0.10)', text: 'Nur Aktien: Kurse, Charts, wann rein, wann raus – fürs Planspiel Börse, mit Depot.' },
   };
   const fine = (id) => (DOGS[id][64] ? 64 : 32); // feineres Raster für die großen Ansichten
   const art = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;
