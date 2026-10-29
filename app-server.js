@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -39,6 +39,7 @@ const ACC = require('./lib/accounts');
 const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
 const RADAR = require('./lib/radar');
 const HOLD = require('./lib/holdings'); // „Meine Käufe“ des Börsen-Bären (im Chat genannt, je Konto) // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
+const WSP = require('./lib/workspaces'); // geteilte Workspaces: teilen, Einladungen annehmen/ablehnen
 const AGT = require('./lib/agenttasks'); // Aufgaben, die ein Agent im Hintergrund abarbeitet (Tab „Aufgaben“)
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
@@ -1297,6 +1298,13 @@ async function handle(req, res) {
       return sendJson(res, 200, await AGT.run({ store, uid: user.id, task: b.task || {}, env: readEnv(), prepareBody: (x) => withAgentData(x, user) }));
     }
     if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 20000); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
+    // Geteilte Workspaces (lib/workspaces.js)
+    if (req.method === 'GET' && urlPath === '/api/workspaces') return sendJson(res, 200, await WSP.overview(store, serverEnv(), user.id));
+    if (req.method === 'POST' && urlPath.startsWith('/api/workspaces/')) {
+      const b = await readBody(req, 8000), act = urlPath.slice('/api/workspaces/'.length);
+      const fn = { share: WSP.share, answer: WSP.answer, update: WSP.update, remove: WSP.remove }[act];
+      if (fn) return sendJson(res, 200, await fn(store, serverEnv(), user.id, b));
+    }
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {

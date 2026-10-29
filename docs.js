@@ -2395,16 +2395,39 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
   async function sync() {
     if (!ready) return;
     try {
-      const r = await fetch('/api/docs'); if (!r.ok) return;
-      const fresh = ((await r.json()).docs || []).filter((d) => d?.id && !docOf(d.id) && !deletedIds.has(d.id));
+      const r = await fetch('/api/docs', { cache: 'no-store' }); if (!r.ok) return;
+      const all = (await r.json()).docs || [];
+      const fresh = all.filter((d) => d?.id && !docOf(d.id) && !deletedIds.has(d.id));
       fresh.forEach((d) => { docs.unshift(d); sentDocs.set(d.id, JSON.stringify(d)); });
-      if (fresh.length) { renderSide(); if (list.open) list.render(); }
+      // geteilte Workspaces: von anderen geänderte Dokumente übernehmen (nicht das gerade offene), gelöschte entfernen
+      const shared = new Set((window.Workspaces?.list() || []).filter((w) => w.shared).map((w) => w.id));
+      let changed = fresh.length;
+      if (shared.size) {
+        const open = editor.currentId?.();
+        const there = new Map(all.map((d) => [d.id, d]));
+        docs.forEach((d, i) => {
+          if (!shared.has(d.ws) || d.id === open) return;
+          const s = there.get(d.id);
+          if (s && (Number(s.updated) || 0) > (Number(d.updated) || 0)) { docs[i] = s; sentDocs.set(s.id, JSON.stringify(s)); changed++; }
+        });
+        const gone = docs.filter((d) => shared.has(d.ws) && !there.has(d.id) && sentDocs.has(d.id) && d.id !== open);
+        if (gone.length) { forget(gone.map((d) => d.id)); changed++; }
+      }
+      if (changed) { renderSide(); if (list.open) list.render(); }
     } catch {}
   }
+  // Dokumente nur hier entfernen (z. B. Workspace verlassen – sie gehören dem Besitzer), nicht auf dem Server löschen
+  function forget(ids) {
+    const set = new Set(ids);
+    docs = docs.filter((d) => !set.has(d.id));
+    set.forEach((id) => sentDocs.delete(id));
+    renderSide(); if (list.open) list.render();
+  }
+  const forgetWs = (ws) => forget(docs.filter((d) => d.ws === ws).map((d) => d.id));
   function discard(id) { const d = docOf(id); if (d && isEmpty(d)) { docs = docs.filter((x) => x !== d); deletedIds.add(id); save(); renderSide(); if (list.open) list.render(); } }
 
   return {
-    list, editor, open, create, add, update, discard, sync, remove, makeForm, offer, make, clean, appendTo,
+    list, editor, open, create, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
     get: (id) => docOf(id),
     isEmpty: (id) => { const d = docOf(id); return !d || isEmpty(d); },
     titleOf: (id) => docOf(id)?.title || 'Unbenannt',

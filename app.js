@@ -137,7 +137,7 @@ function closeTab(tab) {
   saveChats();
 }
 
-function createTab(title = 'Neuer Chat', view = '', data = {}) {
+function createTab(title = 'Neuer Chat', view = '', data = {}, { background = false } = {}) {
   const tab = document.createElement('div');
   tab.className = 'tab';
   tab.setAttribute('role', 'tab');
@@ -150,7 +150,7 @@ function createTab(title = 'Neuer Chat', view = '', data = {}) {
   tab.querySelector('.tab-title').textContent = title;
   tabsEl.insertBefore(tab, newTabBtn);
   snapToPixels([tab]);
-  activateTab(tab);
+  if (!background) activateTab(tab);
   return tab;
 }
 
@@ -4648,6 +4648,74 @@ async function openSavedChat(id) {
   return true;
 }
 window.openSavedChat = openSavedChat;
+
+/* ---------- Geteilte Workspaces: Chats der anderen übernehmen ----------
+   Beim Öffnen, beim Zurückkehren in die App und jede Minute: neue Chats kommen als (geschlossene) Tabs dazu, geänderte werden
+   neu gezeichnet (nicht während eine Antwort läuft), von anderen gelöschte verschwinden. Der sichtbare Chat bleibt, wo er ist. */
+function renderDetached(hist) {
+  const keep = document.createDocumentFragment(); keep.append(...chat.childNodes);
+  const keepH = history.splice(0);
+  history.push(...hist); renderSavedHistory(hist);
+  const nodes = document.createDocumentFragment(); nodes.append(...chat.childNodes);
+  const h = history.splice(0);
+  chat.append(keep); history.push(...keepH);
+  return { nodes, history: h };
+}
+const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' });
+async function syncSharedChats() {
+  if (restoring) return;
+  const shared = new Set((window.Workspaces?.list() || []).filter((w) => w.shared).map((w) => w.id));
+  if (!shared.size) return;
+  void window.Docs?.sync?.();
+  let data = null;
+  try { const r = await fetch('/api/chats', { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch {}
+  if (!data || restoring) return;
+  const top = chatScroll.scrollTop;
+  const onServer = new Set();
+  let changed = false;
+  for (const s of data.chats || []) {
+    if (!shared.has(s.ws)) continue;
+    onServer.add(s.id);
+    if (deletedChats.has(s.id)) continue;
+    let tab = tabsEl.querySelector(`.tab[data-cid="${s.id}"]`);
+    const stamp = JSON.stringify(s);
+    if (tab && (runOf(tab) || (Number(s.updated) || 0) <= (Number(chatOf(tab).updated) || 0))) continue;
+    if (!tab) { tab = createTab(s.title, '', {}, { background: true }); tab.dataset.cid = s.id; tab.hidden = true; }
+    tab._chat = chatFields(s);
+    tab.querySelector('.tab-title').textContent = s.title;
+    if (tab.classList.contains('active')) {
+      chat.replaceChildren(); history.length = 0; history.push(...(s.history || [])); renderSavedHistory(s.history || []);
+    } else tabChats.set(tab, renderDetached(s.history || []));
+    sentChats.set(s.id, JSON.stringify(chatItems(true).find((c) => c.id === s.id) || stamp));
+    changed = true;
+  }
+  // von anderen gelöscht (war schon einmal auf dem Server) → hier nur den Tab entfernen
+  tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])').forEach((t) => {
+    const c = chatOf(t), id = t.dataset.cid;
+    if (!id || !shared.has(c.ws) || onServer.has(id) || !sentChats.has(id) || runOf(t)) return;
+    sentChats.delete(id); tabChats.delete(t);
+    if (t.classList.contains('active')) { const next = tabsEl.querySelector('.tab:not(.uil-tab):not(.ws-off):not([hidden]):not(.active)'); if (next) activateTab(next); else createTab('Neuer Chat'); }
+    t.remove(); changed = true;
+  });
+  if (!changed) return;
+  chatScroll.scrollTop = top;
+  markDrafts(); renderBookmarks(); window.renderSideChats?.(); window.Workspaces?.refreshTabs?.();
+  if (chatsView?.open) chatsView.render?.();
+}
+// Workspace verlassen / Teilen beendet: dessen Chats nur hier entfernen (sie gehören dem Besitzer)
+function dropWorkspaceChats(ws) {
+  tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])').forEach((t) => {
+    if (chatOf(t).ws !== ws || runOf(t)) return;
+    sentChats.delete(t.dataset.cid); tabChats.delete(t);
+    if (t.classList.contains('active')) { const next = tabsEl.querySelector('.tab:not(.uil-tab):not(.ws-off):not([hidden]):not(.active)'); if (next) activateTab(next); else createTab('Neuer Chat'); }
+    t.remove();
+  });
+  markDrafts(); window.renderSideChats?.();
+}
+window.syncSharedChats = syncSharedChats;
+window.dropWorkspaceChats = dropWorkspaceChats;
+setInterval(() => { if (!document.hidden) void syncSharedChats(); }, 60000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void syncSharedChats(); });
 
 /* ---------- Offene Tabs merken: welche Tabs (Chats, Kalender, Aufgaben, Inbox, Dokumente …) offen waren,
    in welcher Reihenfolge und welcher aktiv war – nach dem Neustart wieder genauso ---------- */

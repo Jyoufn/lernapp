@@ -7620,3 +7620,120 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 
 /* eingeklappter Plan (Standard): normale Linie der Zeitleiste zum nächsten Schritt; aufgeklappt sitzt der Plan-Kasten auf der Linie */
 .step.has-box:not(.open):not(:last-child)::before { display: block; }
+
+/* ---------- Einstellungen → Workspaces: gleiche Zeilen, Name direkt bearbeitbar, Bereich mit Teilen darunter ---------- */
+.st-ws { cursor: pointer; transition: background-color 120ms ease; }
+.st-ws:hover { background: rgba(255, 255, 255, 0.02); }
+.st-ws-in { flex: 0 1 220px; min-width: 0; height: 30px; margin-left: -8px; padding: 0 8px; border: 0; border-radius: 7px; outline: none; background: none;
+  color: var(--text-2); font: 500 13.5px/30px Inter, sans-serif; cursor: text; transition: background-color 120ms ease; }
+.st-ws-in:hover { background: rgba(255, 255, 255, 0.04); }
+.st-ws-in:focus { background: rgba(255, 255, 255, 0.06); }
+.st-ws-badge { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 7px; background: rgba(47, 134, 255, 0.13); color: #6aa8ff; font-size: 11.5px; font-weight: 500; }
+.st-ws-chev { display: grid; place-items: center; width: 20px; color: var(--text-4); transition: transform 260ms var(--spring); }
+.st-ws.open .st-ws-chev { transform: rotate(90deg); color: var(--text-3); }
+.st-ws-panel { display: grid; grid-template-rows: 1fr; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.st-ws-panel.in { animation: st-ws-open 340ms var(--spring); }
+@keyframes st-ws-open { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
+.st-ws-pin { overflow: hidden; min-height: 0; padding: 4px 14px 14px 54px; }
+.st-ws-panel + .st-row { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.st-ws-h { margin: 12px 0 7px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.st-ws-note { margin: 0; color: var(--text-3); font-size: 12.5px; line-height: 1.5; }
+.st-ws-share { display: flex; gap: 8px; }
+.st-ws-share .st-field { flex: 1 1 auto; min-width: 0; max-width: 320px; }
+.st-ws-msg { margin: 8px 0 0; color: #4fcf8a; font-size: 12px; }
+.st-ws-msg.err { color: #f07a6e; }
+.st-ws-people { display: flex; flex-direction: column; gap: 2px; max-width: 400px; }
+.st-ws-person { display: flex; align-items: center; gap: 9px; height: 30px; padding: 0 4px 0 2px; border-radius: 7px; }
+.st-ws-pav { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #262626; color: var(--text-3); }
+.st-ws-pn { flex: 1 1 auto; min-width: 0; overflow: hidden; color: var(--text-2); font-size: 12.5px; text-overflow: ellipsis; white-space: nowrap; }
+.st-ws-tag { color: var(--text-4); font-size: 11.5px; }
+.st-ws-tag.wait { color: #fb9a52; }
+.st-ws-x { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
+.st-ws-x:hover { background: rgba(239, 107, 95, 0.09); color: #e5705f; }
+.st-ws-foot { margin-top: 14px; }
+.st-ws-del { display: inline-flex; align-items: center; gap: 7px; height: 28px; margin-left: -8px; padding: 0 9px; border: 0; border-radius: 7px; background: none;
+  color: var(--text-4); font: 500 12.5px Inter, sans-serif; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.st-ws-del:hover, .st-ws-del.sure { background: rgba(239, 107, 95, 0.09); color: #e5705f; }
+
+/* ---------- Einladung zu einem geteilten Workspace (workspace-invite.js) ---------- */
+.wi-overlay { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0); transition: background-color 300ms ease; }
+.wi-overlay.open { background: rgba(0, 0, 0, 0.6); }
+.wi-card { width: min(420px, 100%); overflow: hidden; border: 1px solid #262626; border-radius: 18px; background: var(--main-bg);
+  opacity: 0; transform: translateY(14px) scale(0.96); transition: opacity 320ms ease, transform 460ms var(--spring); }
+.wi-overlay.open .wi-card { opacity: 1; transform: none; }
+.wi-overlay.closing .wi-card { opacity: 0; transform: translateY(6px) scale(0.98); transition-duration: 220ms; }
+.wi-stage { position: relative; height: 210px; overflow: hidden; border-bottom: 1px solid #222; background: #141414; }
+.wi-win { position: absolute; top: 30px; left: 50%; width: 272px; height: 156px; margin-left: -136px; overflow: hidden; border: 1px solid #2a2a2a; border-radius: 12px; background: var(--main-bg);
+  animation: wi-rise 700ms var(--spring) both 120ms; }
+@keyframes wi-rise { from { opacity: 0; transform: translateY(16px) scale(0.96); } }
+.wi-bar { display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 8px; border-bottom: 1px solid #222; background: #141414; }
+.wi-bar > i { width: 6px; height: 6px; border-radius: 50%; background: #2e2e2e; }
+.wi-bar-t { margin-left: 6px; overflow: hidden; color: var(--text-3); font-size: 10px; font-weight: 500; text-overflow: ellipsis; white-space: nowrap; }
+.wi-stack { display: flex; margin-left: auto; }
+.wi-av { position: relative; display: grid; place-items: center; width: 18px; height: 18px; margin-left: -5px; border: 2px solid #141414; border-radius: 50%; background: #262626; overflow: hidden;
+  animation: wi-pop 500ms var(--spring) both; animation-delay: calc(500ms + var(--i) * 140ms); }
+.wi-av svg, .wi-mav svg, .wi-tag svg { width: 12px; height: 12px; image-rendering: pixelated; }
+.wi-av svg { width: 14px; height: 14px; }
+@keyframes wi-pop { from { opacity: 0; transform: scale(0.4); } }
+.wi-body { display: flex; height: calc(100% - 26px); }
+.wi-side { display: flex; flex-direction: column; gap: 6px; width: 58px; padding: 10px 7px; border-right: 1px solid #222; background: #141414; }
+.wi-side b { height: 6px; border-radius: 3px; background: #232323; }
+.wi-side b.on { background: #2e2e2e; }
+.wi-main { display: flex; flex: 1; flex-direction: column; gap: 8px; padding: 12px 10px; }
+.wi-msg { display: flex; align-items: flex-end; gap: 5px; opacity: 0; animation: wi-msg 7s var(--spring) infinite; }
+.wi-msg.me { justify-content: flex-end; }
+.wi-msg.m2 { animation-name: wi-msg2; }
+.wi-msg.m3 { animation-name: wi-msg3; }
+.wi-mav { display: grid; flex: none; place-items: center; width: 16px; height: 16px; border-radius: 50%; background: #262626; overflow: hidden; }
+.wi-lines { display: flex; flex: 0 1 68%; flex-direction: column; gap: 4px; padding: 6px 8px; border-radius: 9px; background: #1f1f1f; }
+.wi-msg.me .wi-lines { flex-basis: 52%; align-items: flex-end; background: #262626; }
+.wi-lines i { height: 4px; border-radius: 2px; background: #3a3a3a; }
+.wi-typing { display: flex; gap: 3px; padding: 7px 8px; border-radius: 9px; background: #1f1f1f; }
+.wi-typing i { width: 4px; height: 4px; border-radius: 50%; background: #6e6e6e; animation: wi-dot 1s ease-in-out infinite; }
+.wi-typing i:nth-child(2) { animation-delay: 150ms; }
+.wi-typing i:nth-child(3) { animation-delay: 300ms; }
+@keyframes wi-dot { 0%, 60%, 100% { opacity: 0.35; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
+/* Nachrichten erscheinen nacheinander (wie gerade geschrieben) und fangen nach einer Weile von vorn an */
+@keyframes wi-msg { 0%, 8% { opacity: 0; transform: translateY(6px); } 14%, 90% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; transform: none; } }
+@keyframes wi-msg2 { 0%, 34% { opacity: 0; transform: translateY(6px); } 40%, 90% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; transform: none; } }
+@keyframes wi-msg3 { 0%, 58% { opacity: 0; transform: translateY(6px); } 64%, 90% { opacity: 1; transform: none; } 97%, 100% { opacity: 0; transform: none; } }
+/* Mauszeiger der Personen: wandern gleichzeitig durch den Workspace (gleiche Dauer wie die Nachrichten) */
+.wi-cur { position: absolute; top: 0; left: 0; display: flex; align-items: flex-start; gap: 1px; pointer-events: none; will-change: transform; }
+.wi-arrow { flex: none; }
+.wi-tag { display: inline-flex; align-items: center; gap: 4px; height: 18px; margin-top: 11px; padding: 0 6px 0 3px; border-radius: 6px;
+  background: color-mix(in srgb, var(--c) 18%, #171717); color: var(--c); font-size: 10px; font-weight: 500; white-space: nowrap; }
+.wi-cur-a { animation: wi-path-a 7s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.wi-cur-b { animation: wi-path-b 7s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+.wi-cur-c { animation: wi-path-c 7s cubic-bezier(0.45, 0, 0.25, 1) infinite; }
+@keyframes wi-path-a { 0% { transform: translate(40px, 150px); } 12% { transform: translate(140px, 74px); } 30% { transform: translate(150px, 80px); }
+  55% { transform: translate(118px, 140px); } 75% { transform: translate(60px, 66px); } 100% { transform: translate(40px, 150px); } }
+@keyframes wi-path-b { 0% { transform: translate(330px, 60px); } 20% { transform: translate(300px, 120px); } 38% { transform: translate(262px, 100px); }
+  60% { transform: translate(250px, 156px); } 82% { transform: translate(340px, 150px); } 100% { transform: translate(330px, 60px); } }
+@keyframes wi-path-c { 0% { transform: translate(210px, 176px); } 25% { transform: translate(226px, 40px); } 50% { transform: translate(180px, 124px); }
+  75% { transform: translate(300px, 180px); } 100% { transform: translate(210px, 176px); } }
+.wi-info { padding: 20px 22px 20px; }
+.wi-kicker { display: inline-flex; align-items: center; gap: 6px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.wi-info h2 { margin: 8px 0 14px; color: var(--text); font-size: 17px; font-weight: 600; line-height: 1.3; }
+.wi-ws { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid #262626; border-radius: 12px; background: color-mix(in srgb, var(--main-bg) 96%, #fff); }
+.wi-ws-dog { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: #1f1f1f; }
+.wi-ws-dog svg { image-rendering: pixelated; }
+.wi-ws-t { display: flex; flex-direction: column; min-width: 0; }
+.wi-ws-t b { overflow: hidden; color: var(--text-2); font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.wi-ws-t small { color: var(--text-4); font-size: 12px; }
+.wi-text { margin: 12px 0 0; color: var(--text-3); font-size: 13px; line-height: 1.55; }
+.wi-err { margin: 10px 0 0; color: #f07a6e; font-size: 12.5px; }
+.wi-actions { display: flex; gap: 8px; margin-top: 18px; }
+.wi-btn { flex: 1; height: 34px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px; background: rgba(255, 255, 255, 0.04); color: var(--text-2);
+  font: 500 13px Inter, sans-serif; cursor: pointer; transition: background-color 120ms ease, opacity 120ms ease; }
+.wi-btn:hover { background: rgba(255, 255, 255, 0.07); }
+.wi-btn.primary { border-color: transparent; background: var(--accent); color: #fff; }
+.wi-btn.primary:hover { background: #4794ff; }
+.wi-btn:disabled { cursor: default; opacity: 0.55; }
+.wi-btn.wait { opacity: 1; }
+@media (max-width: 440px) { .wi-stage { transform-origin: top center; } .wi-cur { display: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .wi-card, .wi-overlay { transition: none; }
+  .wi-win, .wi-av, .wi-msg, .wi-cur, .wi-typing i { animation: none; opacity: 1; }
+}
+.wi-btn:focus { outline: none; }
+.st-ws-share .st-btn.light { min-width: 96px; }

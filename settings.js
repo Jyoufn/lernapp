@@ -123,19 +123,42 @@
 
   // Workspaces (höchstens 3): Hund wählen (Klick auf den Hund), umbenennen, löschen – Chats/Dokumente wandern dann in den ersten
   let wsPicking = null;
+  // Workspaces: alle Zeilen gleich – Hund antippen = Symbol wählen, Name antippen = umbenennen, Zeile antippen = Bereich darunter
+  // mit Teilen (E-Mail → Einladung), Personen und Löschen/Verlassen
+  let wsOpen = null, wsMsg = null, wsDel = null, wsAnim = null;
+  function wsPanel(w) {
+    const W = window.Workspaces;
+    const ppl = (w.members || []).map((m) => {
+      const who = m.state === 'self' ? 'Du' : m.name || m.email || 'Mitglied';
+      const tag = { owner: 'Besitzer', pending: 'Eingeladen', member: 'Mitglied', self: 'Mitglied' }[m.state] || '';
+      const rm = !w.guest && m.email ? `<button type="button" class="st-ws-x" data-ws-unshare="${w.id}" data-email="${esc(m.email)}" aria-label="Entfernen" title="Entfernen">${fi('x', 12)}</button>` : '';
+      return `<div class="st-ws-person"><span class="st-ws-pav">${fi('user', 12)}</span><span class="st-ws-pn">${esc(who)}</span><span class="st-ws-tag${m.state === 'pending' ? ' wait' : ''}">${tag}</span>${rm}</div>`;
+    });
+    if (!w.guest && ppl.length) ppl.unshift(`<div class="st-ws-person"><span class="st-ws-pav">${fi('user', 12)}</span><span class="st-ws-pn">Du</span><span class="st-ws-tag">Besitzer</span></div>`);
+    const share = w.guest ? `<p class="st-ws-note">Geteilt von ${esc(w.from || 'jemandem')} – Chats und Dokumente sind für alle gleich.</p>`
+      : w.id === 'main' ? '<p class="st-ws-note">Dein erster Workspace bleibt privat. Zum Teilen legst du oben links einen weiteren an.</p>'
+        : `<form class="st-ws-share" data-ws-share="${w.id}"><input class="st-field" type="email" name="email" placeholder="E-Mail-Adresse" autocomplete="off" aria-label="E-Mail-Adresse" /><button type="submit" class="st-btn light">Einladen</button></form>
+          ${wsMsg?.id === w.id ? `<p class="st-ws-msg${wsMsg.err ? ' err' : ''}">${esc(wsMsg.text)}</p>` : ''}`;
+    const del = w.id === 'main' ? '' : `<div class="st-ws-foot"><button type="button" class="st-ws-del${wsDel === w.id ? ' sure' : ''}" data-ws-del="${w.id}">${fi('trash', 12)}${wsDel === w.id ? (w.guest ? 'Wirklich verlassen?' : 'Wirklich löschen?') : w.guest ? 'Workspace verlassen' : 'Workspace löschen'}</button></div>`;
+    const anim = wsAnim === w.id; wsAnim = null; // nur beim Aufklappen gleitet der Bereich auf, nicht bei jedem Neuzeichnen
+    return `<div class="st-ws-panel${anim ? ' in' : ''}"><div class="st-ws-pin">
+        <div class="st-ws-h">Teilen</div>${share}
+        ${ppl.length ? `<div class="st-ws-h">Personen</div><div class="st-ws-people">${ppl.join('')}</div>` : ''}
+        ${del}</div></div>`;
+  }
   function wsSection() {
     const W = window.Workspaces; if (!W) return '';
     const dogsApi = window.PixelDogs;
     const ids = (dogsApi?.MODES || []).map((m) => m.id).filter((id) => !dogsApi.UNAVAILABLE?.has(id));
-    const rows = W.list().map((w) => `<div class="st-row st-ws">
+    const rows = W.list().map((w) => `<div class="st-row st-ws${wsOpen === w.id ? ' open' : ''}" data-ws-row="${w.id}">
         <button type="button" class="st-ws-dog" data-ws-dog="${w.id}" title="Symbol wählen" aria-label="Symbol wählen">${dogsApi ? dogsApi.svg(w.dog || 'general', 24) : ''}</button>
-        ${w.id === 'main' ? `<span class="st-name">${esc(nameOf())}</span><span class="st-muted st-ws-sub">Persönlicher Workspace</span>`
-          : `<input class="st-field st-ws-in" data-ws-name="${w.id}" maxlength="32" value="${esc(w.name || '')}" aria-label="Name des Workspace" />`}
+        <input class="st-ws-in" data-ws-name="${w.id}" maxlength="32" value="${esc(W.nameOf(w.id))}" aria-label="Name des Workspace" spellcheck="false" />
         <span class="grow"></span>
-        ${w.id === W.active() ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>` : `<button type="button" class="st-btn dark" data-ws-use="${w.id}">Öffnen</button>`}
-        ${w.id !== 'main' ? `<button type="button" class="st-btn dark" data-ws-del="${w.id}">Löschen</button>` : ''}
-      </div>${wsPicking === w.id ? `<div class="st-row st-ws-pick">${ids.map((d) => `<button type="button" class="st-ws-opt${d === (w.dog || 'general') ? ' on' : ''}" data-ws-set="${w.id}:${d}" aria-label="${d}">${dogsApi.svg(d, 24)}</button>`).join('')}</div>` : ''}`).join('');
-    return `<h2>Workspaces</h2><div class="st-card">${rows}${W.list().length < 3 ? `<div class="st-row"><span class="st-muted">Bis zu 3 Workspaces – neue legst du oben links über den Namen an.</span></div>` : ''}</div>`;
+        ${w.shared ? `<span class="st-ws-badge">${fi('people', 12)}${esc(W.sub(w.id).replace(/^Geteilt · /, ''))}</span>` : ''}
+        <span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span>
+      </div>${wsPicking === w.id ? `<div class="st-row st-ws-pick">${ids.map((d) => `<button type="button" class="st-ws-opt${d === (w.dog || 'general') ? ' on' : ''}" data-ws-set="${w.id}:${d}" aria-label="${d}">${dogsApi.svg(d, 24)}</button>`).join('')}</div>` : ''}
+      ${wsOpen === w.id ? wsPanel(w) : ''}`).join('');
+    return `<h2>Workspaces</h2><div class="st-card st-ws-card">${rows}</div>`;
   }
   function drawView() {
     const title = PAGES[page];
@@ -215,18 +238,33 @@
     if (wd) { wsPicking = wsPicking === wd.dataset.wsDog ? null : wd.dataset.wsDog; drawView(); return; }
     const wset = e.target.closest('[data-ws-set]');
     if (wset) { const [id, d] = wset.dataset.wsSet.split(':'); window.Workspaces?.setDog(id, d); wsPicking = null; drawView(); return; }
-    const wu = e.target.closest('[data-ws-use]');
-    if (wu) { window.Workspaces?.set(wu.dataset.wsUse); drawView(); return; }
+    const wun = e.target.closest('[data-ws-unshare]');
+    if (wun) { window.Workspaces?.unshare(wun.dataset.wsUnshare, wun.dataset.email).then(drawView, drawView); return; }
     const wdel = e.target.closest('[data-ws-del]');
     if (wdel) {
-      if (wdel.dataset.confirm !== '1') { wdel.dataset.confirm = '1'; wdel.textContent = 'Wirklich löschen?'; return; } // zweiter Klick löscht
-      window.Workspaces?.remove(wdel.dataset.wsDel); drawView(); return;
+      if (wsDel !== wdel.dataset.wsDel) { wsDel = wdel.dataset.wsDel; drawView(); return; } // zweiter Klick löscht endgültig
+      wsDel = null; wsOpen = null;
+      Promise.resolve(window.Workspaces?.remove(wdel.dataset.wsDel)).then(drawView); return;
     }
+    if (e.target.closest('[data-ws-name], .st-ws-panel')) return;
+    const wrow = e.target.closest('[data-ws-row]');
+    if (wrow) { const id = wrow.dataset.wsRow; wsOpen = wsOpen === id ? null : id; wsAnim = wsOpen; wsMsg = null; wsDel = null; wsPicking = null; drawView();
+      if (wsOpen) window.Workspaces?.load().then(() => { if (wsOpen === id && !view.querySelector('.st-ws-share input:focus, [data-ws-name]:focus')) drawView(); }); return; }
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
   view.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const sh = e.target.closest('[data-ws-share]');
+    if (sh) {
+      const id = sh.dataset.wsShare, inp = sh.querySelector('input'), btn = sh.querySelector('button');
+      if (!inp.value.trim()) { inp.focus(); return; }
+      btn.disabled = true; btn.textContent = 'Senden …';
+      try { await window.Workspaces.share(id, inp.value.trim()); wsMsg = { id, text: `Einladung an ${inp.value.trim()} gesendet.` }; }
+      catch (err) { wsMsg = { id, text: err.message, err: true }; }
+      drawView();
+      return;
+    }
     const form = e.target.closest('form[data-key]');
     const v = form?.querySelector('.st-key-in').value.trim();
     if (!form || !v) { form?.querySelector('.st-key-in').focus(); return; }
@@ -235,7 +273,10 @@
     editing = null;
     drawView();
   });
+  // Workspace-Name: übernommen beim Verlassen des Felds oder mit Enter
+  view.addEventListener('change', (e) => { if (e.target.matches('[data-ws-name]')) window.Workspaces?.rename(e.target.dataset.wsName, e.target.value); });
   view.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.matches('[data-ws-name]')) { e.preventDefault(); e.target.blur(); return; }
     if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; drawView(); }
   });
   view.addEventListener('input', (e) => {
@@ -246,7 +287,6 @@
       view.querySelectorAll('.st-sw').forEach((b) => b.classList.toggle('on', b === own));
       return;
     }
-    if (e.target.matches('[data-ws-name]')) { window.Workspaces?.rename(e.target.dataset.wsName, e.target.value); return; }
     if (!e.target.matches('[data-name]')) return;
     write(NAME_KEY, e.target.value.trim());
     applyName();

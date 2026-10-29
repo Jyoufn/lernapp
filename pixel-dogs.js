@@ -1038,20 +1038,33 @@ const PixelDogs = (() => {
   const APAL = { ...PROP, J: '#22352a', j: '#2e4537', D: '#5a5a5a', T: '#e9e4d8', t: '#c9c2b2', E: '#2f86ff' };
   const fur = (id) => ({ ...APAL, F: (FUR[id] || FUR.general)[0], f: (FUR[id] || FUR.general)[1] });
   const P2 = (rows, x, y, pal = APAL) => ({ rows, x, y, pal });
-  // Denkwolke: runde Wolke mit Buckeln oben und unten, darin erscheinen die Punkte nacheinander; zwei kleine Wölkchen führen zum Kopf
-  // Denkwolke: richtige Wolke mit runden Buckeln (oben drei, unten zwei), schwebt über dem Kopf; darin erscheinen die drei Punkte
-  // nacheinander und der jeweils neueste ist dunkler (wie „schreibt gerade“). Zwei kleine runde Wölkchen führen zum Kopf.
-  const CLOUD_SHAPE = (() => { // Wolke aus vier sich überlappenden Kreisen (16 × 10): drei Buckel oben, voller Bauch unten
-    const W = 16, H = 10, C = [[4.2, 5.2, 3.4], [8, 3.6, 3.7], [11.8, 5, 3.4], [8, 6.6, 3.2]];
-    const inside = (x, y) => C.some(([cx, cy, r]) => (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= r * r);
-    return Array.from({ length: H }, (_, y) => Array.from({ length: W }, (_, x) => {
-      if (!inside(x, y)) return '.';
-      const edge = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dy]) => !inside(x + dx, y + dy));
-      return edge ? 'K' : 'L';
-    }).join(''));
-  })();
-  const CLOUD = (n) => CLOUD_SHAPE.map((r, y) => (y !== 5 ? r : [...r].map((ch, x) => { const i = [4, 7, 10].indexOf(x); return i < 0 ? ch : i < n ? (i === n - 1 ? 'K' : 'D') : ch; }).join('')));
-  const PUFF = [P2(['.KK.', 'KLLK', 'KLLK', '.KK.'], 4, 4), P2(['KK', 'KK'], 7, 7)];
+  // Denkblase: runde Sprechblase (Kreis) mit kurzer Spitze nach rechts unten zum Kopf. Darin erscheinen die drei Punkte
+  // nacheinander, der jeweils neueste ist dunkler (wie „schreibt gerade“); danach hüpfen sie einmal als Welle.
+  const BUBBLE_SHAPE = [
+    '....KKKKKK....',
+    '..KKLLLLLLKK..',
+    '.KLLLLLLLLLLK.',
+    '.KLLLLLLLLLLK.',
+    'KLLLLLLLLLLLLK',
+    'KLLLLLLLLLLLLK',
+    'KLLLLLLLLLLLLK',
+    'KLLLLLLLLLLLLK',
+    '.KLLLLLLLLLLK.',
+    '.KLLLLLLLLLLK.',
+    '..KKLLLLLLKK..',
+    '....KKKKKLLK..',
+    '.........KLK..',
+    '..........KK..',
+  ];
+  const DOT_X = [3, 6, 9];
+  // n = Anzahl sichtbarer Punkte (der neueste dunkel); lift = welcher Punkt eine Reihe höher steht (Welle), −1 = keiner
+  const BUBBLE = (n, lift = -1) => BUBBLE_SHAPE.map((r, y) => [...r].map((ch, x) => {
+    const i = DOT_X.findIndex((d) => x === d || x === d + 1);
+    if (i < 0 || i >= n) return ch;
+    const top = i === lift ? 4 : 5;
+    if (y !== top && y !== top + 1) return ch;
+    return i === n - 1 && lift < 0 ? 'K' : 'D';
+  }).join(''));
   // Lupe: runder Rahmen (Metall), helles Glas mit Glanz, Griff schräg nach rechts unten zur Pfote
   const LENS_S = [
     '..KKKKK...',
@@ -1165,8 +1178,9 @@ const PixelDogs = (() => {
     const chin = P2(['.KK.', 'KFFK', 'KfFK', '.KK.'], AX + 3, AY + 15, pf); // Pfote am Kinn
     const paw = (x, y) => P2(['.KK.', 'KFFK', 'KfFK'], x, y, pf);
     return {
-      // denkt: Wolke schwebt leicht auf und ab (über dem Kopf), Punkte erscheinen nacheinander, Pfote am Kinn
-      think: { frames: [0, 1, 2, 3, 3].map((n, i) => [P2(CLOUD(n), -2, i % 2 ? -8 : -7), ...PUFF, chin]), loop: [[0, 360], [1, 300], [2, 300], [3, 300], [4, 600]] },
+      // denkt: runde Sprechblase über dem Kopf, Punkte erscheinen nacheinander und laufen dann als Welle durch, Pfote am Kinn
+      think: { frames: [[0, -1], [1, -1], [2, -1], [3, -1], [3, 0], [3, 1], [3, 2], [3, -1]].map(([n, lift], i) => [P2(BUBBLE(n, lift), -3, i < 4 && i % 2 ? -11 : -10), chin]),
+        loop: [[0, 340], [1, 300], [2, 300], [3, 300], [4, 120], [5, 120], [6, 120], [7, 520]] },
       // sucht: Lupe wandert, ein Lichtreflex huscht über das Glas, ab und zu blitzt ein Fund auf
       search: { frames: [[0, 9, 0], [1, 10, 1], [2, 9, 2], [1, 8, 3], [0, 9, 4], [1, 10, 0]].map(([x, y, g]) => [P2(LENS_S, x, y), ...(g < 3 ? [P2(['H', 'H'].slice(0, 2 - (g === 2)), x + 3 + g, y + 2 + g)] : []), ...(g === 4 ? [P2(SPARK, x + 6, y - 3)] : []), paw(x + 8, y + 9)]),
         loop: [[0, 260], [1, 260], [2, 260], [3, 340], [4, 260], [5, 300]] },

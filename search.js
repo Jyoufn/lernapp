@@ -138,7 +138,34 @@ const AppSearch = (() => {
   let wsData = wsLoad();
   const wsSave = () => { try { localStorage.setItem(WS_KEY, JSON.stringify(wsData)); } catch {} };
   const wsOf = (id) => wsData.list.find((w) => w.id === id) || wsData.list[0];
-  const wsName = (w) => (w.id === 'main' ? (window.userName?.() || 'Julian') : w.name || 'Workspace');
+  const wsName = (w) => w.name || (w.id === 'main' ? (window.userName?.() || 'Julian') : 'Workspace');
+  // Personen im Workspace: Besitzer + angenommene Mitglieder (Einladungen zählen noch nicht)
+  const people = (w) => (w.guest ? 0 : 1) + (w.members || []).filter((m) => m.state !== 'pending').length;
+  const wsSub = (w) => (w.shared ? `Geteilt · ${people(w)} ${people(w) === 1 ? 'Person' : 'Personen'}` : 'Privat');
+  const post = async (path, body) => {
+    const r = await fetch(`/api/workspaces/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Das hat nicht geklappt.');
+    return j;
+  };
+  // Stand vom Server übernehmen: geteilte eigene Workspaces bekommen ihre Mitglieder, fremde (guest) kommen dazu oder fallen weg
+  function applyShared(o) {
+    if (!o?.shared) return;
+    const seen = new Set();
+    o.shared.forEach((x) => {
+      seen.add(x.ws);
+      let w = wsData.list.find((y) => y.id === x.ws);
+      if (!w && x.mine) return;
+      if (!w) { w = { id: x.ws }; wsData.list.push(w); }
+      Object.assign(w, { name: x.name, dog: x.dog, shared: true, members: x.members, ...(x.mine ? {} : { guest: true, owner: x.owner, from: x.from }) });
+    });
+    const gone = wsData.list.filter((w) => w.guest && !seen.has(w.id));
+    gone.forEach((w) => { window.dropWorkspaceChats?.(w.id); window.Docs?.forgetWs?.(w.id); });
+    wsData.list = wsData.list.filter((w) => !gone.includes(w));
+    wsData.list.forEach((w) => { if (!w.guest && !seen.has(w.id) && w.shared) { delete w.shared; delete w.members; } });
+    if (!wsData.list.some((w) => w.id === wsData.active)) wsData.active = 'main';
+    wsSave(); refreshAll();
+  }
   // Tabs oben: nur Chats und Dokumente des aktiven Workspace (Kalender, Aufgaben, Bibliothek bleiben)
   const applyTabs = () => {
     const act = wsData.active;
@@ -161,29 +188,64 @@ const AppSearch = (() => {
     window.Docs?.refresh?.();
     if (chatsView?.open) chatsView.render?.();
   };
+  const shareSync = (w, patch) => { if (w.shared) post('update', { ws: w.id, owner: w.owner, ...patch }).then(applyShared).catch(() => {}); };
   window.Workspaces = {
     active: () => wsData.active,
     list: () => wsData.list.slice(),
+    get: (id) => wsData.list.find((w) => w.id === id) || null,
     label: () => wsName(wsOf(wsData.active)),
+    nameOf: (id) => wsName(wsOf(id)),
+    sub: (id) => wsSub(wsOf(id)),
+    refreshTabs: () => applyTabs(),
     set(id) { if (!wsData.list.some((w) => w.id === id) || id === wsData.active) return; wsData.active = id; wsSave(); refreshAll(); },
     add(name) {
-      if (wsData.list.length >= WS_MAX) return null;
+      if (wsData.list.filter((w) => !w.guest).length >= WS_MAX) return null;
       const used = new Set(wsData.list.map((w) => w.dog));
       const w = { id: `w${Date.now().toString(36)}`, name: String(name || 'Workspace').trim().slice(0, 32) || 'Workspace', dog: WS_DOGS.find((d) => !used.has(d)) || 'general' };
       wsData.list.push(w); wsData.active = w.id; wsSave(); refreshAll();
       return w;
     },
-    setDog(id, dog) { const w = wsData.list.find((x) => x.id === id); if (!w || !window.PixelDogs?.DOGS?.[dog]) return; w.dog = dog; wsSave(); refreshAll(); },
-    rename(id, name) { const w = wsData.list.find((x) => x.id === id); if (!w || id === 'main') return; w.name = String(name).trim().slice(0, 32) || w.name; wsSave(); refreshAll(); },
-    // Löschen: Chats und Dokumente gehen nicht verloren – sie wandern in den ersten Workspace
-    remove(id) {
-      if (id === 'main' || !wsData.list.some((w) => w.id === id)) return;
-      document.querySelectorAll('#tabs .tab:not(.uil-tab):not([data-view])').forEach((t) => { const c = chatOf(t); if (c?.ws === id) { c.ws = 'main'; c.updated = Date.now(); } });
-      (window.Docs?.docs || []).filter((d) => d.ws === id).forEach((d) => window.Docs.update(d.id, { ws: 'main' }));
-      window.saveChats?.();
-      wsData.list = wsData.list.filter((w) => w.id !== id);
+    canAdd: () => wsData.list.filter((w) => !w.guest).length < WS_MAX,
+    setDog(id, dog) { const w = wsData.list.find((x) => x.id === id); if (!w || !window.PixelDogs?.DOGS?.[dog]) return; w.dog = dog; wsSave(); refreshAll(); shareSync(w, { dog }); },
+    rename(id, name) {
+      const w = wsData.list.find((x) => x.id === id); if (!w) return;
+      const n = String(name).trim().slice(0, 32);
+      if (!n || n === wsName(w)) return;
+      w.name = n; wsSave(); refreshAll(); shareSync(w, { name: n });
+    },
+    // Löschen: eigene Chats und Dokumente gehen nicht verloren – sie wandern in den ersten Workspace.
+    // Fremder (geteilter) Workspace: austreten – sein Inhalt gehört dem Besitzer und verschwindet nur hier.
+    async remove(id) {
+      const w = wsData.list.find((x) => x.id === id);
+      if (id === 'main' || !w) return;
+      if (w.guest) {
+        await post('remove', { ws: id, owner: w.owner }).catch(() => {});
+        window.dropWorkspaceChats?.(id); window.Docs?.forgetWs?.(id);
+      } else {
+        if (w.shared) await post('remove', { ws: id }).catch(() => {});
+        document.querySelectorAll('#tabs .tab:not(.uil-tab):not([data-view])').forEach((t) => { const c = chatOf(t); if (c?.ws === id) { c.ws = 'main'; c.updated = Date.now(); } });
+        (window.Docs?.docs || []).filter((d) => d.ws === id).forEach((d) => window.Docs.update(d.id, { ws: 'main' }));
+        window.saveChats?.();
+      }
+      wsData.list = wsData.list.filter((x) => x.id !== id);
       if (wsData.active === id) wsData.active = 'main';
       wsSave(); refreshAll();
+    },
+    // Teilen: Einladung an eine E-Mail (der Haupt-Workspace bleibt privat)
+    async share(id, email) {
+      const w = wsData.list.find((x) => x.id === id); if (!w || w.guest) throw new Error('Nur eigene Workspaces kannst du teilen.');
+      const o = await post('share', { ws: { id: w.id, name: wsName(w), dog: w.dog }, email, from: window.userName?.() || '' });
+      applyShared(o); return o;
+    },
+    async unshare(id, email) { applyShared(await post('remove', { ws: id, email })); },
+    async load() {
+      try { const r = await fetch('/api/workspaces', { cache: 'no-store' }); if (!r.ok) return null; const o = await r.json(); applyShared(o); return o; } catch { return null; }
+    },
+    async answer(inviteId, accept) {
+      const o = await post('answer', { id: inviteId, accept, name: window.userName?.() || '' });
+      applyShared(o);
+      if (o.joined) { this.set(o.joined.ws); await window.syncSharedChats?.(); }
+      return o;
     },
   };
   window.addEventListener('storage', (e) => { if (e.key === WS_KEY) { wsData = wsLoad(); refreshAll(); } });
@@ -206,9 +268,9 @@ const AppSearch = (() => {
     const rows = wsData.list.map((w) => renaming === w.id
       ? `<div class="ws-row edit"><span class="ws-av">${dog(w.dog, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
       : `<div class="ws-row${w.id === wsData.active ? ' on' : ''}" data-ws-pick="${w.id}" role="menuitemradio" aria-checked="${w.id === wsData.active}" tabindex="0">
-          <span class="ws-av">${dog(w.dog, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${w.id === 'main' ? 'Persönlicher Workspace' : 'Workspace'}</small></span>
+          <span class="ws-av">${dog(w.dog, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${wsSub(w)}</small></span>
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
-    const full = wsData.list.length >= WS_MAX;
+    const full = !window.Workspaces.canAdd();
     pop.innerHTML = `${rows}
       ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 12)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
