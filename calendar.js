@@ -39,7 +39,7 @@ const Calendar = (() => {
   view.setAttribute('aria-label', 'Kalender');
   view.innerHTML = `
     <header class="cal-head">
-      <div class="cal-title"><span class="cw-kw"></span><span class="cw-my"><span class="cal-month"></span> <span class="cal-year"></span></span></div>
+      <div class="cal-title"><span class="cw-my"><span class="cal-month"></span> <span class="cal-year"></span></span></div>
       <div class="cal-nav">
         <div class="cal-seg">
           <button type="button" data-cal="prev" aria-label="Vorherige Woche" title="Vorherige Woche">${icon('f-back')}</button>
@@ -83,7 +83,6 @@ const Calendar = (() => {
     view.querySelector('.cal-year').textContent = days[3].getFullYear();
     const off = -new Date().getTimezoneOffset() / 60;
     view.querySelector('.cw-tz').textContent = `GMT${off >= 0 ? '+' : '−'}${Math.abs(off)}`;
-    view.querySelector('.cw-kw').textContent = `KW ${isoWeek(a)}`;
     const today = todayIso();
     daysBox.querySelectorAll('.cw-day').forEach((x) => x.remove());
     daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); return `<button type="button" class="cw-day${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${DAYS[i]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
@@ -338,33 +337,37 @@ const Calendar = (() => {
   function edit(ev, date, time = '', end = '', store = null, anchor = null) {
     close(); // ggf. Tagesliste schließen
     const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: COLORS[0], icon: 'f-calendar' };
-    const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
-    emodal.innerHTML = `<form class="tk-form" autocomplete="off">
-      <div class="tk-form-head">
-        <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Neuer Termin" maxlength="80" aria-label="Titel" required />
-        <button type="button" class="tk-x" data-act="close" aria-label="Schließen">${icon('f-x')}</button>
+    // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
+    // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
+    const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
+    emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet" autocomplete="off">
+      <button type="button" class="tk-x tk-sheet-x" data-act="close" aria-label="Schließen">${icon('f-x')}</button>
+      <div class="tk-sheet-main">
+        <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
+        <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
-      <textarea class="tk-f-notes" name="description" rows="2" placeholder="Beschreibung …" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
-      <div class="tk-pills">
+      <div class="tk-sheet-rows">
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<label class="ce-allday"><span>Ganztägig</span><button type="button" class="ce-switch" data-allday role="switch" aria-label="Ganztägig"><i></i></button></label>
           <div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${pill('color', UIKit.colorRow(e.color, 'data-color'), 'color')}
         ${pill('icon', `<div class="ce-icon-grid">${EV_ICONS.map((id) => `<button type="button" data-icon="${id}" aria-label="Icon">${icon(id)}</button>`).join('')}</div>`, 'icon')}
       </div>
-      <div class="tk-form-foot"><span class="grow"></span>${ev ? `<button type="button" class="tk-del" data-act="delete">${icon('f-trash')}Löschen</button>` : ''}<button type="submit" class="tk-create">${ev ? 'Speichern' : 'Termin erstellen'}</button></div>
+      <div class="tk-sheet-foot"><span class="grow"></span>${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen" title="Löschen">${icon('f-trash')}</button>` : ''}<button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
     </form>`;
     const form = emodal.querySelector('form');
+    UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
-    const grow = () => { notes.style.height = 'auto'; notes.style.height = `${Math.min(notes.scrollHeight, 160)}px`; };
+    const grow = () => { notes.style.height = '0px'; notes.style.height = `${Math.max(20, Math.min(notes.scrollHeight, 160))}px`; };
     notes.addEventListener('input', grow);
 
     const draw = () => {
       const d = new Date(`${e.date}T12:00:00`);
-      form.querySelector('[data-open="date"]').innerHTML = `${icon('f-calendar')}${WD_SHORT[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()].slice(0, 3)}.`;
-      form.querySelector('[data-open="time"]').innerHTML = `${icon('f-clock')}${e.time ? `${e.time}${e.end ? ` – ${e.end}` : ''}` : 'Ganztägig'}`;
-      form.querySelector('[data-open="color"]').innerHTML = `<i style="background:${e.color}"></i>Farbe`;
-      form.querySelector('[data-open="icon"]').innerHTML = `<span style="color:${e.color}">${icon(e.icon)}</span>Icon`;
+      const set = (k, ic, text) => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>`; };
+      set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`);
+      set('time', icon('f-clock'), e.time ? `${e.time}${e.end ? ` – ${e.end}` : ''}` : 'Ganztägig');
+      set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
+      set('icon', `<span style="color:${e.color}">${icon(e.icon)}</span>`, 'Icon');
       form.querySelector('[data-allday]').classList.toggle('on', !e.time);
       form.querySelector('.ce-wheels').hidden = !e.time; // ganztägig: keine Uhrzeiten
       form.querySelectorAll('[data-icon]').forEach((b) => b.classList.toggle('on', b.dataset.icon === e.icon));
@@ -450,7 +453,8 @@ const Calendar = (() => {
       const left = r.left - gap - fw >= 8 ? r.left - gap - fw : Math.min(innerWidth - fw - 8, r.right + gap);
       const side = left < r.left ? 'right' : 'left'; // Spitze zeigt zum Termin
       const fh = form.offsetHeight || 260;
-      const top = Math.max(12, Math.min(innerHeight - fh - 12, r.top + r.height / 2 - 60));
+      const room = 290; // Platz nach unten, damit Datum/Zeit/Icon aufklappen können, ohne dass das Fenster wandert
+      const top = Math.max(12, Math.min(innerHeight - fh - room - 12, r.top + r.height / 2 - 60));
       Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${top}px`, width: `${fw}px` });
       form.dataset.arrow = side;
       form.style.setProperty('--ay', `${Math.max(18, Math.min(fh - 18, r.top + r.height / 2 - top))}px`);

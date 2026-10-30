@@ -124,6 +124,44 @@ const UIKit = (() => {
     return el;
   }
 
-  return { pad2, isoOf, COLORS, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG };
+  /* ---------- Aufklapp-Zeilen (Aufgaben- und Termin-Fenster): Inhalt wächst weich im Kasten unter seiner Zeile auf ----------
+     Beobachtet die Klasse „open“ an jeder .tk-pop im Fenster – egal, wer sie setzt oder entfernt (Klick, Auswahl, Esc) –
+     und lässt die Höhe von .tk-menu weich auf- bzw. zulaufen. Beim Zuklappen hält „folding“ den Inhalt sichtbar, bis er zu ist. */
+  function foldRows(root) {
+    const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
+    const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const isOpen = (cls) => /(^|\s)open(\s|$)/.test(cls || '');
+    // eigene Änderungen an „folding“ lösen den Beobachter auch aus – sie ändern „open“ nicht und fallen unten heraus
+    const mo = new MutationObserver((list) => list.forEach((m) => {
+      const pop = m.target;
+      if (!pop.classList || !pop.classList.contains('tk-pop')) return;
+      const was = isOpen(m.oldValue), is = pop.classList.contains('open');
+      if (was === is) return;
+      const menu = pop.querySelector(':scope > .tk-menu'), box = menu && menu.firstElementChild;
+      if (!menu) return;
+      const wasFolding = pop.classList.contains('folding');
+      pop.classList.add('folding'); // sichtbar halten, damit die aktuelle Höhe messbar ist
+      const from = menu.offsetHeight; // läuft noch eine Animation: dort weitermachen, wo sie gerade ist
+      menu.getAnimations().forEach((a) => a.cancel());
+      box?.getAnimations().forEach((a) => a.cancel());
+      pop.classList.remove('folding');
+      if (reduced()) return;
+      if (is) {
+        const h = menu.offsetHeight;
+        menu.animate([{ height: `${wasFolding ? from : 0}px` }, { height: `${h}px` }], { duration: 360, easing: EASE });
+        box?.animate([{ opacity: 0, transform: 'translateY(-6px) scale(0.985)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: EASE });
+      } else {
+        pop.classList.add('folding');
+        // gleiche Kurve und Dauer wie beim Aufklappen → beim Wechsel zwischen zwei Zeilen bleibt die Fensterhöhe ruhig
+        const a = menu.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 360, easing: EASE, fill: 'forwards' });
+        box?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
+        a.onfinish = () => { if (!pop.classList.contains('open')) { pop.classList.remove('folding'); menu.getAnimations().forEach((x) => x.cancel()); box?.getAnimations().forEach((x) => x.cancel()); } };
+      }
+    }));
+    mo.observe(root, { subtree: true, attributes: true, attributeFilter: ['class'], attributeOldValue: true });
+    return mo;
+  }
+
+  return { pad2, isoOf, COLORS, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows };
 })();
 window.UIKit = UIKit;

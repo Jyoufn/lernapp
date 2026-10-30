@@ -8458,3 +8458,52 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 :is(.chats-view, .dc-list) .cl-new { border: 1px solid #3a3a3a; border-radius: 8px; background: none; color: var(--text); }
 :is(.chats-view, .dc-list) .cl-new:hover { border-color: #4a4a4a; background: none; color: var(--text); }
 :is(.chats-view, .dc-list) .cl-new svg { color: var(--text-2); }
+
+/* =====================================================================
+   30.10. abends – Köpfe von Chats, Bibliothek, Aufgaben und Kalender:
+   Suche weniger rund, innen die graue Fläche des Hauptteils (auch auf dem iPad keine schwarze Systemfläche im Suchfeld);
+   „Neuer Chat“ / „Neues Dokument“ / „Neue Aufgabe“ / „Neu“ wieder blau und weniger rund; Kalender ohne „KW“
+   ===================================================================== */
+:is(.chats-view, .dc-list) .cl-search, .tk-view.tk-listmode .tk-search { border: 1px solid var(--field-border, #272727); border-radius: 10px; background: var(--main-bg); }
+:is(.cl-search, .tk-search) input { -webkit-appearance: none; appearance: none; border-radius: 0; background: transparent; }
+:is(.cl-search, .tk-search) input::-webkit-search-decoration { -webkit-appearance: none; }
+:is(.chats-view, .dc-list) .cl-new, .tk-view.tk-listmode .tk-new { border: 0; border-radius: 8px; background: var(--accent); color: #fff; }
+:is(.chats-view, .dc-list) .cl-new:hover, .tk-view.tk-listmode .tk-new:hover { border: 0; background: var(--accent); color: #fff; filter: brightness(1.08); }
+:is(.chats-view, .dc-list) .cl-new svg, .tk-view.tk-listmode .tk-new svg { color: #fff; }
+.tk-view.tk-listmode .tk-filter-wrap .tk-ib { border-radius: 7px; }
+.cal-week .cal-seg { border-radius: 8px; }
+.cal-week .cal-seg button { border-radius: 5px; }
+.cal-week .cal-new { border-radius: 8px; }
+
+/* =====================================================================
+   Aufgaben- und Termin-Fenster v6: kein Kopf-Text („Neue Aufgabe“), nur × oben rechts; darunter Titel + „Beschreibung
+   hinzufügen“. Jede Zeile klappt ihren Inhalt in einem Kasten (.tk-box) direkt darunter auf – die Höhe läuft weich auf
+   und zu (UIKit.foldRows), nichts springt oder wackelt. Der Termin im Kalender nutzt genau diesen Aufbau (.ce-sheet).
+   ===================================================================== */
+.tk-sheet { position: relative; }
+.tk-sheet-x { position: absolute; top: 14px; right: 12px; z-index: 2; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: #2a2a2a; color: var(--text-3); cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.tk-sheet-x:hover { background: #333; color: var(--text); }
+.tk-sheet-x svg { width: 12px; height: 12px; }
+.tk-sheet-main { padding: 16px 48px 8px 18px; }
+.tk-sheet-rows .tk-menu, .tk-sheet-rows .tk-pop.open .tk-menu { position: static; display: none; width: auto !important; min-width: 0; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; overflow: hidden; opacity: 1; visibility: visible; transform: none; transition: none; animation: none; }
+.tk-sheet-rows .tk-pop:is(.open, .folding) > .tk-menu { display: block; }
+.tk-sheet-rows .tk-pop.open .tk-menu > * { animation: none; }
+.tk-box { margin: 0 14px 8px; padding: 5px; border: 1px solid #2e2e2e; border-radius: 12px; background: #232323; }
+.tk-sheet-rows .tk-box .tk-mi { height: 32px; padding: 0 8px; border-radius: 7px; }
+.tk-sheet-rows .tk-box .tk-mi:hover { background: #2b2b2b; }
+.tk-sheet-rows .tk-menu.date .tk-box { padding: 10px 10px 8px; }
+.tk-sheet-rows .tk-box .tk-tag-row { margin: 0 0 2px; }
+.tk-sheet-rows .tk-box .tk-tag-in { padding: 0 8px; }
+.tk-sheet-rows .tk-box .tk-ml { padding-left: 8px; padding-right: 8px; }
+.tk-sheet-rows .tk-box .tk-side.open { padding: 8px 6px 2px; border-top: 1px solid #2e2e2e; }
+.tk-sheet-rows .tk-box .tk-date-clear { padding: 4px 2px 2px; }
+.tk-sheet-rows .tk-pop.open > .tk-pill .tk-rv { color: var(--text); }
+/* Termin-Fenster */
+.ce-sheet .tk-rv { color: var(--text); }
+.ce-sheet .ce-dot { display: block; width: 10px; height: 10px; border-radius: 50%; }
+.ce-sheet .tk-menu.color .tk-colors { flex-wrap: wrap; padding: 4px; }
+.ce-sheet .ce-icon-grid { grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); }
+.ce-sheet .ce-icon-grid button { width: 100%; }
+.ce-sheet .ce-allday { padding: 0 8px; }
+.ce-sheet .ce-wheels { border-top-color: #2e2e2e; }
+.cal-emodal.anchored .tk-sheet { border-radius: 18px; }

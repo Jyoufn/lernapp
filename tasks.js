@@ -324,13 +324,11 @@ const Tasks = (() => {
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
-    const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
+    // Liste: Inhalt in einem Kasten (.tk-box), der weich unter seiner Zeile aufklappt (UIKit.foldRows)
+    const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${listMode ? `<div class="tk-box">${menu}</div>` : menu}</div></div>`;
     // Liste: Fenster mit Zeilen wie das Termin-Fenster der Kalender-Vorlage – nur Beschreibung, Datum, Priorität, Tags; unten Agent + Aktionen
         if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
-      <div class="tk-sheet-head">
-        <b class="tk-sheet-h">${t0 ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}</b>
-        <button type="button" class="tk-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
-      </div>
+      <button type="button" class="tk-x tk-sheet-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
       <div class="tk-sheet-main">
         <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="120" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
@@ -373,6 +371,7 @@ const Tasks = (() => {
         ${t0 ?`<button type="button" class="tk-del" data-act="delete">${fi('trash', 12)}Löschen</button>` : ''}<button type="submit" class="tk-create">${t0 ? 'Speichern' : 'Aufgabe erstellen'}</button></div>
     </form>`;
     const form = modal.querySelector('form');
+    if (listMode) UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
     const grow = () => { notes.style.height = listMode ? '0px' : 'auto'; notes.style.height = `${Math.max(listMode ? 20 : 0, Math.min(notes.scrollHeight, 200))}px`; };
     notes.addEventListener('input', grow);
