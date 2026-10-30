@@ -845,11 +845,27 @@ const PixelDogs = (() => {
       b.classList.toggle('on', on);
       b.innerHTML = on ? `${ico('check')}Aktiv` : 'Auswählen';
     });
+    // Passt das Feld nicht über das Eingabefeld (iPad, leerer Chat: Feld sitzt mittig), rückt das Eingabefeld nach unten
+    // und das Feld bekommt höchstens den freien Platz bis unter die Kopfzeile (Rest scrollt) – nichts ragt mehr oben hinaus
+    const fit = (open) => {
+      const panel = host.closest('.panel');
+      panel?.classList.toggle('pick-low', false);
+      picker.style.maxHeight = '';
+      if (!open) return;
+      const box = host.closest('.panel, .dcc') || document.body;
+      const top = box.getBoundingClientRect().top + (box.classList.contains('panel') ? 60 : 52);
+      const lift = panel?.classList.contains('home') ? parseFloat(getComputedStyle(panel).getPropertyValue('--home-lift')) || 0 : 0;
+      let space = host.getBoundingClientRect().top - 8 - top;
+      if (lift && space < picker.scrollHeight) { panel.classList.add('pick-low'); space += lift; }
+      picker.style.maxHeight = `${Math.max(180, Math.floor(space))}px`;
+    };
     const set = (open) => {
       if (open) { paint(); picker.querySelectorAll('.ap-card.chosen').forEach((c) => c.classList.remove('chosen')); }
+      fit(open);
       picker.classList.toggle('open', open);
       host.classList.toggle('picking', open);
     };
+    if (typeof window !== 'undefined') window.addEventListener('resize', () => { if (picker.classList.contains('open')) fit(true); });
     triggers.forEach((t) => t.addEventListener('click', () => set(!picker.classList.contains('open'))));
     picker.addEventListener('click', (e) => {
       if (e.target.closest('.ap-close')) { set(false); return; }
@@ -1095,6 +1111,38 @@ const PixelDogs = (() => {
   // umblättern: Seite hebt sich rechts, steht senkrecht am Rücken, legt sich links ab – danach stehen andere Zeilen da
   const PAGE = [['...KKKK', '..KwwwK', '.KwwwwK', 'KwwwwK.'], ['.K.', 'KwK', 'KwK', 'KwK', 'KwK'], ['KKKK...', 'KwwwK..', 'KwwwwK.', '.KwwwwK']];
   const BOOK_B = BOOK_S.map((r, i) => (i === 2 ? 'KwvvvwwKwvvwwwK' : i === 4 ? 'KwvvvvwKwvvvvwK' : r));
+  // Lernen: erst sieht man die Buchrückseite vor ihm (Klappentext, Rücken links), das Buch dreht sich, die Vorderseite mit Titel
+  // kommt, es legt sich hin und der Umschlag klappt auf – dann liest er und blättert um
+  const BOOK_BACK = [
+    '.KKKKKKKKK',
+    'KooOOOOOOK',
+    'KooOOOOOOK',
+    'KooOwwwwOK',
+    'KooOvvvvOK',
+    'KooOvvvOOK',
+    'KooOvvvvOK',
+    'KooOOOOOOK',
+    'KooOOyyOOK',
+    'KooOOOOOOK',
+    '.KKKKKKKKK',
+  ];
+  const BOOK_EDGE = ['.KK.', 'KoOK', 'KoOK', 'KoOK', 'KoOK', 'KoOK', 'KoOK', 'KoOK', 'KoOK', 'KoOK', '.KK.'];
+  const BOOK_FRONT = [
+    'KKKKKKKKK.',
+    'KOOOOOOooK',
+    'KOyyyyOooK',
+    'KOOOOOOooK',
+    'KOwwwwOooK',
+    'KOOOOOOooK',
+    'KOOOOOOooK',
+    'KOOyOOOooK',
+    'KOOOOOOooK',
+    'KOOOOOOooK',
+    'KKKKKKKKK.',
+  ];
+  const BOOK_TILT = ['..KKKKKKKK.', '.KOyyyyOOoK', '.KOOOOOOOoK', 'KOwwwwOOoK.', 'KOOOOOOOoK.', 'KKKKKKKKK..'];
+  const BOOK_SHUT = ['KKKKKKKK', 'KOOOOOOK', 'KOyyyyOK', 'KOOOOOOK', 'KOwwwwOK', 'KOOOOOOK', 'KoooooOK', '.KKKKKKK'];
+  const coverOf = (rows) => rows.map((r) => r.replace(/w/g, 'O'));
   // Pergamentrolle mit Feder (Research beim Aufschreiben): Zeilen entstehen, die Federspitze folgt
   const SCROLL_LINES = [[2, 7], [4, 5], [6, 6]];
   const parchment = (k) => {
@@ -1226,7 +1274,19 @@ const PixelDogs = (() => {
       cook: { frames: [0, 1, 2, 3, 4, 5].map((k) => [
           ...[[2, 14 - (k % 3) * 2, k % 3 === 2 ? 'v' : 'L'], [5, 13 - ((k + 1) % 3) * 2, (k + 1) % 3 === 2 ? 'v' : 'L']].map(([x, y, c]) => P2([`${c}.`, `.${c}`], x, y)),
           P2(FLAMES[k % 3], 1, 16), P2(PAN_S, k === 3 ? 1 : 0, 20), paw(12, 19)]), loop: seq(6, 150) },
-      book: { frames: [[BOOK_S, null], [BOOK_S, 0], [BOOK_S, 1], [BOOK_B, 2], [BOOK_B, null]].map(([b, k]) => [P2(b, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 7, 3][k], k === 1 ? 11 : 12)]), paw(0, 19), paw(11, 19)]),
+      book: { frames: [
+          ...[[BOOK_S, null], [BOOK_S, 0], [BOOK_S, 1], [BOOK_B, 2], [BOOK_B, null]].map(([b, k]) => [P2(b, 0, 15), ...(k == null ? [] : [P2(PAGE[k], [7, 7, 3][k], k === 1 ? 11 : 12)]), paw(0, 19), paw(11, 19)]),
+          // 5–12: Einstieg (Rückseite → dreht sich → Vorderseite → legt sich hin → Umschlag klappt auf)
+          [P2(BOOK_BACK, 1, 10), paw(0, 18), paw(9, 18)],
+          [P2(BOOK_EDGE, 4, 10), paw(1, 18), paw(7, 18)],
+          [P2(BOOK_FRONT, 1, 10), paw(0, 18), paw(9, 18)],
+          [P2(BOOK_TILT, 1, 14), paw(0, 18), paw(10, 18)],
+          [P2(BOOK_SHUT, 3, 15), paw(11, 19)],
+          [P2(BOOK_S, 0, 15), P2(coverOf(PAGE[0]), 7, 12), paw(0, 19), paw(11, 19)],
+          [P2(BOOK_S, 0, 15), P2(coverOf(PAGE[1]), 7, 11), paw(0, 19), paw(11, 19)],
+          [P2(BOOK_S, 0, 15), P2(coverOf(PAGE[2]), 3, 12), paw(0, 19), paw(11, 19)],
+        ],
+        intro: [[5, 750], [6, 90], [7, 420], [8, 140], [9, 180], [10, 120], [11, 120], [12, 120], [0, 600]],
         loop: [[0, 900], [1, 130], [2, 130], [3, 130], [4, 900], [3, 130], [2, 130], [1, 130], [0, 700]] },
       quill: { frames: Array.from({ length: 19 }, (_, k) => { const { rows, tip } = parchment(k); return [P2(rows, 0, 11), P2(QUILL, tip[0] - 0, 11 + tip[1] - 4)]; }), loop: [...seq(19, 140), [18, 900]], glasses: true },
       board: { frames: Array.from({ length: 19 }, (_, k) => [P2(boardRows(k), 0, 9)]), loop: [...seq(19, 120), [18, 1000]] },
@@ -1274,10 +1334,10 @@ const PixelDogs = (() => {
       const a = anims[k], g = wrap.querySelector(`[data-anim="${k}"]`);
       const frame = (f) => g.querySelectorAll(':scope > [data-f]').forEach((n) => { n.style.display = +n.dataset.f === f ? '' : 'none'; });
       if (still) { frame(a.loop[a.loop.length - 1][0]); return; }
-      let i = 0;
+      let i = 0, seq = a.intro ? [...a.intro, ...a.loop] : a.loop; // Einstieg nur einmal, danach die Schleife
       const tick = () => {
-        if (i >= a.loop.length) { if (a.once) { onDone?.(); return; } i = 0; }
-        const [f, ms] = a.loop[i++];
+        if (i >= seq.length) { if (a.once) { onDone?.(); return; } i = 0; seq = a.loop; }
+        const [f, ms] = seq[i++];
         frame(f);
         loopT = setTimeout(tick, ms);
       };

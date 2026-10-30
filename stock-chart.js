@@ -85,6 +85,7 @@ const StockChart = (() => {
   function figure(spec) {
     const fig = document.createElement('figure');
     fig.className = 'stk';
+    window.enterOnce?.(fig);
     fig.innerHTML = `<div class="stk-head">
         <div class="stk-title"><strong>${esc(spec.name || spec.symbol)}</strong><span>${esc(spec.symbol)}</span></div>
         <div class="stk-quote"><span class="stk-price shimmer">Kurs wird geladen</span><span class="stk-chg"></span><span class="stk-time"></span></div>
@@ -131,8 +132,10 @@ const StockChart = (() => {
       ch.textContent = d.change == null ? '' : `${up ? '+' : '−'}${nf(Math.abs(d.change), 2)} € (${up ? '+' : '−'}${nf(Math.abs(d.changePct), 2)} %) ${{ '1T': 'heute', '1W': '1 Woche', '1M': '1 Monat', '6M': '6 Monate', '1J': '1 Jahr', '5J': '5 Jahre' }[st.range]}`;
       fig.querySelector('.stk-time').innerHTML = d.realtime ? `<i class="stk-live"></i>Echtzeit · ${clock(d.time)}` : `Stand ${clock(d.time)}`;
       fig.querySelector('.stk-title strong').textContent = st.spec.name || d.name || d.symbol;
-      fig.querySelector('.stk-foot').textContent = `Quelle: ${d.source}${d.bid && d.ask ? ` · Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : ''}`
-        + (st.spec.forecast ? ` · Prognose: Trend und Schwankung fortgeschrieben, Band = 80 % Wahrscheinlichkeit – keine Garantie` : '');
+      // keine Quellenangabe (Wunsch des Nutzers) – nur Geld/Brief und bei Prognosen der Hinweis
+      const foot = [d.bid && d.ask ? `Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : '', st.spec.forecast ? 'Prognose: Trend und Schwankung fortgeschrieben, Band = 80 % Wahrscheinlichkeit – keine Garantie' : ''].filter(Boolean).join(' · ');
+      fig.querySelector('.stk-foot').textContent = foot;
+      fig.querySelector('.stk-foot').hidden = !foot;
       // Depot: Ergebnis der Position direkt im Chart (statt als Text darunter)
       const over = fig.querySelector('.stk-over'), pos = st.spec.pos;
       if (pos?.buyPrice && d.price) {
@@ -307,10 +310,11 @@ const StockChart = (() => {
     // Immer live: alle 3 s der Kurs (neue Kerze, wenn ein neuer Abschnitt beginnt), jede Minute der ganze Verlauf neu.
     // Läuft, solange der Chart zu sehen ist; wird er wieder sichtbar (anderer Tab, App wieder vorn), sofort aktualisieren.
     const STEP = { '1T': 300000, '1W': 900000 };
-    let visible = false, lastFull = Date.now(), busyTick = false;
+    let visible = false, lastFull = Date.now(), busyTick = false, lastTick = 0;
     const tick = async () => {
-      if (!fig.isConnected) { clearInterval(st.timer); return; }
-      if (!visible || document.hidden || !st.data || busyTick) return;
+      if (!fig.isConnected) { if (!fig._gone) { fig._gone = setTimeout(() => { if (!fig.isConnected) clearInterval(st.timer); fig._gone = 0; }, 4000); } return; } // kurz ausgehängt (Weiterschreiben) ≠ weg
+      if (!visible || document.hidden || !st.data || busyTick || Date.now() - lastTick < 2500) return;
+      lastTick = Date.now();
       busyTick = true;
       try {
         if (Date.now() - lastFull > 60000) { // ganzer Verlauf (z. B. neue Tageskerze, frische 20/50-Tage-Linie)
@@ -423,5 +427,14 @@ const StockChart = (() => {
   return { parse, figure, RANGES };
 })();
 window.StockChart = StockChart;
+// Börsen-Karten blenden EINMAL ein – per Skript statt CSS: beim Weiterschreiben wird die Antwort bei jedem Schritt neu aufgebaut und die Karte
+// aus- und wieder eingehängt; eine CSS-Animation startet dabei jedes Mal neu (Flackern/Ruckeln), eine Skript-Animation läuft einfach weiter
+window.enterOnce = (node, { y = 8, delay = 0, dur = 520 } = {}) => {
+  if (!node || node._entered) return node;
+  node._entered = true;
+  node.classList.add('shown');
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) node.animate([{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }], { duration: dur, delay, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' });
+  return node;
+};
 // Börsen-Karten blenden nur EINMAL ein: beim Neuzeichnen der Antwort (Text läuft noch) würden sie sonst jedes Mal neu hereingleiten
 if (typeof document !== 'undefined') document.addEventListener('animationend', (e) => { if (e.animationName === 'card-in') e.target.classList.add('shown'); });

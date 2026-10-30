@@ -1293,41 +1293,46 @@ const DocBlocks = (() => {
         }
       }
     }, true);
-    // iPad/Touch: Gedrückthalten (0,45 s, ohne zu verschieben) öffnet dasselbe Menü wie der Rechtsklick; Doppelklick/Doppeltippen
-    // auf einen Block, ein Bild/Diagramm, eine Trennlinie oder einen Seitenlink ebenfalls (im Fließtext bleibt Doppelklick = Wort markieren)
-    const openMenuAt = (target, x, y) => {
-      const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window });
-      target.dispatchEvent(ev);
-      return ev.defaultPrevented;
+    // iPad/Touch: kein Gedrückthalten/Doppeltippen mehr (störte Markieren und Tabellen). Stattdessen: tippt man in einen Block
+    // (Tabelle, Bild/Diagramm, Block, Hervorhebung, Liste, Trennlinie, Seitenlink), erscheint rechts daneben ein kleiner „•••“-Knopf –
+    // erst der öffnet das Menü (wie der Rechtsklick, für genau die Stelle, die man angetippt hat). Markieren und Tippen bleiben normal.
+    const MENU_NODE = '.dc-blk, .dc-tw, [data-viz], .dc-viz, [data-callout], a[data-doclink], ul[data-todo], hr';
+    const handle = document.createElement('button');
+    handle.type = 'button';
+    handle.className = 'dc-handle';
+    handle.setAttribute('aria-label', 'Block-Menü');
+    handle.innerHTML = '<svg width="14" height="14" aria-hidden="true"><use href="#f-more"/></svg>';
+    handle.hidden = true;
+    let handleFor = null, handleTarget = null;
+    const touchy = () => matchMedia('(hover: none)').matches;
+    const placeHandle = () => {
+      if (!handleFor?.isConnected || !content.contains(handleFor)) { handle.hidden = true; return; }
+      const host = content.offsetParent || content.parentElement;
+      if (handle.parentElement !== host) host.append(handle);
+      const r = handleFor.getBoundingClientRect(), h = host.getBoundingClientRect();
+      handle.style.top = `${r.top - h.top + host.scrollTop + (handleFor.tagName === 'HR' ? -13 : 2)}px`;
+      handle.style.left = `${Math.min(h.width - 34, r.right - h.left + 6)}px`;
+      handle.hidden = false;
     };
-    let press = null;
-    const cancelPress = () => { if (press) { clearTimeout(press.t); press = null; } };
-    content.addEventListener('pointerdown', (e) => {
-      cancelPress();
-      if (e.pointerType === 'mouse' || e.button > 0) return;
-      const target = e.target, x = e.clientX, y = e.clientY;
-      press = { x, y, t: setTimeout(() => {
-        press = null;
-        if (openMenuAt(target, x, y)) {
-          navigator.vibrate?.(8);
-          getSelection()?.removeAllRanges();
-          // das folgende Loslassen soll nichts anklicken
-          const stop = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
-          content.addEventListener('click', stop, { capture: true, once: true });
-          setTimeout(() => content.removeEventListener('click', stop, { capture: true }), 700);
-        }
-      }, 450) };
-    }, { passive: true });
-    content.addEventListener('pointermove', (e) => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); }, { passive: true });
-    ['pointerup', 'pointercancel', 'scroll'].forEach((k) => content.addEventListener(k, cancelPress, { passive: true }));
-    content.addEventListener('dblclick', (e) => {
-      const t = e.target;
-      const onBlock = t.closest?.('.dc-blk, [data-viz], .dc-viz, a[data-doclink]') || t.tagName === 'HR';
-      if (!onBlock || !content.contains(t)) return;
-      if (openMenuAt(t, e.clientX, e.clientY)) { e.preventDefault(); getSelection()?.removeAllRanges(); }
+    content.addEventListener('pointerup', (e) => {
+      if (e.pointerType === 'mouse' || !touchy()) return;
+      const node = e.target.closest?.(MENU_NODE);
+      handleFor = node && content.contains(node) ? (node.closest('.dc-tw, .dc-blk, [data-viz], .dc-viz') || node) : null;
+      handleTarget = e.target;
+      placeHandle();
     });
-    // iOS: das eigene Menü statt der Lupe/Textauswahl-Leiste, solange auf einem Block gedrückt wird
-    content.addEventListener('touchstart', (e) => { if (e.target.closest?.('.dc-blk, [data-viz], .dc-viz')) e.target.closest('.dc-blk, [data-viz], .dc-viz').style.webkitTouchCallout = 'none'; }, { passive: true });
+    content.addEventListener('input', () => { if (!handle.hidden) placeHandle(); });
+    window.addEventListener('resize', () => { if (!handle.hidden) placeHandle(); });
+    document.addEventListener('pointerdown', (e) => { if (!handle.hidden && e.target !== handle && !handle.contains(e.target) && !content.contains(e.target)) handle.hidden = true; }, true);
+    handle.addEventListener('pointerdown', (e) => e.preventDefault()); // Tastatur/Markierung bleibt
+    handle.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const t = handleTarget?.isConnected && handleFor?.contains(handleTarget) ? handleTarget : handleFor;
+      if (!t) return;
+      const r = handle.getBoundingClientRect();
+      t.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: r.left, clientY: r.bottom + 4, view: window }));
+      handle.hidden = true;
+    });
     // Rechtsklick auf Blöcke, Tabellen, Hervorhebungen, Trennlinien, Listen, Seitenlinks:
     // schlichtes Menü mit Gruppen; was ein eigenes Fenster braucht, öffnet sich als Untermenü rechts daneben
     content.addEventListener('contextmenu', (e) => {

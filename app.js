@@ -1786,7 +1786,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     sweepRow(step.querySelector('.step-line'));
     const t = step.querySelector('.t');
     picStep = { step, from, web, done: false, tick: setInterval(() => { t.textContent = secs(from); }, 250) };
-    if (!web) { ensureActor(); actor?.set('paint'); } // Hund wechselt an die Staffelei, solange das Bild entsteht
+    if (!web && pictureAsk) { ensureActor(); actor?.set('paint'); } // reine Bildbitte: gleich an die Staffelei – mit Text erst, wenn der Text fertig ist
     msgEl.classList.add('pic-in-timeline');
     scrollToBottom();
   };
@@ -2365,7 +2365,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'web') onWeb(data);
       else if (event === 'deep') onDeep(data);
       else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
-        const a = data.added?.length || 0, so = data.sold?.length || 0, sk = data.skipped || 0, un = data.unknown?.length || 0;
+        const a = data.added?.length || 0, so = data.sold?.length || 0, sk = (data.skipped || 0) + (data.unchanged || 0), un = data.unknown?.length || 0;
         const parts = [a ? `${a} ${a === 1 ? 'buy' : 'buys'}` : '', so ? `${so} ${so === 1 ? 'sale' : 'sales'}` : '', sk ? `${sk} already there` : '', un ? `${un} not recognized` : ''].filter(Boolean);
         if (parts.length || data.removed?.length) { noteStep('saveDepot', parts.join(' · ') || 'updated'); phase('saveDepot'); }
       }
@@ -2439,17 +2439,27 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (signal.aborted) answerR.flush();
       else await answerR.finish();
       if (!signal.aborted) {
-        if (!coding && answer.querySelector('.chat-illustration[data-prompt]')) showPicStep();
+        if (!coding && answer.querySelector('.chat-illustration[data-prompt]')) { ensureWork(); showPicStep(); } // auch bei schnellen Antworten ohne Zeitleiste: jetzt „Painting“ zeigen
         pictures = hydrateIllustrations(answer, signal);
         if (picStep) pictures.finally(() => finishPicStep(signal.aborted));
       } else { answer.querySelectorAll('.chat-illustration[data-prompt]').forEach((f) => f.remove()); finishPicStep(true); } // gestoppt: keine hängenden Platzhalter
     }
-    actor?.finish(!signal.aborted && !failed && !/```ask/.test(answerR?.text || ''));
+    // Bild entsteht noch: erst den Text fertig schreiben, DANN malt der Hund an der Staffelei („Painting“), bis das Bild da ist –
+    // erst danach Daumen hoch und „Completed“ (vorher sprang er schon zum Daumen, während das Bild noch lief)
+    const okEnd = !signal.aborted && !failed && !/```ask/.test(answerR?.text || '');
+    const picsPending = !!(picStep && !picStep.done && pictures && !signal.aborted);
+    if (picsPending) {
+      ensureActor(); actor?.set('paint');
+      pictures.finally(() => actor?.finish(okEnd));
+    } else actor?.finish(okEnd);
     if (work) {
       work.endStart?.();
-      work.work.classList.remove('active');
-      work.head.querySelector('.work-title').classList.remove('sweep');
-      swapText(work.head.querySelector('.work-title'), signal.aborted || failed ? 'Stopped after' : P('done').main);
+      const wTitle = work.head.querySelector('.work-title');
+      const endTitle = () => { work.work.classList.remove('active'); wTitle.classList.remove('sweep'); swapText(wTitle, signal.aborted || failed ? 'Stopped after' : P('done').main); };
+      if (picsPending) {
+        setActivity(P('picture').kind, P('picture').main);
+        pictures.finally(() => { endTitle(); const tt = work.head.querySelector('.t'); tt.classList.remove('live'); tt.textContent = secs(); });
+      } else endTitle();
       // Abschluss: blauer Haken mit kurzer Zusammenfassung (Schritte, Quellen) – nur, wenn wirklich fertig
       if (!signal.aborted && !failed && !/```ask/.test(answerR?.text || '') && !work.steps.querySelector('.step.finished')) {
         const n = work.steps.querySelectorAll(':scope > .step:not([hidden])').length;

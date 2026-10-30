@@ -1,27 +1,34 @@
 /* ===================================================================
    Präsentationen des Lern-Agenten (Block ```praesentation im Chat)
-   - Die KI liefert nur Inhalt (Titel, Folien, Stichpunkte, Bildwünsche); Gestaltung und Aufteilung macht die App:
+   - Die KI liefert nur Inhalt (Titel, Folien, Stichpunkte mit **fett**, Bildwünsche); Gestaltung macht die App:
      EIN Layout-Rechner erzeugt je Folie einfache Bausteine (Fläche, Kreis, Text mit fertigen Zeilen, Bild) in Zoll (13,333 × 7,5 = 16:9).
-     Daraus entstehen drei Ausgaben, die gleich aussehen: Vorschau im Chat (HTML), PowerPoint (.pptx, Text bleibt bearbeitbar)
-     und PDF (jede Folie als Bild). „Keynote“ = dieselbe .pptx – auf dem iPad über das Teilen-Menü direkt „In Keynote öffnen“
-     (ein .key-Format kann ein Browser nicht schreiben; Keynote übernimmt .pptx vollständig).
-   - Bilder: echte, freie Bilder (Wikimedia, über /api/illustration mit source "web" – wie im Chat), passend zugeschnitten
+     Daraus entstehen drei gleich aussehende Ausgaben: Vorschau im Chat (HTML), PowerPoint (.pptx, Text bearbeitbar) und PDF.
+     „Keynote“ = dieselbe .pptx – auf dem iPad über das Teilen-Menü „In Keynote öffnen“ (.key kann ein Browser nicht schreiben).
+   - **fett** im Text wird wirklich fett gesetzt (Vorschau, PDF und PowerPoint), die Sternchen verschwinden
+   - Immer mit Gliederung: fehlt die Folie „gliederung“, setzt die App sie hinter die Titelfolie (aus den Abschnitten)
+   - Fünf Designs zum Umschalten in der Karte: Klar · Nacht · Papier · Kräftig · Minimal (Wahl je Präsentation gemerkt)
+   - Bilder: echte, freie Bilder (Wikimedia, über /api/illustration mit source "web" – wie im Chat), passend zugeschnitten, mit Bildnachweis
    - Ohne fremde Bibliotheken: ZIP (für .pptx) und PDF werden hier selbst geschrieben
-   Folienarten: titel · punkte · bild · zwei · zitat · abschnitt · fazit
+   Folienarten: titel · gliederung · punkte · bild · zahlen · zwei · zitat · abschnitt · fazit
    =================================================================== */
 const Praesentation = (() => {
   const W = 13.333, H = 7.5; // Zoll, 16:9 wie PowerPoint
-  const FONT = 'Helvetica Neue';
-  const CSS_FONT = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+  const FONTS = { sans: { pptx: 'Helvetica Neue', css: '"Helvetica Neue", Helvetica, Arial, sans-serif' }, serif: { pptx: 'Georgia', css: 'Georgia, "Times New Roman", serif' } };
+  const FONT = FONTS.sans.pptx;
   const THEMES = {
-    hell: { bg: '#FFFFFF', text: '#1D1D1F', sub: '#6E6E73', panel: '#F4F5F7', line: '#E3E4E8', accent: '#2F86FF', onAccent: '#FFFFFF' },
-    dunkel: { bg: '#121418', text: '#F5F5F7', sub: '#A1A1A6', panel: '#1E2128', line: '#2C3038', accent: '#6AA8FF', onAccent: '#0E1116' },
-    warm: { bg: '#FBF7F0', text: '#2B2118', sub: '#7A6A58', panel: '#F2E9DB', line: '#E6D9C4', accent: '#C8642A', onAccent: '#FFFFFF' },
+    klar: { name: 'Klar', bg: '#FFFFFF', text: '#14161A', sub: '#5F6672', panel: '#F2F4F7', line: '#E3E6EB', accent: '#2F6BFF', onAccent: '#FFFFFF', head: 'sans', title: 'split', radius: 0.22 },
+    nacht: { name: 'Nacht', bg: '#0E1320', text: '#F4F6FB', sub: '#9AA3B5', panel: '#182033', line: '#273049', accent: '#5EA2FF', onAccent: '#0B1020', head: 'sans', title: 'full', radius: 0.22 },
+    papier: { name: 'Papier', bg: '#F6F1E7', text: '#2A2118', sub: '#76695A', panel: '#ECE3D3', line: '#DDD1BC', accent: '#B5532A', onAccent: '#FFFFFF', head: 'serif', title: 'split', radius: 0.08 },
+    kraeftig: { name: 'Kräftig', bg: '#FFFFFF', text: '#111111', sub: '#555B66', panel: '#F2F2F2', line: '#E6E6E6', accent: '#FF5A36', onAccent: '#FFFFFF', head: 'sans', title: 'block', radius: 0.3 },
+    minimal: { name: 'Minimal', bg: '#FAFAFA', text: '#0A0A0A', sub: '#6B6B6B', panel: '#FFFFFF', line: '#D9D9D9', accent: '#0A0A0A', onAccent: '#FFFFFF', head: 'sans', title: 'minimal', radius: 0, fixedAccent: true },
   };
-  const TYPES = ['titel', 'punkte', 'bild', 'zwei', 'zitat', 'abschnitt', 'fazit'];
+  const ALIAS = { hell: 'klar', dunkel: 'nacht', warm: 'papier' };
+  const themeOf = (deck) => { const T = THEMES[deck.theme] || THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.theme === deck.aiTheme ? { accent: deck.accent } : {}) }; };
+  const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'fazit'];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
   const str = (x, n) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const plain = (x) => String(x ?? '').replace(/\*\*|__/g, '').replace(/(^|\s)\*(\S)/g, '$1$2').replace(/(\S)\*(\s|$)/g, '$1$2');
   const hex = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : null);
 
   /* ---------- Daten prüfen ---------- */
@@ -29,144 +36,218 @@ const Praesentation = (() => {
     let o = null;
     try { o = JSON.parse(String(raw || '').trim()); } catch { return null; }
     if (!o || typeof o !== 'object' || !Array.isArray(o.slides) || !o.slides.length) return null;
-    const pts = (a) => (Array.isArray(a) ? a.map((p) => str(p, 160)).filter(Boolean).slice(0, 6) : []);
+    const pts = (a, n = 6) => (Array.isArray(a) ? a.map((p) => str(p, 180)).filter(Boolean).slice(0, n) : []);
     const img = (i) => (i && typeof i === 'object' && (i.query || i.prompt) ? { query: str(i.query, 80), prompt: str(i.prompt || i.query, 400) } : null);
-    const slides = o.slides.slice(0, 16).map((s) => ({
+    let slides = o.slides.slice(0, 18).map((s) => ({
       type: TYPES.includes(s?.type) ? s.type : 'punkte',
-      title: str(s?.title, 110), text: str(s?.text, 420), points: pts(s?.points),
-      left: s?.left ? { title: str(s.left.title, 60), points: pts(s.left.points) } : null,
-      right: s?.right ? { title: str(s.right.title, 60), points: pts(s.right.points) } : null,
+      title: plain(str(s?.title, 110)), text: str(s?.text, 460), points: pts(s?.points, s?.type === 'gliederung' ? 8 : 6),
+      left: s?.left ? { title: plain(str(s.left.title, 60)), points: pts(s.left.points) } : null,
+      right: s?.right ? { title: plain(str(s.right.title, 60)), points: pts(s.right.points) } : null,
       image: img(s?.image), notes: str(s?.notes, 1200),
     })).filter((s) => s.title || s.text || s.points.length);
     if (!slides.length) return null;
-    const theme = THEMES[o.theme] ? o.theme : 'hell';
-    return { title: str(o.title || slides[0].title, 110), subtitle: str(o.subtitle, 160), theme, accent: hex(o.accent), slides };
+    // Gliederung ist Pflicht: fehlt sie, kommt sie hinter die Titelfolie (Abschnitte, sonst die Folientitel)
+    if (!slides.some((s) => s.type === 'gliederung')) {
+      const secs = slides.filter((s) => s.type === 'abschnitt').map((s) => s.title);
+      const items = (secs.length >= 2 ? secs : slides.filter((s) => !['titel', 'fazit', 'zitat'].includes(s.type)).map((s) => s.title)).filter(Boolean).slice(0, 8);
+      if (items.length >= 2) slides.splice(slides[0].type === 'titel' ? 1 : 0, 0, { type: 'gliederung', title: 'Gliederung', text: '', points: items, left: null, right: null, image: null, notes: '' });
+    }
+    const theme = THEMES[o.theme] ? o.theme : ALIAS[o.theme] || 'klar';
+    return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: theme, accent: hex(o.accent), slides };
   }
 
-  /* ---------- Text messen und umbrechen (eine Messung für alle drei Ausgaben) ---------- */
+  /* ---------- Text: **fett** in Läufe zerlegen, messen und umbrechen (eine Messung für alle drei Ausgaben) ---------- */
   const meas = typeof document !== 'undefined' ? document.createElement('canvas').getContext('2d') : null;
   const PT = 1 / 72; // Zoll je Punkt
-  const widthOf = (t, size, bold) => { if (!meas) return t.length * size * 0.52 * PT; meas.font = `${bold ? 600 : 400} ${size}px ${CSS_FONT}`; return meas.measureText(t).width * PT; };
-  function wrap(text, size, bold, maxW) {
+  const cssFont = (b, size, font) => `${b ? 700 : 400} ${size}px ${FONTS[font || 'sans'].css}`;
+  const wWidth = (t, size, b, font) => { if (!meas) return t.length * size * (b ? 0.56 : 0.52) * PT; meas.font = cssFont(b, size, font); return meas.measureText(t).width * PT; };
+  // Wörter mit Fett-Kennung; allBold = ganze Zeile fett (Überschriften)
+  function words(text, allBold) {
+    const out = [];
+    String(text || '').split('**').forEach((part, i) => plain(part).split(/\s+/).filter(Boolean).forEach((w) => out.push({ w, b: allBold || i % 2 === 1 })));
+    return out;
+  }
+  const lineWidth = (line, size, font) => line.reduce((n, x, i) => n + wWidth(x.w, size, x.b, font) + (i ? wWidth(' ', size, false, font) : 0), 0);
+  function wrap(text, size, bold, maxW, font) {
     const out = [];
     String(text || '').split('\n').forEach((para) => {
-      let line = '';
-      para.split(/\s+/).filter(Boolean).forEach((w) => {
-        const t = line ? `${line} ${w}` : w;
-        if (widthOf(t, size, bold) <= maxW || !line) line = t; else { out.push(line); line = w; }
+      let line = [];
+      words(para, bold).forEach((x) => {
+        const t = [...line, x];
+        if (!line.length || lineWidth(t, size, font) <= maxW) line = t; else { out.push(line); line = [x]; }
       });
       out.push(line);
     });
     return out;
   }
+  const cut = (lines, keep) => { if (lines.length > keep) { lines.length = keep; const l = lines[keep - 1]; l[l.length - 1] = { ...l[l.length - 1], w: `${l[l.length - 1].w} …` }; } return lines; };
   // größte Schrift (in 1-pt-Schritten), bei der der Text in die Fläche passt
-  function fit(text, { max, min, bold = false, w, h, lh = 1.2, maxLines = 99 }) {
+  function fit(text, { max, min, bold = false, w, h, lh = 1.2, maxLines = 99, font }) {
     for (let s = max; s >= min; s--) {
-      const lines = wrap(text, s, bold, w);
+      const lines = wrap(text, s, bold, w, font);
       if (lines.length <= maxLines && lines.length * s * lh * PT <= h) return { size: s, lines };
     }
-    const lines = wrap(text, min, bold, w);
-    const keep = Math.max(1, Math.min(maxLines, Math.floor(h / (min * lh * PT))));
-    if (lines.length > keep) { lines.length = keep; lines[keep - 1] = `${lines[keep - 1].replace(/\s+\S*$/, '')} …`; }
-    return { size: min, lines };
-  }
-  // Stichpunkte: gemeinsame Schriftgröße, damit alle in die Fläche passen; Punkt in Akzentfarbe davor
-  function bulletList(points, { x, y, w, h, max = 22, min = 13, color, dot, gap = 0.3 }) {
-    let size = max, blocks;
-    for (; size >= min; size--) {
-      blocks = points.map((p) => wrap(p, size, false, w - 0.42));
-      const total = blocks.reduce((n, l) => n + l.length * size * 1.25 * PT, 0) + (points.length - 1) * gap * size / 22;
-      if (total <= h) break;
-    }
-    size = Math.max(size, min);
-    const items = [];
-    let cy = y;
-    blocks.forEach((lines) => {
-      const lhIn = size * 1.25 * PT;
-      items.push({ k: 'ellipse', x: x + 0.04, y: cy + lhIn / 2 - 0.055, w: 0.11, h: 0.11, fill: dot });
-      items.push({ k: 'text', x: x + 0.42, y: cy, w: w - 0.42, lines, size, color, lh: 1.25 });
-      cy += lines.length * lhIn + gap * size / 22;
-    });
-    return items;
+    return { size: min, lines: cut(wrap(text, min, bold, w, font), Math.max(1, Math.min(maxLines, Math.floor(h / (min * lh * PT))))) };
   }
 
   /* ---------- Layout: Folie → Bausteine ---------- */
   function layout(deck, slide, i, n, images) {
-    const T = { ...THEMES[deck.theme], ...(deck.accent ? { accent: deck.accent } : {}) };
-    const im = images.get(slide);
+    const T = themeOf(deck);
+    const imo = images.get(slide), im = imo?.img;
     const out = [{ k: 'rect', x: 0, y: 0, w: W, h: H, fill: T.bg }];
-    const text = (txt, o) => { const f = fit(txt, o); out.push({ k: 'text', x: o.x, y: o.y, w: o.w, lines: f.lines, size: f.size, bold: o.bold, color: o.color, align: o.align, lh: o.lh || 1.2 }); return f; };
+    const M = 0.75; // Rand
+    const text = (txt, o) => {
+      const f = fit(txt, { font: 'sans', ...o });
+      out.push({ k: 'text', x: o.x, y: o.y, w: o.w, lines: f.lines, size: f.size, color: o.color, align: o.align, lh: o.lh || 1.2, alpha: o.alpha, font: o.font || 'sans' });
+      return { ...f, bottom: o.y + f.lines.length * f.size * (o.lh || 1.2) * PT };
+    };
     const footer = (dark) => {
-      out.push({ k: 'text', x: 0.7, y: H - 0.48, w: 8, lines: [deck.title], size: 10, color: dark ? 'rgba(255,255,255,0.7)' : T.sub, lh: 1.2 });
-      out.push({ k: 'text', x: W - 1.7, y: H - 0.48, w: 1, lines: [String(i + 1)], size: 10, color: dark ? 'rgba(255,255,255,0.7)' : T.sub, align: 'r', lh: 1.2 });
+      const c = dark ? 'rgba(255,255,255,0.75)' : T.sub;
+      if (T.title === 'minimal' || T.head === 'serif') out.push({ k: 'rect', x: M, y: H - 0.62, w: W - 2 * M, h: 0.012, fill: dark ? 'rgba(255,255,255,0.35)' : T.line });
+      out.push({ k: 'text', x: M, y: H - 0.5, w: 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2 });
+      if (imo?.credit) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8 });
+      out.push({ k: 'text', x: W - M - 0.6, y: H - 0.5, w: 0.6, lines: [words(String(i + 1))], size: 10, color: c, align: 'r', lh: 1.2 });
     };
-    const heading = (t, w = W - 1.4) => {
-      const f = text(t, { x: 0.7, y: 0.6, w, h: 1.1, max: 32, min: 22, bold: true, color: T.text, maxLines: 2, lh: 1.1 });
-      const bottom = 0.6 + f.lines.length * f.size * 1.1 * PT;
-      out.push({ k: 'rect', x: 0.7, y: bottom + 0.16, w: 0.7, h: 0.07, fill: T.accent, r: 0.035 });
-      return bottom + 0.55;
+    // Abschnitt, zu dem die Folie gehört (Kicker über der Überschrift)
+    let sec = '';
+    for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
+    const heading = (t, w = W - 2 * M) => {
+      let y = 0.62;
+      if (sec && T.title !== 'minimal') { out.push({ k: 'text', x: M, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
+      const f = text(t, { x: M, y, w, h: 1.15, max: T.head === 'serif' ? 34 : 32, min: 22, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 2, lh: 1.1 });
+      if (T.title === 'minimal') { out.push({ k: 'rect', x: M, y: f.bottom + 0.22, w: W - 2 * M, h: 0.014, fill: T.line }); return f.bottom + 0.55; }
+      out.push({ k: 'rect', x: M, y: f.bottom + 0.17, w: 0.62, h: 0.07, fill: T.accent, r: 0.035 });
+      return f.bottom + 0.58;
     };
+    const bullets = (pts, { x, y, w, h, max = 21, min = 13, gap = 0.3 }) => {
+      let size = max, blocks;
+      for (; size >= min; size--) {
+        blocks = pts.map((p) => wrap(p, size, false, w - 0.42));
+        const total = blocks.reduce((m, l) => m + l.length * size * 1.28 * PT, 0) + (pts.length - 1) * gap;
+        if (total <= h) break;
+      }
+      size = Math.max(size, min);
+      let cy = y;
+      blocks.forEach((lines) => {
+        const lhIn = size * 1.28 * PT;
+        if (T.title === 'minimal') out.push({ k: 'rect', x: x + 0.02, y: cy + lhIn / 2 - 0.01, w: 0.16, h: 0.022, fill: T.text });
+        else out.push({ k: 'ellipse', x: x + 0.03, y: cy + lhIn / 2 - 0.055, w: 0.11, h: 0.11, fill: T.accent });
+        out.push({ k: 'text', x: x + 0.42, y: cy, w: w - 0.42, lines, size, color: T.text, lh: 1.28 });
+        cy += lines.length * lhIn + gap;
+      });
+    };
+    const R = T.radius;
     const s = slide;
     if (s.type === 'titel') {
-      const hasImg = !!im;
-      const tw = hasImg ? 5.7 : 10.2;
-      if (hasImg) out.push({ k: 'image', x: 6.9, y: 0, w: W - 6.9, h: H, src: im });
-      else { out.push({ k: 'ellipse', x: 9.4, y: -1.6, w: 6, h: 6, fill: T.panel }); out.push({ k: 'ellipse', x: 11.2, y: 4.6, w: 2.6, h: 2.6, fill: T.accent, alpha: 0.18 }); }
-      out.push({ k: 'rect', x: 0.8, y: 2.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
-      const f = text(s.title || deck.title, { x: 0.8, y: 2.4, w: tw, h: 2.5, max: 46, min: 30, bold: true, color: T.text, maxLines: 3, lh: 1.08 });
       const sub = s.text || deck.subtitle;
-      if (sub) text(sub, { x: 0.8, y: 2.4 + f.lines.length * f.size * 1.08 * PT + 0.3, w: tw, h: 1.4, max: 20, min: 14, color: T.sub, maxLines: 3, lh: 1.3 });
+      if (T.title === 'full') {
+        if (im) { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#060A14', alpha: 0.55 }); }
+        else { out.push({ k: 'ellipse', x: 8.6, y: -2.2, w: 7.4, h: 7.4, fill: T.accent, alpha: 0.16 }); out.push({ k: 'ellipse', x: 10.4, y: 4.4, w: 3.4, h: 3.4, fill: T.accent, alpha: 0.1 }); }
+        out.push({ k: 'rect', x: M, y: 3.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
+        const f = text(s.title || deck.title, { x: M, y: 3.35, w: 9.5, h: 2.2, max: 50, min: 30, bold: true, color: '#FFFFFF', maxLines: 3, lh: 1.05 });
+        if (sub) text(sub, { x: M, y: f.bottom + 0.3, w: 8.5, h: 1.2, max: 20, min: 14, color: 'rgba(255,255,255,0.82)', maxLines: 2, lh: 1.3 });
+      } else if (T.title === 'block') {
+        const bw = im ? 6.2 : W;
+        out.push({ k: 'rect', x: 0, y: 0, w: bw, h: H, fill: T.accent });
+        if (im) out.push({ k: 'image', x: bw, y: 0, w: W - bw, h: H, src: im });
+        const f = text(s.title || deck.title, { x: M, y: 2.3, w: bw - 1.5, h: 2.8, max: 52, min: 30, bold: true, color: T.onAccent, maxLines: 3, lh: 1.02 });
+        if (sub) text(sub, { x: M, y: f.bottom + 0.3, w: bw - 1.5, h: 1.3, max: 20, min: 14, color: T.onAccent, alpha: 0.88, maxLines: 3, lh: 1.3 });
+      } else if (T.title === 'minimal') {
+        if (im) out.push({ k: 'image', x: 8.4, y: M, w: W - 8.4 - M, h: H - 2 * M, src: im });
+        const tw = im ? 6.9 : 11;
+        const f = text(s.title || deck.title, { x: M, y: 2.4, w: tw, h: 2.6, max: 56, min: 32, bold: true, color: T.text, maxLines: 3, lh: 1.0 });
+        out.push({ k: 'rect', x: M, y: f.bottom + 0.3, w: tw, h: 0.014, fill: T.text });
+        if (sub) text(sub, { x: M, y: f.bottom + 0.5, w: tw, h: 1.2, max: 18, min: 13, color: T.sub, maxLines: 2, lh: 1.35 });
+      } else { // split (Klar, Papier)
+        const tw = im ? 5.6 : 10.4;
+        if (im) out.push({ k: 'image', x: 6.85, y: 0, w: W - 6.85, h: H, src: im });
+        else { out.push({ k: 'ellipse', x: 9.3, y: -1.7, w: 6.2, h: 6.2, fill: T.panel }); out.push({ k: 'ellipse', x: 11.0, y: 4.5, w: 2.8, h: 2.8, fill: T.accent, alpha: 0.18 }); }
+        out.push({ k: 'rect', x: M + 0.05, y: 2.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
+        const f = text(s.title || deck.title, { x: M + 0.05, y: 2.4, w: tw, h: 2.6, max: T.head === 'serif' ? 50 : 46, min: 30, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 3, lh: 1.06 });
+        if (sub) text(sub, { x: M + 0.05, y: f.bottom + 0.3, w: tw, h: 1.4, max: 20, min: 14, color: T.sub, maxLines: 3, lh: 1.3 });
+      }
+    } else if (s.type === 'gliederung') {
+      sec = '';
+      const top = heading(s.title || 'Gliederung');
+      const items = s.points.length ? s.points : [];
+      const two = items.length > 4, colW = two ? (W - 2 * M - 0.5) / 2 : W - 2 * M, rows = two ? Math.ceil(items.length / 2) : items.length;
+      const rh = Math.min(1.05, (H - top - 0.95) / Math.max(rows, 1));
+      items.forEach((p, k) => {
+        const col = two && k >= rows ? 1 : 0, r = two ? k % rows : k;
+        const x = M + col * (colW + 0.5), y = top + r * rh;
+        out.push({ k: 'text', x, y: y + 0.02, w: 0.9, lines: [words(String(k + 1).padStart(2, '0'), true)], size: 26, bold: true, color: T.accent, lh: 1.1, font: T.head });
+        text(p, { x: x + 0.95, y: y + 0.08, w: colW - 1.0, h: rh - 0.2, max: 21, min: 14, color: T.text, maxLines: 2, lh: 1.2 });
+        if (r < rows - 1) out.push({ k: 'rect', x: x + 0.95, y: y + rh - 0.1, w: colW - 0.95, h: 0.012, fill: T.line });
+      });
+      footer();
     } else if (s.type === 'abschnitt') {
-      out[0].fill = T.accent;
-      out.push({ k: 'text', x: 0.8, y: 1.6, w: 4, lines: [String(i).padStart(2, '0')], size: 80, bold: true, color: T.onAccent, alpha: 0.35, lh: 1 });
-      text(s.title, { x: 0.8, y: 3.2, w: W - 1.6, h: 1.8, max: 44, min: 28, bold: true, color: T.onAccent, maxLines: 2, lh: 1.08 });
-      if (s.text) text(s.text, { x: 0.8, y: 5.0, w: W - 3, h: 1.2, max: 20, min: 14, color: T.onAccent, maxLines: 2, alpha: 0.85 });
+      const num = deck.slides.slice(0, i + 1).filter((x) => x.type === 'abschnitt').length;
+      const dark = T.title !== 'minimal';
+      if (dark) out[0].fill = T.title === 'full' ? T.panel : T.accent;
+      const fg = T.title === 'minimal' ? T.text : T.title === 'full' ? T.text : T.onAccent;
+      if (im && T.title !== 'minimal') { out.push({ k: 'image', x: 8.3, y: 0, w: W - 8.3, h: H, src: im }); }
+      const tw = im && T.title !== 'minimal' ? 6.8 : W - 2 * M;
+      out.push({ k: 'text', x: M, y: 1.55, w: 4, lines: [words(String(num).padStart(2, '0'), true)], size: T.title === 'minimal' ? 120 : 84, bold: true, color: T.title === 'full' ? T.accent : fg, alpha: T.title === 'full' ? 1 : 0.35, lh: 1, font: T.head });
+      const f = text(s.title, { x: M, y: 3.35, w: tw, h: 1.9, max: 46, min: 28, bold: T.head !== 'serif', font: T.head, color: fg, maxLines: 2, lh: 1.06 });
+      if (s.text) text(s.text, { x: M, y: f.bottom + 0.25, w: tw, h: 1.2, max: 20, min: 14, color: fg, alpha: 0.85, maxLines: 2 });
     } else if (s.type === 'bild' && im) {
       out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im });
-      out.push({ k: 'rect', x: 0, y: H * 0.45, w: W, h: H * 0.55, fill: '#000000', alpha: 0.5 });
-      const f = text(s.title, { x: 0.8, y: 4.4, w: W - 1.6, h: 1.2, max: 36, min: 24, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.08 });
+      out.push({ k: 'rect', x: 0, y: H * 0.5, w: W, h: H * 0.5, fill: '#05070C', alpha: 0.58 });
+      const f = text(s.title, { x: M, y: 4.55, w: W - 2 * M, h: 1.1, max: 36, min: 24, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.06 });
       const body = s.text || s.points.join(' · ');
-      if (body) text(body, { x: 0.8, y: 4.4 + f.lines.length * f.size * 1.08 * PT + 0.2, w: W - 2.4, h: 1.4, max: 18, min: 13, color: 'rgba(255,255,255,0.88)', maxLines: 3, lh: 1.35 });
+      if (body) text(body, { x: M, y: f.bottom + 0.18, w: W - 2.6, h: 1.25, max: 18, min: 13, color: 'rgba(255,255,255,0.9)', maxLines: 3, lh: 1.35 });
       footer(true);
+    } else if (s.type === 'zahlen') {
+      const top = heading(s.title);
+      const items = (s.points.length ? s.points : [s.text]).filter(Boolean).slice(0, 4).map((p) => { const [v, ...l] = String(p).split('|'); return { v: plain(v.trim()), l: l.join('|').trim() }; });
+      const cw = (W - 2 * M - (items.length - 1) * 0.35) / Math.max(items.length, 1), y = top + 0.2, h = H - y - 1.0;
+      items.forEach((it, k) => {
+        const x = M + k * (cw + 0.35);
+        out.push({ k: 'rect', x, y, w: cw, h, fill: T.panel, r: R });
+        const fv = text(it.v, { x: x + 0.35, y: y + 0.45, w: cw - 0.7, h: 1.2, max: 54, min: 26, bold: true, color: T.accent, maxLines: 1, lh: 1.05, font: T.head });
+        if (it.l) text(it.l, { x: x + 0.35, y: fv.bottom + 0.25, w: cw - 0.7, h: y + h - fv.bottom - 0.6, max: 18, min: 12, color: T.text, lh: 1.3 });
+      });
+      footer();
     } else if (s.type === 'zwei') {
       const top = heading(s.title);
-      const colW = (W - 1.4 - 0.4) / 2;
+      const colW = (W - 2 * M - 0.4) / 2;
       [s.left, s.right].forEach((c, k) => {
-        const x = 0.7 + k * (colW + 0.4), y = top + 0.05, h = H - y - 0.85;
-        out.push({ k: 'rect', x, y, w: colW, h, fill: T.panel, r: 0.18 });
-        const ht = c?.title ? text(c.title, { x: x + 0.4, y: y + 0.35, w: colW - 0.8, h: 0.8, max: 20, min: 15, bold: true, color: T.accent, maxLines: 2 }) : null;
-        const by = y + 0.35 + (ht ? ht.lines.length * ht.size * 1.2 * PT + 0.25 : 0);
-        out.push(...bulletList(c?.points || [], { x: x + 0.4, y: by, w: colW - 0.8, h: y + h - by - 0.3, max: 18, min: 12, color: T.text, dot: T.accent }));
+        const x = M + k * (colW + 0.4), y = top + 0.05, h = H - y - 0.9;
+        out.push({ k: 'rect', x, y, w: colW, h, fill: T.panel, r: R });
+        if (T.title !== 'minimal') out.push({ k: 'rect', x, y, w: colW, h: 0.08, fill: k ? T.text : T.accent, alpha: k ? 0.85 : 1, r: Math.min(R, 0.04) });
+        const ht = c?.title ? text(c.title, { x: x + 0.4, y: y + 0.38, w: colW - 0.8, h: 0.8, max: 20, min: 15, bold: true, color: k ? T.text : T.accent, maxLines: 2, font: T.head }) : null;
+        bullets(c?.points || [], { x: x + 0.4, y: ht ? ht.bottom + 0.25 : y + 0.4, w: colW - 0.8, h: y + h - (ht ? ht.bottom + 0.25 : y + 0.4) - 0.3, max: 18, min: 12, gap: 0.22 });
       });
       footer();
     } else if (s.type === 'zitat') {
-      out.push({ k: 'rect', x: 0.7, y: 0.7, w: W - 1.4, h: H - 1.6, fill: T.panel, r: 0.25 });
-      out.push({ k: 'text', x: 1.3, y: 0.95, w: 2, lines: ['“'], size: 110, bold: true, color: T.accent, lh: 1 });
-      const f = text(s.text || s.title, { x: 1.6, y: 2.4, w: W - 3.2, h: 3, max: 32, min: 20, bold: true, color: T.text, align: 'c', maxLines: 5, lh: 1.25 });
-      if (s.text && s.title) text(s.title, { x: 1.6, y: 2.4 + f.lines.length * f.size * 1.25 * PT + 0.35, w: W - 3.2, h: 0.6, max: 16, min: 12, color: T.sub, align: 'c', maxLines: 1 });
+      if (T.title === 'minimal') out.push({ k: 'rect', x: M, y: 1.0, w: 0.06, h: H - 2.4, fill: T.text });
+      else out.push({ k: 'rect', x: M, y: 0.75, w: W - 2 * M, h: H - 1.65, fill: T.panel, r: R });
+      out.push({ k: 'text', x: 1.3, y: 0.95, w: 2, lines: [words('“', true)], size: 120, bold: true, color: T.accent, lh: 1, font: 'serif' });
+      const f = text(s.text || s.title, { x: 1.7, y: 2.45, w: W - 3.4, h: 3, max: 32, min: 20, bold: T.head !== 'serif', font: T.head, color: T.text, align: 'c', maxLines: 5, lh: 1.25 });
+      if (s.text && s.title) text(s.title, { x: 1.7, y: f.bottom + 0.35, w: W - 3.4, h: 0.6, max: 15, min: 12, color: T.sub, align: 'c', maxLines: 1 });
       footer();
     } else if (s.type === 'fazit') {
       const top = heading(s.title || 'Das Wichtigste');
       const pts = s.points.length ? s.points : [s.text].filter(Boolean);
-      if (pts.length <= 3) {
-        const cw = (W - 1.4 - (pts.length - 1) * 0.35) / pts.length, y = top + 0.15, h = H - y - 0.95;
+      if (pts.length <= 4) {
+        const cw = (W - 2 * M - (pts.length - 1) * 0.3) / pts.length, y = top + 0.15, h = H - y - 0.95;
         pts.forEach((p, k) => {
-          const x = 0.7 + k * (cw + 0.35);
-          out.push({ k: 'rect', x, y, w: cw, h, fill: T.panel, r: 0.2 });
-          out.push({ k: 'ellipse', x: x + 0.4, y: y + 0.4, w: 0.62, h: 0.62, fill: T.accent });
-          out.push({ k: 'text', x: x + 0.4, y: y + 0.52, w: 0.62, lines: [String(k + 1)], size: 18, bold: true, color: T.onAccent, align: 'c', lh: 1 });
-          text(p, { x: x + 0.4, y: y + 1.35, w: cw - 0.8, h: h - 1.7, max: 20, min: 13, color: T.text, lh: 1.3 });
+          const x = M + k * (cw + 0.3);
+          out.push({ k: 'rect', x, y, w: cw, h, fill: T.panel, r: R });
+          out.push({ k: 'ellipse', x: x + 0.38, y: y + 0.4, w: 0.62, h: 0.62, fill: T.accent });
+          out.push({ k: 'text', x: x + 0.38, y: y + 0.53, w: 0.62, lines: [words(String(k + 1), true)], size: 18, bold: true, color: T.onAccent, align: 'c', lh: 1 });
+          text(p, { x: x + 0.38, y: y + 1.35, w: cw - 0.76, h: h - 1.7, max: 19, min: 12, color: T.text, lh: 1.32 });
         });
-      } else out.push(...bulletList(pts, { x: 0.7, y: top + 0.1, w: W - 1.4, h: H - top - 1.0, color: T.text, dot: T.accent }));
+      } else bullets(pts, { x: M, y: top + 0.1, w: W - 2 * M, h: H - top - 1.0 });
       footer();
     } else { // punkte (auch „bild“ ohne Bild)
       const hasImg = !!im;
-      const top = heading(s.title, hasImg ? 6.5 : W - 1.4);
-      const bw = hasImg ? 6.3 : W - 1.4;
+      const bw = hasImg ? 6.35 : W - 2 * M;
+      const top = heading(s.title, bw);
       let y = top;
-      if (s.text) { const f = text(s.text, { x: 0.7, y, w: bw, h: s.points.length ? 1.4 : H - y - 1, max: 20, min: 13, color: T.sub, maxLines: s.points.length ? 3 : 12, lh: 1.35 }); y += f.lines.length * f.size * 1.35 * PT + 0.3; }
-      if (s.points.length) out.push(...bulletList(s.points, { x: 0.7, y, w: bw, h: H - y - 0.9, color: T.text, dot: T.accent }));
-      if (hasImg) out.push({ k: 'image', x: 7.45, y: 0.6, w: W - 7.45 - 0.7, h: H - 1.45, src: im, r: 0.2 });
+      if (s.text) { const f = text(s.text, { x: M, y, w: bw, h: s.points.length ? 1.45 : H - y - 1, max: 19, min: 13, color: T.sub, maxLines: s.points.length ? 3 : 12, lh: 1.38 }); y = f.bottom + 0.3; }
+      if (s.points.length) bullets(s.points, { x: M, y, w: bw, h: H - y - 0.9 });
+      if (hasImg) out.push({ k: 'image', x: 7.55, y: T.title === 'minimal' ? M : 0.6, w: W - 7.55 - M, h: H - (T.title === 'minimal' ? 2 * M : 1.4), src: im, r: R });
       footer();
     }
     return out;
@@ -182,7 +263,7 @@ const Praesentation = (() => {
       ? requestIllustration(prompt, want.query || '', 'web')
       : fetch('/api/illustration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, query: want.query, source: 'web' }) }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('kein Bild')))))
       .then((r) => {
-        if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return { src: r.url, credit: [r.author, r.license].filter(Boolean).join(' · ') };
+        if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return { src: r.url, credit: [r.author, r.license].filter(Boolean).join(' · ').replace(/<[^>]+>/g, '') };
         if (/^image\/(png|jpeg|webp)$/.test(r.mime) && r.data) return { src: `data:${r.mime};base64,${r.data}`, credit: '' };
         throw new Error('Bildformat');
       })
@@ -208,18 +289,19 @@ const Praesentation = (() => {
     m.set(k, url);
     return url;
   }
-  // je Folie mit Bildwunsch das geladene Bild (höchstens 8 Bilder je Präsentation)
+  // je Folie mit Bildwunsch das geladene Bild (höchstens 10 Bilder je Präsentation)
   async function loadAll(deck, timeoutMs = 25000) {
     const map = new Map();
-    const want = deck.slides.filter((s) => s.image).slice(0, 8);
+    const want = deck.slides.filter((s) => s.image).slice(0, 10);
     await Promise.all(want.map((s) => Promise.race([loadImage(s.image), new Promise((r) => setTimeout(() => r(null), timeoutMs))])
-      .then((x) => { if (x?.img) map.set(s, x.img); }).catch(() => {})));
+      .then((x) => { if (x?.img) map.set(s, x); }).catch(() => {})));
     return map;
   }
 
   /* ---------- Ausgabe 1: Vorschau (HTML, skaliert mit der Breite der Folie) ---------- */
   const pct = (v, of) => `${((v / of) * 100).toFixed(3)}%`;
   const cq = (pt) => `${((pt * PT) / W * 100).toFixed(3)}cqw`; // Schriftgröße relativ zur Folienbreite
+  const lineHtml = (line) => line.map((x, i) => `${i ? ' ' : ''}${x.b ? `<b>${esc(x.w)}</b>` : esc(x.w)}`).join('');
   function slideHtml(items) {
     return items.map((it) => {
       const box = `left:${pct(it.x, W)};top:${pct(it.y, H)};width:${pct(it.w, W)};${it.h != null ? `height:${pct(it.h, H)};` : ''}`;
@@ -227,7 +309,7 @@ const Praesentation = (() => {
       if (it.k === 'rect') return `<i class="pz-r" style="${box}background:${it.fill};${op}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}"></i>`;
       if (it.k === 'ellipse') return `<i class="pz-r" style="${box}background:${it.fill};${op}border-radius:50%"></i>`;
       if (it.k === 'image') { const src = crop(it.src, it.w, it.h); return src ? `<img class="pz-i" alt="" src="${src}" style="${box}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}">` : ''; }
-      return `<span class="pz-t" style="${box}color:${it.color};${op}font-size:${cq(it.size)};line-height:${it.lh};font-weight:${it.bold ? 600 : 400};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(esc).join('<br>')}</span>`;
+      return `<span class="pz-t" style="${box}color:${it.color};${op}font-family:${FONTS[it.font || 'sans'].css.replace(/"/g, "'")};font-size:${cq(it.size)};line-height:${it.lh};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(lineHtml).join('<br>')}</span>`;
     }).join('');
   }
 
@@ -242,15 +324,21 @@ const Praesentation = (() => {
       if (it.k === 'rect') { g.fillStyle = it.fill; rr(P(it.x), P(it.y), P(it.w), P(it.h), P(it.r || 0)); g.fill(); }
       else if (it.k === 'ellipse') { g.fillStyle = it.fill; g.beginPath(); g.ellipse(P(it.x + it.w / 2), P(it.y + it.h / 2), P(it.w / 2), P(it.h / 2), 0, 0, Math.PI * 2); g.fill(); }
       else if (it.k === 'image') {
-        const src = crop(it.src, it.w, it.h);
-        if (src && it._img) { rr(P(it.x), P(it.y), P(it.w), P(it.h), P(it.r || 0)); g.clip(); g.drawImage(it._img, P(it.x), P(it.y), P(it.w), P(it.h)); }
+        if (it._img) { rr(P(it.x), P(it.y), P(it.w), P(it.h), P(it.r || 0)); g.clip(); g.drawImage(it._img, P(it.x), P(it.y), P(it.w), P(it.h)); }
       } else {
-        g.fillStyle = it.color; g.textBaseline = 'top';
-        const size = it.size * PT * px;
-        g.font = `${it.bold ? 600 : 400} ${size}px ${CSS_FONT}`;
-        g.textAlign = it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left';
-        const ax = it.align === 'c' ? it.x + it.w / 2 : it.align === 'r' ? it.x + it.w : it.x;
-        it.lines.forEach((l, k) => g.fillText(l, P(ax), P(it.y) + k * size * it.lh + (size * (it.lh - 1)) / 2));
+        g.fillStyle = it.color; g.textBaseline = 'top'; g.textAlign = 'left';
+        const size = it.size * PT * px, sizePt = it.size;
+        it.lines.forEach((line, k) => {
+          const lw = lineWidth(line, sizePt, it.font) * px;
+          let x = P(it.x) + (it.align === 'c' ? (P(it.w) - lw) / 2 : it.align === 'r' ? P(it.w) - lw : 0);
+          const y = P(it.y) + k * size * it.lh + (size * (it.lh - 1)) / 2;
+          line.forEach((wd, j) => {
+            if (j) { g.font = cssFont(false, size, it.font); x += g.measureText(' ').width; }
+            g.font = cssFont(wd.b, size, it.font);
+            g.fillText(wd.w, x, y);
+            x += g.measureText(wd.w).width;
+          });
+        });
       }
       g.restore();
     });
@@ -321,22 +409,28 @@ const Praesentation = (() => {
   function slideXml(items, media) {
     let id = 2;
     const xfrm = (it) => `<a:xfrm><a:off x="${e(it.x)}" y="${e(it.y)}"/><a:ext cx="${Math.max(1, e(it.w))}" cy="${Math.max(1, e(it.h ?? 0.1))}"/></a:xfrm>`;
+    const geomOf = (it) => (it.r ? `<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.round(Math.min(50000, (it.r / Math.min(it.w, it.h)) * 100000))}"/></a:avLst></a:prstGeom>` : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
     const shapes = items.map((it) => {
       const nid = id++;
       if (it.k === 'rect' || it.k === 'ellipse') {
-        const geom = it.k === 'ellipse' ? '<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>'
-          : it.r ? `<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.round(Math.min(50000, (it.r / Math.min(it.w, it.h)) * 100000))}"/></a:avLst></a:prstGeom>` : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
+        const geom = it.k === 'ellipse' ? '<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>' : geomOf(it);
         return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Form ${nid}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm(it)}${geom}<a:solidFill>${colorOf(it.fill, it.alpha ?? 1)}</a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>`;
       }
       if (it.k === 'image') {
         const m = media.get(it); if (!m) return '';
-        const geom = it.r ? `<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.round(Math.min(50000, (it.r / Math.min(it.w, it.h)) * 100000))}"/></a:avLst></a:prstGeom>` : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>';
-        return `<p:pic><p:nvPicPr><p:cNvPr id="${nid}" name="Bild ${nid}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${m.rid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${xfrm(it)}${geom}</p:spPr></p:pic>`;
+        return `<p:pic><p:nvPicPr><p:cNvPr id="${nid}" name="Bild ${nid}"/><p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr/></p:nvPicPr><p:blipFill><a:blip r:embed="${m.rid}"/><a:stretch><a:fillRect/></a:stretch></p:blipFill><p:spPr>${xfrm(it)}${geomOf(it)}</p:spPr></p:pic>`;
       }
       const h = it.lines.length * it.size * it.lh * PT + 0.05;
       const algn = it.align === 'c' ? 'ctr' : it.align === 'r' ? 'r' : 'l';
-      const run = (t) => `<a:r><a:rPr lang="de-DE" sz="${Math.round(it.size * 100)}" b="${it.bold ? 1 : 0}" dirty="0"><a:solidFill>${colorOf(it.color, it.alpha ?? 1)}</a:solidFill><a:latin typeface="${FONT}"/><a:cs typeface="${FONT}"/></a:rPr><a:t>${xmlEsc(t)}</a:t></a:r>`;
-      const para = `<a:p><a:pPr algn="${algn}"><a:lnSpc><a:spcPct val="${Math.round(it.lh * 100000 * 0.86)}"/></a:lnSpc></a:pPr>${it.lines.map((l, k) => `${k ? `<a:br><a:rPr lang="de-DE" sz="${Math.round(it.size * 100)}"/></a:br>` : ''}${run(l)}`).join('')}</a:p>`;
+      const face = FONTS[it.font || 'sans'].pptx;
+      const run = (t, b) => `<a:r><a:rPr lang="de-DE" sz="${Math.round(it.size * 100)}" b="${b ? 1 : 0}" dirty="0"><a:solidFill>${colorOf(it.color, it.alpha ?? 1)}</a:solidFill><a:latin typeface="${face}"/><a:cs typeface="${face}"/></a:rPr><a:t>${xmlEsc(t)}</a:t></a:r>`;
+      // Zeile → Läufe (gleich fett zusammengefasst), Leerzeichen bleiben im Text
+      const runs = (line) => {
+        const parts = [];
+        line.forEach((x, j) => { const t = `${j ? ' ' : ''}${x.w}`; if (parts.length && parts[parts.length - 1].b === x.b) parts[parts.length - 1].t += t; else parts.push({ t, b: x.b }); });
+        return parts.map((p) => run(p.t, p.b)).join('');
+      };
+      const para = `<a:p><a:pPr algn="${algn}"><a:lnSpc><a:spcPct val="${Math.round(it.lh * 100000 * 0.86)}"/></a:lnSpc></a:pPr>${it.lines.map((l, k) => `${k ? `<a:br><a:rPr lang="de-DE" sz="${Math.round(it.size * 100)}"/></a:br>` : ''}${runs(l)}`).join('')}</a:p>`;
       return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Text ${nid}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm({ ...it, h })}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr><a:lstStyle/>${para}</p:txBody></p:sp>`;
     }).join('');
     return `${XML}<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${shapes}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
@@ -349,7 +443,7 @@ const Praesentation = (() => {
 <a:effectStyleLst><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle><a:effectStyle><a:effectLst/></a:effectStyle></a:effectStyleLst>
 <a:bgFillStyleLst><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill><a:solidFill><a:schemeClr val="phClr"/></a:solidFill></a:bgFillStyleLst></a:fmtScheme></a:themeElements><a:objectDefaults/><a:extraClrSchemeLst/></a:theme>`;
   function pptx(slidesItems, deck) {
-    const T = { ...THEMES[deck.theme], ...(deck.accent ? { accent: deck.accent } : {}) };
+    const T = themeOf(deck);
     const files = [], n = slidesItems.length;
     let mediaN = 0;
     const slideFiles = slidesItems.map((items, i) => {
@@ -406,30 +500,37 @@ const Praesentation = (() => {
     return false;
   }
 
-  /* ---------- Karte im Chat ---------- */
+  /* ---------- Karte im Chat: nur die Präsentation (ohne Kopf), Designs zum Umschalten, Ausgabe als drei Kacheln ---------- */
   const fi = (n, s = 13) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
+  const OUTS = [
+    { id: 'pptx', label: 'PowerPoint', hint: 'Bearbeitbar', badge: 'PPTX' },
+    { id: 'key', label: 'Keynote', hint: 'iPad & Mac', badge: 'KEY' },
+    { id: 'pdf', label: 'PDF', hint: 'Zum Teilen', badge: 'PDF' },
+  ];
+  const designKey = (deck) => `pz.design.${deck.title.slice(0, 60)}`;
   function figure(raw) {
     const deck = parse(raw);
     const fig = document.createElement('figure');
     fig.className = 'pz';
+    window.enterOnce?.(fig);
     if (!deck) { fig.innerHTML = '<div class="pz-wait"><span class="shimmer">Präsentation wird erstellt …</span></div>'; return fig; }
+    try { const d = localStorage.getItem(designKey(deck)); if (THEMES[d]) deck.theme = d; } catch {}
     const n = deck.slides.length;
-    fig.innerHTML = `<div class="pz-head"><span class="pz-ic">${fi('slides', 15)}</span><span class="pz-tt"><b>${esc(deck.title)}</b><small>${n} Folien${deck.subtitle ? ` · ${esc(deck.subtitle)}` : ''}</small></span></div>
-      <div class="pz-stage"><div class="pz-slide pz-big"></div>
+    fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div>
         <button type="button" class="pz-nav prev" data-go="-1" aria-label="Vorherige Folie">${fi('back', 14)}</button><button type="button" class="pz-nav next" data-go="1" aria-label="Nächste Folie">${fi('forward', 14)}</button>
         <span class="pz-count"></span></div>
       <div class="pz-strip">${deck.slides.map((_, i) => `<button type="button" class="pz-thumb" data-i="${i}" aria-label="Folie ${i + 1}"><span class="pz-slide"></span></button>`).join('')}</div>
-      <div class="pz-acts">
-        <button type="button" class="pz-btn primary" data-out="pptx">${fi('download', 13)}PowerPoint</button>
-        <button type="button" class="pz-btn" data-out="key">${fi('share', 13)}Keynote</button>
-        <button type="button" class="pz-btn" data-out="pdf">${fi('file', 13)}PDF</button>
-        <span class="pz-msg" aria-live="polite"></span>
-      </div>`;
+      <div class="pz-bar">
+        <div class="pz-designs" role="radiogroup" aria-label="Design">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}" role="radio" aria-label="Design ${t.name}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
+        <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${o.badge}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
+      </div>
+      <div class="pz-msg" aria-live="polite"></div>`;
     let images = new Map(), cur = 0, items = [];
     const big = fig.querySelector('.pz-big'), thumbs = [...fig.querySelectorAll('.pz-thumb .pz-slide')], msg = fig.querySelector('.pz-msg');
     const draw = () => {
       items = deck.slides.map((s, i) => layout(deck, s, i, n, images));
       thumbs.forEach((t, i) => { t.innerHTML = slideHtml(items[i]); });
+      fig.querySelectorAll('[data-design]').forEach((b) => { const on = b.dataset.design === deck.theme; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       show(cur, 0);
     };
     const show = (i, dir) => {
@@ -438,28 +539,32 @@ const Praesentation = (() => {
       if (dir) { big.classList.remove('in-l', 'in-r'); void big.offsetWidth; big.classList.add(dir > 0 ? 'in-l' : 'in-r'); }
       fig.querySelector('.pz-count').textContent = `${cur + 1} / ${n}`;
       fig.querySelectorAll('.pz-thumb').forEach((b, k) => b.classList.toggle('on', k === cur));
-      fig.querySelector('.pz-thumb.on')?.scrollIntoView?.({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      const th = fig.querySelector('.pz-thumb.on'), strip = fig.querySelector('.pz-strip');
+      if (th && strip) strip.scrollTo({ left: th.offsetLeft - strip.clientWidth / 2 + th.offsetWidth / 2, behavior: 'smooth' });
     };
     draw();
     // Bilder kommen nach und nach – Folien werden dann neu gesetzt (Text rückt neben das Bild)
     const loading = loadAll(deck).then((m) => { images = m; if (m.size) draw(); return m; });
     if (deck.slides.some((s) => s.image)) { fig.classList.add('loading'); loading.finally(() => fig.classList.remove('loading')); }
+    const say = (t, ms = 0) => { msg.textContent = t; msg.classList.toggle('on', !!t); if (ms) setTimeout(() => { if (msg.textContent === t) say(''); }, ms); };
     fig.addEventListener('click', async (ev) => {
       const go = ev.target.closest('[data-go]'); if (go) { show(cur + +go.dataset.go, +go.dataset.go); return; }
       const th = ev.target.closest('[data-i]'); if (th) { show(+th.dataset.i, +th.dataset.i - cur); return; }
-      const out = ev.target.closest('[data-out]'); if (!out || out.disabled) return;
-      fig.querySelectorAll('[data-out]').forEach((b) => { b.disabled = true; });
-      msg.textContent = 'Wird erstellt …';
+      const ds = ev.target.closest('[data-design]');
+      if (ds) { deck.theme = ds.dataset.design; try { localStorage.setItem(designKey(deck), deck.theme); } catch {} big.classList.add('pz-swap'); setTimeout(() => big.classList.remove('pz-swap'), 380); draw(); return; }
+      const out = ev.target.closest('[data-out]'); if (!out || fig.classList.contains('busy')) return;
+      fig.classList.add('busy'); out.classList.add('working');
+      say('Wird erstellt …');
       try {
         await loading;
         await readyImages(items);
         if (out.dataset.out === 'pdf') download(pdf(items, deck.title), fileName(deck, 'pdf'));
         else if (out.dataset.out === 'pptx') download(pptx(items, deck), fileName(deck, 'pptx'));
         else await share(pptx(items, deck), fileName(deck, 'pptx'));
-        msg.textContent = out.dataset.out === 'key' ? 'In Keynote öffnen: im Teilen-Menü „Keynote“ wählen' : 'Fertig';
-        setTimeout(() => { if (msg.textContent !== 'Wird erstellt …') msg.textContent = ''; }, 5000);
-      } catch (err) { msg.textContent = `Hat nicht geklappt (${err.message || 'Fehler'})`; }
-      finally { fig.querySelectorAll('[data-out]').forEach((b) => { b.disabled = false; }); }
+        out.classList.add('ok'); setTimeout(() => out.classList.remove('ok'), 1600);
+        say(out.dataset.out === 'key' ? 'Im Teilen-Menü „Keynote“ wählen' : '', 5000);
+      } catch (err) { say(`Hat nicht geklappt (${err.message || 'Fehler'})`, 6000); }
+      finally { fig.classList.remove('busy'); out.classList.remove('working'); }
     });
     fig.addEventListener('keydown', (ev) => { if (ev.key === 'ArrowRight') show(cur + 1, 1); if (ev.key === 'ArrowLeft') show(cur - 1, -1); });
     // Wischen auf dem iPad

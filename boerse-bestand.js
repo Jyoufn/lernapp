@@ -70,6 +70,7 @@ const BoerseBestand = (() => {
   function figure() {
     const fig = document.createElement('figure');
     fig.className = 'bst';
+    window.enterOnce?.(fig);
     fig.innerHTML = `<div class="bst-top"><span class="bst-title"><b>Mein Depot</b><span class="bst-sub"></span></span>
         <button type="button" class="bst-icon" data-reload title="Aktualisieren" aria-label="Aktualisieren"><svg width="16" height="16" aria-hidden="true"><use href="#i-refresh"/></svg></button>
         <button type="button" class="st-btn dark bst-addbtn" data-add>Hinzufügen</button></div>
@@ -84,11 +85,12 @@ const BoerseBestand = (() => {
         : dp ? `Depotwert ${eur(dp.value)} · Bargeld ${eur(dp.cash)} · <span class="${tone(dp.perf)}">${signed(dp.perf)} (${signed(dp.perfPct, ' %')})</span> · ${dp.trades} Orders`
         : (d.items || []).length ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
       list.innerHTML = rows(d, st.open);
+      list.querySelectorAll('.bst-row').forEach((r, i) => window.enterOnce?.(r, { y: 6, delay: Math.min(i, 6) * 40, dur: 420 }));
       mountCharts();
     };
     // Charts der aufgeklappten Zeilen bleiben erhalten, wenn die Liste neu gezeichnet wird (alle 2 min) – kein Neuladen, kein Flackern
     const charts = new Map();
-    const rangeFor = (date) => { const days = date ? (Date.now() - new Date(`${date}T12:00:00`)) / 86400000 : 999; return days <= 25 ? '1M' : days <= 170 ? '6M' : '1J'; };
+    const rangeFor = (date) => { const days = date ? (Date.now() - new Date(`${date}T12:00:00`)) / 86400000 : 999; return days <= 170 ? '6M' : '1J'; }; // wie bei den Chancen: 6 Monate (lädt verlässlich, Kauftag liegt drin)
     const mountCharts = () => fig.querySelectorAll('.bst-row.open [data-chart]').forEach((host) => {
       const sym = host.dataset.chart, x = (st.d?.items || []).find((i) => i.symbol === sym);
       if (!x || !window.StockChart) return;

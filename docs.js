@@ -1068,6 +1068,11 @@ const Docs = (() => {
         else if (d.stage === 'browsing' || d.stage === 'searching_sources') { const k = m.news ? 'news' : 'search'; step('src', done ? x(m.news ? 'gather' : 'gather', m.read ? `${m.read} ${m.read === 1 ? 'source' : 'sources'}` : '') : live(P(k).sub), !done); if (!done) ph(k); }
         else if (d.stage === 'verifying') { step('check', done ? x('review', m.corrected ? `corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : '') : live(P('review').sub), !done); if (!done) ph('review'); }
         else if (d.stage === 'answering') { step('write', done ? x('work') : live(P('work').sub), !done); if (!done && !pic) ph('work'); }
+      }, paint() { // Text ist fertig, jetzt entsteht noch ein Bild: Hund an die Staffelei, Schritt „Generating picture“
+        if (over) return;
+        ph('picture');
+        if (!rows.picture) step('picture', `<span class="shimmer ill-ico"></span><span class="shimmer">Generating picture</span>`, true);
+        doneLabel = 'Generated picture';
       }, drop() { over = true; clearInterval(tick); w.work.remove(); actor?.el.remove(); a.classList.remove('acting'); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
     }
     // Bildwunsch? Dann steht oben von Anfang an „Generating picture“ statt „Thinking“
@@ -1137,7 +1142,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         await rv.finish();
         // Bild in der Antwort: erzeugen und weich einblenden (bei Bildwunsch läuft „Generating picture“ oben weiter)
         if (pic && body.querySelector('.chat-illustration[data-prompt]')) { await hydrateIllustrations(body, ctrl.signal).catch(() => {}); think.end(true); }
-        else { if (pic) think.drop(); else think.end(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
+        else if (pic) { think.drop(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
+        else if (body.querySelector('.chat-illustration[data-prompt]') && window.hydrateIllustrations) { think.paint(); await hydrateIllustrations(body, ctrl.signal).catch(() => {}); think.end(true); }
+        else think.end();
       } catch (err) {
         rv.flush();
         if (err.name !== 'AbortError') a.append(el('div', 'dcc-err', esc(err.message || 'Fehler')));
@@ -1193,7 +1200,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         await rv.finish();
         // Bild in der Antwort: erzeugen und weich einblenden (bei Bildwunsch läuft „Generating picture“ oben weiter)
         if (pic && body.querySelector('.chat-illustration[data-prompt]')) { await hydrateIllustrations(body, ctrl.signal).catch(() => {}); think.end(true); }
-        else { if (pic) think.drop(); else think.end(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
+        else if (pic) { think.drop(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
+        else if (body.querySelector('.chat-illustration[data-prompt]') && window.hydrateIllustrations) { think.paint(); await hydrateIllustrations(body, ctrl.signal).catch(() => {}); think.end(true); }
+        else think.end();
       } catch (err) {
         rv.flush();
         if (err.name !== 'AbortError') a.append(el('div', 'dcc-err', esc(err.message || 'Fehler')));

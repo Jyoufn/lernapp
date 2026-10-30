@@ -25,6 +25,13 @@ const ChancenCard = (() => {
   // Karte, aufgeräumt: oben Name + Index (DAX, MDAX …) und Etikett; darunter eine ruhige Zeile Branche · Muster;
   // dann der Kurs groß und Einstieg / Stopp / Ziel als drei gleich breite Felder; Chance:Risiko und Trefferquote klein darunter;
   // Begründung höchstens zwei Zeilen. Klick klappt den Chart auf.
+  // Begründung des Bären in kurzen Fach-Stichworten (aus dem Radar-Text und den Kennzahlen) – erst nach Klick auf den Bären
+  function whyBox(p, v) {
+    const keys = String(p.reason || '').split(/\s*[;·]\s*|\.\s+|,\s+(?=[A-ZÄÖÜ0-9])/).map((x) => x.replace(/\.$/, '').trim()).filter((x) => x.length > 2).slice(0, 5);
+    const crv = crvOf(p);
+    const nums = [p.type ? `Muster: ${p.type}` : '', crv ? `Chance : Risiko ${nf(crv, 1)} : 1` : '', p.hit ? `Trefferquote ${p.hit}` : '', p.stop ? `Stopp ${eur(p.stop)}` : ''].filter(Boolean);
+    return `<b class="chn-why-h">${v === 'kaufen' ? 'Warum kaufen?' : 'Warum beobachten?'}</b><ul>${[...keys, ...nums].map((k) => `<li>${esc(k)}</li>`).join('')}</ul>`;
+  }
   function row(p) {
     const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
     const meta = [p.sector, p.type].filter(Boolean).map(esc).join(' · ');
@@ -44,8 +51,10 @@ const ChancenCard = (() => {
           </div>
         </div>
         ${facts ? `<div class="chn-facts">${facts}</div>` : ''}
-        ${p.reason ? `<p class="chn-why">${esc(p.reason)}</p>` : ''}
-        <div class="chn-chart"><div class="chn-chart-in"></div></div>
+        <div class="chn-chart"><div class="chn-chart-in"></div>
+          <div class="chn-bear-row"><div class="chn-why-box" hidden>${whyBox(p, v)}</div>
+            <button type="button" class="chn-bear" data-why aria-label="Warum ${LABEL[v]}?" aria-expanded="false">${window.PixelDogs?.svg ? PixelDogs.svg('boerse', 20) : ''}</button></div>
+        </div>
       </div>`;
   }
   // Nur die Karten, einzeln untereinander – erst alle „Kaufen“, dann höchstens 10 „Beobachten“. Kein Rahmen, keine Überschrift.
@@ -60,7 +69,8 @@ const ChancenCard = (() => {
     const spec = parse(raw);
     const fig = document.createElement('div');
     fig.className = 'chn';
-    if (Array.isArray(spec.picks)) fig.innerHTML = body(spec); else load().then((d) => { fig.innerHTML = body(d); });
+    const enter = () => fig.querySelectorAll('.chn-pick').forEach((c, i) => window.enterOnce?.(c, { delay: Math.min(i, 5) * 60 }));
+    if (Array.isArray(spec.picks)) { fig.innerHTML = body(spec); enter(); } else load().then((d) => { fig.innerHTML = body(d); enter(); });
     // Klick auf eine Karte: darunter klappt der Aktienchart auf (Kursdaten per Rechnung, keine KI); nochmal Klick klappt zu
     const toggle = (card) => {
       const open = !card.classList.contains('open');
@@ -69,7 +79,11 @@ const ChancenCard = (() => {
       const host = card.querySelector('.chn-chart-in');
       if (open && !host.firstChild && window.StockChart) host.append(StockChart.figure({ symbol: card.dataset.sym, name: card.dataset.name, range: '6M' }));
     };
-    fig.addEventListener('click', (e) => { const c = e.target.closest('.chn-pick'); if (c && !e.target.closest('.chn-chart')) toggle(c); });
+    fig.addEventListener('click', (e) => {
+      const why = e.target.closest('[data-why]');
+      if (why) { const box = why.parentElement.querySelector('.chn-why-box'), on = box.hidden; box.hidden = !on; why.setAttribute('aria-expanded', String(on)); why.classList.toggle('on', on); return; }
+      const c = e.target.closest('.chn-pick'); if (c && !e.target.closest('.chn-chart')) toggle(c);
+    });
     fig.addEventListener('keydown', (e) => { const c = e.target.closest('.chn-pick'); if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(c); } });
     return fig;
   }

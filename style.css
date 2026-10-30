@@ -8166,3 +8166,84 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .tk-sheet-rows .tk-pill .tk-si svg { width: 14px; height: 14px; }
 .tk-sheet textarea.tk-f-notes { padding: 0 !important; min-height: 0 !important; border: 0 !important; background: none !important; }
 .tk-sheet .tk-si span svg { color: inherit; }
+
+/* Hund neben dem Status – weichere Wechsel: der alte Gegenstand sinkt kurz weg und wird kleiner, der neue wächst mit Feder nach,
+   der Hund duckt sich dabei minimal (Gegenstände bleiben im Pixel-Raster, nur die Gruppe bewegt sich) */
+.pa-prop { opacity: 0; transform: translateY(5px) scale(0.9); transform-box: fill-box; transform-origin: 40% 100%;
+  transition: opacity 170ms ease, transform 220ms cubic-bezier(0.4, 0, 1, 1); }
+.pa-prop.on { opacity: 1; transform: none; transition: opacity 240ms ease 150ms, transform 560ms var(--spring) 150ms; }
+.pd-actor.swap .pa-dog { animation: pa-swap 360ms var(--spring) 1 !important; }
+@keyframes pa-swap { 0% { transform: none; } 35% { transform: translateY(1px); } 70% { transform: translateY(-1px); } 100% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pa-prop, .pa-prop.on { transition: none; } .pd-actor.swap .pa-dog { animation: none !important; } }
+/* Agenten-Feld im leeren Chat (iPad): Eingabefeld rückt nach unten, damit das Feld ganz zu sehen ist; zu hoch → scrollt innen */
+.panel.home.pick-low .composer-area { transform: none; }
+.agent-picker { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.agent-picker::-webkit-scrollbar { display: none; }
+
+/* ===== Präsentation v2: nur die Folien (kein Kopf, kein Icon), Designs zum Umschalten, Ausgabe als drei Kacheln ===== */
+.pz { padding: 12px; }
+.pz-slide .pz-t b { font-weight: 700; }
+.pz-big.pz-swap { animation: pz-swap 380ms var(--spring); }
+@keyframes pz-swap { from { opacity: 0.35; transform: scale(0.985); } }
+.pz-bar { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.pz-designs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.pz-designs::-webkit-scrollbar { display: none; }
+.pz-design { flex: none; display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px 0 6px; border: 1px solid #2a2a2a; border-radius: 15px; background: none; color: var(--text-3); font: 500 12.5px Inter, sans-serif; cursor: pointer; transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease; }
+.pz-design i { position: relative; width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); overflow: hidden; }
+.pz-design i::after { content: ''; position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: var(--a); }
+.pz-design:hover { color: var(--text); background: #222; }
+.pz-design.on { border-color: var(--accent); color: var(--text); background: rgba(47, 134, 255, 0.08); }
+.pz-outs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.pz-out { position: relative; display: flex; align-items: center; gap: 10px; min-width: 0; height: 56px; padding: 0 12px 0 10px; border: 1px solid #2a2a2a; border-radius: 14px; background: #1f1f1f; color: var(--text); text-align: left; cursor: pointer;
+  transition: transform 220ms var(--spring), border-color 160ms ease, background-color 160ms ease; }
+.pz-out:hover { border-color: #3a3a3a; background: #242424; transform: translateY(-1px); }
+.pz-out:active { transform: scale(0.98); }
+.pz-badge { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; color: #fff; font: 700 9.5px Inter, sans-serif; letter-spacing: 0.04em; }
+.pz-badge.pptx { background: linear-gradient(160deg, #F0703F, #C4441C); }
+.pz-badge.key { background: linear-gradient(160deg, #4C9BFF, #1F63E0); }
+.pz-badge.pdf { background: linear-gradient(160deg, #F06A6A, #C93434); }
+.pz-ol { display: flex; flex-direction: column; min-width: 0; }
+.pz-ol b { overflow: hidden; font-size: 13.5px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.pz-ol small { overflow: hidden; color: var(--text-4); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; }
+.pz-oi { margin-left: auto; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #2a2a2a; color: var(--text-3); transition: background-color 160ms ease, color 160ms ease; }
+.pz-out:hover .pz-oi { background: var(--accent); color: #fff; }
+.pz-out.working .pz-oi svg { animation: pz-bounce 700ms ease-in-out infinite; }
+@keyframes pz-bounce { 50% { transform: translateY(2px); } }
+.pz-out.ok .pz-oi { background: #34c778; color: #fff; }
+.pz.busy .pz-out:not(.working) { opacity: 0.5; pointer-events: none; }
+.pz-msg { height: 0; overflow: hidden; color: var(--text-4); font-size: 12px; transition: height 200ms ease; }
+.pz-msg.on { height: 22px; padding-top: 6px; }
+@media (max-width: 560px) { .pz-outs { grid-template-columns: 1fr; } }
+.pz-badge.pptx { background: #D9542A; } .pz-badge.key { background: #2F7BEF; } .pz-badge.pdf { background: #D94141; }
+/* Börsen-Karten und Präsentation: Einblenden per Skript (enterOnce) – keine CSS-Animation, die beim Weiterschreiben neu startet */
+.stk, .bst, .bst-row, .chn-pick, .pz { animation: none !important; }
+/* Depot: aufgeklappte Zeile ohne Grid-Höhen-Trick (auf dem iPad blieb sie teils winzig) – einfach auf/zu, Inhalt gleitet ein */
+.bst-d { display: block !important; height: 0; overflow: hidden; opacity: 0; transition: opacity 220ms ease; }
+.bst-row.open .bst-d { height: auto; overflow: visible; opacity: 1; }
+.bst-row.open .bst-d-in { animation: tk-card-in 360ms var(--spring) both; }
+.bst-chart { min-height: 300px; }
+/* aufgeklappter Chart in Chancen-Karte und Depot: Kurs oben LINKS (Name steht schon auf der Karte) */
+:is(.chn-chart, .bst-chart) .stk-head { justify-content: flex-start; }
+:is(.chn-chart, .bst-chart) .stk-title { display: none; }
+:is(.chn-chart, .bst-chart) .stk-quote { align-items: flex-start; text-align: left; }
+.stk-foot[hidden] { display: none; }
+/* Chancen-Karte: eingeklappt ohne Begründung; aufgeklappt unten rechts der Bär – Klick zeigt die Gründe als kurze Stichworte */
+.chn-pick .chn-why { display: none; }
+.chn-bear-row { display: flex; align-items: flex-end; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+.chn-bear { flex: none; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 12px; background: #262626; cursor: pointer;
+  transition: transform 220ms var(--spring), background-color 140ms ease, border-color 140ms ease; }
+.chn-bear svg { image-rendering: pixelated; width: 24px; height: 24px; }
+.chn-bear:hover { background: #2e2e2e; transform: translateY(-1px); }
+.chn-bear.on { border-color: var(--accent); }
+.chn-why-box { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 12px; background: #1d1d1d; animation: tk-card-in 300ms var(--spring) both; }
+.chn-why-box[hidden] { display: none; }
+.chn-why-h { display: block; margin-bottom: 6px; color: var(--text); font-size: 12.5px; font-weight: 600; }
+.chn-why-box ul { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.chn-why-box li { height: 24px; padding: 0 9px; border-radius: 8px; background: #2a2a2a; color: var(--text-2); font-size: 12px; line-height: 24px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.md .chn-why-box ul, .md .chn-why-box li { margin: 0; }
+.md .chn-why-box li::before { content: none; display: none; }
+/* Dokument auf dem iPad: „•••“-Knopf neben dem angetippten Block öffnet das Block-Menü (statt Gedrückthalten) */
+.dc-handle { position: absolute; z-index: 30; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--menu-border); border-radius: 9px;
+  background: var(--menu-bg); color: var(--text-2); cursor: pointer; animation: tk-card-in 240ms var(--spring) both; }
+.dc-handle[hidden] { display: none; }
+.dc-handle:active { transform: scale(0.94); }

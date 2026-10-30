@@ -472,3 +472,16 @@ test('Börsen-Agent: „Financial News“ ohne bestimmte Aktie liest allgemeine 
   assert.match(sys, /DAX klettert auf Rekordhoch – Handelsblatt/);
   assert.ok(fx.calls.some((c) => c.url.includes('bing.com/news')), 'Ersatzquelle wurde gefragt');
 });
+
+test('Meine Käufe: dasselbe Tagebuch nochmal → nichts doppelt; Depotübersicht gleicht nur die Differenz ab', async () => {
+  const Hd = require('../lib/holdings');
+  const store = { m: new Map(), get(k) { return this.m.get(k); }, set(k, v) { this.m.set(k, v); } };
+  await Hd.apply(store, 'u', { add: [{ symbol: 'SAP.DE', qty: 40, price: 231.2, date: '2026-10-02T10:15' }, { symbol: 'RHM.DE', qty: 5, price: 1800, date: '2026-10-05T11:00' }], source: 'upload' });
+  const again = await Hd.apply(store, 'u', { add: [{ symbol: 'SAP.DE', qty: 40, price: 231.25, date: '2026-10-02' }, { symbol: 'RHM.DE', qty: 5, price: 1800.4, date: '2026-10-05T11:00' }], source: 'upload' });
+  assert.equal(again.added.length, 0);
+  assert.equal(again.skipped, 2);
+  const sync = await Hd.apply(store, 'u', { positions: [{ symbol: 'SAP.DE', qty: 40, price: 231.2, now: 250 }, { symbol: 'RHM.DE', qty: 8, price: 1790, now: 1850 }] });
+  assert.equal(sync.unchanged, 1);
+  const pos = Hd.merged(Hd.replay(await Hd.book(store, 'u')).items);
+  assert.deepEqual(pos.map((p) => [p.symbol, p.qty, Math.round(p.price)]), [['SAP.DE', 40, 231], ['RHM.DE', 8, 1790]]);
+});
