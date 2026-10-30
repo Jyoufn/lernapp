@@ -125,7 +125,8 @@ const FadeIcons = (() => {
     info: { b: '<circle cx="8" cy="8" r="6.5"/>', c: '<rect x="7.15" y="7" width="1.7" height="4.4" rx=".85"/><circle cx="8" cy="5" r="1.05"/>' },
     sliders: { b: '<rect x="1.5" y="3.3" width="13" height="1.5" rx=".75"/><rect x="1.5" y="7.25" width="13" height="1.5" rx=".75"/><rect x="1.5" y="11.2" width="13" height="1.5" rx=".75"/><circle cx="5" cy="4.05" r="1.75"/><circle cx="10.6" cy="8" r="1.75"/><circle cx="6.6" cy="11.95" r="1.75"/>' },
     expand: { k: '<path d="M9.5 2.5h4v4M13.5 2.5 9.2 6.8M6.5 13.5h-4v-4M2.5 13.5l4.3-4.3"/>' },
-    focus: { k: '<circle cx="8" cy="8" r="5.6" stroke-dasharray="6.3 2.5" transform="rotate(-58 8 8)"/>' }, // Fokusmodus: Kreis aus vier Bögen
+    focus: { k: '<circle cx="8" cy="8" r="5.8" stroke-dasharray="2.75 1.8" transform="rotate(-80 8 8)"/>' }, // Fokusmodus: Kreis aus acht kurzen Bögen (wie Vorlage)
+    smile: { b: '<circle cx="8" cy="8" r="6.5"/>', c: '<circle cx="5.9" cy="6.6" r="1"/><circle cx="10.1" cy="6.6" r="1"/>', cl: '<path d="M5.4 9.6c.6 1.1 1.5 1.7 2.6 1.7s2-.6 2.6-1.7"/>' }, // „Icon hinzufügen“
     shrink: { k: '<path d="M13.5 6.5h-4v-4M9.5 6.5l4-4M2.5 9.5h4v4M6.5 9.5l-4 4"/>' },
     kanban: { b: '<rect x="1.5" y="2" width="3.6" height="12" rx="1.3"/><rect x="6.2" y="2" width="3.6" height="8.5" rx="1.3"/><rect x="10.9" y="2" width="3.6" height="10.5" rx="1.3"/>' },
   };

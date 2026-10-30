@@ -15,12 +15,11 @@
 - Fehler/fehlender Schlüssel/Unterbrechung als ruhige Karte statt roter Box; Limit erreicht als graue Zeile.
 
 ## Dokumente
-- Editor: Cover, Icon, Titel, Beschreibung, „Infos ⌄“, Inhalt (contenteditable), Überschriften h2–h4 einklappbar mit Griff links, Slash-Menü, Format-Menü bei Markierung (Ask AI), Rechtsklick-/„•••“-Menü für Blöcke.
-- Oben rechts: Fokusmodus (`#f-focus`, Kreis aus vier Bögen, ohne Rand/Fläche), Einstellungen (Regler), Seitenfenster (Dokument-Chat).
-- **Fokusmodus**: nur Titel + Inhalt, Sidebar/Leisten/Griffe/Seitenfenster weg, **kein Browser-Vollbild** (nur in der App), nicht bearbeitbar; oben mittig ein kleiner Kasten mit rundem Kreis → Klick (oder Esc) beendet.
-- **Projekt** als Pille über dem Titel (wie Capacities-Vorlage „Project ⌄“): gesetzt = getönt in der Projektfarbe mit Ordner + Name + ⌄, leer = leises „Projekt hinzufügen“ (nur beim Darüberfahren); Menü: suchen, wählen (nochmal = entfernen), neu anlegen (`doc.projectId`, `projects` mit Farbe). Keine Collections, kein „Wide layout“.
-- Infos: Erstellt, Bearbeitet, Priorität, Tags, Umfang, Abschnitte. Sidebar „Dokumente“ zeigt alle (auch mit Projekt).
-- „Icon/Cover hinzufügen“: nur Text, keine Fläche/kein Rand (auch nicht nach dem Klick). Dokument-Icons `#d-…` (155, neu u. a. note, checklist, inbox, quote, feather, anchor, infinity, hashtag, flag2, rainbow).
+- Editor (Kopf nach Capacities-Vorlage): über dem Titel EINE Zeile **Projekt-Pille** (Akzentfarbe getönt + Rand, Würfel `#d-cube`, „Projekt“ bzw. Name, ⌄; Menü „Suchen“, „Noch keine Projekte“, Enter legt an) · „Icon hinzufügen“ (`#f-smile`) · „Cover hinzufügen“ – erscheinen beim Darüberfahren/Antippen. Darunter Titel, dann **Tags**, dann die **Infos-Tabelle** (Erstellt, Bearbeitet, Priorität, Umfang, Abschnitte; fest, nicht einklappbar; in den Dokument-Einstellungen „Infos“ abschaltbar). Keine Beschreibung, kein Platzhaltertext im Inhalt.
+- Inhalt: Überschriften h2–h4 einklappbar mit Griff links, Slash-Menü, Format-Menü bei Markierung (Ask AI), Rechtsklick-/„•••“-Menü für Blöcke.
+- Oben rechts: Fokusmodus (`#f-focus`, Kreis aus acht Bögen), **Anheften** (`#f-pin`, angeheftet = Akzent), Einstellungen, Seitenfenster. Alle ohne Rand/Fläche.
+- **Fokusmodus**: nur Titel + Inhalt, Sidebar/Leisten/Griffe/Infos weg, kein Browser-Vollbild, nicht bearbeitbar; oben mittig ein Kasten in Dokumentfarbe mit rundem Kreis → Klick/Esc beendet; Text blendet darunter weich aus.
+- Cover-Stile (eigene Farbe): Wellen, Dünen, Bänder, Bögen, Schlicht, Gipfel, Prisma, Punkte, Bokeh, Bauhaus, Seide, Streifen, Horizont, Wirbel, Marmor, Konfetti, Strahlen, Flüssig, Mosaik.
 - Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat.
 
 ## Aufgaben (`tasks.js`, Liste)

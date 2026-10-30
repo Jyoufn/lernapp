@@ -8913,3 +8913,54 @@ div.tl4-h { cursor: default; }
 .dc-editor.focus .dc-pchip:not(.set) { display: none; }
 .dc-editor.focus .dc-projrow { pointer-events: none; }
 @media (hover: none) { .dc-pchip:not(.set) { opacity: 1; } }
+
+/* =====================================================================
+   Dokument-Kopf v3 (30.10., 23:55, nach Vorlage): über dem Titel EINE Zeile – Projekt-Pille (Akzent, Würfel) · Icon · Cover;
+   Icon/Cover und eine leere Projekt-Pille erscheinen erst beim Darüberfahren/Antippen; Tags unter dem Titel;
+   Infos als feste Tabelle (keine Beschreibung, kein Platzhaltertext)
+   ===================================================================== */
+.dc-adds { display: flex; align-items: center; gap: 4px; opacity: 1 !important; min-height: 28px; margin-left: 0 !important; }
+.dc-page .dc-adds .dc-add, .dc-page .dc-pchip:not(.set) { opacity: 0; transition: opacity 160ms ease, color 120ms ease; }
+.dc-page:hover .dc-adds .dc-add, .dc-page:hover .dc-pchip, .dc-page:focus-within .dc-adds .dc-add, .dc-page:focus-within .dc-pchip, .dc-ppop.open .dc-pchip { opacity: 1; }
+@media (hover: none) { .dc-page .dc-adds .dc-add, .dc-page .dc-pchip:not(.set) { opacity: 1; } }
+.dc-pchip, .dc-pchip:not(.set) { margin: 0 6px 0 0; height: 26px; padding: 0 9px 0 8px; gap: 6px; border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent); border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: color-mix(in srgb, var(--accent) 80%, #fff); font: 500 12.5px Inter, sans-serif; }
+.dc-pchip:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+.dc-pchip svg:last-child { opacity: 0.75; }
+.dc-pchip.set { background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.dc-add { padding: 0 8px; }
+.dc-projrow { display: none; }
+/* keine Beschreibung im Kopf, kein „Schreib los …“ */
+.dc-page .dc-sub-in { display: none; }
+.dc-content:empty::before, .dc-content[data-placeholder=""]::before { content: none !important; }
+/* Tags direkt unter dem Titel */
+.dc-page > .dc-meta { margin-top: 2px; }
+.dc-meta-in::after, .dc-meta.open .dc-meta-in::after { content: none; display: none; }
+.dc-tagline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 28px; margin: 0 0 14px; }
+.dc-tagline .dc-tag { height: 24px; padding: 0 9px 0 7px; border-radius: 8px; font-size: 12px; }
+.dc-tagadd { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; margin-left: -8px; border: 0; border-radius: 7px; background: none; color: var(--text-4); font: 500 12.5px Inter, sans-serif; cursor: pointer; }
+.dc-tagline .dc-tag + .tk-pop .dc-tagadd { margin-left: 0; }
+.dc-tagadd:hover, .dc-mpop.open .dc-tagadd { background: none; color: var(--text-2); }
+/* Infos als Tabelle: Etikett links (mit Icon), Wert rechts, feine Linien zwischen den Zeilen */
+.dc-ptable { display: grid; margin: 0 0 22px; border-top: 1px solid rgba(255, 255, 255, 0.07); }
+.dc-ptable[hidden] { display: none; }
+.dc-ptable .dc-mrow { display: grid; grid-template-columns: minmax(150px, 30%) 1fr; align-items: center; min-height: 40px; margin: 0; padding: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.07); overflow: visible; }
+.dc-ptable .dc-mlabel { display: flex; align-items: center; gap: 9px; height: 100%; padding-right: 12px; border-right: 1px solid rgba(255, 255, 255, 0.07); color: var(--text-3); font-size: 13px; }
+.dc-ptable .dc-mlabel svg { color: var(--text-4); }
+.dc-ptable .dc-mval { padding-left: 14px; color: var(--text-2); font-size: 13px; }
+.dc-editor.focus .dc-meta { display: none !important; }
+
+/* Topbar: Anheften zwischen Fokus und Einstellungen; Icons ohne Rand/Fläche */
+.dc-topbar .dc-pinbtn, .dc-topbar .dc-pinbtn:hover, .dc-topbar .dc-pinbtn:focus { border: 0; background: none; outline: none; -webkit-tap-highlight-color: transparent; }
+.dc-topbar .dc-pinbtn { color: var(--text-3); }
+.dc-topbar .dc-pinbtn:hover { color: var(--text); }
+.dc-topbar .dc-pinbtn.on { color: var(--accent); }
+
+/* Fokusmodus: Kasten oben in der Farbe des Dokuments; der Text blendet darunter weich aus statt hindurchzuscheinen */
+.dc-editor.focus .dc-focus-bar { background: var(--main-bg); border-color: rgba(255, 255, 255, 0.09); }
+.dc-editor.focus .dc-scroll { -webkit-mask-image: linear-gradient(to bottom, transparent 0, transparent 48px, #000 84px); mask-image: linear-gradient(to bottom, transparent 0, transparent 48px, #000 84px); }
+.dc-page .dc-meta-in { padding-top: 0; }
+.dc-ptable .dc-mrow { grid-template-columns: 190px 1fr; column-gap: 0; }
+.dc-ptable .dc-mlabel { width: 100%; box-sizing: border-box; justify-self: stretch; }
+.dc-page .dc-title-in { margin-bottom: 0; }
+.dc-tagline { margin-top: -4px; }

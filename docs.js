@@ -413,6 +413,49 @@ const Docs = (() => {
       <radialGradient id="l" cx="25%" cy="15%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>`,
       `<rect width="${CW}" height="${CH}" fill="url(#bg)"/><rect width="${CW}" height="${CH}" fill="${vein}" mask="url(#m1)" opacity=".75"/><rect width="${CW}" height="${CH}" fill="${vein2}" mask="url(#m2)" opacity=".55"/><rect width="${CW}" height="${CH}" fill="url(#l)"/>`);
   }
+  // Konfetti: verstreute Formen (Kreise, Striche, Dreiecke, Ringe) auf ruhiger Fläche
+  function artConfetti(pal, seed) {
+    const r = rng(seed), [bg, ...cols] = pal;
+    let body = `<rect width="${CW}" height="${CH}" fill="${bg}"/>`;
+    for (let i = 0; i < 70; i++) {
+      const x = r() * CW, y = r() * CH, c = cols[i % cols.length], s = 8 + r() * 22, rot = Math.floor(r() * 180), t = i % 4;
+      if (t === 0) body += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(s / 2).toFixed(1)}" fill="${c}"/>`;
+      else if (t === 1) body += `<rect x="${(x - s).toFixed(0)}" y="${(y - 3).toFixed(0)}" width="${(s * 2).toFixed(0)}" height="7" rx="3.5" fill="${c}" transform="rotate(${rot} ${x.toFixed(0)} ${y.toFixed(0)})"/>`;
+      else if (t === 2) body += `<path d="M ${x.toFixed(0)} ${(y - s).toFixed(0)} L ${(x + s).toFixed(0)} ${(y + s * 0.7).toFixed(0)} L ${(x - s).toFixed(0)} ${(y + s * 0.7).toFixed(0)} Z" fill="${c}" transform="rotate(${rot} ${x.toFixed(0)} ${y.toFixed(0)})"/>`;
+      else body += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${(s * 0.6).toFixed(1)}" fill="none" stroke="${c}" stroke-width="4"/>`;
+    }
+    return svgWrap('', body);
+  }
+  // Strahlen: Sonnenstrahlen aus einer Ecke, abwechselnd hell und dunkel, mit weichem Licht
+  function artRays(pal, seed) {
+    const r = rng(seed), [a, b, glow] = pal, cx = CW * (r() < 0.5 ? 0.12 : 0.88), cy = CH * 1.05, R = CW * 1.4, n = 36;
+    let body = `<rect width="${CW}" height="${CH}" fill="${a}"/>`;
+    for (let i = 0; i < n; i += 2) {
+      const a1 = (i / n) * Math.PI * 2, a2 = ((i + 1) / n) * Math.PI * 2;
+      body += `<path d="M ${cx} ${cy} L ${(cx + Math.cos(a1) * R).toFixed(0)} ${(cy + Math.sin(a1) * R).toFixed(0)} L ${(cx + Math.cos(a2) * R).toFixed(0)} ${(cy + Math.sin(a2) * R).toFixed(0)} Z" fill="${b}"/>`;
+    }
+    body += `<circle cx="${cx}" cy="${cy}" r="${CH * 1.1}" fill="url(#g)"/>`;
+    return svgWrap(`<radialGradient id="g"><stop offset="0" stop-color="${glow}" stop-opacity=".9"/><stop offset=".45" stop-color="${glow}" stop-opacity=".25"/><stop offset="1" stop-color="${glow}" stop-opacity="0"/></radialGradient>`, body);
+  }
+  // Flüssig: weiche, ineinanderfließende Farbblasen (wie Lavalampe)
+  function artBlobs(pal, seed) {
+    const r = rng(seed), [bg, ...cols] = pal;
+    let body = `<rect width="${CW}" height="${CH}" fill="${bg}"/><g filter="url(#goo)">`;
+    for (let i = 0; i < 9; i++) body += `<circle cx="${(r() * CW).toFixed(0)}" cy="${(r() * CH).toFixed(0)}" r="${(90 + r() * 160).toFixed(0)}" fill="${cols[i % cols.length]}"/>`;
+    body += '</g>';
+    return svgWrap('<filter id="goo" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="38"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -9"/></filter>', body);
+  }
+  // Mosaik: Dreiecks-Raster mit leichten Helligkeitsunterschieden (wie facettiertes Glas)
+  function artMosaic(pal, seed) {
+    const r = rng(seed), s = 110, rows = Math.ceil(CH / s) + 1, colsN = Math.ceil(CW / s) + 1;
+    let body = '';
+    for (let y = 0; y < rows; y++) for (let x = 0; x < colsN; x++) {
+      const x0 = x * s, y0 = y * s, k = (x / colsN) * 0.6 + (y / rows) * 0.4;
+      const pick = () => pal[Math.max(0, Math.min(pal.length - 1, Math.floor(k * (pal.length - 1) + (r() - 0.5) * 1.6)))];
+      body += `<path d="M ${x0} ${y0} L ${x0 + s} ${y0} L ${x0} ${y0 + s} Z" fill="${pick()}"/><path d="M ${x0 + s} ${y0} L ${x0 + s} ${y0 + s} L ${x0} ${y0 + s} Z" fill="${pick()}"/>`;
+    }
+    return svgWrap('', body);
+  }
   const COVER_GROUPS = [{ id: 'waves', name: 'Wellen' }, { id: 'dunes', name: 'Dünen' }, { id: 'aurora', name: 'Aurora' }, { id: 'lines', name: 'Linien' }];
   const art = (id, group, name, fn, pal, seed) => ({ id, group, name, pal, bg: svgUrl(fn(pal, seed)) }); // pal: auch für die automatische Akzentfarbe
   const COVER_PRESETS = [
@@ -453,7 +496,7 @@ const Docs = (() => {
     const S = Math.round(Math.min(1, s) * 100);
     const hsl = (dh, sat, lit) => `hsl(${(h + dh + 360) % 360},${Math.max(0, Math.min(100, Math.round(sat)))}%,${Math.max(0, Math.min(100, Math.round(lit)))}%)`;
     // feste Form je Stil – beim Farbwechsel ändert sich nur die Farbe, nie das Motiv (Wellen/Dünen = Form der Vorschau)
-    const seed = ({ waves: 11, wave: 11, dunes: 7, soft: 7, ribbons: 31, mesh: 31, aurora: 31, arcs: 5, lines: 5, peaks: 17, prism: 23, dots: 29, bokeh: 37, bauhaus: 43, silk: 47, stripes: 53, swirl: 59, marble: 61 })[style] || 41;
+    const seed = ({ waves: 11, wave: 11, dunes: 7, soft: 7, ribbons: 31, mesh: 31, aurora: 31, arcs: 5, lines: 5, peaks: 17, prism: 23, dots: 29, bokeh: 37, bauhaus: 43, silk: 47, stripes: 53, swirl: 59, marble: 61, confetti: 67, rays: 71, blobs: 73, mosaic: 79 })[style] || 41;
     if (style === 'flat') return `radial-gradient(120% 140% at 100% 0%, ${hsl(0, S, 62)} 0%, transparent 60%), ${hsl(0, S, 50)}`;
     if (style === 'ribbons') return svgUrl(artRibbons([hsl(-6, S * 0.5, 14), hsl(8, S * 0.6, 22), hsl(0, S * 0.9, 52), hsl(14, S * 0.85, 60), hsl(-14, S * 0.85, 48)], seed));
     if (style === 'arcs') return svgUrl(artArcs([hsl(-8, S * 0.6, 16), hsl(-6, S * 0.8, 26), hsl(-3, S * 0.9, 36), hsl(0, S, 46), hsl(4, S, 56), hsl(8, S * 0.9, 66), hsl(12, S * 0.8, 76)], seed));
@@ -467,6 +510,10 @@ const Docs = (() => {
     if (style === 'silk') return svgUrl(artSilk([hsl(-6, S * 0.9, 26), hsl(8, S * 0.9, 40), hsl(0, S * 0.9, 66), hsl(14, S * 0.85, 74)], seed));
     if (style === 'stripes') return svgUrl(artStripes([hsl(0, S * 0.9, 42), hsl(-5, S * 0.9, 34), hsl(0, S, 48), hsl(5, S, 56), hsl(3, S * 0.8, 66), hsl(-3, S * 0.9, 28)], seed));
     if (style === 'swirl') return svgUrl(artSwirl([hsl(0, S * 0.4, 8), hsl(0, S, 30), hsl(10, S, 42), hsl(20, S, 54), hsl(30, S, 66), hsl(40, S * 0.9, 78)], seed));
+    if (style === 'confetti') return svgUrl(artConfetti([hsl(0, S * 0.3, 10), hsl(0, S, 58), hsl(30, S, 62), hsl(-30, S * 0.9, 60), hsl(10, S * 0.5, 86)], seed));
+    if (style === 'rays') return svgUrl(artRays([hsl(-6, S * 0.9, 34), hsl(4, S * 0.95, 42), hsl(20, S, 72)], seed));
+    if (style === 'blobs') return svgUrl(artBlobs([hsl(0, S * 0.4, 9), hsl(0, S, 52), hsl(25, S, 58), hsl(-25, S * 0.9, 50), hsl(10, S * 0.8, 70)], seed));
+    if (style === 'mosaic') return svgUrl(artMosaic([hsl(-10, S * 0.8, 20), hsl(-5, S * 0.9, 30), hsl(0, S, 40), hsl(5, S, 50), hsl(10, S * 0.95, 60), hsl(15, S * 0.85, 70)], seed));
     if (style === 'plain') return svgUrl(artPlain([hsl(-6, S * 0.9, 30), hsl(3, S, 50), hsl(10, S * 0.75, 76)]));
     if (style === 'lines') return svgUrl(artLines([hsl(0, S * 0.35, 6), hsl(0, S, 64), hsl(40, S, 60)], seed));
     if (style === 'soft' || style === 'dunes') return svgUrl(artDunes([hsl(-5, S * 0.55, 86), hsl(8, S * 0.6, 78), '#ffffff', hsl(0, S * 0.9, 60), hsl(-5, S * 0.9, 46), hsl(-10, S * 0.9, 32)], seed));
@@ -553,7 +600,7 @@ const Docs = (() => {
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const row = (d, i) => `<div class="cl-row" data-open-doc="${d.id}" data-key="${d.id}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <span class="cl-av">${docIcon(d) ? `<svg width="16" height="16" style="color:${esc(d.icon.c)}"><use href="#d-${d.icon.name}"/></svg>` : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span><span class="cl-title">${esc(d.title || 'Ohne Titel')}</span><span class="cl-time">${relTime(d.updated)}</span>
-        <span class="cl-acts"><button type="button" class="lb-act cl-pin${d.pinned ? ' on' : ''}" data-row="pin" aria-label="${d.pinned ? 'Unpin' : 'Pin'}" title="${d.pinned ? 'Unpin' : 'Pin'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Dokument löschen" title="Löschen">${fi('trash', 14)}</button></span></div>`;
+        <span class="cl-acts"><button type="button" class="lb-act cl-pin${d.pinned ? ' on' : ''}" data-row="pin" aria-label="${d.pinned ? 'Lösen' : 'Anheften'}" title="${d.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Dokument löschen" title="Löschen">${fi('trash', 14)}</button></span></div>`;
     const api = {
       open: false,
       setProject() { api.render(); }, // Projekte gibt es in der Liste nicht mehr
@@ -1266,20 +1313,21 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       view.innerHTML = `<div class="dc-topbar"><div class="dc-hist"><button type="button" class="icon-btn" data-act="undo" aria-label="Rückgängig" title="Rückgängig (Strg+Z)">${fi('undo', 15)}</button><button type="button" class="icon-btn redo" data-act="redo" aria-label="Wiederholen" title="Wiederholen (Strg+Umschalt+Z)">${fi('undo', 15)}</button></div><span class="grow"></span>
           <span class="dc-busy" hidden></span>
           <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('focus', 16)}</button>
+          <button type="button" class="icon-btn dc-pinbtn${doc.pinned ? ' on' : ''}" data-act="pin" aria-label="${doc.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 15)}</button>
           <button type="button" class="icon-btn dc-setbtn" data-act="settings" aria-label="Einstellungen des Dokuments">${fi('sliders', 15)}</button>
           <button type="button" class="icon-btn dc-panebtn" data-act="pane" aria-label="Seitenfenster rechts ein-/ausklappen" title="Seitenfenster">${icon('i-sidebar', 16)}</button></div>
         <div class="dc-body"><div class="dc-scroll">
           <div class="dc-page">
-          <div class="dc-adds"><button type="button" class="dc-add" data-act="icon" data-add="icon">${fi('sparkle', 13)}Icon hinzufügen</button><button type="button" class="dc-add" data-act="cover" data-add="cover">${fi('image', 13)}Cover hinzufügen</button></div>
+          <div class="dc-adds"><span class="tk-pop dc-mpop dc-ppop"><button type="button" class="dc-pchip" data-popen></button>
+            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Suchen" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span>
+            <button type="button" class="dc-add" data-act="icon" data-add="icon">${fi('smile', 13)}Icon hinzufügen</button><button type="button" class="dc-add" data-act="cover" data-add="cover">${fi('image', 13)}Cover hinzufügen</button></div>
           <div class="dc-cover"><div class="dc-cover-img"></div><div class="dc-cover-acts">
             <button type="button" data-act="cover">${fi('image', 12)}Cover ändern</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
           <button type="button" class="dc-icon" data-act="icon" aria-label="Icon ändern" title="Icon ändern" hidden><span class="dc-icon-g"></span></button>
-          <div class="dc-projrow"><span class="tk-pop dc-mpop dc-ppop"><button type="button" class="dc-pchip" data-popen></button>
-            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Projekt suchen oder neu" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span></div>
           <textarea class="dc-title-in" rows="1" placeholder="Titel" maxlength="160" aria-label="Titel">${esc(doc.title)}</textarea>
           <textarea class="dc-sub-in" rows="1" placeholder="Beschreibung hinzufügen …" maxlength="400" aria-label="Beschreibung">${esc(doc.subtitle || '')}</textarea>
-          <div class="dc-meta"><button type="button" class="dc-meta-toggle" aria-expanded="false"><span class="dc-sep"></span><span class="dc-meta-hint">Infos${fi('chevron-down', 10)}</span></button><div class="dc-meta-body"><div class="dc-meta-in"></div></div></div>
-          <div class="dc-content" contenteditable="true" spellcheck="true" data-placeholder="Schreib los – oder markiere Text für das Format-Menü" aria-label="Inhalt">${doc.content || ''}</div>
+          <div class="dc-meta open shown"><div class="dc-meta-body"><div class="dc-meta-in"></div></div></div>
+          <div class="dc-content" contenteditable="true" spellcheck="true" data-placeholder="" aria-label="Inhalt">${doc.content || ''}</div>
           <div class="dc-gutter" hidden><button type="button" class="dc-fold" aria-label="Abschnitt ein-/ausklappen" title="Ein-/ausklappen">${fi('chevron-down', 10)}</button></div>
           <div class="dc-drop" hidden></div>
         </div></div>
@@ -1328,7 +1376,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         window.setTabTitle?.(tab, doc.title.trim() || 'Unbenannt');
         changed();
       });
-      title.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); sub.focus(); } });
+      title.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); c.focus(); } });
       sub.addEventListener('input', () => { doc.subtitle = sub.value.replace(/\n/g, ' '); grow(sub); changed(); });
       sub.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); c.focus(); } });
       c.addEventListener('focus', () => document.execCommand('defaultParagraphSeparator', false, 'p'));
@@ -1521,15 +1569,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const prio = PRIOS.find((p) => p.id === pid) || PRIOS[0];
       const ts = (doc.tags || []).map(tagOf).filter(Boolean);
       const row = (ic, label, value) => `<div class="dc-mrow"><span class="dc-mlabel">${fi(ic, 15)}${label}</span><span class="dc-mval">${value}</span></div>`;
-      box.innerHTML = row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
+      const tagsHtml = `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
+            <span class="tk-pop dc-mpop"><button type="button" class="dc-madd dc-tagadd" data-mopen="tags" aria-label="Tag hinzufügen">${fi('tag', 12)}${ts.length ? '' : '<span>Tags</span>'}</button>
+            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Suchen" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></span></span>`;
+      box.innerHTML = `<div class="dc-tagline">${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
         + row('clock', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
-        + row('hash', 'Tags', `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
-            <span class="tk-pop dc-mpop"><button type="button" class="dc-madd" data-mopen="tags" aria-label="Tag hinzufügen" title="Tag hinzufügen">${fi('plus', 12)}${ts.length ? '' : '<span>Hinzufügen</span>'}</button>
-            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></span></span>`)
         + row('file', 'Umfang', `${words.toLocaleString('de-DE')} Wörter`)
-        + row('list', 'Abschnitte', String(heads));
+        + row('list', 'Abschnitte', String(heads)) + '</div>';
     }
     function drawMetaTags() {
       const list = view.querySelector('.dc-meta .tk-tag-list'), inp = view.querySelector('.dc-meta .tk-tag-in'); if (!list) return;
@@ -1560,19 +1608,19 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
       list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span>„${esc(q)}“ anlegen</span></span>` : '')
         + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><i style="background:${p.c}"></i><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
-        + (!found.length && !q ? '<span class="tk-ml">Noch keine Projekte – Namen eintippen</span>' : '');
+        + (!found.length && !q ? '<span class="tk-ml">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
       const b = view.querySelector('.dc-pchip'); if (!b || !doc) return;
       const pr = projOf(doc.projectId);
       b.classList.toggle('set', !!pr);
-      if (pr) b.style.setProperty('--c', pr.c); else b.style.removeProperty('--c');
-      b.innerHTML = pr ? `${fi('folder', 12)}<span>${esc(pr.name)}</span>${fi('chevron-down', 9)}` : `${fi('folder', 13)}<span>Projekt hinzufügen</span>`;
+      const cube = '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
+      b.innerHTML = `${cube}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
       view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
     }
     const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawProj(); view.querySelector('.dc-ppop')?.classList.remove('open'); };
     function wireProj() {
-      const box = view.querySelector('.dc-projrow'); if (!box) return;
+      const box = view.querySelector('.dc-adds'); if (!box) return;
       drawProj();
       const pop = box.querySelector('.dc-ppop'), inp = box.querySelector('.dc-proj-in');
       box.addEventListener('click', (e) => {
@@ -1595,20 +1643,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     const newProj = (name) => { const pr = { id: newId('p'), name: name.slice(0, 40), c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
     const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in)');
-    // Klick auf den Strich klappt die Infos auf/zu (Zustand wird gemerkt)
+    // Infos: Tags unter dem Titel, darunter die feste Tabelle (abschaltbar in den Dokument-Einstellungen)
     function wireMeta() {
       const meta = view.querySelector('.dc-meta'); if (!meta) return;
-      const btn = meta.querySelector('.dc-meta-toggle');
-      let shownT = 0;
-      const setOpen = (open) => {
-        if (open) drawMeta();
-        meta.classList.toggle('open', open); btn.setAttribute('aria-expanded', String(open));
-        // erst nach dem Aufklappen dürfen Menüs über den Rand ragen
-        clearTimeout(shownT); meta.classList.remove('shown');
-        if (open) shownT = setTimeout(() => meta.classList.add('shown'), 440);
-      };
-      setOpen(localStorage.getItem('docs.metaOpen') === '1');
-      btn.addEventListener('click', () => { const open = !meta.classList.contains('open'); setOpen(open); localStorage.setItem('docs.metaOpen', open ? '1' : '0'); });
+      drawMeta(); // Infos stehen immer da (Tags unter dem Titel, darunter die Tabelle) – kein Auf-/Zuklappen
       const closeMenus = () => { metaNew = ''; metaEdit = null; meta.querySelectorAll('.dc-mpop.open').forEach((x) => x.classList.remove('open')); };
       const reopenTags = (focus) => { const pop = tagPop(); if (!pop) return; pop.classList.add('open'); const inp = pop.querySelector('.tk-tag-in'); inp.value = ''; drawMetaTags(); if (focus) inp.focus(); };
       meta.addEventListener('click', (e) => {
@@ -1733,7 +1771,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
        doc.settings: accent ('auto' = aus dem Cover | Farbe), font (sans/serif/mono), width (normal/wide), small, nav, spell
  */
     const ACCENTS = ['#2f86ff', '#6aa8ff', '#b49cff', '#f472b6', '#f07a6e', '#f0913a', '#facc15', '#4fcf8a', '#2dd4bf', '#a3a3a3'];
-    const docSet = () => ({ accent: 'auto', font: 'sans', width: 'normal', small: false, nav: true, spell: true, ...(doc?.settings || {}) });
+    const docSet = () => ({ accent: 'auto', font: 'sans', width: 'normal', small: false, nav: true, spell: true, infos: true, ...(doc?.settings || {}) });
     // Akzent automatisch: Farbe des Covers (Farb-Cover direkt, Motiv aus seiner Palette, eigenes Bild = mittlere kräftige Farbe)
     function autoAccent() {
       const cv = doc?.cover; if (!cv) return null;
@@ -1761,6 +1799,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       page.classList.toggle('f-serif', s.font === 'serif'); page.classList.toggle('f-mono', s.font === 'mono');
       page.classList.toggle('wide', s.width === 'wide'); page.classList.toggle('small', !!s.small);
       view.querySelector('.dc-nav')?.classList.toggle('off', !s.nav);
+      const pt = view.querySelector('.dc-ptable'); if (pt) pt.hidden = s.infos === false;
       view.querySelector('.dc-content')?.setAttribute('spellcheck', String(!!s.spell));
     }
     function openSettings() {
@@ -1780,6 +1819,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
             ${row('Breite', '', seg('width', [['normal', 'Normal'], ['wide', 'Breit']], s.width))}
             ${row('Kleine Schrift', '', sw('small', !!s.small))}
             <div class="dc-set-sec">Dokument</div>
+            ${row('Infos', 'Tabelle unter dem Titel (Erstellt, Bearbeitet, Priorität …)', sw('infos', s.infos !== false))}
             ${row('Gliederung links', 'Striche zu den Überschriften', sw('nav', s.nav))}
             ${row('Rechtschreibprüfung', '', sw('spell', s.spell))}
           </div></div>`;
@@ -1946,6 +1986,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       { id: 'peaks', name: 'Gipfel', color: '#6aa8ff' }, { id: 'prism', name: 'Prisma', color: '#f472b6' }, { id: 'dots', name: 'Punkte', color: '#4fcf8a' },
       { id: 'bokeh', name: 'Bokeh', color: '#facc15' }, { id: 'bauhaus', name: 'Bauhaus', color: '#f0913a' }, { id: 'silk', name: 'Seide', color: '#b49cff' },
       { id: 'stripes', name: 'Streifen', color: '#2dd4bf' },
+      { id: 'horizon', name: 'Horizont', color: '#f472b6' }, { id: 'swirl', name: 'Wirbel', color: '#6aa8ff' }, { id: 'marble', name: 'Marmor', color: '#a3a3a3' },
+      { id: 'confetti', name: 'Konfetti', color: '#facc15' }, { id: 'rays', name: 'Strahlen', color: '#f0913a' }, { id: 'blobs', name: 'Flüssig', color: '#b49cff' },
+      { id: 'mosaic', name: 'Mosaik', color: '#2dd4bf' },
     ];
     const OLD_STYLE = { wave: 'waves', soft: 'dunes', mesh: 'ribbons', aurora: 'ribbons', lines: 'arcs', flat: 'plain' };
     const styleOfCover = (cv) => (cv?.kind === 'preset' ? COVER_PRESETS.find((p) => p.id === cv.id)?.group : cv?.kind === 'color' ? (OLD_STYLE[cv.style] || cv.style) : null);
@@ -2424,6 +2467,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'focus') { setFocus(!focusOn); return; }
       if (focusOn) return; // im Fokusmodus lässt sich nichts ändern
+      if (act === 'pin') { doc.pinned = !doc.pinned; touch(doc); changed(); const b = view.querySelector('.dc-pinbtn'); b?.classList.toggle('on', !!doc.pinned); b?.setAttribute('aria-label', doc.pinned ? 'Lösen' : 'Anheften'); return; }
       if (act === 'undo' || act === 'redo') { stepHist(act === 'undo'); return; }
       if (act === 'pane') { paneOpen = !paneOpen; localStorage.setItem('docs.pane', paneOpen ? '1' : '0'); drawPane(); return; }
       if (act === 'cover') { openCoverPop(); return; }
