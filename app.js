@@ -962,46 +962,72 @@ function heftFigure(code) {
   fig.append(page);
   return fig;
 }
+/* Mindmap: Thema in der Mitte, Äste rundherum (rechts, links, unten, oben …) als Kästchen ohne Hintergrund –
+   oben der Oberpunkt, darunter die Stichpunkte. Schmal (iPhone/Seitenfenster): Thema oben, Äste darunter. */
 function mindmapFigure(data) {
   const figure = el('figure', 'chat-mindmap');
   figure.setAttribute('role', 'img');
   figure.setAttribute('aria-label', `Mindmap ${data.center}: ${data.branches.map((b) => b.label).join(', ')}`);
-  const grid = el('div', 'mm2');
+  const map = el('div', 'mm3');
   const svg = svgNode('svg', { 'aria-hidden': 'true' });
-  const right = el('div', 'mm2-col r'), left = el('div', 'mm2-col l');
-  const center = el('div', 'mm2-c');
+  const zones = { top: el('div', 'mm3-z top'), l: el('div', 'mm3-z l'), r: el('div', 'mm3-z r'), bot: el('div', 'mm3-z bot') };
+  const center = el('div', 'mm3-c');
   center.textContent = data.center;
-  data.branches.forEach((b, i) => {
-    const node = el('div', 'mm2-b');
-    node.style.animationDelay = `${120 + i * 60}ms`;
-    const h = el('div', 'mm2-h');
-    h.textContent = b.label;
-    const items = el('div', 'mm2-i');
-    b.items.forEach((it) => { const s = document.createElement('span'); s.textContent = it; items.append(s); });
-    node.append(h, items);
-    (i % 2 ? left : right).append(node);
+  const ORDER = ['r', 'l', 'bot', 'top', 'r', 'l', 'bot', 'top'];
+  const cards = data.branches.map((b, i) => {
+    const node = el('div', 'mm3-b');
+    node.style.animationDelay = `${140 + i * 70}ms`;
+    const h = el('div', 'mm3-h'); h.textContent = b.label;
+    node.append(h);
+    if (b.items.length) {
+      const ul = el('div', 'mm3-i');
+      b.items.forEach((it) => { const li = el('span', ''); li.textContent = it; ul.append(li); });
+      node.append(ul);
+    }
+    node._zone = ORDER[i];
+    return node;
   });
-  grid.append(svg, left, center, right);
-  figure.append(grid);
-
+  map.append(svg, zones.top, zones.l, center, zones.r, zones.bot);
+  figure.append(map);
+  let narrow = null;
+  const place = () => {
+    const n = map.clientWidth < 560;
+    if (n === narrow) return;
+    narrow = n;
+    map.classList.toggle('narrow', n);
+    cards.forEach((c) => (n ? zones.bot : zones[c._zone]).append(c));
+  };
   const draw = () => {
-    const R = grid.getBoundingClientRect();
+    place();
+    const R = map.getBoundingClientRect();
     if (!R.width) return;
     const C = center.getBoundingClientRect();
-    const cy = C.top + C.height / 2 - R.top;
+    const cx = C.left + C.width / 2 - R.left, cy = C.top + C.height / 2 - R.top;
     svg.setAttribute('viewBox', `0 0 ${R.width} ${R.height}`);
-    svg.replaceChildren(...[...grid.querySelectorAll('.mm2-h')].map((h, k) => {
-      const H = h.getBoundingClientRect(), isLeft = !!h.closest('.mm2-col.l');
-      const x1 = isLeft ? C.left - R.left : C.right - R.left;
-      const x2 = isLeft ? H.right - R.left + 8 : H.left - R.left - 8;
-      const y2 = H.top + H.height / 2 - R.top, m = (x1 + x2) / 2;
-      const p = svgNode('path', { d: `M${x1},${cy} C${m},${cy} ${m},${y2} ${x2},${y2}`, fill: 'none', stroke: '#454545', 'stroke-width': 1.25, 'stroke-linecap': 'round', pathLength: 1 });
-      p.style.animationDelay = `${k * 60}ms`;
+    svg.replaceChildren(...cards.map((c, k) => {
+      const B = c.getBoundingClientRect(), z = c.parentElement.classList;
+      let d;
+      if (narrow) { // schmal: Stamm links unter dem Thema, je Ast ein Bogen zum Kästchen
+        const tx = C.left - R.left + 18, y2 = B.top + B.height / 2 - R.top, x2 = B.left - R.left;
+        d = `M${tx},${C.bottom - R.top} L${tx},${y2 - 10} Q${tx},${y2} ${tx + 10},${y2} L${x2},${y2}`;
+      } else if (z.contains('l') || z.contains('r')) {
+        const left = z.contains('l');
+        const x1 = left ? C.left - R.left : C.right - R.left, x2 = left ? B.right - R.left : B.left - R.left;
+        const y2 = B.top + B.height / 2 - R.top, m = (x1 + x2) / 2;
+        d = `M${x1},${cy} C${m},${cy} ${m},${y2} ${x2},${y2}`;
+      } else {
+        const up = z.contains('top');
+        const y1 = up ? C.top - R.top : C.bottom - R.top, y2 = up ? B.bottom - R.top : B.top - R.top;
+        const x2 = B.left + B.width / 2 - R.left, m = (y1 + y2) / 2;
+        d = `M${cx},${y1} C${cx},${m} ${x2},${m} ${x2},${y2}`;
+      }
+      const p = svgNode('path', { d, fill: 'none', stroke: '#4a4a4a', 'stroke-width': 1.25, 'stroke-linecap': 'round', pathLength: 1 });
+      p.style.animationDelay = `${k * 70}ms`;
       return p;
     }));
   };
   // erst zeichnen, wenn die Mindmap im Chat steht und Maße hat; bei Größenänderung neu
-  new ResizeObserver(() => requestAnimationFrame(draw)).observe(grid);
+  new ResizeObserver(() => requestAnimationFrame(draw)).observe(map);
   return figure;
 }
 

@@ -788,3 +788,13 @@ test('Präsentation (Lernen): recherchiert immer und hängt die echten Quellen a
   assert.ok(/https?:\/\//.test(list[0]));
   assert.ok(list.includes('Arbeitsblatt des Nutzers'));
 });
+
+test('Quellen: Research/Allgemein suchen offen (alle seriösen Seiten), Foren und Fachartikel fallen weg', () => {
+  assert.ok(W.rankOpen({ url: 'https://www.heise.de/news/x' }) > 0);          // normale Website zählt
+  assert.ok(W.rankOpen({ url: 'https://www.adac.de/rund-ums-fahrzeug' }) > 0); // Ratgeber/Verband
+  assert.ok(W.rankOpen({ url: 'https://www.bpb.de/x' }) > W.rankOpen({ url: 'https://example.com/x' })); // Fachseite weiter vorn
+  assert.equal(W.rankOpen({ url: 'https://www.reddit.com/r/x' }), null);
+  assert.equal(W.rankOpen({ url: 'https://www.nature.com/articles/x' }), null);
+  assert.ok(W.SCHOOL_TOPIC.test('Hilf mir bei der Hausaufgabe zur Photosynthese'));
+  assert.ok(!W.SCHOOL_TOPIC.test('Welches E-Auto hat die beste Reichweite?'));
+});
