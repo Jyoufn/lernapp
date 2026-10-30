@@ -1,7 +1,8 @@
 /* ===================================================================
    Chancen-Übersicht im Chat (Block ```chancen, vom Börsen-Bären bei „welche Aktien …“ / Empfehlungen):
    je Wert ein Kästchen mit Etikett Kaufen (grün) · Beobachten (grau) · Nicht kaufen (rot), Muster, Kurs, Einstieg, Stopp, Ziel,
-   Chance:Risiko, Trefferquote und Begründung – jede Karte einzeln, ohne Sammelkasten. Klick auf eine Karte klappt ihren Aktienchart auf.
+   Chance:Risiko, Trefferquote und Begründung – jede Karte einzeln, ohne Sammelkasten. Klick irgendwo auf die Karte klappt ihren
+   Aktienchart samt Bär (Begründung) auf; zugeklappt nimmt beides keinen Platz ein.
    Daten: stehen im Block (vom Server angehängt) – sonst aus dem GESPEICHERTEN Radar (/api/boerse/chancen, ohne Neu-Rechnen, ohne KI).
    Es gibt keine automatischen Abfragen im Hintergrund: Chancen kommen nur, wenn man danach fragt.
    =================================================================== */
@@ -51,10 +52,10 @@ const ChancenCard = (() => {
           </div>
         </div>
         ${facts ? `<div class="chn-facts">${facts}</div>` : ''}
-        <div class="chn-chart"><div class="chn-chart-in"></div>
+        <div class="chn-chart"><div class="chn-chart-in"><div class="chn-chart-host"></div>
           <div class="chn-bear-row"><div class="chn-why-box" hidden>${whyBox(p, v)}</div>
             <button type="button" class="chn-bear" data-why aria-label="Warum ${LABEL[v]}?" aria-expanded="false">${window.PixelDogs?.svg ? PixelDogs.svg('boerse', 20) : ''}</button></div>
-        </div>
+        </div></div>
       </div>`;
   }
   // Nur die Karten, einzeln untereinander – erst alle „Kaufen“, dann höchstens 10 „Beobachten“. Kein Rahmen, keine Überschrift.
@@ -76,13 +77,14 @@ const ChancenCard = (() => {
       const open = !card.classList.contains('open');
       card.classList.toggle('open', open);
       card.setAttribute('aria-expanded', String(open));
-      const host = card.querySelector('.chn-chart-in');
+      const host = card.querySelector('.chn-chart-host');
       if (open && !host.firstChild && window.StockChart) host.append(StockChart.figure({ symbol: card.dataset.sym, name: card.dataset.name, range: '6M' }));
     };
     fig.addEventListener('click', (e) => {
       const why = e.target.closest('[data-why]');
       if (why) { const box = why.parentElement.querySelector('.chn-why-box'), on = box.hidden; box.hidden = !on; why.setAttribute('aria-expanded', String(on)); why.classList.toggle('on', on); return; }
-      const c = e.target.closest('.chn-pick'); if (c && !e.target.closest('.chn-chart')) toggle(c);
+      // die ganze Karte ist die Klickfläche (nicht nur der Name); nur im aufgeklappten Chart selbst wird nichts umgeschaltet
+      const c = e.target.closest('.chn-pick'); if (c && !(c.classList.contains('open') && e.target.closest('.chn-chart'))) toggle(c);
     });
     fig.addEventListener('keydown', (e) => { const c = e.target.closest('.chn-pick'); if (c && e.target === c && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(c); } });
     return fig;

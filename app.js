@@ -2401,8 +2401,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'deep') onDeep(data);
       else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
         const a = data.added?.length || 0, so = data.sold?.length || 0, sk = (data.skipped || 0) + (data.unchanged || 0), un = data.unknown?.length || 0;
-        const parts = [a ? `${a} ${a === 1 ? 'buy' : 'buys'}` : '', so ? `${so} ${so === 1 ? 'sale' : 'sales'}` : '', sk ? `${sk} already there` : '', un ? `${un} not recognized` : ''].filter(Boolean);
-        if (parts.length || data.removed?.length) { noteStep('saveDepot', parts.join(' · ') || 'updated'); phase('saveDepot'); }
+        const rm = data.removed?.length || 0;
+        const parts = [data.cleared ? 'depot cleared' : '', rm ? `${rm} removed` : '', a ? `${a} ${a === 1 ? 'buy' : 'buys'}` : '', so ? `${so} ${so === 1 ? 'sale' : 'sales'}` : '', sk ? `${sk} already there` : '', un ? `${un} not recognized` : ''].filter(Boolean);
+        if (parts.length) { noteStep('saveDepot', parts.join(' · ')); phase('saveDepot'); }
       }
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);

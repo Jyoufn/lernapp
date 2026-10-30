@@ -485,3 +485,27 @@ test('Meine Käufe: dasselbe Tagebuch nochmal → nichts doppelt; Depotübersich
   const pos = Hd.merged(Hd.replay(await Hd.book(store, 'u')).items);
   assert.deepEqual(pos.map((p) => [p.symbol, p.qty, Math.round(p.price)]), [['SAP.DE', 40, 231], ['RHM.DE', 8, 1790]]);
 });
+
+test('Depot bearbeiten: „lösche alles und übernimm das Bild“ leert erst, Löschen geht auch per Name; dabei keine Marktanalyse', async () => {
+  const H = require('../lib/holdings');
+  const store = require('../lib/store').memoryStore();
+  await H.apply(store, 'u9', { add: [{ symbol: 'SAP.DE', name: 'SAP', qty: 40, price: 231, date: '2026-10-02' }, { symbol: 'RHM.DE', name: 'Rheinmetall', qty: 5, price: 1600, date: '2026-10-03' }] });
+  const r = await H.apply(store, 'u9', { remove: [{ name: 'Rheinmetall' }] });
+  assert.deepEqual(r.removed.map((x) => x.symbol), ['RHM.DE']);
+  const c = await H.apply(store, 'u9', { clear: true, add: [{ symbol: 'BMW.DE', name: 'BMW', qty: 20, price: 80, date: '2026-10-20' }] });
+  assert.equal(c.cleared.positions, 1);
+  assert.deepEqual(H.merged(await H.list(store, 'u9')).map((p) => p.symbol), ['BMW.DE']);
+  for (const q of ['lösche alle Einträge aus meinem Depot und füge die aus dem Bild bitte hinein', 'aktualisiere das', 'Lösche Rheinmetall aus meinem Depot', 'ersetze mein Depot durch das Bild']) assert.ok(B.intentOf(q, []).adding, q);
+  for (const q of ['Wie steht mein Depot?', 'Welche Aktien soll ich kaufen?', 'Wie weit ist mein Stopp entfernt?']) assert.ok(!B.intentOf(q, []).adding, q);
+});
+
+test('Chart: liefert Yahoo nichts, kommt der Verlauf von Stooq (wie bei den Depot-Kursen)', async () => {
+  const b = bars(300, 0.001).map((x, i) => ({ ...x, t: Date.now() - (300 - i) * 86400000 })); // bis heute
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('yahoo'), respond: () => new Response('Too Many Requests', { status: 429 }) },
+    { match: (c) => c.url.includes('stooq'), respond: () => stooqCsv(b) },
+  ]);
+  const d = await B.chartData('BAS.DE', '6M');
+  assert.ok(d.bars.length > 100 && d.price > 0, `${d.bars.length} Kerzen`);
+  assert.equal(d.source, 'Stooq');
+});

@@ -8507,3 +8507,9 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .ce-sheet .ce-allday { padding: 0 8px; }
 .ce-sheet .ce-wheels { border-top-color: #2e2e2e; }
 .cal-emodal.anchored .tk-sheet { border-radius: 18px; }
+
+/* Chatverlauf offen → das Chat-Symbol oben rechts ist überflüssig und blendet weich aus */
+.chats-btn { transition: opacity 180ms ease, background-color 120ms ease, color 120ms ease; }
+.chats-btn.on { opacity: 0; visibility: hidden; pointer-events: none; }
+/* Agenten-Empfehlung im Chat („Dafür ist … da“) und über dem Eingabefeld: Fläche und Rand wie das Eingabefeld */
+.agent-suggest, .agent-hint { background: var(--field-bg, #1c1c1c); border-color: var(--field-border, #272727); }
