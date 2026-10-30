@@ -143,15 +143,13 @@
     if (!locked) whenReady();
   }
 
-  // gerade angemeldet → wenn die App ihre Tabs wiederhergestellt hat, „Neuer Chat“ öffnen
+  // gerade angemeldet → App startet im leeren Chat (siehe restoreLayout in app.js)
   function whenReady() {
     let fresh = false;
     try { fresh = sessionStorage.getItem(FRESH_KEY) === '1'; sessionStorage.removeItem(FRESH_KEY); } catch {}
-    if (!fresh) return;
-    let done = false;
-    const go = () => { if (done) return; done = true; document.querySelector('.sidebar .sb-main [data-nav="new"]')?.click(); };
-    window.addEventListener('app-layout-ready', () => setTimeout(go, 0), { once: true });
-    setTimeout(go, 6000); // falls das Ereignis nie kommt
+    // nach dem Anmelden bleibt die App so stehen, wie die Animation endet (leerer Chat) – kein Springen zum letzten Tab;
+    // app.js liest das beim Wiederherstellen der Tabs (restoreLayout)
+    if (fresh) window.AUTH_FRESH = true;
   }
 
   /* ===================================================================

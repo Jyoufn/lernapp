@@ -4901,6 +4901,12 @@ function saveLayout() {
 async function restoreLayout() {
   let saved = null;
   try { saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || 'null'); } catch {}
+  if (window.AUTH_FRESH) {
+    // frisch angemeldet: nichts wiederherstellen, nichts umschalten – man bleibt im leeren Chat, wie die Animation endet
+    const cur = activeTab();
+    if (!(cur && !cur.dataset.view && isDraft(cur))) createTab('Neuer Chat');
+    saved = null;
+  }
   if (saved?.order?.length) {
     // Dokumente sind evtl. noch nicht geladen → kurz warten, bis sie da sind
     const needDocs = saved.order.some((k) => k.startsWith('doc:'));

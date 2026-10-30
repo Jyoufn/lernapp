@@ -38,6 +38,7 @@
 - Kursverlauf: Yahoo → Stooq → ING (`ingSeries`, per ISIN – ING ist vom Server aus erreichbar, auch wenn Yahoo/Stooq sperren). Live-Kurs: Tradegate/ING.
 
 ## Workspaces und Konto
+- Nach dem Anmelden: Vorschau wächst zur App, danach bleibt man im leeren Chat (kein Sprung, keine wiederhergestellten Tabs; `window.AUTH_FRESH` → `restoreLayout`). Schon angemeldet (Neuladen): letzter Tab wird wiederhergestellt.
 - Bis 3 Workspaces, teilbar per E-Mail (Einladung beim Öffnen). Alles (Chats, Dokumente, Aufgaben, Einstellungen, API-Keys) gehört zum Konto.
 - Einstellungen in der Sidebar: Allgemein · Aussehen (Dunkel/Schwarz/Hell, Akzentfarbe) · Agenten (Verbindung/Schlüssel).
 
