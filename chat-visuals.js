@@ -3,7 +3,7 @@ const ChatVisuals = (() => {
   // Zeitangaben in Beschriftungen: Jahre, Daten, Quartale, KW, Monate, Wochentage, Uhrzeiten
   const TIME = /^(?:\d{4}|\d{1,2}\.\d{1,2}\.(?:\d{2,4})?|(?:19|20)\d{2}[/-]\d{1,2}|Q[1-4](?:\s?\d{2,4})?|KW\s?\d{1,2}|(?:jan|feb|mär|mar|apr|mai|may|jun|jul|aug|sep|okt|oct|nov|dez|dec)[a-zä]*\.?(?:\s?\d{2,4})?|(?:mo|di|mi|do|fr|sa|so)[a-z]*\.?|\d{1,2}(?::\d{2})?\s?uhr|\d{1,2}:\d{2})$/i;
   // Welcher Diagrammtyp zeigt diese Zahlen am besten?
-  // Festgelegt (README.md): Verlauf über die Zeit → Linie mit Fläche, sonst immer Ring. Balken gibt es nicht.
+  // Festgelegt (kb/design.md): Verlauf über die Zeit → Linie mit Fläche, sonst immer Ring. Balken gibt es nicht.
   // Die Rangliste ist nur der Ausweg, wenn ein Ring nicht geht (negative Werte oder mehr als 8 Teile).
   const ringOk = ({ labels, values }) => labels.length <= 8 && values.every((x) => x >= 0) && values.some((x) => x > 0);
   function bestType(d) {

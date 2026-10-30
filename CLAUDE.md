@@ -1,9 +1,9 @@
 # Hinweise für Claude
 
-Vor jeder Änderung an der Oberfläche **README.md lesen** – dort stehen die verbindlichen Stilregeln (Farben, Schrift, Icons, Animationen), die festgelegten Bausteine und wo die KI-Prompts liegen.
+**Zuerst `kb/00-start.md` lesen** (kurz) – dort steht, welche Datei der Wissensbasis zur Aufgabe passt. Nur diese eine lesen, dann gezielt per `grep` in den Code springen statt ganze Dateien zu lesen.
 
-- Neue Stile nur in den Block „FESTGELEGTER STIL“ am Ende von `style.css`.
-- Icons aus `icons.js` (`#f-<name>`), gefüllt; keine Emojis.
-- Neue Bausteine erst nach Absprache übernehmen und in der README (Abschnitt 4) eintragen.
+- UI-Änderungen: vorher `kb/design.md`. Neue Stile nur ans Ende von `style.css`.
+- Icons aus `icons.js` (`#f-<name>`), gefüllt; keine Emojis. Oberfläche nur auf Deutsch.
+- Neue Bausteine erst nach Absprache; danach den aktuellen Stand kurz in `kb/` eintragen (keine Chronik, alte Aussagen ersetzen).
 - Neue Browser-Dateien in `app-server.js` → `PUBLIC_FILES` eintragen.
 - Danach `npm run check` und `npm test`.

@@ -2984,7 +2984,7 @@ textarea::selection, input::selection { background: transparent; }
 
 
 /* =====================================================================
-   FESTGELEGTER STIL (aus „UI Elements“ ausgesucht – Regeln in README.md)
+   FESTGELEGTER STIL (aus „UI Elements“ ausgesucht – Regeln in kb/design.md)
    Steht bewusst ganz am Ende und überschreibt ältere Schichten oben.
    ===================================================================== */
 :root {
@@ -8851,3 +8851,16 @@ div.tl4-h { cursor: default; }
 .cs-pill button { height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: none; color: var(--text-4); font: 500 13px Inter, sans-serif; cursor: pointer; transition: color 180ms ease; -webkit-tap-highlight-color: transparent; }
 .cs-pill button:hover { color: var(--text-2); }
 .cs-pill button.on { color: var(--text); cursor: default; }
+
+/* Quellen unter der Antwort (30.10., 23:15): je Quelle rundes Logo + Name der Seite, höchstens zwei, dann „+N“ */
+.src-stack { gap: 10px; padding: 0 8px; }
+.stack-src { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.stack-src .stack-ico { width: 16px; height: 16px; margin: 0; border-radius: 50%; box-shadow: none; background: #262626; }
+.stack-src .stack-ico img { border-radius: 50%; }
+.stack-ico + .stack-ico { margin-left: 0; }
+.stack-name { max-width: 150px; overflow: hidden; color: var(--text-3); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.src-stack:hover .stack-name { color: var(--text-2); }
+.stack-more { margin-left: 0; }
+.stack-src .stack-ico { display: inline-grid; place-items: center; flex: none; overflow: hidden; border-radius: 50% !important; line-height: 1; font-size: 9px; font-weight: 700; color: var(--text-2); }
+.stack-src .stack-ico.has-fav { background: #262626; }
+.stack-src .stack-ico img { width: 12px; height: 12px; border-radius: 3px; object-fit: contain; }

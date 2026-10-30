@@ -11,7 +11,7 @@
    - Linien (spec.levels): z. B. Stopp (rot) und Ziel (grün) als feine gestrichelte Linien mit kleiner Beschriftung
    - Prognose (spec.forecast): der Verlauf wird nach rechts weitergeführt – Mittelweg gestrichelt, Band = 80 % der wahrscheinlichen
      Kurse (Trend und Schwankung der letzten Monate fortgeschrieben; mit "target"/"low"/"high" vom Bären auf dessen Szenario ausgerichtet)
-   Farben: Grün #4fcf8a, Rot #f07a6e, 20er #6aa8ff, 50er #fb9a52, Prognose Akzent-Blau #6aa8ff (README 3.1)
+   Farben: Grün #4fcf8a, Rot #f07a6e, 20er #6aa8ff, 50er #fb9a52, Prognose Akzent-Blau #6aa8ff (kb/design.md)
    =================================================================== */
 const StockChart = (() => {
   const RANGES = ['1T', '1W', '1M', '6M', '1J', '5J'];

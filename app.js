@@ -726,7 +726,7 @@ const chartValue = (value, unit) => {
       : value.toLocaleString('de-DE', { maximumFractionDigits: 2 });
   return `${num}${unit ? ` ${unit}` : ''}`;
 };
-/* Diagramme im festgelegten Stil (README.md): Grau + Blau-Akzent, ruhige Animationen, Werte beim Drüberfahren */
+/* Diagramme im festgelegten Stil (kb/design.md): Grau + Blau-Akzent, ruhige Animationen, Werte beim Drüberfahren */
 const CHART_ACC = '#2f86ff';
 // Ring: kräftiges Blau → helles Blau → Blaugrau; gut unterscheidbar, aber ruhig
 const CHART_RING = ['#3d8bff', '#7bb2ff', '#b9d5ff', '#6b7a90', '#8d9bb0', '#4a5466', '#c3cad6', '#3a414d'];
@@ -897,7 +897,7 @@ function chartFigure(data) {
   return figure;
 }
 
-/* Zeitstrahl (README.md): links die Linie mit Punkt, daneben das Kästchen (ohne Fläche, feiner Rand) – darin links das Datum, rechts der Titel.
+/* Zeitstrahl (kb/design.md): links die Linie mit Punkt, daneben das Kästchen (ohne Fläche, feiner Rand) – darin links das Datum, rechts der Titel.
    Klick klappt Text und Stichpunkte IM selben Kästchen weich auf (nur die Höhe läuft); mehrere können offen sein. Keine Obergrenze. */
 function timelineFigure(data) {
   const figure = el('figure', 'chat-timeline tl4');
@@ -940,7 +940,7 @@ function timelineFigure(data) {
   list.addEventListener('click', (ev) => { const h = ev.target.closest('button.tl4-h'); if (h) toggle(h.closest('.tl4-row')); });
   return figure;
 }
-/* Mindmap im festgelegten Stil (README.md): Thema in der Mitte, Äste links/rechts ohne Kästen,
+/* Mindmap im festgelegten Stil (kb/design.md): Thema in der Mitte, Äste links/rechts ohne Kästen,
    Unterpunkte als Liste, feine graue Verbindungen – werden nach dem Einfügen vermessen und gezeichnet */
 /* Hefteintrag: Kasten „So kommt es ins Heft“, darin Karopapier; „# …“ = Überschrift, „> …“ = Merkkasten, leere Zeile = Abstand.
    Die Formeln ($…$) sind beim Aufruf schon von KaTeX gesetzt (stehen als HTML im Code-Element). */
@@ -962,7 +962,7 @@ function heftFigure(code) {
   fig.append(page);
   return fig;
 }
-/* Mindmap als Baum (README.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
+/* Mindmap als Baum (kb/design.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
    immer von Kästchen-Rand zu Kästchen-Rand durch die freie Spalte dazwischen (nie durch ein Kästchen). Kästchen ohne Fläche, feiner Rand.
    Zoomen (−/+, Strg/⌘ + Mausrad, zwei Finger), Verschieben (ziehen), Prozent-Knopf = alles einpassen, Vollbild für große Mindmaps.
    Schmal (iPhone): alle Äste rechts. */
@@ -1866,9 +1866,11 @@ function placeSourceStack(answerEl, sources) {
   if (!sources.length) return null;
   const stack = el('button', 'src-stack');
   stack.type = 'button';
-  stack.title = 'Hauptquellen anzeigen';
-  sources.slice(0, 3).forEach((src) => stack.append(siteIcon(src.domain, src.title, 'stack-ico')));
-  if (sources.length > 3) stack.append(el('span', 'stack-more', `+${sources.length - 3}`));
+  stack.title = 'Quellen anzeigen';
+  // je Quelle: rundes Logo + Name der Seite (z. B. „wikipedia.org“), höchstens zwei, dahinter „+N“
+  const nameOf = (s) => { const d = String(s.domain || '').replace(/^www\./i, ''); return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d) && !/vertexaisearch/i.test(d) ? d : String(s.title || d).slice(0, 28); };
+  sources.slice(0, 2).forEach((src) => { const c = el('span', 'stack-src'); c.append(siteIcon(src.domain, src.title, 'stack-ico'), el('span', 'stack-name', escapeHtml(nameOf(src)))); stack.append(c); });
+  if (sources.length > 2) stack.append(el('span', 'stack-more', `+${sources.length - 2}`));
   stack.addEventListener('click', () => openSourcesModal(sources, null));
   let last = answerEl.lastElementChild;
   while (last && (last.matches('ul, ol') ? last.lastElementChild : null)) last = last.lastElementChild; // in Listen: letzter Punkt
@@ -2022,19 +2024,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     msgEl.insertBefore(work.work, answer.isConnected ? answer : null);
     // Erster Schritt: die Anfrage verstehen (Hauptstatus „Understanding“ bzw. „Planning research“). Er ist fertig, sobald der
     // nächste Schritt dazukommt – dann wandert der Kopf zum nächsten Hauptstatus.
-    if (!pictureAsk) {
-      const st = stepLine('spin', live('start'));
-      st.classList.add('ph-start');
-      work.steps.append(st);
-      const from = Date.now();
-      const mo = new MutationObserver(() => {
-        if (work.steps.lastElementChild === st) return;
-        mo.disconnect();
-        finishStep(st, doneLine('start', '', secs(from)));
-      });
-      mo.observe(work.steps, { childList: true });
-      work.endStart = () => { mo.disconnect(); if (st.querySelector('.spinner')) finishStep(st, doneLine('start', '', secs(from))); };
-    }
+    // „Verstehen“ steht nur im Kopf – keine eigene Zeile, die gar nichts tut; Zeilen gibt es nur für echte Schritte
+    work.endStart = () => {};
     // Standard-Tätigkeit nur, wenn im selben Moment keine konkrete gesetzt wird (kein kurzes Aufblitzen)
     queueMicrotask(() => { if (!work.head.querySelector('.work-title').textContent) phase(pictureAsk ? 'picture' : 'start'); });
     return work;
@@ -2284,6 +2275,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // „Analyzing · Evaluating information“: nur, wenn vorher wirklich recherchiert wurde (nicht bei Research – der hat eigene Schritte)
   let analyzedNoted = false;
   const noteAnalyze = () => {
+    return; // kein eigener Schritt: das Auswerten passiert beim Schreiben (nur echte Schritte zeigen)
     if (analyzedNoted || agentId === 'research' || agentId === 'boerse') return;
     const n = renderOpts.sources.filter(Boolean).length || stages.browsing?.pages?.length || 0;
     if (!n) return;
@@ -2319,23 +2311,21 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources') markerIcon(st.step, 'search');
     st.step.hidden = false;
     const sub = P(st.key || stageKey(s.stage, st.news)).sub;
-    if (s.status === 'cancelled') { line.innerHTML = `${sub} – stopped`; return; }
-    if (s.status === 'failed') { line.innerHTML = `${sub} – not completed`; st.step.classList.add('warn'); return; }
+    if (s.status === 'cancelled') { line.innerHTML = `${sub} – gestoppt`; return; }
+    if (s.status === 'failed') { if (s.stage === 'browsing' || s.stage === 'searching_sources') { st.step.remove(); return; } line.innerHTML = `${sub} – nicht fertig geworden`; st.step.classList.add('warn'); return; }
     if (s.stage === 'browsing') {
       const n = st.pages.length;
       const k = st.gathering ? 'gather' : st.key;
-      line.innerHTML = n ? `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? (n === 1 ? 'Artikel' : 'Artikel') : (n === 1 ? 'Quelle' : 'Quellen')}</span> ${dur}`
-        : `${P(st.key).sub} <span class="ph-x">· ${st.news ? 'no recent articles from trusted sources' : 'no suitable sources found'}</span> ${dur}`;
+      if (!n) { st.step.remove(); return; } // nichts gefunden → kein Schritt (kein „keine Quellen“)
+      line.innerHTML = `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? 'Artikel' : (n === 1 ? 'Quelle' : 'Quellen')}</span> ${dur}`;
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
-      line.innerHTML = used.length ? doneLine('search', '', dur.replace(/<[^>]+>/g, '')) : `${P('search').sub} <span class="ph-x">· keine passenden Quellen</span> ${dur}`;
-      if (used.length) {
-        const g = noteStep('gather', `${used.length} ${used.length === 1 ? 'Quelle' : 'Quellen'}`);
-        const chips = el('div', 'chips');
-        g.append(chips);
-        fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
-        phase('gather');
-      }
+      if (!used.length) { st.step.remove(); return; } // nichts Brauchbares → Schritt verschwindet
+      line.innerHTML = doneLine('search', '', dur.replace(/<[^>]+>/g, ''));
+      line.innerHTML = doneLine('search', `${used.length} ${used.length === 1 ? 'Quelle' : 'Quellen'}`, dur.replace(/<[^>]+>/g, ''));
+      const chips = el('div', 'chips');
+      st.step.append(chips);
+      fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
     } else if (s.stage === 'market') {
       // Börse: aus dem, was wirklich gerechnet wurde, die einzelnen Analyse-Schritte (nur die, die zur Frage gehören)
       const m = s.meta || {}, n = m.count || 0;
@@ -2343,15 +2333,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (!Array.isArray(m.steps)) {
       if (m.depot != null) {
         notes.push(['portfolio', `${m.depot} ${m.depot === 1 ? 'Position' : 'Positionen'}`]);
-        if (m.depot > 1) notes.push(['allocation', '']);
       }
       if (m.indices || m.headlines) notes.push(['market', [m.indices ? `${m.indices} Indizes` : '', m.headlines ? `${m.headlines} Schlagzeilen` : ''].filter(Boolean).join(' · ')]);
       if (n) notes.push(['charts', `${n} ${n === 1 ? 'Aktie' : 'Aktien'}${m.frames ? ' · Tag, Woche, Monat' : ''}`]);
       if (m.fundamentals) notes.push(['fundamentals', '']);
       if (n && (m.mode === 'ideas' || m.mode === 'both')) notes.push(['opportunities', m.radar ? `${m.radar} ${m.radar === 1 ? 'Chance' : 'Chancen'}` : 'gerade keine']);
-      if (n || m.depot) notes.push(['risk', '']);
       }
-      if (!notes.length) { line.innerHTML = `${P('market').sub} <span class="ph-x">· market data not reachable</span> ${dur}`; st.step.classList.add('warn'); }
+      if (!notes.length) { line.innerHTML = `${P('market').sub} <span class="ph-x">· Kurse gerade nicht erreichbar</span> ${dur}`; st.step.classList.add('warn'); }
       else {
         const [k0, x0] = notes.shift();
         line.innerHTML = `${doneLine(k0, x0)} ${dur}`;
@@ -2379,9 +2367,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (STAGE_TEXT[s.stage]) {
       if (s.status === 'active') startStage(s); else endStage(s);
     } else if (s.stage === 'search_failed') {
-      addStep('Source search failed – answering without external sources', 'warn');
+      // Suche ging schief: kein eigener Schritt – die Antwort kommt einfach ohne Quellen
     } else if (s.stage === 'answering' && s.status === 'active' && /nicht möglich/.test(s.description)) {
-      addStep('Revision not possible – showing the checked draft', 'warn');
+      addStep('Überarbeitung nicht möglich – geprüfter Entwurf', 'warn');
     } else if (s.stage === 'generation_failed') {
       failed = true;
     } else if (s.stage === 'answering' && s.status === 'active' && work) {
@@ -2405,6 +2393,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     }
   };
 
+  let groundSrc = []; // Google-Suche des Modells: nur die Quellen, auf die sich die Antwort stützt (Server filtert)
   const onResearch = (r) => {
     if (r.status === 'grounding') {
       // Google-Suche (nur bei aktuellen Themen): genutzte Websites als Chips
@@ -2416,6 +2405,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
       st.step.querySelector('.web-line').innerHTML = `Im Web gesucht · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
       fillChips(st.chips, r.sources, () => openSourcesModal(r.sources, null));
+      groundSrc = r.sources; // für unten an der Antwort, wenn es keine nummerierten Belege gibt
       return;
     }
     if (r.status === 'done' || r.status === 'failed') {
@@ -2648,6 +2638,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const allSrc = renderOpts.sources.filter(Boolean);
     let main = mainSources(allSrc, citations);
     if (!main.length && deep.all.length) main = allSrc;
+    if (!main.length && groundSrc.length) main = groundSrc; // Antwort mit Google-Suche: deren benutzte Quellen
     const loose = placeSourceStack(answer, main);
     const footer = messageFooter(msgEl, answerR.text);
     if (loose) footer.append(loose);
@@ -2676,7 +2667,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     // Rückfrage gehört zum Denken: kein eigener Antworttext, sondern ein Schritt in der Zeitleiste
     if (stripAskBlock(answerR.text).trim().length < 300) answer.remove();
     const w = ensureWork();
-    const step = stepLine('spin', '<span class="shimmer">Waiting for your answer</span>');
+    const step = stepLine('spin', '<span class="shimmer">Wartet auf deine Antwort</span>');
     w.steps.append(step);
     setActivity('wait', 'Wartet auf dich');
     w.head.querySelector('.t').hidden = true;
