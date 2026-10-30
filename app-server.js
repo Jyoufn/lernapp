@@ -733,6 +733,25 @@ async function handleImageEdit(req, res) {
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}` });
 }
 
+/* ---------- /api/cover-image: Cover im Dokument „mit KI erstellen“ ----------
+   Gemini macht aus dem deutschen Wunsch einen englischen Bild-Auftrag im Cover-Stil (gezeichnet, nicht realistisch) → FLUX malt. */
+const COVER_STYLE = 'flat digital illustration, hand-drawn look, soft painterly shading, smooth color gradients, harmonious limited palette, clean simple shapes, subtle grain, calm wide composition with breathing room, subject centered in a wide horizontal banner crop, not photorealistic, no text, no letters, no border';
+const COVER_SYSTEM = `Du bekommst einen Wunsch für ein Cover (breites Titelbild über einem Schul-Dokument) auf Deutsch. Antworte NUR mit JSON: {"prompt":"englischer Bild-Auftrag"}
+"prompt" (Englisch, 40–90 Wörter) beschreibt genau das gewünschte Motiv (bei Schulthemen fachlich richtig, z. B. Biologie: Zelle mit Zellkern) und endet mit diesem Stil: ${COVER_STYLE}.
+Nie fotorealistisch, keine Schrift im Bild.`;
+async function handleCoverImage(req, res) {
+  const env = readEnv();
+  const { wish } = await readBody(req, 4000);
+  const w = String(wish || '').trim().slice(0, 400);
+  if (w.length < 3) return sendJson(res, 400, { error: 'Beschreib kurz, was auf dem Cover sein soll.' });
+  const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}`, [], 0).catch(() => null);
+  let prompt = String(plan?.prompt || '').trim();
+  if (prompt.length < 30) prompt = `${w}. ${COVER_STYLE}`;
+  const out = await nvcfImage(env, prompt.slice(0, 2000), Math.floor(Math.random() * 1e6));
+  if (!out) return sendJson(res, 502, { error: 'Das Cover konnte gerade nicht erstellt werden.' });
+  sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}` });
+}
+
 // Freies Bild aus dem Netz (Wikimedia Commons, mit Quelle/Lizenz) – Gemini schaut sich die Kandidaten an und nimmt nur ein wirklich passendes
 const FIT_SYSTEM = `Du prüfst, ob ein Bild für eine Lern-App wirklich zum Thema passt. Antworte NUR mit JSON: {"fits": true|false}
 true nur, wenn das Bild genau das gewünschte Thema fachlich richtig und gut erkennbar zeigt (kein ähnliches Thema, kein Ausschnitt von etwas anderem, keine Textseite).`;
@@ -1347,6 +1366,7 @@ async function handle(req, res) {
       return sendJson(res, 200, { items: (Array.isArray(items) ? items : [items]).filter(Boolean).slice(0, 12) });
     }
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
+    if (req.method === 'POST' && urlPath === '/api/cover-image') return await handleCoverImage(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {
       // Die Client-ID ist kein Geheimnis (PKCE-Anmeldung ohne Secret) – darf an den Browser
       return sendJson(res, 200, { clientId: readEnv().SPOTIFY_CLIENT_ID || '' });

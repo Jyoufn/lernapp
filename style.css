@@ -9096,3 +9096,26 @@ div.tl4-h { cursor: default; }
 .st-ws-del:hover, .st-ws-del.sure { background: rgba(239, 107, 95, 0.14); color: #f07a6e; }
 .st-row.st-ws .st-ws-avbtn svg.pd, .st-row.st-ws .st-ws-avbtn img { width: 24px; height: 24px; }
 .st-ws-del { margin: 0; }
+
+/* =====================================================================
+   Cover „Mit KI“ (31.10.): Kachel neben Hochladen, Eingabefeld oben im Fenster
+   ===================================================================== */
+.dc-caitile.on::before { border-style: solid; border-color: color-mix(in srgb, var(--accent) 55%, transparent); }
+.dc-caitile.busy .dc-cup-in svg { animation: dc-cai-pulse 1.2s ease-in-out infinite; }
+@keyframes dc-cai-pulse { 50% { opacity: 0.35; } }
+.dc-cai { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; padding: 4px 4px 4px 12px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 11px; animation: cal-fade 180ms ease both; }
+.dc-cai:focus-within { border-color: rgba(255, 255, 255, 0.18); }
+.dc-cai-in { flex: 1; min-width: 0; height: 32px; border: 0; outline: none; background: none; color: var(--text); font: 400 13px Inter, sans-serif; }
+.dc-cai-in::placeholder { color: var(--text-4); }
+.dc-cai-go { display: grid; place-items: center; flex: none; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
+.dc-cai-go:disabled { opacity: 0.6; cursor: default; }
+.dc-cai-spin { width: 13px; height: 13px; border: 2px solid rgba(255, 255, 255, 0.35); border-top-color: #fff; border-radius: 50%; animation: spin 700ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Aufgaben-Fenster (31.10.): Datum und Automatisierung mit Schalter rechts in der Zeile (blau = an, grau = aus) */
+.tk-swpop { position: relative; }
+.tk-swpop > .tk-pill { padding-right: 64px; }
+.tk-rowsw { position: absolute; top: 14px; right: 18px; z-index: 1; }
+.tk-sheet-rows .tk-swpop > .tk-pill.empty .tk-rv { color: var(--text-4); }
+.dc-ctile.dc-caitile.on { box-shadow: none; outline: none; }
+.dc-ctile.dc-caitile.on::before { border-color: rgba(255, 255, 255, 0.35); border-style: solid; }

@@ -376,7 +376,8 @@ const Tasks = (() => {
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
     // Liste: Inhalt in einem Kasten (.tk-box), der weich unter seiner Zeile aufklappt (UIKit.foldRows)
-    const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${listMode ? `<div class="tk-box">${menu}</div>` : menu}</div></div>`;
+    const pill = (k, menu, cls = '', sw = '') => `<div class="tk-pop${sw ? ' tk-swpop' : ''}" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button>${sw ? `<button type="button" class="ce-switch tk-rowsw" ${sw} role="switch" aria-label="Datum"><i></i></button>` : ''}<div class="tk-menu ${cls}">${listMode ? `<div class="tk-box">${menu}</div>` : menu}</div></div>`;
+    let lastDate = t.date || ''; // Datum ausgeschaltet → das zuletzt gewählte bleibt grau stehen
     // Liste: Fenster mit Zeilen wie das Termin-Fenster der Kalender-Vorlage – nur Beschreibung, Datum, Priorität, Tags; unten Agent + Aktionen
         if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
       <div class="tk-sheet-main">
@@ -386,8 +387,7 @@ const Tasks = (() => {
       <div class="tk-sheet-rows">
         ${pill('date', `<div class="tk-cal"></div>
           <div class="tk-dt-time"><span class="tk-dt-l">${fi('clock', 13)}Uhrzeit</span><button type="button" class="ce-switch" data-ttime role="switch" aria-label="Uhrzeit"><i></i></button></div>
-          <div class="tk-dt-wheel" hidden><div data-wheel="due"></div></div>
-          <button type="button" class="tk-mi tk-date-none" data-qdate=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Kein Datum</span>${fi('check', 12)}</button>`, 'date')}
+          <div class="tk-dt-wheel" hidden><div data-wheel="due"></div></div>`, 'date', 'data-dsw')}
         ${listMode && agents && !locked ? pill('sched', `<button type="button" class="tk-mi" data-rep="daily"><span class="tk-mi-ic">${fi('refresh', 12)}</span><span>Täglich</span>${fi('check', 12)}</button>
           <button type="button" class="tk-mi" data-rep="weekdays"><span class="tk-mi-ic">${fi('briefcase', 12)}</span><span>Werktags (Mo–Fr)</span>${fi('check', 12)}</button>
           <button type="button" class="tk-mi" data-rep="weekly"><span class="tk-mi-ic">${fi('calendar', 12)}</span><span>Wöchentlich</span>${fi('check', 12)}</button>
@@ -397,8 +397,7 @@ const Tasks = (() => {
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
-        ${listMode && agents && !locked ? pill('auto', `<button type="button" class="tk-mi" data-auto="0"><span class="tk-mi-ic">${fi('x', 11)}</span><span>Nein</span>${fi('check', 12)}</button>
-          <button type="button" class="tk-mi" data-auto="1"><span class="tk-mi-ic">${fi('bolt', 12)}</span><span>Ja – der Agent erledigt sie regelmäßig</span>${fi('check', 12)}</button>`) : ''}
+        ${listMode && agents && !locked ? `<div class="tk-pop tk-swpop" data-k="auto"><button type="button" class="tk-pill" data-autosw></button><button type="button" class="ce-switch tk-rowsw" data-autosw role="switch" aria-label="Automatisierung"><i></i></button></div>` : ''}
         ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
       </div>
       <div class="tk-sheet-foot">
@@ -470,22 +469,24 @@ const Tasks = (() => {
       if (listMode) {
         const set = (k, html, empty) => { const b = form.querySelector(`[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${html[0]}</span><span class="tk-rv">${html[1]}</span>`; b.classList.toggle('empty', !!empty); } };
         const dd = t.date ? new Date(`${t.date}T12:00:00`) : null;
-        set('date', [fi('calendar', 14), dd ? `${dd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${t.time ? `, ${t.time} Uhr` : ''}${du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}` : 'Datum hinzufügen'], !dd);
+        if (t.date) lastDate = t.date;
+        const gd = dd || new Date(`${lastDate || isoOf(new Date())}T12:00:00`);
+        set('date', [fi('calendar', 14), `${gd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${dd && t.time ? `, ${t.time} Uhr` : ''}${dd && du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}`], !dd);
+        form.querySelector('[data-dsw]')?.classList.toggle('on', !!dd);
         set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
         set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
-        form.querySelector('.tk-date-none')?.classList.toggle('on', !t.date); // „Kein Datum“ immer wählbar, Haken, wenn keins gesetzt ist
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
         // Datum: Uhrzeit-Schalter + Rad
         const tsw = form.querySelector('[data-ttime]');
         if (tsw) { tsw.classList.toggle('on', !!t.time); tsw.closest('.tk-dt-time').classList.toggle('off', !t.date); form.querySelector('.tk-dt-wheel').hidden = !t.time || !t.date; }
         // Automatisierung: statt des Datums steht der Zeitplan (anderes Icon), darunter die Zahl der Wiederholungen
-        if (form.querySelector('[data-open="auto"]')) {
-          set('auto', [fi('bolt', 14), t.repeat ? 'Automatisierung: Ja' : 'Automatisierung'], !t.repeat);
+        if (form.querySelector('[data-autosw]')) {
+          const ab = form.querySelector('.tk-pill[data-autosw]'); ab.innerHTML = `<span class="tk-si">${fi('bolt', 14)}</span><span class="tk-rv">Automatisierung</span>`; ab.classList.toggle('empty', !t.repeat);
+          form.querySelector('.ce-switch[data-autosw]')?.classList.toggle('on', !!t.repeat);
           set('sched', [fi('refresh', 14), t.repeat ? repText(t.repeat) : ''], false);
           const lim = t.repeat?.limit || 0;
           set('limit', [fi('hash', 14), lim ? `${lim}-mal wiederholen` : 'Ohne Limit wiederholen'], false);
-          form.querySelectorAll('[data-auto]').forEach((b) => b.classList.toggle('on', b.dataset.auto === (t.repeat ? '1' : '0')));
           form.querySelectorAll('[data-rep]').forEach((b) => b.classList.toggle('on', b.dataset.rep === (t.repeat?.every || '')));
           form.querySelectorAll('[data-limit]').forEach((b) => b.classList.toggle('on', +b.dataset.limit === lim));
           form.querySelector('.tk-rep-days').hidden = t.repeat?.every !== 'weekly';
@@ -668,8 +669,11 @@ const Tasks = (() => {
       if (ag) { t.agent = ag.dataset.tagent; if (!t.output) t.output = 'chat'; draw(); ag.closest('.tk-pop').classList.remove('open'); return; }
       const ou = e.target.closest('[data-toutput]');
       if (ou) { t.output = ou.dataset.toutput; draw(); ou.closest('.tk-pop').classList.remove('open'); return; }
-      const au = e.target.closest('[data-auto]');
-      if (au) { au.closest('.tk-pop').classList.remove('open'); setTimeout(() => setAuto(au.dataset.auto === '1'), 160); return; }
+      if (e.target.closest('[data-autosw]')) { form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open')); setAuto(!t.repeat); return; }
+      if (e.target.closest('[data-dsw]')) { // Datum an/aus: aus = grau, das zuletzt gewählte bleibt stehen
+        if (t.date) { lastDate = t.date; t.date = ''; t.time = ''; } else t.date = lastDate || isoOf(new Date());
+        form.querySelector('.tk-pop[data-k="date"]').classList.remove('open'); draw(); if (calMonth) drawCal(); return;
+      }
       const li = e.target.closest('[data-limit]');
       if (li) { if (t.repeat) { t.repeat.limit = +li.dataset.limit; draw(); } li.closest('.tk-pop').classList.remove('open'); return; }
       const tt = e.target.closest('[data-ttime]');

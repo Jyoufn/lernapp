@@ -2006,10 +2006,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       { id: 'ribbons', name: 'Bänder', color: '#b49cff' }, { id: 'arcs', name: 'Bögen', color: '#6aa8ff' }, { id: 'plain', name: 'Schlicht', color: '#2dd4bf' },
       { id: 'peaks', name: 'Gipfel', color: '#6aa8ff' }, { id: 'prism', name: 'Prisma', color: '#f472b6' }, { id: 'dots', name: 'Punkte', color: '#4fcf8a' },
       { id: 'bokeh', name: 'Bokeh', color: '#facc15' }, { id: 'bauhaus', name: 'Bauhaus', color: '#f0913a' }, { id: 'silk', name: 'Seide', color: '#b49cff' },
-      { id: 'stripes', name: 'Streifen', color: '#2dd4bf' },
-      { id: 'horizon', name: 'Horizont', color: '#f472b6' }, { id: 'swirl', name: 'Wirbel', color: '#6aa8ff' }, { id: 'marble', name: 'Marmor', color: '#a3a3a3' },
-      { id: 'confetti', name: 'Konfetti', color: '#facc15' }, { id: 'rays', name: 'Strahlen', color: '#f0913a' }, { id: 'blobs', name: 'Flüssig', color: '#b49cff' },
-      { id: 'mosaic', name: 'Mosaik', color: '#2dd4bf' },
+      { id: 'stripes', name: 'Streifen', color: '#2dd4bf' }, { id: 'mosaic', name: 'Mosaik', color: '#2dd4bf' },
+      // Horizont, Wirbel, Marmor, Konfetti, Strahlen, Flüssig: nicht mehr wählbar (bestehende Cover werden weiter gezeichnet)
     ];
     const OLD_STYLE = { wave: 'waves', soft: 'dunes', mesh: 'ribbons', aurora: 'ribbons', lines: 'arcs', flat: 'plain' };
     const styleOfCover = (cv) => (cv?.kind === 'preset' ? COVER_PRESETS.find((p) => p.id === cv.id)?.group : cv?.kind === 'color' ? (OLD_STYLE[cv.style] || cv.style) : null);
@@ -2028,6 +2026,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const body = pop.querySelector('.dc-cpop-body'), file = pop.querySelector('input[type=file]'), title = pop.querySelector('.dc-cpop-title');
       let step = null; // null = Übersicht, sonst die ID des gewählten Stils
       let pick = { c: doc.cover?.kind === 'color' ? doc.cover.c : UIKit.COLORS[0] };
+      const ai = { open: false, busy: false, text: '', err: '' }; // „Mit KI“: Feld oben im Fenster, das Fenster bleibt offen
       const isOn = (cv) => JSON.stringify(cv) === JSON.stringify(doc.cover || null);
       const tile = (cv, bg, label, extra = '') => `<button type="button" class="dc-ctile${isOn(cv) ? ' on' : ''}${extra}" data-cv='${esc(JSON.stringify(cv))}' title="${esc(label)}" aria-label="${esc(label)}"><span style="background:${esc(bg)}"></span></button>`;
       const previewOf = (st) => { const x = COVER_STYLES.find((y) => y.id === st); return (x.preview && COVER_PRESETS.find((p) => p.id === x.preview)?.bg) || colorCover(x.color, st); };
@@ -2036,9 +2035,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           title.textContent = 'Cover';
           const cur = styleOfCover(doc.cover);
           const own = ownImages();
-          body.innerHTML = `<div class="dc-cgrid">
+          body.innerHTML = `${ai.open ? `<form class="dc-cai" data-ai-form>
+              <input class="dc-cai-in" maxlength="400" placeholder="Was soll auf dem Cover sein? z. B. Pflanzenzelle mit Zellkern" value="${esc(ai.text)}" ${ai.busy ? 'disabled' : ''} aria-label="Cover beschreiben" />
+              <button type="submit" class="dc-cai-go" aria-label="Erstellen" ${ai.busy ? 'disabled' : ''}>${ai.busy ? '<span class="dc-cai-spin"></span>' : fi('arrow-up', 14)}</button></form>
+              ${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}` : ''}<div class="dc-cgrid">
               <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload" data-upload aria-label="Bild hochladen" title="Bild hochladen">
                 <span class="dc-cup-in">${fi('cloud-up', 22)}</span></button></div>
+              <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload dc-caitile${ai.open ? ' on' : ''}${ai.busy ? ' busy' : ''}" data-ai aria-label="Mit KI erstellen">
+                <span class="dc-cup-in">${fi('image', 20)}<i>Mit KI erstellen</i></span></button></div>
               ${COVER_STYLES.map((st) => `<div class="dc-cstyle"><button type="button" class="dc-ctile${cur === st.id ? ' on' : ''}" data-style="${st.id}" aria-label="${esc(st.name)}" title="${esc(st.name)}"><span style="background:${esc(previewOf(st.id))}"></span></button></div>`).join('')}
             </div>
             ${own.length ? `<div class="dc-clabel">Deine Bilder</div><div class="dc-cgrid">${own.map((src) => tile({ kind: 'image', src }, `center / cover no-repeat url("${src}")`, 'Eigenes Bild')).join('')}</div>` : ''}`;
@@ -2094,8 +2098,26 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         }
         const sw = e.target.closest('[data-c]'); if (sw) { applyColor(sw.dataset.c); showPreview(sw.dataset.c); setTimeout(close, 160); return; } // Farbe gewählt → übernehmen und schließen
         if (e.target.closest('[data-upload]')) { file.click(); return; }
+        if (e.target.closest('[data-ai]')) { if (ai.busy) return; ai.open = !ai.open; ai.err = ''; render(); body.querySelector('.dc-cai-in')?.focus(); return; }
         const tl = e.target.closest('[data-cv]');
         if (tl) { const cv = JSON.parse(tl.dataset.cv); if (cv.kind === 'color') pick.c = cv.c; setCover(cv); render(); }
+      });
+      pop.addEventListener('submit', async (e) => {
+        if (!e.target.closest('[data-ai-form]')) return;
+        e.preventDefault();
+        ai.text = body.querySelector('.dc-cai-in').value.trim();
+        if (ai.text.length < 3 || ai.busy) { body.querySelector('.dc-cai-in')?.focus(); return; }
+        ai.busy = true; ai.err = ''; render();
+        try {
+          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text }) });
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok || !j.src) throw new Error(j.error || 'Das Cover konnte gerade nicht erstellt werden.');
+          const ratio = await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth / im.naturalHeight || 1); im.onerror = () => ok(1); im.src = j.src; });
+          setCover({ kind: 'image', src: j.src, ratio });
+          ai.open = false; ai.text = '';
+        } catch (err) { ai.err = err.message; }
+        ai.busy = false;
+        if (coverPop) render();
       });
       const upload = async (f) => {
         if (!f || !/^image\//.test(f.type)) return;

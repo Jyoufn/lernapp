@@ -279,6 +279,19 @@ const Calendar = (() => {
   const EV_ICONS = ['calendar', 'book-open', 'cap', 'pencil', 'bulb', 'file', 'people', 'user', 'chat', 'clock', 'bell', 'flag',
     'star', 'heart', 'music', 'gamepad', 'dumbbell', 'coffee', 'food', 'cart', 'car', 'plane', 'map-pin', 'home',
     'briefcase', 'medical', 'sun', 'moon', 'gift', 'camera', 'palette', 'leaf', 'globe', 'bolt'].map((n) => `f-${n}`);
+  // passendes Icon aus dem Titel (nur solange keins von Hand gewählt wurde)
+  const ICON_WORDS = [
+    ['cap', /\b(klausur|klassenarbeit|prüfung|test|abi|abitur|schulaufgabe|ex\b|stegreif)/i], ['book-open', /\b(lernen|lesen|buch|vokabel|wiederhol|hausaufgabe|ha\b)/i],
+    ['pencil', /\b(schreib|aufsatz|referat|hausarbeit|facharbeit|erörterung)/i], ['bulb', /\b(idee|projekt|präsentation|vortrag)/i],
+    ['people', /\b(treffen|meeting|gruppe|team|elternabend|besprechung)/i], ['medical', /\b(arzt|zahnarzt|termin beim|praxis|impf|kranken)/i],
+    ['dumbbell', /\b(sport|training|fitness|gym|fußball|handball|basketball|tennis|schwimm|lauf|joggen|turnen)/i], ['music', /\b(musik|klavier|gitarre|chor|band|konzert|orchester|unterricht.*(klavier|gitarre))/i],
+    ['gift', /\b(geburtstag|party|feier|geschenk)/i], ['plane', /\b(urlaub|reise|flug|ferien)/i], ['car', /\b(fahrstunde|fahren|auto|abholen)/i],
+    ['food', /\b(essen|mittag|abendessen|frühstück|kochen|restaurant)/i], ['coffee', /\b(kaffee|café|cafe)/i], ['cart', /\b(einkauf|kaufen|supermarkt|shopping)/i],
+    ['gamepad', /\b(zocken|spiel|gaming|roblox|konsole)/i], ['briefcase', /\b(arbeit|job|praktikum|schicht|bewerbung)/i], ['bell', /\b(erinner|deadline|abgabe|frist)/i],
+    ['chat', /\b(anruf|telefon|call|anrufen)/i], ['home', /\b(zuhause|aufräumen|putzen|haushalt)/i], ['globe', /\b(englisch|französisch|spanisch|latein|sprache)/i],
+    ['leaf', /\b(bio|biologie|natur|garten|wandern)/i], ['bolt', /\b(physik|chemie)/i], ['palette', /\b(kunst|malen|zeichnen)/i], ['camera', /\b(foto|fotos|film|video)/i],
+  ];
+  const guessIcon = (title) => { const hit = ICON_WORDS.find(([, re]) => re.test(title || '')); return hit ? `f-${hit[0]}` : 'f-calendar'; };
   const emodal = document.createElement('div');
   emodal.className = 'tk-modal cal-emodal';
   emodal.hidden = true;
@@ -301,6 +314,7 @@ const Calendar = (() => {
   function edit(ev, date, time = '', end = '', store = null, anchor = null) {
     close(); // ggf. Tagesliste schließen
     const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: COLORS[0], icon: 'f-calendar' };
+    let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
     // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
@@ -376,7 +390,7 @@ const Calendar = (() => {
       const co = x.target.closest('[data-color]');
       if (co) { e.color = co.dataset.color; form.querySelector('.tk-custom').classList.remove('on'); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
       const ic = x.target.closest('[data-icon]');
-      if (ic) { e.icon = ic.dataset.icon; draw(); ic.closest('.tk-pop').classList.remove('open'); return; }
+      if (ic) { e.icon = ic.dataset.icon; iconPicked = true; draw(); ic.closest('.tk-pop').classList.remove('open'); return; }
       if (!x.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = x.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') eclose();
@@ -388,6 +402,7 @@ const Calendar = (() => {
       else if (x.key === 'Enter' && x.target.matches('.tk-f-title')) { x.preventDefault(); notes.focus(); }
     });
     form.addEventListener('keypress', (x) => x.stopPropagation());
+    form.querySelector('.tk-f-title').addEventListener('input', (x) => { if (iconPicked) return; const n = guessIcon(x.target.value); if (n !== e.icon) { e.icon = n; draw(); } });
     form.addEventListener('submit', (x) => {
       x.preventDefault();
       const title = String(new FormData(form).get('title')).trim();

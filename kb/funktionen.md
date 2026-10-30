@@ -21,19 +21,20 @@
 - **Fokusmodus**: Icon, Titel, Infos-Tabelle und Inhalt bleiben; Sidebar, Leisten, Griffe, Projekt/Icon/Cover hinzufügen, Tags und Cover-Bild weg, kein Browser-Vollbild, nicht bearbeitbar; oben mittig ein Kasten in Dokumentfarbe mit rundem Kreis → Klick/Esc beendet; Text blendet darunter weich aus.
 - Icon-Auswahl: Übersicht immer grau, gewählt = Umrandung; oben **Gefüllt | Linie** (Linien-Fassung `#dl-<name>`, `doc.icon.line`); danach Farbe. Rendern immer über `DocIcons.of(ic)` bzw. `DocIcons.svg(name, size, '', line)`.
 - Cover-Kacheln wachsen beim Darüberfahren nicht (iPad), Fenster scrollt überall.
-- Cover-Stile (eigene Farbe): Wellen, Dünen, Bänder, Bögen, Schlicht, Gipfel, Prisma, Punkte, Bokeh, Bauhaus, Seide, Streifen, Horizont, Wirbel, Marmor, Konfetti, Strahlen, Flüssig, Mosaik.
+- Cover-Stile (eigene Farbe): Wellen, Dünen, Bänder, Bögen, Schlicht, Gipfel, Prisma, Punkte, Bokeh, Bauhaus, Seide, Streifen, Mosaik (Horizont…Flüssig nicht mehr wählbar, alte Cover werden weiter gezeichnet).
+- Cover **„Mit KI erstellen“**: Kachel neben Hochladen → Eingabefeld oben im Fenster (Fenster bleibt offen) → `POST /api/cover-image {wish}` (Gemini → englischer Auftrag im festen Stil `COVER_STYLE`: gezeichnete, flache Illustration, nicht realistisch, keine Schrift → FLUX via `nvcfImage`).
 - Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat.
 
 ## Aufgaben (`tasks.js`, Liste)
 - Gruppen-Karten: Überfällig · Heute · Diese Woche · Später · Ohne Datum, unten „Erledigt“ (aufklappbar). Zeile 46 px: Kreis 15 px · Titel 14 px · Tags (leicht getönt) · rechts Hund-Ergebnis oder Datum (+Uhrzeit) · Priorität · Stift (gleitet beim Aufklappen herein).
 - Aufklappen nur, wenn es etwas zu zeigen gibt (Beschreibung oder „An Lernen geben“, falls im Fenster ein Agent gewählt ist). Kein „Keine Beschreibung“.
 - Vom Agenten erledigt: rechts Hund + Name des Ergebnisses (Dokument), Klick öffnet es.
-- Fenster: Datum (Kalender immer 6 Wochen, Uhrzeit-Schalter + Rad, „Kein Datum“), Priorität, Tags (anlegen mit Farbe), Agent, **Automatisierung** Nein/Ja → statt Datum der Zeitplan (Täglich/Werktags/Wöchentlich + Tag + Uhrzeit) und „Wiederholungen“ (Kein Limit, 1–20-mal). „Aufgabe erstellen“ schickt nicht automatisch ab; Ergebnis von Agenten ist immer ein Dokument.
+- Fenster: Datum (Kalender immer 6 Wochen, Uhrzeit-Schalter + Rad; **Schalter rechts in der Zeile**: aus = Datum grau, das zuletzt gewählte/heutige bleibt stehen), Priorität, Tags (anlegen mit Farbe), Agent, **Automatisierung** als Schalter rechts (blau an, grau aus) → statt Datum der Zeitplan (Täglich/Werktags/Wöchentlich + Tag + Uhrzeit) und „Wiederholungen“ (Kein Limit, 1–20-mal). „Aufgabe erstellen“ schickt nicht automatisch ab; Ergebnis von Agenten ist immer ein Dokument.
 - Hintergrund-Lauf: Server (`lib/agenttasks.js`) ohne Rückfragen (`noClarify`), auch bei geschlossener App (Cron). Ziel des Nutzers: Hausaufgaben eintragen → Agent erledigt sie → später Export (PDF) für GoodNotes.
 
 ## Kalender (`calendar.js`)
 - Wochenansicht: Tage „Mo 26“ (heute rote Pille), Stunden 56 px, Termine getönt mit Farbstrich. **Ganztägig = Farbband durch den ganzen Tag** (Titel klebt oben), keine Ganztägig-Zeile, keine Jetzt-Linie, kein Überscrollen. Klick in leere Felder macht nichts – neue Termine nur über „Neu“. Klick auf Tagesnamen öffnet das Tagesfenster.
-- Termin-Fenster wie das Aufgaben-Fenster (Datum, Zeit/Ganztägig, Farbe, Icon).
+- Termin-Fenster wie das Aufgaben-Fenster (Datum, Zeit/Ganztägig, Farbe, Icon). Neuer Termin: Icon folgt dem Titel (`guessIcon`/`ICON_WORDS` in `calendar.js`), bis eins von Hand gewählt wird.
 
 ## Börse (Bär)
 - Echtzeitkurse (Tradegate/ING), Verlauf (Yahoo, Ersatz Stooq), Nachrichten (Google/Bing News), Kennzahlen; Strategie des Nutzers: **nur „Starker Rückgang · Erholung“** (in 2 Tagen ≥ 5 % / 5 Tagen ≥ 8 % gefallen, Grund zur Erholung) – kein riskantes Momentum.
