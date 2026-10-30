@@ -7,7 +7,11 @@
      Preis-Achse rechts mit Marke für den aktuellen Kurs; Zeit-Achse unten
    - Fadenkreuz mit Eröffnung/Hoch/Tief/Schluss/Umsatz (Maus und Finger)
    - immer live: Kurs alle 3 s (neue Kerzen entstehen), Verlauf jede Minute, sofort nach dem Zurückkommen (Server: /api/boerse/chart, /api/boerse/quote)
-   Farben: Grün #4fcf8a, Rot #f07a6e, 20er #6aa8ff, 50er #fb9a52 (README 3.1)
+   - Depot (spec.pos): Kaufkurs als Linie mit Marke am Kauftag, oben im Chart „Seit Kauf ±… € (±… %)“ und Wert der Position
+   - Linien (spec.levels): z. B. Stopp (rot) und Ziel (grün) als feine gestrichelte Linien mit kleiner Beschriftung
+   - Prognose (spec.forecast): der Verlauf wird nach rechts weitergeführt – Mittelweg gestrichelt, Band = 80 % der wahrscheinlichen
+     Kurse (Trend und Schwankung der letzten Monate fortgeschrieben; mit "target"/"low"/"high" vom Bären auf dessen Szenario ausgerichtet)
+   Farben: Grün #4fcf8a, Rot #f07a6e, 20er #6aa8ff, 50er #fb9a52, Prognose Akzent-Blau #6aa8ff (README 3.1)
    =================================================================== */
 const StockChart = (() => {
   const RANGES = ['1T', '1W', '1M', '6M', '1J', '5J'];
@@ -28,8 +32,40 @@ const StockChart = (() => {
     let o = null;
     try { o = JSON.parse(t); } catch { o = t ? { symbol: t.split(/\s+/)[0] } : null; }
     if (!o || typeof o !== 'object' || !/^[\w.^=-]{1,20}$/.test(String(o.symbol || ''))) return null;
-    return { symbol: String(o.symbol), name: String(o.name || ''), range: RANGES.includes(o.range) ? o.range : '6M' };
+    const num = (x) => (Number.isFinite(+x) && +x > 0 ? +x : null);
+    let forecast = null;
+    if (o.forecast) {
+      const f = typeof o.forecast === 'object' ? o.forecast : {};
+      forecast = { horizon: HORIZON[f.horizon] ? f.horizon : '3M', target: num(f.target), low: num(f.low), high: num(f.high) };
+    }
+    const range = RANGES.includes(o.range) ? o.range : forecast ? (['6M', '1J'].includes(forecast.horizon) ? '1J' : '6M') : '6M';
+    return { symbol: String(o.symbol), name: String(o.name || ''), range, ...(forecast ? { forecast } : {}) };
   }
+  // Prognose-Zeiträume in Handelstagen
+  const HORIZON = { '1W': 5, '1M': 21, '3M': 63, '6M': 126, '1J': 252 };
+  const HORIZON_TEXT = { '1W': '1 Woche', '1M': '1 Monat', '3M': '3 Monate', '6M': '6 Monate', '1J': '1 Jahr' };
+  // Prognose-Pfad: Trend (halbiert – Trends laufen selten ungebremst weiter) und Schwankung der geladenen Kurse fortgeschrieben.
+  // k = Schritte in die Zukunft; mid/lo/hi = Mittelweg und 80-%-Band. target/low/high richten den Pfad auf das Szenario des Bären aus.
+  function forecastPath(bars, steps, f) {
+    const c = bars.map((b) => b.c).filter((x) => x > 0).slice(-160);
+    const r = c.slice(1).map((x, i) => Math.log(x / c[i]));
+    if (!r.length || !steps) return null;
+    const mean = r.reduce((a, b) => a + b, 0) / r.length;
+    const sd = Math.sqrt(r.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, r.length - 1)) || 0.01;
+    const p0 = c[c.length - 1];
+    const mu = f.target ? Math.log(f.target / p0) / steps : mean * 0.5;
+    const z = 1.2816;
+    const upW = f.high ? Math.max(0.0001, Math.log(f.high / (p0 * Math.exp(mu * steps)))) / Math.sqrt(steps) : z * sd;
+    const dnW = f.low ? Math.max(0.0001, Math.log((p0 * Math.exp(mu * steps)) / f.low)) / Math.sqrt(steps) : z * sd;
+    return Array.from({ length: steps + 1 }, (_, k) => ({ k, mid: p0 * Math.exp(mu * k), hi: p0 * Math.exp(mu * k + upW * Math.sqrt(k)), lo: p0 * Math.exp(mu * k - dnW * Math.sqrt(k)) }));
+  }
+  // nächste Handelstage (ohne Wochenende) für die Beschriftung der Zukunft
+  const futureTime = (t, k, weekly) => {
+    const d = new Date(t);
+    if (weekly) { d.setDate(d.getDate() + 7 * k); return +d; }
+    for (let i = 0; i < k;) { d.setDate(d.getDate() + 1); if (d.getDay() % 6) i++; }
+    return +d;
+  };
 
   // Daten zwischenspeichern: die Antwort wird beim Schreiben mehrfach neu gezeichnet – nicht jedes Mal neu laden
   const memo = new Map();
@@ -59,7 +95,7 @@ const StockChart = (() => {
         <div class="stk-legend"><span class="s20">20 Tage</span><span class="s50">50 Tage</span></div>
         <div class="stk-type"><button type="button" data-type="candle" title="Kerzen" aria-label="Kerzen"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3.5 1v12M10.5 1v12" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="3.5" width="3" height="6" rx=".6" fill="currentColor"/><rect x="9" y="5" width="3" height="5" rx=".6" fill="currentColor"/></svg></button><button type="button" data-type="line" title="Linie" aria-label="Linie"><svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M1 10.5 4.5 6l3 2.5L13 2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
       </div>
-      <div class="stk-plot"><div class="stk-tip" hidden></div></div>
+      <div class="stk-plot"><div class="stk-tip" hidden></div><div class="stk-over" hidden></div></div>
       <div class="stk-foot"></div>`;
     const st = { spec, range: spec.range, type: typePref(), data: null, hover: null, timer: 0, seq: 0 };
     fig._stock = st;
@@ -95,7 +131,20 @@ const StockChart = (() => {
       ch.textContent = d.change == null ? '' : `${up ? '+' : '−'}${nf(Math.abs(d.change), 2)} € (${up ? '+' : '−'}${nf(Math.abs(d.changePct), 2)} %) ${{ '1T': 'heute', '1W': '1 Woche', '1M': '1 Monat', '6M': '6 Monate', '1J': '1 Jahr', '5J': '5 Jahre' }[st.range]}`;
       fig.querySelector('.stk-time').innerHTML = d.realtime ? `<i class="stk-live"></i>Echtzeit · ${clock(d.time)}` : `Stand ${clock(d.time)}`;
       fig.querySelector('.stk-title strong').textContent = st.spec.name || d.name || d.symbol;
-      fig.querySelector('.stk-foot').textContent = `Quelle: ${d.source}${d.bid && d.ask ? ` · Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : ''}`;
+      fig.querySelector('.stk-foot').textContent = `Quelle: ${d.source}${d.bid && d.ask ? ` · Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : ''}`
+        + (st.spec.forecast ? ` · Prognose: Trend und Schwankung fortgeschrieben, Band = 80 % Wahrscheinlichkeit – keine Garantie` : '');
+      // Depot: Ergebnis der Position direkt im Chart (statt als Text darunter)
+      const over = fig.querySelector('.stk-over'), pos = st.spec.pos;
+      if (pos?.buyPrice && d.price) {
+        const plus = (d.price - pos.buyPrice) * (pos.qty || 1), pct = (d.price / pos.buyPrice - 1) * 100, up = plus >= 0;
+        over.innerHTML = `<span class="stk-over-l">Seit Kauf</span><b class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${nf(Math.abs(plus), 2)} € <em>${up ? '+' : '−'}${nf(Math.abs(pct), 2)} %</em></b>`
+          + (pos.qty ? `<span class="stk-over-s">${nf(pos.qty, pos.qty % 1 ? 2 : 0)} Stk · Wert ${nf(pos.qty * d.price, 2)} €</span>` : '');
+        over.hidden = false;
+      } else if (st.spec.forecast && st.fc) {
+        const end = st.fc[st.fc.length - 1], up = end.mid >= d.price;
+        over.innerHTML = `<span class="stk-over-l">Prognose ${HORIZON_TEXT[st.spec.forecast.horizon]}</span><b class="fc">${eur(end.mid)} <em class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${nf(Math.abs((end.mid / d.price - 1) * 100), 1)} %</em></b><span class="stk-over-s">Spanne ${eur(end.lo)} – ${eur(end.hi)}</span>`;
+        over.hidden = false;
+      } else over.hidden = true;
       fig.querySelector('.stk-legend').hidden = !d.sma20;
     };
 
@@ -104,13 +153,22 @@ const StockChart = (() => {
       const W = Math.max(260, Math.round(plot.clientWidth || 600));
       const H = H_PRICE + GAP + H_VOL + AXIS_B;
       const bars = d.bars, n = bars.length;
-      const iw = W - AXIS_R - PAD_L, step = iw / Math.max(n, 1);
+      // Prognose nur auf Tages-/Wochenkerzen (nicht 1T/1W); Zukunft bekommt rechts eigene Plätze
+      const weekly = st.range === '5J';
+      const fSteps = st.spec.forecast && !['1T', '1W'].includes(st.range) ? Math.max(1, Math.round(HORIZON[st.spec.forecast.horizon] / (weekly ? 5 : 1))) : 0;
+      const fc = fSteps ? forecastPath(bars, fSteps, st.spec.forecast) : null;
+      st.fc = fc ? fc.map((p) => ({ ...p, mid: p.mid * (d.price / fc[0].mid), lo: p.lo * (d.price / fc[0].mid), hi: p.hi * (d.price / fc[0].mid) })) : null;
+      const slots = n + (st.fc ? fSteps : 0);
+      const iw = W - AXIS_R - PAD_L, step = iw / Math.max(slots, 1);
       const xOf = (i) => PAD_L + step * (i + 0.5);
       const vals = [];
       bars.forEach((b) => vals.push(st.type === 'candle' ? b.l : b.c, st.type === 'candle' ? b.h : b.c));
       (d.sma20 || []).forEach((v) => v != null && vals.push(v));
       (d.sma50 || []).forEach((v) => v != null && vals.push(v));
       if (st.range === '1T' && d.prevClose) vals.push(d.prevClose);
+      (st.spec.levels || []).forEach((l) => l.price > 0 && vals.push(l.price));
+      if (st.spec.pos?.buyPrice) vals.push(st.spec.pos.buyPrice);
+      (st.fc || []).forEach((p) => vals.push(p.lo, p.hi));
       let lo = Math.min(...vals), hi = Math.max(...vals);
       const pad = (hi - lo || hi * 0.01) * 0.08; lo -= pad; hi += pad;
       const yOf = (v) => 6 + (1 - (v - lo) / (hi - lo)) * (H_PRICE - 12);
@@ -127,7 +185,8 @@ const StockChart = (() => {
         const t = svgEl('text', { x: W - AXIS_R + 8, y: y + 4, class: 'stk-ax' }); t.textContent = nf(v, v >= 1000 ? 0 : dec(v)); svg.append(t);
       });
       // Zeit-Achse
-      xTicks(bars, st.range).forEach(({ i, label }) => {
+      const fTicks = st.fc ? [{ i: n - 1 + fSteps, label: new Date(futureTime(bars[n - 1].t, fSteps, weekly)).toLocaleDateString('de-DE', fSteps > 60 ? { month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }) }] : [];
+      [...xTicks(bars, st.range).filter((t) => !st.fc || t.i < n - 2), ...fTicks].forEach(({ i, label }) => {
         const x = xOf(i);
         svg.append(svgEl('line', { x1: x, x2: x, y1: 0, y2: H_PRICE, class: 'stk-grid v' }));
         const t = svgEl('text', { x, y: H - 6, class: 'stk-ax mid' }); t.textContent = label; svg.append(t);
@@ -171,9 +230,41 @@ const StockChart = (() => {
         arr.forEach((v, i) => { if (v == null) return; p += `${p ? ' L' : 'M'}${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`; });
         if (p) svg.append(svgEl('path', { d: p, fill: 'none', stroke: col, 'stroke-width': 1.2, opacity: 0.9 }));
       });
+      // Linien: Kaufkurs (grau), Stopp (rot), Ziel (grün) – fein gestrichelt, Beschriftung klein links über der Linie
+      const lvl = [...(st.spec.pos?.buyPrice ? [{ price: st.spec.pos.buyPrice, label: 'Kauf', kind: 'buy' }] : []), ...(st.spec.levels || [])];
+      lvl.forEach((l) => {
+        if (!(l.price > 0)) return;
+        const y = yOf(l.price), col = l.kind === 'stop' ? DOWN : l.kind === 'target' ? UP : '#9a9a9a';
+        svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, stroke: col, 'stroke-dasharray': '4 4', 'stroke-width': 1, opacity: 0.75 }));
+        const t = svgEl('text', { x: PAD_L + 4, y: y - 5, class: 'stk-lvl', fill: col }); t.textContent = `${l.label} ${nf(l.price, dec(l.price))} €`; svg.append(t);
+      });
+      // Kauftag: Punkt auf der Kurslinie, wenn der Kauf im gezeigten Zeitraum liegt
+      if (st.spec.pos?.date) {
+        const bt = new Date(st.spec.pos.date).getTime();
+        if (bt >= bars[0].t && bt <= bars[n - 1].t + 86400000) {
+          let bi = 0; bars.forEach((b, i) => { if (b.t <= bt + 43200000) bi = i; });
+          const cx = xOf(bi), cy = yOf(st.spec.pos.buyPrice || bars[bi].c);
+          svg.append(svgEl('circle', { cx, cy, r: 5.5, fill: '#171717', stroke: '#e6e6e6', 'stroke-width': 1.6 }));
+          svg.append(svgEl('circle', { cx, cy, r: 2, fill: '#e6e6e6' }));
+        }
+      }
+      // Prognose: „Heute“-Strich, Band (80 %) und gestrichelter Mittelweg nach rechts
+      if (st.fc) {
+        const x0 = xOf(n - 1);
+        svg.append(svgEl('line', { x1: x0, x2: x0, y1: 0, y2: H_PRICE, class: 'stk-today' }));
+        const tt = svgEl('text', { x: x0 + 5, y: 12, class: 'stk-ax' }); tt.textContent = 'Heute'; svg.append(tt);
+        const xs = st.fc.map((p) => xOf(n - 1 + p.k));
+        const band = `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(' L')} L${st.fc.slice().reverse().map((p, j) => `${xs[st.fc.length - 1 - j].toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(' L')} Z`;
+        svg.append(svgEl('path', { d: band, fill: S20, opacity: 0.13, class: 'stk-fc-band' }));
+        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1, opacity: 0.35 }));
+        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1, opacity: 0.35 }));
+        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.mid).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1.8, 'stroke-dasharray': '5 4', 'stroke-linecap': 'round', class: 'stk-fc-line' }));
+        const end = st.fc[st.fc.length - 1];
+        svg.append(svgEl('circle', { cx: xs[xs.length - 1], cy: yOf(end.mid), r: 3.5, fill: S20 }));
+      }
       // aktueller Kurs: Linie + Marke rechts
       const yl = yOf(d.price), lc = upAll ? UP : DOWN;
-      svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: yl, y2: yl, stroke: lc, 'stroke-dasharray': '2 3', 'stroke-width': 1, opacity: 0.7 }));
+      svg.append(svgEl('line', { x1: PAD_L, x2: st.fc ? xOf(n - 1) : W - AXIS_R, y1: yl, y2: yl, stroke: lc, 'stroke-dasharray': '2 3', 'stroke-width': 1, opacity: 0.7 }));
       svg.append(svgEl('rect', { x: W - AXIS_R + 2, y: yl - 9, width: AXIS_R - 4, height: 18, rx: 4, fill: lc }));
       const tl = svgEl('text', { x: W - AXIS_R + 8, y: yl + 4, class: 'stk-ax tag' }); tl.textContent = nf(d.price, dec(d.price)); svg.append(tl);
       // Fadenkreuz
@@ -187,7 +278,13 @@ const StockChart = (() => {
       }
       plot.querySelector('svg')?.remove();
       plot.prepend(svg);
-      st.geo = { xOf, yOf, step, n, W };
+      // Fadenkreuz in der Zukunft: Punkt auf dem Mittelweg
+      if (st.hover != null && st.hover >= n && st.fc?.[st.hover - n + 1]) {
+        const p = st.fc[st.hover - n + 1], x = xOf(st.hover);
+        svg.append(svgEl('line', { x1: x, x2: x, y1: 0, y2: H_PRICE, class: 'stk-cross' }));
+        svg.append(svgEl('circle', { cx: x, cy: yOf(p.mid), r: 3, fill: '#fff' }));
+      }
+      st.geo = { xOf, yOf, step, n, slots, W, weekly };
     }
 
     async function show(range) {
@@ -258,9 +355,18 @@ const StockChart = (() => {
       const rect = plot.getBoundingClientRect();
       const x = e.clientX - rect.left;
       if (x > st.geo.W - AXIS_R) { leave(); return; }
-      const i = Math.max(0, Math.min(st.geo.n - 1, Math.floor((x - PAD_L) / st.geo.step)));
+      const i = Math.max(0, Math.min(st.geo.slots - 1, Math.floor((x - PAD_L) / st.geo.step)));
       if (i === st.hover) return;
       st.hover = i; draw();
+      if (i >= st.geo.n && st.fc) { // Zukunft: Datum, Mittelweg und Spanne
+        const p = st.fc[i - st.geo.n + 1], last = st.data.bars[st.geo.n - 1];
+        tip.innerHTML = `<span class="stk-tip-t">Prognose · ${new Date(futureTime(last.t, p.k, st.geo.weekly)).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span><b>${nf(p.mid, dec(p.mid))} €</b><span class="stk-tip-s">Spanne ${nf(p.lo, dec(p.lo))} – ${nf(p.hi, dec(p.hi))} €</span>`;
+        tip.hidden = false;
+        const w = tip.offsetWidth, h = tip.offsetHeight, px = st.geo.xOf(i), py = st.geo.yOf(p.hi);
+        tip.style.left = `${Math.max(2, Math.min(st.geo.W - AXIS_R - w, px - w / 2))}px`;
+        tip.style.top = `${py - h - 12 >= 2 ? py - h - 12 : py + 14}px`;
+        return;
+      }
       const b = st.data.bars[i];
       const when = new Date(b.t).toLocaleString('de-DE', ['1T', '1W'].includes(st.range) ? { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' } : { day: '2-digit', month: '2-digit', year: 'numeric' });
       // kleine Marke direkt über dem Punkt: Zeit, Schlusskurs mit Veränderung zur Eröffnung, darunter Hoch/Tief/Umsatz in einer Zeile

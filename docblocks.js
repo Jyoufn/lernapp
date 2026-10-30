@@ -1293,6 +1293,41 @@ const DocBlocks = (() => {
         }
       }
     }, true);
+    // iPad/Touch: Gedrückthalten (0,45 s, ohne zu verschieben) öffnet dasselbe Menü wie der Rechtsklick; Doppelklick/Doppeltippen
+    // auf einen Block, ein Bild/Diagramm, eine Trennlinie oder einen Seitenlink ebenfalls (im Fließtext bleibt Doppelklick = Wort markieren)
+    const openMenuAt = (target, x, y) => {
+      const ev = new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: x, clientY: y, view: window });
+      target.dispatchEvent(ev);
+      return ev.defaultPrevented;
+    };
+    let press = null;
+    const cancelPress = () => { if (press) { clearTimeout(press.t); press = null; } };
+    content.addEventListener('pointerdown', (e) => {
+      cancelPress();
+      if (e.pointerType === 'mouse' || e.button > 0) return;
+      const target = e.target, x = e.clientX, y = e.clientY;
+      press = { x, y, t: setTimeout(() => {
+        press = null;
+        if (openMenuAt(target, x, y)) {
+          navigator.vibrate?.(8);
+          getSelection()?.removeAllRanges();
+          // das folgende Loslassen soll nichts anklicken
+          const stop = (ev) => { ev.preventDefault(); ev.stopPropagation(); };
+          content.addEventListener('click', stop, { capture: true, once: true });
+          setTimeout(() => content.removeEventListener('click', stop, { capture: true }), 700);
+        }
+      }, 450) };
+    }, { passive: true });
+    content.addEventListener('pointermove', (e) => { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress(); }, { passive: true });
+    ['pointerup', 'pointercancel', 'scroll'].forEach((k) => content.addEventListener(k, cancelPress, { passive: true }));
+    content.addEventListener('dblclick', (e) => {
+      const t = e.target;
+      const onBlock = t.closest?.('.dc-blk, [data-viz], .dc-viz, a[data-doclink]') || t.tagName === 'HR';
+      if (!onBlock || !content.contains(t)) return;
+      if (openMenuAt(t, e.clientX, e.clientY)) { e.preventDefault(); getSelection()?.removeAllRanges(); }
+    });
+    // iOS: das eigene Menü statt der Lupe/Textauswahl-Leiste, solange auf einem Block gedrückt wird
+    content.addEventListener('touchstart', (e) => { if (e.target.closest?.('.dc-blk, [data-viz], .dc-viz')) e.target.closest('.dc-blk, [data-viz], .dc-viz').style.webkitTouchCallout = 'none'; }, { passive: true });
     // Rechtsklick auf Blöcke, Tabellen, Hervorhebungen, Trennlinien, Listen, Seitenlinks:
     // schlichtes Menü mit Gruppen; was ein eigenes Fenster braucht, öffnet sich als Untermenü rechts daneben
     content.addEventListener('contextmenu', (e) => {

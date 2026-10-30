@@ -15,6 +15,7 @@
    anim = was der Hund neben dem Hauptstatus tut (PixelDogs.actor) – Denkblase nur am Anfang, danach je Agent EIN Arbeitsbild:
      Allgemein kocht (Pfanne) · Lernen blättert im Buch · Research sucht mit der Lupe und schreibt am Ende mit Feder auf Pergament
      (mit Brille) · Börse liest die Zeitung (Markt, Nachrichten, Depot) und arbeitet am Laptop · am Ende Daumen hoch
+     Bild erzeugen (picture): alle Agenten malen an der Staffelei
    =================================================================== */
 const Thinking = (() => {
   const F = (main, sub, kind, anim = 'think') => ({ main, sub, kind, anim });
@@ -29,7 +30,7 @@ const Thinking = (() => {
       thoughts: F('Thinking', 'Connecting key insights', 'think', 'think'),
       work: F('Cooking', 'Preparing response', 'write', 'cook'),
       review: F('Cooking', 'Checking accuracy', 'check', 'cook'),
-      picture: F('Cooking', 'Generating picture', 'work', 'cook'),
+      picture: F('Painting', 'Generating picture', 'work', 'paint'),
       done: F('Completed', 'Response ready', 'check', 'done'),
     },
     learn: {
@@ -42,7 +43,7 @@ const Thinking = (() => {
       thoughts: F('Thinking', 'Structuring the explanation', 'think', 'think'),
       work: F('Working', 'Developing the answer', 'write', 'book'),
       review: F('Reviewing', 'Checking accuracy', 'check', 'book'),
-      picture: F('Working', 'Drawing the illustration', 'work', 'book'),
+      picture: F('Painting', 'Drawing the illustration', 'work', 'paint'),
       done: F('Completed', 'Learning response ready', 'check', 'done'),
     },
     research: {
@@ -62,7 +63,7 @@ const Thinking = (() => {
       thoughts: F('Synthesizing', 'Connecting research findings', 'think', 'think'),
       work: F('Working', 'Structuring research report', 'write', 'quill'),
       review: F('Reviewing', 'Reviewing sources and findings', 'check', 'search'),
-      picture: F('Working', 'Generating picture', 'work', 'quill'),
+      picture: F('Painting', 'Generating picture', 'work', 'paint'),
       done: F('Completed', 'Research report ready', 'check', 'done'),
     },
     boerse: {
@@ -88,7 +89,7 @@ const Thinking = (() => {
       thoughts: F('Thinking', 'Connecting market insights', 'think', 'think'),
       work: F('Working', 'Preparing market assessment', 'write', 'chartop'),
       review: F('Reviewing', 'Verifying data and findings', 'check', 'chartop'),
-      picture: F('Working', 'Preparing market assessment', 'work', 'chartop'),
+      picture: F('Painting', 'Generating picture', 'work', 'paint'),
       done: F('Completed', 'Market analysis ready', 'check', 'done'),
     },
   };

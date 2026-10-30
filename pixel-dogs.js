@@ -1030,6 +1030,7 @@ const PixelDogs = (() => {
        board  Tafel, Kreide schreibt Zeile für Zeile                          plan    Klemmbrett, Haken erscheinen
        laptop Laptop, Zeilen laufen (mit Brille)                              type    Laptop, Text wird getippt (mit Brille)
        chart  Tablet, Kurslinie zeichnet sich                                  news    Zeitung, wird leicht bewegt
+       paint  Staffelei: Pinsel malt ein kleines Bild (Himmel, Sonne, Hügel, Blumen) – beim Erzeugen eines Bildes
        done   Daumen hoch mit kleinem Funkeln
      Übergänge: der alte Gegenstand gleitet weich nach unten weg, der neue kommt von unten – und jeder Zustand bleibt mindestens
      MIN_DWELL ms stehen. Kommen Wechsel schneller (kurzes Thinking), wird direkt zum NEUESTEN gesprungen statt alle abzuspielen. */
@@ -1172,6 +1173,43 @@ const PixelDogs = (() => {
     });
     return ['bbbbbbbbbbb', ...inner, 'bbbbbbbbbbb', '.BBBBBBBBB.'];
   };
+  // Malen (Bild wird erzeugt): Staffelei mit Leinwand – der Pinsel malt Strich für Strich ein kleines Bild
+  // (Himmel, Sonne, grüner Hügel, zwei rote Blumen); die Pinselspitze trägt die Farbe, die gerade aufgetragen wird.
+  // Ist das Bild fertig, funkelt es kurz, dann wird die Leinwand gewechselt und er fängt von vorn an.
+  const PAINT_PAL = { ...APAL, S: '#6aa8ff', s: '#3d7fe0', U: '#ffd447', V: '#4fcf8a', W: '#2f9e64', R: '#f0645a', E: '#b07a4a', e: '#7a5232' };
+  const PIC = [
+    'SSSSSSSUUS',
+    'SSSSSSUUUU',
+    'SSSSSSSUUS',
+    'SSSVVSSSSS',
+    'SVVVVVVSSS',
+    'VVVVVVVVVV',
+    'WWRWWWWWRW',
+  ];
+  // Reihenfolge der Pinselstriche: erst der Himmel in Bahnen (hin und zurück), dann Sonne, Hügel, Wiese, Blumen
+  const PAINT_ORDER = (() => {
+    const out = [], take = (pred) => { for (let y = 0; y < PIC.length; y++) { const xs = [...Array(10).keys()]; (y % 2 ? xs.reverse() : xs).forEach((x) => { if (pred(PIC[y][x], x, y)) out.push([x, y, PIC[y][x]]); }); } };
+    take((c) => c === 'S'); take((c) => c === 'U'); take((c) => c === 'V'); take((c) => c === 'W'); take((c) => c === 'R');
+    return out;
+  })();
+  const PAINT_STEPS = 16;
+  const easel = (k) => {
+    const n = Math.round((Math.min(k, PAINT_STEPS) / PAINT_STEPS) * PAINT_ORDER.length);
+    const g = Array.from({ length: 7 }, () => Array(10).fill('w'));
+    PAINT_ORDER.slice(0, n).forEach(([x, y, c]) => { g[y][x] = c; });
+    const rows = ['.EEEEEEEEEEEE', ...g.map((r) => `.E${r.join('')}E`), '.EEEEEEEEEEEE', '..e........e.', '..e........e.', '.e..........e'];
+    const last = PAINT_ORDER[Math.max(0, n - 1)];
+    return { rows, tip: n && n < PAINT_ORDER.length ? [last[0] + 2, last[1] + 1, last[2]] : null };
+  };
+  // Pinsel: Spitze in der aktuellen Farbe, dann Zwinge (grau) und Stiel (Holz) schräg nach rechts unten zur Pfote
+  const brushLine = (x0, y0, c) => {
+    const x1 = 13, y1 = 19, n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1, out = [];
+    for (let i = 0; i <= n; i++) {
+      const x = Math.round(x0 + ((x1 - x0) * i) / n), y = Math.round(y0 + ((y1 - y0) * i) / n);
+      out.push(P2([i === 0 ? c : i === 1 ? 'M' : i % 2 ? 'e' : 'E'], x, y, PAINT_PAL));
+    }
+    return out;
+  };
   const ANIMS = (id) => {
     const pf = fur(id);
     const seq = (n, ms) => Array.from({ length: n }, (_, i) => [i, ms]);
@@ -1200,6 +1238,20 @@ const PixelDogs = (() => {
       // liest: Zeitung bewegt sich leicht, die Schlagzeile leuchtet kurz auf, der Blick wandert die Spalten entlang
       news: { frames: [[12, 0], [12, 1], [13, 2], [13, 3]].map(([y, k]) => [P2(NEWS, 0, y), ...(k === 1 ? [P2(['RRRRRRRRR'], 2, y + 2)] : []), ...(k >= 2 ? [P2(['N'], k === 2 ? 2 : 7, y + 4 + (k - 2) * 2)] : []), paw(11, y + 6)]),
         loop: [[0, 700], [1, 220], [0, 300], [1, 220], [2, 600], [3, 600]] },
+      // malt: Leinwand füllt sich Strich für Strich, der Pinsel tupft mit (wippt leicht), am Ende funkelt das fertige Bild
+      paint: { frames: [
+          ...Array.from({ length: PAINT_STEPS + 1 }, (_, k) => {
+            const { rows, tip } = easel(k);
+            const parts = [P2(rows, -1, 7, PAINT_PAL)];
+            // Pinselstiel als gerade Pixel-Linie von der Spitze (auf der Leinwand) zur Pfote unten rechts – die Pfote bleibt ruhig
+            if (tip) { const dip = k % 2; parts.push(...brushLine(tip[0] - 1, 7 + tip[1] + dip, tip[2]), paw(12, 19)); }
+            else parts.push(paw(12, 19));
+            return parts;
+          }),
+          [P2(easel(PAINT_STEPS).rows, -1, 7, PAINT_PAL), P2(SPARK, 9, 5), P2(['H'], 2, 9), paw(12, 19)],
+          [P2(easel(PAINT_STEPS).rows, -1, 7, PAINT_PAL), P2(['Y'], 10, 6), P2(SPARK, 0, 6), paw(12, 19)],
+        ],
+        loop: [[0, 260], ...Array.from({ length: PAINT_STEPS }, (_, i) => [i + 1, i % 4 === 3 ? 200 : 130]), [PAINT_STEPS + 1, 220], [PAINT_STEPS + 2, 220], [PAINT_STEPS + 1, 220], [PAINT_STEPS, 900]] },
       // fertig: Daumen schnellt hoch, Funken springen nacheinander auf (oben, rechts, links) und verglühen
       done: { frames: [[P2(THUMB, 0, 16, pf)], [P2(THUMB, 0, 11, pf)], [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 8)],
           [P2(THUMB, 0, 12, pf), P2(SPARK, 9, 8), P2(['Y'], 3, 9), P2(['H'], 12, 13)], [P2(THUMB, 0, 12, pf), P2(['Y'], 10, 9), P2(SPARK, 2, 8)], [P2(THUMB, 0, 12, pf), P2(['H'], 3, 9)], [P2(THUMB, 0, 12, pf)]],

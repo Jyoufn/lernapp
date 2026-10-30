@@ -1,7 +1,9 @@
 /* ===================================================================
    Kalender
-   - Monatsansicht (Seitenleiste → „Calendar“), Termine als leicht durchscheinende, farbige Einträge mit Icon
-   - Klick auf einen Tag oder „Neuer Termin“ → Menü: Titel, Beschreibung, Datum, Uhrzeit, Icon, Farbe
+   - Wochenansicht (Seitenleiste → „Kalender“): Mo–So nebeneinander, links die Uhrzeiten, oben ganztägige Termine,
+     rote Linie = jetzt; blättern wochenweise (Pfeile, „Heute“, Wischen auf dem iPad)
+   - Klick in eine Stunde oder „Neuer Termin“ → Menü: Titel, Beschreibung, Datum, Uhrzeit, Icon, Farbe
+   - Klick auf den Tageskopf → großes Tagesfenster
    - Klick auf einen Termin → bearbeiten oder löschen
    - Gespeichert im Browser (localStorage); der Agent kann Termine anlegen (AppActions.add_event)
    =================================================================== */
@@ -21,58 +23,120 @@ const Calendar = (() => {
   const icon = (id) => `<svg width="16" height="16" aria-hidden="true"><use href="#${id}"/></svg>`;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  let cursor = new Date(); cursor.setDate(1); // angezeigter Monat
+  // angezeigte Woche: Montag 12 Uhr (12 Uhr, damit Zeitumstellungen das Datum nicht verschieben)
+  const mondayOf = (d) => { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; };
+  let cursor = mondayOf(new Date());
   let open = false;
+  const WEEK_HOUR = 56; // Höhe einer Stunde in der Wochenansicht
+  // Kalenderwoche nach ISO 8601
+  const isoWeek = (d) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); };
+  const minsOf = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
 
-  /* ---------- Ansicht ---------- */
+  /* ---------- Ansicht: Woche (Mo–So) mit Uhrzeiten links, ganztägige Termine oben ---------- */
   const view = document.createElement('section');
-  view.className = 'cal-view';
+  view.className = 'cal-view cal-week';
   view.hidden = true;
   view.setAttribute('aria-label', 'Kalender');
   view.innerHTML = `
     <header class="cal-head">
-      <div class="cal-title"><span class="cal-month"></span><span class="cal-year"></span></div>
+      <div class="cal-title"><span class="cw-kw"></span><span class="cw-my"><span class="cal-month"></span> <span class="cal-year"></span></span></div>
       <div class="cal-nav">
         <div class="cal-seg">
-          <button type="button" data-cal="prev" aria-label="Vorheriger Monat" title="Vorheriger Monat">${icon('f-back')}</button>
+          <button type="button" data-cal="prev" aria-label="Vorherige Woche" title="Vorherige Woche">${icon('f-back')}</button>
           <button type="button" class="cal-seg-today" data-cal="today">Heute</button>
-          <button type="button" data-cal="next" aria-label="Nächster Monat" title="Nächster Monat">${icon('f-forward')}</button>
+          <button type="button" data-cal="next" aria-label="Nächste Woche" title="Nächste Woche">${icon('f-forward')}</button>
         </div>
-        <button class="cal-new" type="button" data-cal="new" title="Neuer Termin">${icon('f-plus')}<span>Neuer Termin</span></button>
+        <button class="cal-new" type="button" data-cal="new" title="Neuer Termin">${icon('f-plus')}<span>Neu</span></button>
       </div>
     </header>
-    <div class="cal-weekdays">${DAYS.map((d) => `<span>${d}</span>`).join('')}</div>
-    <div class="cal-grid"></div>`;
-  const grid = view.querySelector('.cal-grid');
+    <div class="cw">
+      <div class="cw-top"><div class="cw-days"><span class="cw-tz"></span></div><div class="cw-all"><span class="cw-all-l">Ganztägig</span></div></div>
+      <div class="cw-scroll"><div class="cw-body" style="height:${24 * WEEK_HOUR}px">
+        <div class="cw-hours">${Array.from({ length: 24 }, (_, h) => `<span style="top:${h * WEEK_HOUR}px">${h ? `${pad(h)}:00` : ''}</span>`).join('')}<b class="cw-now-tag" hidden></b></div>
+        <div class="cw-now-all" hidden></div>
+        <div class="cw-cols"></div>
+      </div></div>
+    </div>`;
+  const grid = view.querySelector('.cw'); // Ziel der Blätter-Animation
+  const daysBox = view.querySelector('.cw-days'), allBox = view.querySelector('.cw-all'), colsBox = view.querySelector('.cw-cols'), scroller = view.querySelector('.cw-scroll');
+  let scrolledOnce = false;
 
+  // Termine eines Tages nebeneinander legen, wenn sie sich überschneiden
+  function layoutDay(list) {
+    const timed = list.filter((e) => minsOf(e.time) != null).map((e) => ({ e, s: minsOf(e.time), en: Math.max(minsOf(e.time) + 30, minsOf(e.end) ?? minsOf(e.time) + 60) })).sort((a, b) => a.s - b.s || b.en - a.en);
+    const out = []; let cluster = [], lanes = [], clusterEnd = -1;
+    const flush = () => { cluster.forEach((x) => { x.n = lanes.length; }); out.push(...cluster); cluster = []; lanes = []; };
+    timed.forEach((x) => {
+      if (x.s >= clusterEnd && cluster.length) flush();
+      let lane = lanes.findIndex((l) => l <= x.s);
+      if (lane < 0) { lane = lanes.length; lanes.push(x.en); } else lanes[lane] = x.en;
+      x.lane = lane; cluster.push(x); clusterEnd = Math.max(clusterEnd, x.en);
+    });
+    if (cluster.length) flush();
+    return out;
+  }
   function render(dir = 0) {
-    view.querySelector('.cal-month').textContent = MONTHS[cursor.getMonth()];
-    view.querySelector('.cal-year').textContent = cursor.getFullYear();
-    const first = new Date(cursor);
-    const start = new Date(first);
-    start.setDate(1 - ((first.getDay() + 6) % 7)); // Montag davor
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(cursor); d.setDate(cursor.getDate() + i); return d; });
+    const a = days[0], b = days[6];
+    // Monat wie in der Vorlage: der Monat, in dem der Donnerstag der Woche liegt (gehört nach ISO zu diesem Monat)
+    view.querySelector('.cal-month').textContent = MONTHS[days[3].getMonth()];
+    view.querySelector('.cal-year').textContent = days[3].getFullYear();
+    const off = -new Date().getTimezoneOffset() / 60;
+    view.querySelector('.cw-tz').textContent = `GMT${off >= 0 ? '+' : '−'}${Math.abs(off)}`;
+    view.querySelector('.cw-kw').textContent = `KW ${isoWeek(a)}`;
     const today = todayIso();
-    const cells = [];
-    // nur so viele Wochen wie der Monat braucht (4–6) – kompakter, die Zeilen werden dafür etwas höher
-    const daysIn = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
-    const weeks = Math.ceil((((first.getDay() + 6) % 7) + daysIn) / 7);
-    grid.style.gridTemplateRows = `repeat(${weeks}, 1fr)`;
-    for (let i = 0; i < weeks * 7; i++) {
-      const d = new Date(start); d.setDate(start.getDate() + i);
-      const key = iso(d);
-      const list = events.filter((e) => e.date === key).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
-      const cell = document.createElement('div');
-      cell.className = `cal-cell${d.getMonth() !== cursor.getMonth() ? ' other' : ''}${key === today ? ' today' : ''}${i % 7 > 4 ? ' weekend' : ''}`;
-      cell.dataset.date = key;
-      cell.innerHTML = `<span class="cal-day">${d.getDate()}</span><div class="cal-events"></div>`;
-      const box = cell.querySelector('.cal-events');
-      list.slice(0, 3).forEach((e) => box.append(pill(e)));
-      if (list.length > 3) { const more = document.createElement('button'); more.type = 'button'; more.className = 'cal-more'; more.textContent = `+${list.length - 3} weitere`; more.dataset.more = key; box.append(more); }
-      cells.push(cell);
+    daysBox.querySelectorAll('.cw-day').forEach((x) => x.remove());
+    daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); return `<button type="button" class="cw-day${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${DAYS[i]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
+    // ganztägig
+    const allCells = days.map((d) => {
+      const k = iso(d), c = document.createElement('div');
+      c.className = 'cw-all-cell'; c.dataset.date = k;
+      events.filter((e) => e.date === k && minsOf(e.time) == null).forEach((e) => c.append(pill(e)));
+      return c;
+    });
+    allBox.replaceChildren(allBox.firstElementChild, ...allCells);
+    allBox.classList.toggle('empty', !allCells.some((c) => c.children.length));
+    // Spalten mit Terminen
+    colsBox.replaceChildren(...days.map((d, i) => {
+      const k = iso(d), col = document.createElement('div');
+      col.className = `cw-col${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}`;
+      col.dataset.date = k;
+      layoutDay(events.filter((e) => e.date === k)).forEach(({ e, s, en, lane, n }) => {
+        const p = pill(e);
+        p.classList.add('cw-ev');
+        // wie in der Vorlage: Farbstrich links, oben Icon + Titel, darunter die Uhrzeit
+        p.innerHTML = `<i class="cw-bar"></i><span class="cal-pill-t">${icon(e.icon || 'i-calendar')}<span>${esc(e.title)}</span></span><span class="cal-pill-time">${esc(e.time)}</span>`;
+        if ((en - s) < 45) p.classList.add('short');
+        Object.assign(p.style, { top: `${(s / 60) * WEEK_HOUR + 1}px`, height: `${Math.max(20, ((en - s) / 60) * WEEK_HOUR - 3)}px`, left: `calc(${(lane / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` });
+        const t = p.querySelector('.cal-pill-time'); if (t && e.end && (en - s) >= 45) t.textContent = `${e.time} – ${e.end}`;
+        col.append(p);
+      });
+      if (k === today) {
+        const line = document.createElement('div');
+        line.className = 'cw-now';
+        col.append(line);
+      }
+      return col;
+    }));
+    placeNow();
+    if (!scrolledOnce && !view.hidden) {
+      // beim ersten Öffnen: zur aktuellen Uhrzeit (bzw. 7 Uhr), damit der Tag sichtbar ist
+      const n = new Date(); scroller.scrollTop = Math.max(0, Math.min(n.getHours() - 2, 7)) * WEEK_HOUR; scrolledOnce = true;
     }
-    grid.replaceChildren(...cells);
     if (dir) { grid.classList.remove('slide-l', 'slide-r'); void grid.offsetWidth; grid.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
   }
+  // Jetzt: rote Pille mit der Uhrzeit links, feine rote Linie über die Woche, kräftig im heutigen Tag – wandert jede Minute mit
+  function placeNow() {
+    const n = new Date(), top = `${((n.getHours() * 60 + n.getMinutes()) / 60) * WEEK_HOUR}px`;
+    const inWeek = view.querySelector('.cw-col.today');
+    const tag = view.querySelector('.cw-now-tag'), all = view.querySelector('.cw-now-all');
+    tag.hidden = all.hidden = !inWeek;
+    tag.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`;
+    tag.style.top = all.style.top = top;
+    view.querySelectorAll('.cw-now').forEach((l) => { l.style.top = top; });
+    view.querySelectorAll('.cw-hours > span').forEach((sp, h) => { sp.classList.toggle('near', !!inWeek && Math.abs(h * 60 - (n.getHours() * 60 + n.getMinutes())) < 18); });
+  }
+  setInterval(() => { if (open && !view.hidden) placeNow(); }, 30000);
   function pill(e) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -83,20 +147,44 @@ const Calendar = (() => {
     b.title = [e.time, e.title, e.description].filter(Boolean).join(' · ');
     return b;
   }
+  const shiftWeek = (n) => { cursor.setDate(cursor.getDate() + 7 * n); render(n); };
 
   view.addEventListener('click', (ev) => {
     const a = ev.target.closest('[data-cal]')?.dataset.cal;
-    if (a === 'prev') { cursor.setMonth(cursor.getMonth() - 1); render(-1); return; }
-    if (a === 'next') { cursor.setMonth(cursor.getMonth() + 1); render(1); return; }
-    if (a === 'today') { cursor = new Date(); cursor.setDate(1); render(); return; }
+    if (a === 'prev') { shiftWeek(-1); return; }
+    if (a === 'next') { shiftWeek(1); return; }
+    if (a === 'today') { const was = +cursor; cursor = mondayOf(new Date()); render(Math.sign(+cursor - was)); const n = new Date(); scroller.scrollTo({ top: Math.max(0, n.getHours() - 2) * WEEK_HOUR, behavior: 'smooth' }); return; }
     if (a === 'new') { edit(null, todayIso()); return; }
     const p = ev.target.closest('.cal-pill');
-    if (p) { edit(events.find((e) => e.id === p.dataset.id)); return; }
-    const more = ev.target.closest('[data-more]');
-    if (more) { dayList(more.dataset.more); return; }
-    const cell = ev.target.closest('.cal-cell');
-    if (cell) openDay(cell.dataset.date, cell);
+    if (p) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
+    const day = ev.target.closest('[data-day]');
+    if (day) { openDay(day.dataset.day, day); return; }
+    const ac = ev.target.closest('.cw-all-cell');
+    if (ac) { edit(null, ac.dataset.date); return; }
+    // Klick in eine Stunde → Termin um diese Uhrzeit (halbe Stunden)
+    const col = ev.target.closest('.cw-col');
+    if (col) {
+      const y = ev.clientY - col.getBoundingClientRect().top;
+      const m = Math.max(0, Math.min(23 * 60, Math.floor(y / (WEEK_HOUR / 2)) * 30));
+      const hm = (x) => `${pad(Math.floor(x / 60))}:${pad(x % 60)}`;
+      // Platzhalter-Termin an der Stelle zeigen, an den das Popover andockt (verschwindet mit dem Fenster)
+      col.querySelector('.cw-ghost')?.remove();
+      const g = document.createElement('div');
+      g.className = 'cw-ghost';
+      Object.assign(g.style, { top: `${(m / 60) * WEEK_HOUR + 1}px`, height: `${WEEK_HOUR - 3}px` });
+      col.append(g);
+      edit(null, col.dataset.date, hm(m), hm(Math.min(23 * 60 + 30, m + 60)), null, g);
+    }
   });
+  // Wischen auf dem iPad: links/rechts = Woche vor/zurück
+  let swipe = null;
+  scroller.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; swipe = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null; }, { passive: true });
+  scroller.addEventListener('touchend', (ev) => {
+    if (!swipe) return;
+    const t = ev.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - swipe.at < 600) shiftWeek(dx < 0 ? 1 : -1);
+    swipe = null;
+  }, { passive: true });
 
   /* ---------- Tagesansicht: Klick auf einen Tag → Tag wächst weich aus der Zelle, links die Uhrzeiten ---------- */
   const HOUR = 52; // Höhe einer Stunde in px
@@ -181,10 +269,10 @@ const Calendar = (() => {
   function closeDay() {
     if (dv.hidden) return;
     const d = new Date(`${dayDate}T12:00:00`);
-    if (d.getMonth() !== cursor.getMonth() || d.getFullYear() !== cursor.getFullYear()) { cursor = d; cursor.setDate(1); }
+    cursor = mondayOf(d);
     render();
     const done = () => { dv.hidden = true; dvWrap.hidden = true; };
-    const cell = grid.querySelector(`[data-date="${dayDate}"]`);
+    const cell = view.querySelector(`.cw-day[data-day="${dayDate}"]`);
     if (reduced()) { done(); return; }
     const fade = dvWrap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease', fill: 'forwards' });
     const shrink = dv.animate([{ transform: 'none', opacity: 1 }, { transform: cell ? fromCell(cell) : 'scale(0.96)', opacity: 0 }], { duration: 300, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
@@ -234,6 +322,7 @@ const Calendar = (() => {
   document.body.append(emodal);
   function eclose() {
     if (emodal.hidden) return;
+    document.querySelectorAll('.cw-ghost').forEach((g) => g.remove());
     emodal.classList.add('closing');
     setTimeout(() => { emodal.hidden = true; emodal.classList.remove('closing'); emodal.replaceChildren(); }, 220);
   }
@@ -245,7 +334,8 @@ const Calendar = (() => {
   });
   const WD_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   // store: eigener Speicherort (z. B. Kalender in einem Dokument) – { onSave(item), onDelete(id) }; ohne: der Kalender der App
-  function edit(ev, date, time = '', end = '', store = null) {
+  // anchor = Termin/Zelle im Wochenraster: das Fenster erscheint wie in der Vorlage als Popover mit Spitze direkt daneben
+  function edit(ev, date, time = '', end = '', store = null, anchor = null) {
     close(); // ggf. Tagesliste schließen
     const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: COLORS[0], icon: 'f-calendar' };
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
@@ -354,6 +444,17 @@ const Calendar = (() => {
     });
     draw();
     emodal.hidden = false;
+    emodal.classList.toggle('anchored', !!anchor);
+    if (anchor) {
+      const r = anchor.getBoundingClientRect(), fw = Math.min(380, innerWidth - 24), gap = 14;
+      const left = r.left - gap - fw >= 8 ? r.left - gap - fw : Math.min(innerWidth - fw - 8, r.right + gap);
+      const side = left < r.left ? 'right' : 'left'; // Spitze zeigt zum Termin
+      const fh = form.offsetHeight || 260;
+      const top = Math.max(12, Math.min(innerHeight - fh - 12, r.top + r.height / 2 - 60));
+      Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${top}px`, width: `${fw}px` });
+      form.dataset.arrow = side;
+      form.style.setProperty('--ay', `${Math.max(18, Math.min(fh - 18, r.top + r.height / 2 - top))}px`);
+    } else { form.removeAttribute('style'); delete form.dataset.arrow; }
     requestAnimationFrame(grow);
     setTimeout(() => form.querySelector('.tk-f-title').focus(), 60);
   }
@@ -380,9 +481,11 @@ const Calendar = (() => {
     save();
     if (open) {
       const d = new Date(`${item.date}T12:00:00`);
-      if (d.getMonth() !== cursor.getMonth() || d.getFullYear() !== cursor.getFullYear()) { cursor = d; cursor.setDate(1); }
+      cursor = mondayOf(d);
       render();
-      grid.querySelector(`[data-id="${item.id}"]`)?.classList.add('fresh');
+      const fresh = view.querySelector(`[data-id="${item.id}"]`);
+      fresh?.classList.add('fresh');
+      if (fresh?.classList.contains('cw-ev')) { const top = parseFloat(fresh.style.top) || 0; if (top < scroller.scrollTop || top > scroller.scrollTop + scroller.clientHeight - 40) scroller.scrollTo({ top: Math.max(0, top - WEEK_HOUR), behavior: 'smooth' }); }
       if (!dv.hidden) { dayDate = item.date; drawDay(); dv.querySelector(`[data-id="${item.id}"]`)?.classList.add('fresh'); }
     }
     return item;
@@ -399,8 +502,8 @@ const Calendar = (() => {
     dv.hidden = true;
     dvWrap.hidden = true;
     open = true;
-    render();
     view.hidden = false;
+    render();
     document.querySelector('.panel')?.classList.add('view-calendar');
   }
   function hide() {

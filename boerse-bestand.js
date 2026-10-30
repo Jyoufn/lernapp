@@ -1,7 +1,9 @@
 /* ===================================================================
    „Meine Käufe“ beim Börsen-Bären (ohne Zugriff aufs Planspiel – nur, was der Nutzer im Chat erzählt):
    - Block ```bestand im Chat → Karte: je Kauf Stück, Kaufkurs, aktueller Kurs, Plus/Minus (€ und %), Empfehlung
-     (Verkaufen · Beobachten · Behalten · Nachkaufen · Teilgewinn); Klick klappt Grund und Stopp auf. Daten von /api/boerse/bestand (reine Rechnung).
+     (Verkaufen · Beobachten · Behalten · Nachkaufen · Teilgewinn); Klick klappt den Aktienchart auf – Kaufkurs, Kauftag, Stopp
+     und „Seit Kauf ±…“ stehen IM Chart (kein Text, keine Knöpfe). Verkauft/geändert wird per Chat beim Bären.
+     Daten von /api/boerse/bestand (reine Rechnung).
    - Block ```merken im Chat → kleine Bestätigung „Notiert: 40 × SAP zu 231,00 €“
    - Hinweise: zur Börsenzeit alle 20 min still nachsehen; ändert sich bei EIGENEN Werten etwas Wichtiges (Verkaufen lohnt sich, Teilgewinn,
      genau beobachten), ploppt EINMAL eine kleine Karte oben rechts auf – sie wird nirgends gespeichert und verschwindet von selbst.
@@ -52,12 +54,7 @@ const BoerseBestand = (() => {
           <span class="bst-p ${tone(x.plus)}"><b>${signed(x.plus)}</b><small>${signed(x.plusPct, ' %')}</small></span>
           <span class="bst-act${x.action === 'verkaufen' ? ' strong' : ''}">${ACT_TEXT[x.action] || '–'}</span>
         </button>
-        <div class="bst-d"><div class="bst-d-in">
-          ${x.why ? `<p>${esc(x.why)}</p>` : ''}
-          <p class="bst-meta">Kurs jetzt ${eur(x.price)}${x.stop ? ` · Stopp ${eur(x.stop)}` : ''} · nach Gebühren ${signed(x.netPlus)}${x.error ? ` · ${esc(x.error)}` : ''}</p>
-          <div class="bst-acts"><button type="button" class="st-btn dark" data-ask="${esc(`Schau dir meine Position ${x.name} (${x.symbol}) an: verkaufen, behalten oder beobachten?`)}">Mit dem Bären besprechen</button>
-            <button type="button" class="st-btn dark" data-del="${esc(x.symbol)}">Entfernen</button></div>
-        </div></div>
+        <div class="bst-d"><div class="bst-d-in"><div class="bst-chart" data-chart="${esc(x.symbol)}"></div></div></div>
       </div>`).join('') + soldRows;
   }
   // Hinzufügen: je Angabe eine Zeile wie in den Einstellungen – Aktie (Suche), Datum, Uhrzeit, Stück; Kaufkurs optional (sonst Kurs zu diesem Zeitpunkt)
@@ -87,7 +84,22 @@ const BoerseBestand = (() => {
         : dp ? `Depotwert ${eur(dp.value)} · Bargeld ${eur(dp.cash)} · <span class="${tone(dp.perf)}">${signed(dp.perf)} (${signed(dp.perfPct, ' %')})</span> · ${dp.trades} Orders`
         : (d.items || []).length ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
       list.innerHTML = rows(d, st.open);
+      mountCharts();
     };
+    // Charts der aufgeklappten Zeilen bleiben erhalten, wenn die Liste neu gezeichnet wird (alle 2 min) – kein Neuladen, kein Flackern
+    const charts = new Map();
+    const rangeFor = (date) => { const days = date ? (Date.now() - new Date(`${date}T12:00:00`)) / 86400000 : 999; return days <= 25 ? '1M' : days <= 170 ? '6M' : '1J'; };
+    const mountCharts = () => fig.querySelectorAll('.bst-row.open [data-chart]').forEach((host) => {
+      const sym = host.dataset.chart, x = (st.d?.items || []).find((i) => i.symbol === sym);
+      if (!x || !window.StockChart) return;
+      let c = charts.get(sym);
+      if (!c) {
+        c = StockChart.figure({ symbol: sym, name: x.name, range: rangeFor(x.date), pos: { buyPrice: x.buyPrice, qty: x.qty, date: x.date }, levels: x.stop ? [{ price: x.stop, label: 'Stopp', kind: 'stop' }] : [] });
+        c.classList.add('bst-stk');
+        charts.set(sym, c);
+      }
+      if (c.parentNode !== host) host.replaceChildren(c);
+    });
     const draw = async (fresh) => {
       fig.classList.add('busy');
       const d = await load(fresh);
@@ -135,14 +147,7 @@ const BoerseBestand = (() => {
       if (row) {
         st.open = st.open === row.dataset.sym ? null : row.dataset.sym;
         fig.querySelectorAll('.bst-row').forEach((r) => { const on = r.querySelector('[data-sym]').dataset.sym === st.open; r.classList.toggle('open', on); r.querySelector('[data-sym]').setAttribute('aria-expanded', String(on)); });
-        return;
-      }
-      const a = e.target.closest('[data-ask]'); if (a) { ask(a.dataset.ask); return; }
-      const del = e.target.closest('[data-del]');
-      if (del) {
-        if (!del.classList.contains('danger')) { del.classList.add('danger'); del.textContent = 'Wirklich entfernen?'; setTimeout(() => { del.classList.remove('danger'); del.textContent = 'Entfernen'; }, 2500); return; }
-        st.d = await fetch(`/api/boerse/bestand?symbol=${encodeURIComponent(del.dataset.del)}`, { method: 'DELETE' }).then((r) => r.json()).catch(() => st.d);
-        memo = null; st.open = null; paint();
+        mountCharts();
         return;
       }
       if (e.target.closest('[data-reload]')) draw(true);

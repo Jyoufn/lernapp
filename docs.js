@@ -969,20 +969,24 @@ const Docs = (() => {
        wird daraus „Done thinking Xs“ (sehr schnelle Antworten zeigen gar nichts).
        thought(): echte Gedanken des Modells live darunter; danach „Thought for Xs“, ein Klick klappt sie auf */
     function dccThink(a, list, label = 'Thinking', doneLabel = 'Done thinking') {
-      // GENAU die Zeitleiste des Haupt-Chats (createWork/stepLine aus app.js): Kopf „Planning“ → „Working“ → „Worked for Xs“,
-      // darunter die Schritte mit Punkten und Plan-Kasten; im Seitenfenster nur etwas kleiner (style.css .dcc-a .work)
+      // GENAU die Zeitleiste des Haupt-Chats (createWork/stepLine aus app.js) und derselbe Ablauf je Agent (thinking.js):
+      // Kopf mit Hauptstatus und Hund (PixelDogs.actor) → Schritte → Gedanken als einzelne Schritte → am Ende „Completed Xs“
+      // und ein blauer Haken mit „… ready · n steps“; danach klappt die Zeitleiste weich zu. Im Seitenfenster nur etwas kleiner.
       const from = Date.now(), pic = /picture/.test(label);
-      let over = false, thoughtEl = null, raw = '';
+      const agent = a.dataset.dog || window.PixelDogs?.mode || 'general';
+      let over = false, thought = null;
       const sec = () => `${Math.max(1, Math.round((Date.now() - from) / 1000))}s`;
       const w = createWork();
       w.work.classList.add('active');
       const act = w.head.querySelector('.act'), title = w.head.querySelector('.work-title'), tEl = w.head.querySelector('.t');
       const setAct = (kind, text) => { if (over) return; if (act.dataset.kind !== kind) { act.dataset.kind = kind; act.innerHTML = ACT_MARKUP[kind] || ACT_MARKUP.work; } title.classList.add('sweep'); swapText(title, text); };
-      // gleicher Denk-Ablauf wie im Haupt-Chat (thinking.js), je nach Agent
-      const P = (k) => window.Thinking ? Thinking.of(a.dataset.dog || window.PixelDogs?.mode || 'general', k) : { main: 'Working', sub: k, kind: 'work' };
-      const ph = (k) => setAct(P(k).kind, P(k).main);
-      if (pic) setAct('work', label); else ph('start');
-      a.prepend(w.work); list.scrollTop = list.scrollHeight;
+      const P = (k) => window.Thinking ? Thinking.of(agent, k) : { main: 'Working', sub: k, kind: 'work', anim: 'think' };
+      // Hund neben dem Hauptstatus wie im Haupt-Chat
+      let actor = null;
+      if (window.PixelDogs?.actor) { actor = PixelDogs.actor(agent); a.prepend(actor.el); a.classList.add('acting'); }
+      const ph = (k) => { setAct(P(k).kind, P(k).main); actor?.set(P(k).anim); };
+      if (pic) { setAct('work', P('picture').main); actor?.set('paint'); } else ph('start');
+      a.prepend(w.work); if (actor) a.prepend(actor.el); list.scrollTop = list.scrollHeight;
       const tick = setInterval(() => { tEl.textContent = sec(); }, 250);
       const rows = {};
       const step = (key, html, live) => {
@@ -993,43 +997,78 @@ const Docs = (() => {
         list.scrollTop = list.scrollHeight;
         return r;
       };
-      return { end(keep = false) {
+      if (pic) step('picture', `<span class="shimmer ill-ico"></span><span class="shimmer">${esc(label)}</span>`, true);
+      const finishThought = (st) => { if (st.done) return; st.done = true; finishStep(st.step); st.head.textContent = st.title; };
+      const live = (txt) => `<span class="shimmer">${txt}</span>`;
+      const x = (k, extra) => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}`;
+      return { end(keep = false, ok = true) {
         if (over) return; over = true; clearInterval(tick);
-        if ((Date.now() - from) < 1000 && !keep && !w.steps.children.length) { w.work.remove(); return; }
+        if ((Date.now() - from) < 1000 && !keep && !w.steps.children.length) { w.work.remove(); actor?.el.remove(); a.classList.remove('acting'); return; }
         w.work.classList.remove('active'); title.classList.remove('sweep');
-        if (thoughtEl) finishStep(thoughtEl, P('thoughts').sub);
+        thought?.steps.forEach(finishThought);
+        if (rows.picture) finishStep(rows.picture, doneLabel);
         Object.values(rows).forEach((r) => { if (r.querySelector('.spinner')) finishStep(r); });
         clearTimeout(title._swap); title.getAnimations?.().forEach((an) => an.cancel());
-        title.textContent = pic ? doneLabel : P('done').main; tEl.classList.remove('live'); tEl.textContent = sec();
-        if (!w.steps.children.length) w.work.classList.add('collapsed');
-        else setTimeout(() => { if (w.work.isConnected && !w.work.classList.contains('collapsed')) toggleWork(w.work, true); }, 700);
+        swapText(title, ok ? P('done').main : 'Stopped after'); tEl.classList.remove('live'); tEl.textContent = sec();
+        actor?.finish(ok);
+        // Abschluss wie im Haupt-Chat: blauer Haken mit kurzer Zusammenfassung
+        if (ok && !w.steps.querySelector('.step.finished')) {
+          const n = w.steps.querySelectorAll(':scope > .step:not([hidden])').length;
+          const fin = stepLine('dot', `<strong>${P('done').sub}</strong>${n ? ` <span class="t">${n} ${n === 1 ? 'step' : 'steps'}</span>` : ''}`);
+          fin.classList.add('finished');
+          markerIcon(fin, 'check-circle', 'done');
+          w.steps.append(fin);
+        }
+        setTimeout(() => { if (w.work.isConnected && !w.work.classList.contains('collapsed')) toggleWork(w.work, true); }, 900);
       }, thought(text) {
         if (over || !text) return;
-        if (!thoughtEl) {
-          thoughtEl = step('thought', `<span class="shimmer">${P('thoughts').sub}</span>`, true); ph('thoughts');
-          thoughtEl.classList.add('foldable', 'open', 'has-box');
-          thoughtEl.insertAdjacentHTML('beforeend', '<div class="fold"><div class="fold-in"><div class="thought-text"></div></div></div>');
-          thoughtEl.querySelector('.step-line').addEventListener('click', () => thoughtEl.classList.toggle('open'));
-        }
-        raw += text; const box = thoughtEl.querySelector('.thought-text'); box.textContent = raw.replace(/\*\*/g, '').trim(); box.scrollTop = box.scrollHeight; list.scrollTop = list.scrollHeight;
+        // echte Gedanken als einzelne Schritte (wie im Haupt-Chat: ChatVisuals.thoughtSteps), der laufende mit Ladezeichen
+        if (!thought) { thought = { raw: '', steps: [] }; ph('thoughts'); }
+        thought.raw += text;
+        const segs = typeof ChatVisuals !== 'undefined' && ChatVisuals.thoughtSteps ? ChatVisuals.thoughtSteps(thought.raw) : [{ title: P('thoughts').sub, body: thought.raw }];
+        segs.forEach((seg, i) => {
+          let st = thought.steps[i];
+          if (!st) {
+            if (thought.steps[i - 1]) finishThought(thought.steps[i - 1]);
+            const sl = stepLine('spin', '');
+            sl.classList.add('thought');
+            const head = el('button', 'thought-head'); head.type = 'button';
+            const box = el('div', 'thought-text'), fold = el('div', 'fold'), inner = el('div', 'fold-in');
+            inner.append(box); fold.append(inner);
+            sl.querySelector('.step-line').append(head); sl.append(fold);
+            st = thought.steps[i] = { step: sl, head, box, title: '', done: false };
+            head.addEventListener('click', () => { if (st.done && st.box.textContent) sl.classList.toggle('open'); });
+            w.steps.insertBefore(sl, rows.write || null);
+          }
+          if (st.title !== seg.title) { st.title = seg.title; if (st.done) st.head.textContent = seg.title; else st.head.innerHTML = live(esc(seg.title)); }
+          if (seg.body !== seg.title) st.box.textContent = seg.body;
+        });
+        list.scrollTop = list.scrollHeight;
       }, status(d) {
         if (over) return;
         const done = d.status !== 'active', m = d.meta || {};
-        const live = (txt) => `<span class="shimmer">${txt}</span>`;
-        const x = (k, extra) => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}`;
         if (d.stage === 'material') { step('material', done ? x('material', m.relevant === true ? 'answering from them' : m.relevant === false ? 'nothing on this topic' : '') : live(P('material').sub), !done); if (!done) ph('material'); }
         else if (d.stage === 'thinking') {
           const r = step('plan', done ? x('plan', m.analysisFailed ? 'not available' : '') : live(P('plan').sub), !done);
           if (!done && !pic) ph('plan');
           if (done && Array.isArray(m.points) && m.points.length && !r.querySelector('.plan-list')) {
             r.classList.add('foldable', 'has-box');
-            r.insertAdjacentHTML('beforeend', `<div class="fold"><div class="fold-in"><div class="plan-list">${m.points.map((p) => `<div class="plan-item" data-state="done"><span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${esc(p)}</span></div>`).join('')}</div></div></div>`);
+            r.insertAdjacentHTML('beforeend', `<div class="fold"><div class="fold-in"><div class="plan-list">${m.points.map((pt) => `<div class="plan-item" data-state="done"><span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${esc(pt)}</span></div>`).join('')}</div></div></div>`);
             r.querySelector('.step-line').addEventListener('click', () => r.classList.toggle('open'));
           }
-        } else if (d.stage === 'browsing' || d.stage === 'searching_sources') { step('src', done ? x('gather') : live(P('search').sub), !done); if (!done) ph('search'); }
+        } else if (d.stage === 'market') {
+          // Börse: genau die Schritte, die der Server für diese Frage gerechnet hat
+          if (!done) { const k = m.first || 'market'; step('market', live(P(k).sub), true); ph(k); }
+          else {
+            const list2 = Array.isArray(m.steps) && m.steps.length ? m.steps : [['market', m.failed ? 'not reachable' : '']];
+            list2.forEach(([k, extra], i) => (i ? step(`market${i}`, x(k, extra), false) : step('market', x(k, extra), false)));
+            if (list2.length) ph(list2[list2.length - 1][0]);
+          }
+        }
+        else if (d.stage === 'browsing' || d.stage === 'searching_sources') { const k = m.news ? 'news' : 'search'; step('src', done ? x(m.news ? 'gather' : 'gather', m.read ? `${m.read} ${m.read === 1 ? 'source' : 'sources'}` : '') : live(P(k).sub), !done); if (!done) ph(k); }
         else if (d.stage === 'verifying') { step('check', done ? x('review', m.corrected ? `corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : '') : live(P('review').sub), !done); if (!done) ph('review'); }
         else if (d.stage === 'answering') { step('write', done ? x('work') : live(P('work').sub), !done); if (!done && !pic) ph('work'); }
-      }, drop() { over = true; clearInterval(tick); w.work.remove(); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
+      }, drop() { over = true; clearInterval(tick); w.work.remove(); actor?.el.remove(); a.classList.remove('acting'); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
     }
     // Bildwunsch? Dann steht oben von Anfang an „Generating picture“ statt „Thinking“
     // Bildwunsch? Nur wenn ausdrücklich ein Bild erstellt/gezeigt werden soll (nicht schon, wenn das Wort „Bild“ vorkommt)
@@ -1087,7 +1126,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: typeof EFFORTS !== 'undefined' ? EFFORTS[state.effort].toLowerCase() : 'auto', noClarify: true }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: typeof EFFORTS !== 'undefined' ? EFFORTS[state.effort].toLowerCase() : 'auto', fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
@@ -1101,7 +1140,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         else { if (pic) think.drop(); else think.end(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
       } catch (err) {
         rv.flush();
-        if (err.name !== 'AbortError') { think.end(); a.append(el('div', 'dcc-err', esc(err.message || 'Fehler'))); }
+        if (err.name !== 'AbortError') a.append(el('div', 'dcc-err', esc(err.message || 'Fehler')));
+        think.end(false, false);
       } finally {
         think.end();
         if (dccRun === ctrl) dccRun = null;
@@ -1142,7 +1182,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: historyForRequest(hist), model: state.model, effort: EFFORTS[state.effort].toLowerCase() }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: historyForRequest(hist), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: a.dataset.dog }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
@@ -1156,7 +1196,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         else { if (pic) think.drop(); else think.end(); await dccPictures(a, body, list, ctrl.signal); } // doch kein Bild: Bild-Zeile verschwindet
       } catch (err) {
         rv.flush();
-        if (err.name !== 'AbortError') { think.end(); a.append(el('div', 'dcc-err', esc(err.message || 'Fehler'))); }
+        if (err.name !== 'AbortError') a.append(el('div', 'dcc-err', esc(err.message || 'Fehler')));
+        think.end(false, false);
       } finally {
         think.end();
         if (dccRun === ctrl) dccRun = null;

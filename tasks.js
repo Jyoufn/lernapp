@@ -1,6 +1,8 @@
 /* ===================================================================
    Aufgaben (Seitenleiste → „Tasks“, erscheint als eigener Tab)
-   - Board mit vier Spalten: Offen, In Arbeit, Prüfen, Erledigt
+   - Haupt-Ansicht als Liste: Blöcke nach Fälligkeit (Überfällig, Heute, Nächste 7 Tage, Später, Ohne Datum),
+     jede Aufgabe eine Zeile mit Kreis zum Abhaken; „Erledigt“ unten zum Aufklappen. Kein Status mehr.
+   - Dokument-Block „Aufgaben-Board“ behält die Spalten (createBoard ohne list)
    - oben rechts nur Icons: Suche, Filter, Neue Aufgabe
    - Anlegen/Bearbeiten in einem flachen Fenster oben (Titel, Notizen, darunter Pillen
      für Status, Priorität, Datum und Tags – jede öffnet ihr Menü direkt darunter)
@@ -88,14 +90,17 @@ const Tasks = (() => {
   // agents = Aufgaben können an einen Agenten gehen (nur das Haupt-Board „Aufgaben“)
   const AGENT_NAMES = { general: 'Allgemein', learn: 'Lernen', research: 'Research', boerse: 'Börse' };
   const dog = (id, s = 20) => (window.PixelDogs?.svg ? window.PixelDogs.svg(id, s) : '');
-  function createBoard(store, { title = 'Aufgaben', cls = '', cols = null, agents = false } = {}) {
+  // list = Liste statt Spalten (Haupt-Ansicht „Aufgaben“): nur offen / erledigt, Blöcke nach Fälligkeit, Kreis zum Abhaken
+  function createBoard(store, { title = 'Aufgaben', cls = '', cols = null, agents = false, list: listMode = false } = {}) {
+  if (listMode) cols = ['backlog', 'done'];
   const COLS = cols ? ALL_COLS.filter((c) => cols.includes(c.id)) : ALL_COLS;
+  const hasCol = (id) => COLS.some((c) => c.id === id);
   let tasks = store.load() || [];
   tasks.forEach((t) => { if (!Array.isArray(t.tags)) t.tags = t.tag ? [t.tag] : []; delete t.tag; if (!COLS.some((c) => c.id === t.status)) t.status = COLS.some((c) => c.id === 'doing') ? 'doing' : COLS[0].id; });
   const save = () => { store.save(tasks); saveTags(); };
   const filter = { q: '', tags: new Set(), prios: new Set(), due: '' };
   const view = document.createElement('section');
-  view.className = `tk-view${cls ? ` ${cls}` : ''}`;
+  view.className = `tk-view${listMode ? ' tk-listmode' : ''}${cls ? ` ${cls}` : ''}`;
   view.setAttribute('aria-label', title || 'Aufgaben');
   view.innerHTML = `<header class="tk-head">
       ${title ? `<h2>${esc(title)}</h2>` : ''}
@@ -108,7 +113,7 @@ const Tasks = (() => {
         <button type="button" class="tk-new" data-act="new" title="Neue Aufgabe">${fi('plus', 13)}<span>Neue Aufgabe</span></button>
       </div>
     </header>
-    <div class="tk-board"></div>`;
+    ${listMode ? `<div class="tk-board tk-lst"></div>` : '<div class="tk-board"></div>'}`;
   const board = view.querySelector('.tk-board');
   const search = view.querySelector('.tk-search input');
   const fbox = view.querySelector('.tk-filter');
@@ -169,7 +174,108 @@ const Tasks = (() => {
     row.innerHTML = `<span class="tk-dog">${dog(t.agent, 20)}</span><span class="tk-an">${AGENT_NAMES[t.agent]}</span>${state}`;
     return row;
   }
+  /* ---------- Listen-Ansicht: Blöcke nach Fälligkeit, jede Aufgabe eine Zeile mit Kreis zum Abhaken ---------- */
+  const GROUPS = [
+    { id: 'late', name: 'Überfällig', test: (d) => d && d.diff < 0 },
+    { id: 'today', name: 'Heute', test: (d) => d && d.diff === 0 },
+    { id: 'soon', name: 'Diese Woche', test: (d) => d && d.diff > 0 && d.diff <= 7 },
+    { id: 'later', name: 'Später', test: (d) => d && d.diff > 7 },
+    { id: 'none', name: 'Ohne Datum', test: (d) => !d },
+  ];
+  const PRIO_RANK = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+  const DONE_KEY = 'tasks.doneOpen.v1';
+  let doneOpen = false;
+  try { doneOpen = localStorage.getItem(DONE_KEY) === '1'; } catch {}
+  const CHECK = '<svg class="tk-ck-mark" width="10" height="10" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 8.4l3 3 6-6.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // Zeile wie in der Vorlage: Kreis · Titel (Notiz klein darunter) · rechts Datums-Chip (heute blau, überfällig rot) und Flagge für die Priorität
+  const WD_LONG = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const FLAG = { urgent: '#f07a6e', high: '#f07a6e', medium: '#fb9a52', low: '#facc15' };
+  const dueChip = (t, done) => {
+    const d = dueInfo(t.date, done); if (!d) return '';
+    const text = d.diff > 1 && d.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : d.text;
+    return `<span class="tk-chip due${d.cls}">${fi('calendar', 11)}${text}</span>`;
+  };
+  function row(t) {
+    const done = t.status === 'done', prio = byId(PRIOS, t.prio);
+    const ts = t.tags.map(tagOf).filter(Boolean);
+    const el = document.createElement('div');
+    el.className = `tk-row${done ? ' done' : ''}`;
+    el.dataset.id = t.id;
+    el.tabIndex = 0;
+    const chips = [
+      ...ts.slice(0, 2).map((g) => `<span class="tk-chip tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`),
+      t.comments?.length ? `<span class="tk-chip">${fi('chat', 11)}${t.comments.length}</span>` : '',
+      dueChip(t, done),
+      FLAG[prio.id] ? `<span class="tk-flag${prio.id === 'urgent' ? ' urgent' : ''}" style="--c:${FLAG[prio.id]}" aria-label="Priorität ${prio.name}">${fi('flag', 11)}</span>` : '',
+    ].filter(Boolean).join('');
+    el.innerHTML = `<button type="button" class="tk-ck" data-check="${t.id}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}">${CHECK}</button>
+      <div class="tk-row-main">
+        <div class="tk-row-title">${esc(t.title)}</div>
+        ${t.notes ? `<div class="tk-row-notes">${esc(t.notes)}</div>` : ''}
+      </div>
+      ${chips ? `<div class="tk-row-chips">${chips}</div>` : ''}`;
+    if (agents && t.agent && AGENT_NAMES[t.agent]) el.querySelector('.tk-row-main').append(agentRow(t));
+    return el;
+  }
+  function renderList() {
+    const open = tasks.filter((t) => t.status !== 'done' && matches(t));
+    const done = tasks.filter((t) => t.status === 'done' && matches(t)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
+    const sortOpen = (a, b) => (a.date || '9999').localeCompare(b.date || '9999') || PRIO_RANK[a.prio || 'none'] - PRIO_RANK[b.prio || 'none'] || (a.order ?? 0) - (b.order ?? 0);
+    const block = (id, name, items, extra = '') => {
+      const g = document.createElement('section');
+      g.className = `tk-grp g-${id}${extra}`;
+      g.dataset.grp = id;
+      g.innerHTML = `<div class="tk-rows"><div class="tk-grp-head"${id === 'done' ? ' data-toggle-done role="button" tabindex="0"' : ''}><span class="tk-grp-n">${name}</span><span class="tk-count">${items.length}</span><span class="grow"></span>${id === 'done' ? `<svg class="tk-grp-chev" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M6 3.5L10.5 8 6 12.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>` : `<button type="button" class="tk-grp-add" data-grp-add="${id}" aria-label="Aufgabe in „${name}“ anlegen">${fi('plus', 12)}</button>`}</div><div class="tk-rows-in"></div></div>`;
+      g.querySelector('.tk-rows-in').append(...items.map(row));
+      return g;
+    };
+    const quick = document.createElement('label');
+    quick.className = 'tk-quick';
+    quick.innerHTML = `<span class="tk-ck ghost">${fi('plus', 11)}</span><input class="tk-quick-in" placeholder="Aufgabe hinzufügen …" maxlength="120" aria-label="Aufgabe hinzufügen" />`;
+    const parts = [quick];
+    GROUPS.forEach((gr) => { const items = open.filter((t) => gr.test(dueInfo(t.date))).sort(sortOpen); if (items.length) parts.push(block(gr.id, gr.name, items)); });
+    if (!open.length) {
+      const e = document.createElement('div');
+      e.className = 'tk-empty';
+      e.textContent = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : 'Alles erledigt.';
+      parts.push(e);
+    }
+    if (done.length) parts.push(block('done', 'Erledigt', done, doneOpen ? ' open' : ''));
+    const keep = document.activeElement?.classList.contains('tk-quick-in');
+    board.replaceChildren(...parts);
+    if (keep) board.querySelector('.tk-quick-in').focus();
+  }
+  function toggleDone(id) {
+    const t = tasks.find((x) => x.id === id); if (!t) return;
+    const el = board.querySelector(`.tk-row[data-id="${id}"]`);
+    const nowDone = t.status !== 'done';
+    t.status = nowDone ? 'done' : 'backlog';
+    if (nowDone) { t.doneAt = Date.now(); t.progress = 100; } else { delete t.doneAt; if (t.progress === 100) t.progress = 0; t.order = -1; }
+    normalize(); save();
+    if (!el) { render(); return; }
+    // erst der Haken, dann gleitet die Zeile weich weg und taucht im anderen Block auf
+    el.classList.toggle('done', nowDone);
+    el.querySelector('.tk-ck').setAttribute('aria-checked', String(nowDone));
+    el.classList.add('leaving');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setTimeout(() => { render(); board.querySelector(`.tk-row[data-id="${id}"]`)?.classList.add('fresh'); }, reduce ? 0 : 420);
+  }
+  function quickAdd(input) {
+    const title = input.value.trim(); if (!title) return;
+    const t = { id: newId(), title: title.slice(0, 120), notes: '', status: 'backlog', tags: [], prio: 'none', date: '', progress: 0, comments: [], order: -1, created: Date.now() };
+    tasks.push(t); normalize(); save(); render();
+    board.querySelector(`.tk-row[data-id="${t.id}"]`)?.classList.add('fresh');
+    board.querySelector('.tk-quick-in')?.focus();
+  }
+  if (listMode) {
+    board.addEventListener('keydown', (e) => {
+      if (e.target.matches('.tk-quick-in')) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); quickAdd(e.target); } if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); } return; }
+      if (e.key === 'Enter' && e.target.matches('[data-toggle-done]')) e.target.click();
+    });
+  }
+
   function render() {
+    if (listMode) { renderList(); const n = filter.tags.size + filter.prios.size + (filter.due ? 1 : 0); const fc = view.querySelector('.tk-fcount'); fc.hidden = !n; fc.textContent = n; return; }
     const any = filter.q || filter.tags.size || filter.prios.size || filter.due;
     board.replaceChildren(...COLS.map((col) => {
       const all = tasks.filter((t) => t.status === col.id);
@@ -212,10 +318,10 @@ const Tasks = (() => {
   const MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
-  function edit(id, status = 'backlog') {
+  function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: '', progress: 0, comments: [], ...(agents ? { agent: startAgent, output: 'chat' } : {}) };
+    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: startAgent, output: 'chat' } : {}) };
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
@@ -227,7 +333,7 @@ const Tasks = (() => {
       </div>
       <textarea class="tk-f-notes" name="notes" rows="2" placeholder="Notizen …" maxlength="1000" aria-label="Notizen">${esc(t.notes)}</textarea>
       <div class="tk-pills">
-        ${pill('status', COLS.map((c) => `<button type="button" class="tk-mi" data-status="${c.id}"><i style="background:${c.c}"></i><span>${c.name}</span>${fi('check', 12)}</button>`).join(''))}
+        ${listMode ? '' : pill('status', COLS.map((c) => `<button type="button" class="tk-mi" data-status="${c.id}"><i style="background:${c.c}"></i><span>${c.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
@@ -236,7 +342,7 @@ const Tasks = (() => {
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" placeholder="Kommentar schreiben …" maxlength="500" aria-label="Kommentar schreiben" /><button type="button" class="tk-tag-plus" data-cm-send aria-label="Kommentar senden" title="Senden">' + fi('arrow-up', 12) + '</button></div>', 'comments')}
       </div>
       <div class="tk-form-foot">
-        <div class="tk-progress" title="Fortschritt"><div class="tk-slider" role="slider" tabindex="0" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100"><i class="tk-sl-fill"></i><b class="tk-sl-knob"></b></div><span class="tk-pv"></span></div>
+        <div class="tk-progress" title="Fortschritt"${listMode ? ' hidden' : ''}><div class="tk-slider" role="slider" tabindex="0" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100"><i class="tk-sl-fill"></i><b class="tk-sl-knob"></b></div><span class="tk-pv"></span></div>
         ${t0 ?`<button type="button" class="tk-del" data-act="delete">${fi('trash', 12)}Löschen</button>` : ''}<button type="submit" class="tk-create">${t0 ? 'Speichern' : 'Aufgabe erstellen'}</button></div>
     </form>`;
     const form = modal.querySelector('form');
@@ -248,7 +354,8 @@ const Tasks = (() => {
     const draw = () => {
       const st = byId(COLS, t.status), pr = byId(PRIOS, t.prio), du = dueInfo(t.date);
       const ts = t.tags.map(tagOf).filter(Boolean);
-      form.querySelector('[data-open="status"]').innerHTML = `<i style="background:${st.c}"></i>${st.name}`;
+      const sp = form.querySelector('[data-open="status"]');
+      if (sp) sp.innerHTML = `<i style="background:${st.c}"></i>${st.name}`;
       form.querySelector('[data-open="prio"]').innerHTML = `${prioIcon(pr.id, 14)}${pr.id === 'none' ? 'Priorität' : pr.name}`;
       form.querySelector('[data-open="date"]').innerHTML = `${fi('calendar', 13)}${du ? du.text : 'Datum'}`;
       // mehrere Tags: Farbpunkte überlappend, erster Name, „+N“
@@ -454,7 +561,7 @@ const Tasks = (() => {
       // neue Aufgabe mit Agent (oder ein Agent wurde nachträglich gewählt) → sofort an den Agenten
       const target = t0 || t;
       const go = agents && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
-      if (go) { target.status = 'doing'; target.order = -1; target.run = { state: 'queued', updated: Date.now() }; }
+      if (go) { if (hasCol('doing')) target.status = 'doing'; target.order = -1; target.run = { state: 'queued', updated: Date.now() }; }
       normalize(); save();
       if (go) startRun(target);
       // weich speichern: Knopf zeigt kurz einen Haken, dann schließt das Fenster und die Karte blendet ein
@@ -513,13 +620,24 @@ const Tasks = (() => {
     const res = e.target.closest('[data-result]');
     if (res) { openResult(tasks.find((x) => x.id === res.dataset.result)); return; }
     const rt = e.target.closest('[data-retry]');
-    if (rt) { const t = tasks.find((x) => x.id === rt.dataset.retry); if (t) { t.status = 'doing'; t.run = { state: 'queued', updated: Date.now() }; normalize(); save(); render(); startRun(t); } return; }
+    if (rt) { const t = tasks.find((x) => x.id === rt.dataset.retry); if (t) { if (hasCol('doing')) t.status = 'doing'; t.run = { state: 'queued', updated: Date.now() }; normalize(); save(); render(); startRun(t); } return; }
     const add = e.target.closest('[data-add]');
     if (add) { edit(null, add.dataset.add); return; }
-    const c = e.target.closest('.tk-card');
+    const ck = e.target.closest('[data-check]');
+    if (ck) { toggleDone(ck.dataset.check); return; }
+    const ga = e.target.closest('[data-grp-add]');
+    if (ga) { const k = ga.dataset.grpAdd, d = new Date(); if (k === 'soon') d.setDate(d.getDate() + 1); edit(null, 'backlog', ['late', 'today', 'soon'].includes(k) ? isoOf(d) : ''); return; }
+    if (e.target.closest('[data-toggle-done]')) {
+      doneOpen = !doneOpen;
+      try { localStorage.setItem(DONE_KEY, doneOpen ? '1' : '0'); } catch {}
+      board.querySelector('.tk-grp.g-done')?.classList.toggle('open', doneOpen);
+      return;
+    }
+    if (e.target.closest('.tk-quick')) return;
+    const c = e.target.closest('.tk-card, .tk-row');
     if (c) edit(c.dataset.id);
   });
-  board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card')) edit(e.target.dataset.id); });
+  board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card, .tk-row')) edit(e.target.dataset.id); if (e.key === ' ' && e.target.matches('.tk-row')) { e.preventDefault(); toggleDone(e.target.dataset.id); } });
 
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
@@ -553,9 +671,9 @@ const Tasks = (() => {
         if ((s.updated || 0) <= (t.run?.updated || 0) && t.run?.state === s.state) return;
         const was = t.run?.state;
         t.run = { state: s.state, chatId: s.chatId || '', docId: s.docId || '', error: s.error || '', updated: s.updated };
-        if (s.state === 'running' && t.status === 'backlog') { t.status = 'doing'; t.order = -1; }
+        if (s.state === 'running' && t.status === 'backlog' && hasCol('doing')) { t.status = 'doing'; t.order = -1; }
         if (s.state === 'done' && was !== 'done') {
-          if (t.status !== 'done') { t.status = 'review'; t.order = -1; }
+          if (t.status !== 'done' && hasCol('review')) { t.status = 'review'; t.order = -1; }
           t.progress = 100;
           t.comments = [...(t.comments || []), { text: `${AGENT_NAMES[t.agent] || 'Agent'}: fertig – ${t.output === 'doc' ? 'Dokument' : 'Chat'} „${s.title || t.title}“ ist bereit.`, at: s.finished || Date.now() }];
         }
@@ -591,7 +709,7 @@ const Tasks = (() => {
   const main = createBoard({
     load: () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } },
     save: (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} },
-  }, { agents: true });
+  }, { agents: true, list: true });
   const view = main.view, render = main.render;
   view.hidden = true;
   let open = false;

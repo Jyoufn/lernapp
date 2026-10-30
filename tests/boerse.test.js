@@ -458,3 +458,17 @@ test('Börse: „Füg die Käufe aus meinem Handelstagebuch hinzu“ = nur eintr
   assert.ok(it.adding && !it.ideas && !it.chartsOnly);
   assert.ok(!B.intentOf('Welche Aktien kann ich kaufen?', []).adding);
 });
+
+test('Börsen-Agent: „Financial News“ ohne bestimmte Aktie liest allgemeine Marktnachrichten (Bing, wenn Google nichts liefert)', async () => {
+  fx = M.installFetch([
+    { match: (c) => /yahoo|stooq/.test(c.url), respond: () => new Response('weg', { status: 503 }) },
+    { match: (c) => c.url.includes('news.google.com'), respond: () => new Response('<rss></rss>') },
+    { match: (c) => c.url.includes('bing.com/news'), respond: () => new Response('<rss><channel><item><title>DAX klettert auf Rekordhoch</title><link>https://b.de/1</link><pubDate>Thu, 29 Oct 2026 10:00:00 GMT</pubDate><News:Source>Handelsblatt</News:Source></item></channel></rss>') },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Der DAX steigt.'])) },
+  ]);
+  await W.runChat({ env: M.ENV, body: { log: false, effort: 'low', agent: 'boerse', messages: [{ role: 'user', text: 'Was gibt es für Financial News?' }] }, send: M.collect().send, signal: new AbortController().signal });
+  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+  assert.match(sys, /MARKTNACHRICHTEN/);
+  assert.match(sys, /DAX klettert auf Rekordhoch – Handelsblatt/);
+  assert.ok(fx.calls.some((c) => c.url.includes('bing.com/news')), 'Ersatzquelle wurde gefragt');
+});

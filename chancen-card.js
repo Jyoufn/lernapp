@@ -9,7 +9,7 @@ const ChancenCard = (() => {
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nf = (x, d = 2) => (x == null || !Number.isFinite(+x) ? '–' : (+x).toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d }));
   const eur = (x) => (x == null ? '–' : `${nf(x)} €`);
-    const LABEL = { kaufen: 'Kaufen', beobachten: 'Beobachten', meiden: 'Nicht kaufen' };
+  const LABEL = { kaufen: 'Kaufen', beobachten: 'Beobachten', meiden: 'Nicht kaufen' };
   const crvOf = (p) => (p.entry && p.stop && p.target && p.entry > p.stop ? (p.target - p.entry) / (p.entry - p.stop) : null);
 
   function parse(raw) {
@@ -22,13 +22,28 @@ const ChancenCard = (() => {
     return memo.p;
   };
 
+  // Karte, aufgeräumt: oben Name + Index (DAX, MDAX …) und Etikett; darunter eine ruhige Zeile Branche · Muster;
+  // dann der Kurs groß und Einstieg / Stopp / Ziel als drei gleich breite Felder; Chance:Risiko und Trefferquote klein darunter;
+  // Begründung höchstens zwei Zeilen. Klick klappt den Chart auf.
   function row(p) {
     const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
-    const nums = `<span><i>Kurs</i>${eur(p.price)}</span><span><i>Einstieg</i>${eur(p.entry)}</span><span><i>Stopp</i><em class="neg">${eur(p.stop)}</em></span><span><i>Ziel</i><em class="pos">${eur(p.target)}</em></span>${crv ? `<span><i>Chance : Risiko</i>${nf(crv, 1)} : 1</span>` : ''}${p.hit ? `<span><i>Treffer</i>${esc(p.hit)}</span>` : ''}`;
-    return `<div class="chn-pick ${v}" data-sym="${esc(p.symbol)}" data-name="${esc(p.name)}" role="button" tabindex="0" aria-expanded="false" title="Chart anzeigen">
-        <div class="chn-top"><span class="chn-name"><b>${esc(p.name)}</b><small>${esc(p.type || '')}${p.sector ? ` · ${esc(p.sector)}` : ''}</small></span>
-          <span class="chn-badge ${v}">${LABEL[v]}</span></div>
-        <div class="chn-nums">${nums}</div>
+    const meta = [p.sector, p.type].filter(Boolean).map(esc).join(' · ');
+    const facts = [crv ? `<span>Chance : Risiko&nbsp; <b>${nf(crv, 1)} : 1</b></span>` : '', p.hit ? `<span>Trefferquote&nbsp; <b>${esc(p.hit)}</b></span>` : ''].filter(Boolean).join('<i class="chn-dot"></i>');
+    return `<div class="chn-pick ${v}" data-sym="${esc(p.symbol)}" data-name="${esc(p.name)}" role="button" tabindex="0" aria-expanded="false">
+        <div class="chn-top">
+          <span class="chn-name"><b>${esc(p.name)}</b>${p.index ? `<span class="chn-idx">${esc(p.index)}</span>` : ''}</span>
+          <span class="chn-badge ${v}">${LABEL[v]}</span>
+        </div>
+        ${meta ? `<div class="chn-meta">${meta}</div>` : ''}
+        <div class="chn-mid">
+          <div class="chn-price"><span>Kurs</span><b>${eur(p.price)}</b></div>
+          <div class="chn-levels">
+            <span><i>Einstieg</i><b>${eur(p.entry)}</b></span>
+            <span><i>Stopp</i><b class="neg">${eur(p.stop)}</b></span>
+            <span><i>Ziel</i><b class="pos">${eur(p.target)}</b></span>
+          </div>
+        </div>
+        ${facts ? `<div class="chn-facts">${facts}</div>` : ''}
         ${p.reason ? `<p class="chn-why">${esc(p.reason)}</p>` : ''}
         <div class="chn-chart"><div class="chn-chart-in"></div></div>
       </div>`;

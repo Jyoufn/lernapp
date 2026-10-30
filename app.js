@@ -632,7 +632,7 @@ const AGENT_HINTS = {
   code: /(programmier|\bcod(e|en|ing)\b|skript|script|quellcode|\bbug|fehler im code|debug|javascript|typescript|python|\bhtml\b|\bcss\b|\bjava\b|c\+\+|c#|\bsql\b|\bapi\b|\blua\b|roblox studio|unity|godot|\bapp (bauen|programmieren|entwickeln)|website (bauen|programmieren|erstellen)|spiel (programmieren|bauen|entwickeln)|game (programmieren|bauen|entwickeln)|funktion schreiben|kompilier|syntax)/i,
   research: /(recherchier|quellen|studien?\b|wissenschaftlich|belege|forschung|aktuelle (daten|zahlen|lage)|statistik zu|faktencheck|stimmt es, dass)/i,
   boerse: /(\baktien?\b|-aktie\b|börse|boerse|mein depot|planspiel|\bdax\b|nasdaq|\betf\b|kursziel|stop-?loss|investier|einsteigen|aussteigen|dividende|charts?\b.*(aktie|kurs))/i,
-  learn: /(hausaufgabe|arbeitsblatt|klausur|klassenarbeit|prüfung|lernzettel|abfragen|üben|erklär(e|en)? mir|versteh(e)? (ich )?nicht|schulstoff|lerne?n? für)/i,
+  learn: /(präsentation|praesentation|powerpoint|keynote|\bfolien\b|hausaufgabe|arbeitsblatt|klausur|klassenarbeit|prüfung|lernzettel|abfragen|üben|erklär(e|en)? mir|versteh(e)? (ich )?nicht|schulstoff|lerne?n? für)/i,
 };
 function agentFor(text, current) {
   if (!current || current === 'general') return null;
@@ -1213,6 +1213,14 @@ function renderMarkdown(target, text, opts = {}) {
     if (!target._chnFig || target._chnRaw !== raw) { target._chnFig = ChancenCard.figure(raw); target._chnRaw = raw; }
     pre.replaceWith(target._chnFig);
   });
+  // Präsentation (```praesentation, Lern-Agent): Folien-Vorschau mit PowerPoint / Keynote / PDF (praesentation.js) – Karte bleibt beim Weiterschreiben
+  target.querySelectorAll('pre:has(code.language-praesentation)').forEach((pre) => {
+    if (!window.Praesentation) { pre.remove(); return; }
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._pz ||= new Map());
+    if (!keep.has(raw)) { const ok = !!Praesentation.parse(raw); const f = Praesentation.figure(raw); if (!ok) { pre.replaceWith(f); return; } keep.set(raw, f); }
+    pre.replaceWith(keep.get(raw));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -1778,6 +1786,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     sweepRow(step.querySelector('.step-line'));
     const t = step.querySelector('.t');
     picStep = { step, from, web, done: false, tick: setInterval(() => { t.textContent = secs(from); }, 250) };
+    if (!web) { ensureActor(); actor?.set('paint'); } // Hund wechselt an die Staffelei, solange das Bild entsteht
     msgEl.classList.add('pic-in-timeline');
     scrollToBottom();
   };
@@ -1834,7 +1843,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const phase = (k) => { setActivity(P(k).kind, P(k).main); ensureActor(); actor?.set(P(k).anim); };
   const live = (k, from = Date.now()) => `<span class="shimmer">${P(k).sub}</span><span class="t live" data-from="${from}">1s</span>`;
   const doneLine = (k, extra = '', dur = '') => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}${dur ? ` <span class="t">${dur}</span>` : ''}`;
-  const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(lastAsk) && /(erstell|mach|zeichne|generier|zeig|gib|such|nimm)/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem)/i.test(lastAsk); // mit Textwunsch: normaler Ablauf
+  const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(lastAsk) && /(erstell|mach|zeichne|generier|zeig|gib|such|nimm)/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem|präsentation|praesentation|folien|powerpoint|keynote|pptx)/i.test(lastAsk); // mit Textwunsch / Präsentation: normaler Ablauf
   let quiet = false; // Kurznachricht (z. B. „Moin“): kein Working/Thinking – die Antwort kommt einfach
   const pendingTimer = setTimeout(() => {
     if (signal.aborted || quiet) return;

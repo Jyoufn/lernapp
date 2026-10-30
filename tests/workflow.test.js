@@ -193,7 +193,7 @@ test('5 Recherche: echte Zählung (Suchanfragen, gefunden, abgerufen, bewertet, 
     ...researchRoutes(),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['In der Lichtreaktion wird Wasser gespalten [1]. ', 'Wikipedia fasst es zusammen [2].'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   assert.ok(r.stages().includes('searching_sources:active'));
   const done = r.of('research').find((e) => e.status === 'done');
   // 3 Suchanfragen: OpenAlex (en), Wikipedia (en), Wikipedia (de)
@@ -239,7 +239,7 @@ test('7 Recherche fehlgeschlagen: search_failed wird gemeldet, Antwort kommt tro
     ...researchRoutes({ wikiSearch: down, openAlex: down }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort ohne Quellen.'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   assert.ok(r.stages().includes('search_failed:failed'));
   assert.equal(r.result.status, 'completed');
   const res = r.of('research').at(-1);
@@ -258,7 +258,7 @@ test('8 Einzelne Quelle nicht erreichbar: als „failed“ gezählt, übrige Que
     ...researchRoutes({ wikiPage: () => M.json({ error: 'x' }, 500) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort [1].'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   const done = r.of('research').find((e) => e.status === 'done');
   assert.equal(done.counts.failed, 1);   // deutscher Wikipedia-Artikel nicht abrufbar
   assert.equal(done.counts.fetched, 1);
@@ -278,7 +278,7 @@ test('9 Widersprüchliche Quellen: beide gehen an Modell und Prüfer, mit Regel 
     ...researchRoutes({ openAlex: () => M.json({ results: [a, b] }) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Die Angaben gehen auseinander: etwa 10 % [1] bzw. 4 % [2].'])) },
   ]);
-  const r = await run({ ...msg('Wie effizient ist die Photosynthese?'), effort: 'high' });
+  const r = await run({ ...msg('Wie effizient ist die Photosynthese?'), effort: 'high', agent: 'learn' });
   const sys = M.systemOf(fx.calls.find(M.is.geminiStream));
   assert.match(sys, /10 percent/);
   assert.match(sys, /4 percent/);
@@ -419,7 +419,7 @@ test('Prompt-Injection in einer Quelle wird erkannt und die Quelle nicht verwend
     ...researchRoutes({ openAlex: () => M.json({ results: [evil, PAPER] }) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['ok'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   const done = r.of('research').find((e) => e.status === 'done');
   assert.ok(done.others.some((o) => /eingeschleuste Anweisungen/.test(o.note)));
   assert.ok(!M.systemOf(fx.calls.find(M.is.geminiStream)).includes('Ignore all previous'));
@@ -487,7 +487,7 @@ test('Quellenauswahl: Übersicht vor Spezialstudie, bester Wikipedia-Artikel als
     ...researchRoutes({ openAlex: () => M.json({ results: [special, overview] }) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['ok'])) },
   ]);
-  const r = await W.runChat({ env: M.ENV, body: { ...msg('Erkläre die Photosynthese.'), effort: 'high' }, send: (() => { const c = M.collect(); r0 = c; return c.send; })(), signal: new AbortController().signal });
+  const r = await W.runChat({ env: M.ENV, body: { ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' }, send: (() => { const c = M.collect(); r0 = c; return c.send; })(), signal: new AbortController().signal });
   const done = r0.of('research').find((e) => e.status === 'done');
   const titles = done.sources.map((s) => s.title);
   assert.equal(titles[0], 'Photosynthese'); // deutschsprachige Quelle zuerst
@@ -528,7 +528,7 @@ test('Inhaltliche Quellenbewertung: thematisch unpassende Studie wird trotz Wort
     ...researchRoutes({ openAlex: () => M.json({ results: [offTopic, PAPER] }) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['ok'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   const done = r.of('research').find((e) => e.status === 'done');
   assert.match(judgeInput, /LEARNER'S QUESTION: Erkläre die Photosynthese\./);
   assert.ok(!done.sources.some((s) => /pyruvate/i.test(s.title)));
@@ -607,7 +607,7 @@ test('Deutsche Quellen zuerst: englische Fachartikel nur als Ergänzung bis zu d
     ...researchRoutes({ openAlex: () => M.json({ results: [paper(1), paper(2), paper(3), paper(4)] }) }),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['ok [1]'])) },
   ]);
-  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high' });
+  const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   const done = r.of('research').filter((e) => e.status === 'done').at(-1);
   assert.equal(done.sources[0].title, 'Photosynthese'); // deutsche Quelle zuerst
   assert.ok(done.sources.length <= 3);
@@ -758,4 +758,16 @@ test('Kein Bild erzeugen, wenn der Nutzer von seinem angehängten Bild spricht (
   const r = await run({ messages: [{ role: 'user', text: 'Im Bild siehst du mein Handelsbuch, bau das in meine Übersicht ein und zeig sie mir', images: [{ url: 'data:image/png;base64,iVBORw0KGgo=', name: 'tagebuch.png' }] }], effort: 'low' });
   const reasons = r.events.filter((e) => e.event === 'status').map((e) => e.data.effort?.reason || '');
   assert.ok(!reasons.some((x) => /Bildwunsch/.test(x)), `kein Bildwunsch: ${reasons.join(' | ')}`);
+});
+
+test('Fachwissenschaftliche Quellen (OpenAlex) nur beim Lern-Agenten', async () => {
+  fx = M.installFetch([
+    { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
+    ...researchRoutes({ openAlex: () => M.json({ results: [] }) }),
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['ok'])) },
+  ]);
+  await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'general' });
+  assert.ok(!fx.calls.some((c) => c.url.includes('openalex')), 'Allgemein fragt keine Fachliteratur ab');
+  await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
+  assert.ok(fx.calls.some((c) => c.url.includes('openalex')), 'Lernen fragt Fachliteratur ab');
 });
