@@ -125,6 +125,7 @@ const FadeIcons = (() => {
     info: { b: '<circle cx="8" cy="8" r="6.5"/>', c: '<rect x="7.15" y="7" width="1.7" height="4.4" rx=".85"/><circle cx="8" cy="5" r="1.05"/>' },
     sliders: { b: '<rect x="1.5" y="3.3" width="13" height="1.5" rx=".75"/><rect x="1.5" y="7.25" width="13" height="1.5" rx=".75"/><rect x="1.5" y="11.2" width="13" height="1.5" rx=".75"/><circle cx="5" cy="4.05" r="1.75"/><circle cx="10.6" cy="8" r="1.75"/><circle cx="6.6" cy="11.95" r="1.75"/>' },
     expand: { k: '<path d="M9.5 2.5h4v4M13.5 2.5 9.2 6.8M6.5 13.5h-4v-4M2.5 13.5l4.3-4.3"/>' },
+    focus: { k: '<circle cx="8" cy="8" r="5.6" stroke-dasharray="6.3 2.5" transform="rotate(-58 8 8)"/>' }, // Fokusmodus: Kreis aus vier Bögen
     shrink: { k: '<path d="M13.5 6.5h-4v-4M9.5 6.5l4-4M2.5 9.5h4v4M6.5 9.5l-4 4"/>' },
     kanban: { b: '<rect x="1.5" y="2" width="3.6" height="12" rx="1.3"/><rect x="6.2" y="2" width="3.6" height="8.5" rx="1.3"/><rect x="10.9" y="2" width="3.6" height="10.5" rx="1.3"/>' },
   };
@@ -312,6 +313,17 @@ const DocIcons = (() => {
     pill: { b: '<rect x="1.4" y="7.4" width="21.2" height="9.2" rx="4.6" transform="rotate(-45 12 12)"/>', cl: '<path d="M8.9 8.9l6.2 6.2"/>' },
     ticket: { b: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5z"/>', cl: '<path d="M15 7.6v1.2M15 11.4v1.2M15 15.2v1.2"/>' },
     tag: { b: '<path d="M2.5 4.5a2 2 0 0 1 2-2h7.2c.5 0 1 .2 1.4.6l8.4 8.4a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L3.1 13.1c-.4-.4-.6-.9-.6-1.4z"/>', c: '<circle cx="7.5" cy="7.5" r="1.8"/>' },
+    // ergänzt 30.10.
+    note: { b: '<path d="M5 3h14a2 2 0 0 1 2 2v9.6L14.6 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>', c: '<path d="M21.5 14h-5a2 2 0 0 0-2 2v5.5z"/><rect x="6.5" y="7" width="11" height="2" rx="1"/><rect x="6.5" y="11" width="7" height="2" rx="1"/>' },
+    checklist: { b: '<rect x="3" y="3" width="18" height="18" rx="4"/>', cl: '<path d="M6.8 8.8l1.6 1.6 2.6-2.8M6.8 14.8l1.6 1.6 2.6-2.8M13.8 9.2h3.6M13.8 15.2h3.6"/>' },
+    inbox: { b: '<rect x="2.5" y="4" width="19" height="16" rx="4"/>', cl: '<path d="M2.5 13.2h4.6l1.4 2.4h7l1.4-2.4h4.6"/>' },
+    quote: { b: '<path d="M3.5 12C3.5 8 5.8 5.3 9.3 4.7v2.8c-1.7.5-2.7 1.7-2.9 3.3h2.1A1.5 1.5 0 0 1 10 12.3v5.2A1.5 1.5 0 0 1 8.5 19H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M13.5 12c0-4 2.3-6.7 5.8-7.3v2.8c-1.7.5-2.7 1.7-2.9 3.3h2.1a1.5 1.5 0 0 1 1.5 1.5v5.2a1.5 1.5 0 0 1-1.5 1.5H15a1.5 1.5 0 0 1-1.5-1.5z"/>' },
+    feather: { b: '<path d="M20.5 3.5c-6.4-.4-12 3.3-13.4 10L5.3 20.2l1.6.6 2-4.6c6.6-.9 10.6-5.8 11.6-12.7z"/>', cl: '<path d="M8.6 16.2 15.4 9.4"/>' },
+    anchor: { s: '<circle cx="12" cy="4.8" r="2.7"/>', k: line('M12 7.5v13.5M4.8 13.2a7.2 7.2 0 0 0 14.4 0M8.4 10.6h7.2', 2.2) },
+    infinity: { k: line('M12 12c-2-2.8-3.6-4-5.5-4a4 4 0 0 0 0 8c1.9 0 3.5-1.2 5.5-4zm0 0c2 2.8 3.6 4 5.5 4a4 4 0 0 0 0-8c-1.9 0-3.5 1.2-5.5 4z', 2.4) },
+    hashtag: { k: line('M9.6 3.5 7.6 20.5M16.4 3.5l-2 17M4.2 9h16.3M3.5 15h16.3', 2.3) },
+    flag2: { b: '<rect x="4" y="2.5" width="2.4" height="19" rx="1.2"/><path d="M7.5 4h11.3c.8 0 1.2.9.7 1.5L17 8.8l2.5 3.3c.5.6 0 1.5-.7 1.5H7.5z"/>' },
+    rainbow: { k: line('M3 18a9 9 0 0 1 18 0M6.5 18a5.5 5.5 0 0 1 11 0', 2.4) + '<circle cx="12" cy="18" r="1.6" fill="currentColor"/>' },
   };
   // Reihenfolge im Auswahlfenster: nach Themen gruppiert
   const ORDER = ['book', 'notebook', 'books', 'cap', 'school', 'backpack', 'pen', 'pencil', 'eraser', 'ruler', 'scissors', 'paperclip', 'clipboard', 'bookmark', 'board', 'certificate', 'quiz', 'calendar', 'clock', 'alarm', 'stopwatch', 'hourglass', 'list', 'folder', 'archive', 'language',

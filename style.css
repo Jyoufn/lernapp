@@ -8884,3 +8884,18 @@ div.tl4-h { cursor: default; }
 .bst-stat-v { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .bst-stat-v small { margin-left: auto; flex: none; font-size: 12.5px; }
 .bst-stat:last-child { padding-right: 0; }
+
+/* Fokusmodus v2 (30.10., 23:40): Icon = Kreis aus vier Bögen, ohne Rand/Fläche (auch nicht nach dem Klick);
+   aktiv: oben mittig ein Kasten mit einem runden Kreis – Klick beendet; kein Browser-Vollbild */
+.dc-topbar .dc-focusbtn, .dc-topbar .dc-focusbtn:hover, .dc-topbar .dc-focusbtn:focus, .dc-topbar .dc-focusbtn:active { border: 0; background: none; box-shadow: none; outline: none; -webkit-tap-highlight-color: transparent; }
+.dc-topbar .dc-focusbtn { color: var(--text-3); transition: color 140ms ease; }
+.dc-topbar .dc-focusbtn:hover { color: var(--text); }
+.dc-focus-bar { display: none; }
+.dc-editor.focus .dc-focus-bar { position: absolute; top: 14px; left: 50%; z-index: 40; display: grid; place-items: center; width: 52px; height: 34px; border: 1px solid var(--menu-border); border-radius: 11px; background: var(--menu-bg); transform: translateX(-50%); animation: dc-focus-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.dc-editor.focus .dc-focus-exit { position: static; display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 10px; background: none; transform: none; animation: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dc-editor.focus .dc-focus-exit:hover { background: none; }
+.dc-focus-exit i { display: block; width: 14px; height: 14px; border: 2px solid var(--text-2); border-radius: 50%; transition: border-color 140ms ease, transform 200ms var(--spring); }
+.dc-focus-exit:hover i { border-color: var(--text); transform: scale(1.08); }
+/* „Icon hinzufügen“ / „Cover hinzufügen“: keine Fläche, kein Rand – auch nicht, solange darauf geklickt wurde */
+.dc-add, .dc-add:hover, .dc-add:focus, .dc-add:active, .dc-add:focus-visible { background: none; border: 0; box-shadow: none; outline: none; -webkit-tap-highlight-color: transparent; }
+.dc-add:hover { color: var(--text-2); }

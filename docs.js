@@ -505,7 +505,7 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   function renderSide() {
-    const loose = docs.filter((d) => inWs(d) && !projOf(d.projectId) && !isEmpty(d)).sort((a, b) => b.updated - a.updated).slice(0, 6);
+    const loose = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated).slice(0, 6);
     side.hidden = !loose.length; // ohne Dokumente keine leere Überschrift
     side.innerHTML = (window.sbSectionHead?.('Dokumente', 'docs') || '<div class="section-label">Dokumente</div>')
       // Projekt-Ordner stehen nicht in der Seitenleiste (nur in der Bibliothek); Dokumente ohne Projekt mit eigenem Icon oder Linien-Icon
@@ -1265,7 +1265,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (!doc) { view.innerHTML = '<div class="dc-empty big">Dieses Dokument gibt es nicht mehr.</div>'; return; }
       view.innerHTML = `<div class="dc-topbar"><div class="dc-hist"><button type="button" class="icon-btn" data-act="undo" aria-label="Rückgängig" title="Rückgängig (Strg+Z)">${fi('undo', 15)}</button><button type="button" class="icon-btn redo" data-act="redo" aria-label="Wiederholen" title="Wiederholen (Strg+Umschalt+Z)">${fi('undo', 15)}</button></div><span class="grow"></span>
           <span class="dc-busy" hidden></span>
-          <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('expand', 15)}</button>
+          <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('focus', 16)}</button>
           <button type="button" class="icon-btn dc-setbtn" data-act="settings" aria-label="Einstellungen des Dokuments">${fi('sliders', 15)}</button>
           <button type="button" class="icon-btn dc-panebtn" data-act="pane" aria-label="Seitenfenster rechts ein-/ausklappen" title="Seitenfenster">${icon('i-sidebar', 16)}</button></div>
         <div class="dc-body"><div class="dc-scroll">
@@ -1283,7 +1283,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         </div></div>
         <nav class="prompt-nav dc-nav" aria-label="Überschriften in diesem Dokument"></nav>
         <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>
-        <button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden">${fi('shrink', 18)}</button>`;
+        <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><i></i></button></div>`;
       wireMeta(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
       grow(view.querySelector('.dc-title-in')); grow(view.querySelector('.dc-sub-in'));
       if (writing.has(doc.id)) busy('KI schreibt …');
@@ -1306,19 +1306,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         document.activeElement?.blur?.(); hideFmt();
         a?.classList.add('collapsed', 'doc-focus');
         a?.classList.remove('rpane-open');
-        const fs = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-        try { const r = fs?.call(document.documentElement); r?.catch?.(() => {}); } catch {}
+        // kein Browser-Vollbild (zeigt eigene Hinweise und ein ×) – die App selbst blendet alles aus
       } else {
         a?.classList.remove('doc-focus');
         a?.classList.toggle('collapsed', !!focusPrev?.collapsed);
-        const ex = document.exitFullscreen || document.webkitExitFullscreen;
-        if (document.fullscreenElement || document.webkitFullscreenElement) { try { const r = ex?.call(document); r?.catch?.(() => {}); } catch {} }
         drawPane();
       }
       applyFocus();
     }
     // Vollbild vom System beendet (Esc, Wischgeste) → Fokusmodus auch beenden
-    ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { if (focusOn && !(document.fullscreenElement || document.webkitFullscreenElement)) setFocus(false); }));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && focusOn) { e.preventDefault(); setFocus(false); } });
     const changed = () => { touch(doc); renderSide(); if (list.open) list.render(); window.markDrafts?.(); };
     function wire() {
@@ -1525,6 +1521,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const row = (ic, label, value) => `<div class="dc-mrow"><span class="dc-mlabel">${fi(ic, 15)}${label}</span><span class="dc-mval">${value}</span></div>`;
       box.innerHTML = row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
         + row('clock', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
+        + row('folder', 'Projekt', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${projOf(doc.projectId) ? '' : ' empty'}" data-mopen="proj">${projOf(doc.projectId) ? `<i class="tag-dot" style="background:${projOf(doc.projectId).c}"></i>${esc(projOf(doc.projectId).name)}` : 'Kein Projekt'}</button>
+            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Projekt suchen oder neu" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span>`)
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
         + row('hash', 'Tags', `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
@@ -1534,7 +1532,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         + row('list', 'Abschnitte', String(heads));
     }
     function drawMetaTags() {
-      const list = view.querySelector('.dc-meta .tk-tag-list'), inp = view.querySelector('.dc-meta .tk-tag-in'); if (!list) return;
+      const list = view.querySelector('.dc-meta .tk-tag-list:not(.dc-proj-list)'), inp = view.querySelector('.dc-meta .tk-tag-in:not(.dc-proj-in)'); if (!list) return;
       const q = inp.value.trim().toLowerCase(), have = doc.tags || [];
       const found = tags.filter((g) => g.name.toLowerCase().includes(q));
       // Tag bearbeiten: Name, Farbe, Löschen
@@ -1554,8 +1552,20 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         + found.map((g) => `<span class="tk-mi tag${have.includes(g.id) ? ' on' : ''}" data-mtag="${g.id}" role="button" tabindex="0"><i style="background:${g.c}"></i><span>${esc(g.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-medit="${g.id}" aria-label="Tag bearbeiten" title="Bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml">Noch keine Tags</span>' : '');
     }
+    // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen mit nächster Farbe
+    function drawMetaProj() {
+      const list = view.querySelector('.dc-proj-list'), inp = view.querySelector('.dc-proj-in'); if (!list) return;
+      const q = inp.value.trim(), ql = q.toLowerCase();
+      const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
+      const exact = projects.some((p) => p.name.toLowerCase() === ql);
+      list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span>„${esc(q)}“ anlegen</span></span>` : '')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><i style="background:${p.c}"></i><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
+        + (!found.length && !q ? '<span class="tk-ml">Noch keine Projekte – Namen eintippen</span>' : '');
+    }
+    const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawMeta(); };
+    const newProj = (name) => { const pr = { id: newId('p'), name: name.slice(0, 40), c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
-    const tagPop = () => view.querySelectorAll('.dc-meta .dc-mpop')[1];
+    const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in:not(.dc-proj-in))');
     // Klick auf den Strich klappt die Infos auf/zu (Zustand wird gemerkt)
     function wireMeta() {
       const meta = view.querySelector('.dc-meta'); if (!meta) return;
@@ -1577,13 +1587,17 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (op) {
           const pop = op.closest('.dc-mpop'), open = !pop.classList.contains('open');
           closeMenus(); pop.classList.toggle('open', open);
+          if (open && op.dataset.mopen === 'proj') { const inp = pop.querySelector('.dc-proj-in'); inp.value = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); }
           if (open && op.dataset.mopen === 'tags') { const inp = pop.querySelector('.tk-tag-in'); inp.value = ''; drawMetaTags(); setTimeout(() => inp.focus(), 30); }
           return;
         }
+        const pj = e.target.closest('[data-mproj]');
+        if (pj) { setProj(pj.dataset.mproj); return; }
+        if (e.target.closest('[data-mproj-new]')) { newProj(view.querySelector('.dc-proj-in').value.trim()); return; }
         const pr = e.target.closest('[data-prio]');
         if (pr) { if (pr.dataset.prio === 'none') delete doc.priority; else doc.priority = pr.dataset.prio; touch(doc); changed(); drawMeta(); return; }
         // Tags anlegen (Farbe wählen) und bearbeiten
-        if (e.target.closest('[data-madd]')) { metaNew = view.querySelector('.dc-meta .tk-tag-in').value.trim(); drawMetaTags(); return; }
+        if (e.target.closest('[data-madd]')) { metaNew = view.querySelector('.dc-meta .tk-tag-in:not(.dc-proj-in)').value.trim(); drawMetaTags(); return; }
         const nc = e.target.closest('[data-mnew-color]');
         if (nc && metaNew) {
           const g = { id: newId('g'), name: metaNew, c: nc.dataset.mnewColor };
@@ -1626,10 +1640,21 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (!e.target.closest('.dc-mpop')) closeMenus();
       });
       meta.addEventListener('input', (e) => {
+        if (e.target.matches('.dc-proj-in')) { drawMetaProj(); return; }
         if (e.target.matches('.tk-tag-in')) { metaNew = ''; metaEdit = null; drawMetaTags(); }
         if (e.target.matches('[data-mname]')) { const g = tagOf(metaEdit); if (g) { g.name = e.target.value.trim() || g.name; saveTags(); } }
       });
       meta.addEventListener('keydown', (e) => {
+        if (e.target.matches('.dc-proj-in')) {
+          e.stopPropagation();
+          if (e.key === 'Escape') { closeMenus(); return; }
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          const name = e.target.value.trim(); if (!name) return;
+          const hit = projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
+          if (hit) setProj(hit.id); else newProj(name);
+          return;
+        }
         if (!e.target.matches('.tk-tag-in')) return;
         e.stopPropagation();
         if (e.key === 'Escape') { closeMenus(); return; }

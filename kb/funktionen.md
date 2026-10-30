@@ -16,8 +16,10 @@
 
 ## Dokumente
 - Editor: Cover, Icon, Titel, Beschreibung, „Infos ⌄“, Inhalt (contenteditable), Überschriften h2–h4 einklappbar mit Griff links, Slash-Menü, Format-Menü bei Markierung (Ask AI), Rechtsklick-/„•••“-Menü für Blöcke.
-- Oben rechts: Fokusmodus (`#f-expand`), Einstellungen (Regler), Seitenfenster (Dokument-Chat).
-- **Fokusmodus**: nur Titel + Inhalt, Sidebar/Leisten/Griffe/Seitenfenster weg, Vollbild, nicht bearbeitbar; runder Knopf oben mittig (`#f-shrink`) oder Esc beendet.
+- Oben rechts: Fokusmodus (`#f-focus`, Kreis aus vier Bögen, ohne Rand/Fläche), Einstellungen (Regler), Seitenfenster (Dokument-Chat).
+- **Fokusmodus**: nur Titel + Inhalt, Sidebar/Leisten/Griffe/Seitenfenster weg, **kein Browser-Vollbild** (nur in der App), nicht bearbeitbar; oben mittig ein kleiner Kasten mit rundem Kreis → Klick (oder Esc) beendet.
+- Infos: Erstellt, Bearbeitet, **Projekt** (suchen/wählen/neu anlegen, `doc.projectId`, `projects` mit Farbe), Priorität, Tags, Umfang, Abschnitte. Sidebar „Dokumente“ zeigt alle (auch mit Projekt).
+- „Icon/Cover hinzufügen“: nur Text, keine Fläche/kein Rand (auch nicht nach dem Klick). Dokument-Icons `#d-…` (155, neu u. a. note, checklist, inbox, quote, feather, anchor, infinity, hashtag, flag2, rainbow).
 - Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat.
 
 ## Aufgaben (`tasks.js`, Liste)
