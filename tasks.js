@@ -326,16 +326,18 @@ const Tasks = (() => {
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
     // Liste: Fenster mit Zeilen wie das Termin-Fenster der Kalender-Vorlage – nur Beschreibung, Datum, Priorität, Tags; unten Agent + Aktionen
-    const QUICK = [['today', 'Heute'], ['tomorrow', 'Morgen'], ['week', 'Nächste Woche'], ['', 'Kein Datum']];
-    if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
+        if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
       <div class="tk-sheet-head">
-        <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Neue Aufgabe" maxlength="120" aria-label="Titel" required />
+        <b class="tk-sheet-h">${t0 ? 'Aufgabe bearbeiten' : 'Neue Aufgabe'}</b>
         <button type="button" class="tk-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
       </div>
+      <div class="tk-sheet-main">
+        <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="120" aria-label="Titel" required />
+        <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
+      </div>
       <div class="tk-sheet-rows">
-        <label class="tk-sheet-note"><span class="tk-si">${fi('file', 14)}</span><textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea></label>
-        ${pill('date', `<div class="tk-quick-dates">${QUICK.map(([k, n]) => `<button type="button" data-qdate="${k}">${n}</button>`).join('')}</div><div class="tk-cal"></div>`, 'date')}
-        ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}"><span class="tk-mi-ic" style="color:${FLAG[p.id] || 'var(--text-4)'}">${fi('flag', 13)}</span><span>${p.id === 'none' ? 'Keine Priorität' : p.name}</span>${fi('check', 12)}</button>`).join(''))}
+        ${pill('date', `<div class="tk-cal"></div><button type="button" class="tk-date-clear" data-qdate="">Datum entfernen</button>`, 'date')}
+        ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}"><span class="tk-mi-ic">${prioIcon(p.id, 15)}</span><span>${p.id === 'none' ? 'Keine Priorität' : p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
@@ -346,7 +348,7 @@ const Tasks = (() => {
         ${t0?.run?.state === 'done' ? `<button type="button" class="tk-sheet-ib" data-result="${t0.id}" aria-label="Ergebnis öffnen" title="Ergebnis öffnen">${fi(t0.output === 'doc' ? 'file' : 'chat', 13)}</button>` : ''}
         ${t0 && !(t0.agent && t0.run) ? `<button type="button" class="tk-sheet-ib" data-act="done" aria-label="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}" title="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}">${fi(t0.status === 'done' ? 'refresh' : 'check', 13)}</button>` : ''}
         ${t0 ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen" title="Löschen">${fi('trash', 13)}</button>` : ''}
-        <button type="submit" class="tk-create ghost">${t0 ? 'Speichern' : 'Erstellen'}</button>
+        <button type="submit" class="tk-create tk-make">${t0 ? 'Speichern' : 'Erstellen'}</button>
         ${agents && !locked ? `<button type="button" class="tk-create tk-go" data-act="go" hidden>${fi('sparkle', 12)}An Agent geben</button>` : ''}
         <div class="tk-progress" hidden><div class="tk-slider" role="slider" tabindex="0" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100"><i class="tk-sl-fill"></i><b class="tk-sl-knob"></b></div><span class="tk-pv"></span></div>
       </div>
@@ -407,12 +409,13 @@ const Tasks = (() => {
         const set = (k, html, empty) => { const b = form.querySelector(`[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${html[0]}</span><span class="tk-rv">${html[1]}</span>`; b.classList.toggle('empty', !!empty); } };
         const dd = t.date ? new Date(`${t.date}T12:00:00`) : null;
         set('date', [fi('calendar', 14), dd ? `${dd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}` : 'Datum hinzufügen'], !dd);
-        set('prio', [FLAG[pr.id] ? `<span style="color:${FLAG[pr.id]}">${fi('flag', 14)}</span>` : fi('flag', 14), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
+        set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
         set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
         const go = form.querySelector('[data-act="go"]');
         if (go) { go.hidden = !t.agent; go.innerHTML = `${fi('sparkle', 12)}An ${AGENT_NAMES[t.agent] || 'Agent'} geben`; }
-        form.querySelectorAll('[data-qdate]').forEach((b) => b.classList.toggle('on', b.dataset.qdate === '' ? !t.date : false));
+        const clr = form.querySelector('.tk-date-clear'); if (clr) clr.hidden = !t.date; // „Kein Datum“: einfach nichts wählen oder entfernen
+        form.querySelector('.tk-make')?.classList.toggle('ghost', !!(go && !go.hidden)); // Agent gewählt: „An … geben“ ist der Hauptknopf
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
         set('output', [fi(t.output === 'doc' ? 'file' : 'chat', 14), `Ergebnis als ${t.output === 'doc' ? 'Dokument' : 'Chat'}`], false);
       }
