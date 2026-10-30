@@ -547,13 +547,13 @@ const Docs = (() => {
     const view = el('section', 'dc-view dc-list');
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap">
-      <div class="cl-head"><h2>Library</h2><button type="button" class="cl-new" data-act="new" title="New document">${fi('plus', 14)}<span>New document</span></button></div>
-      <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Search documents" aria-label="Search documents" /></label>
+      <div class="cl-head"><h2>Bibliothek</h2><button type="button" class="cl-new" data-act="new" title="Neues Dokument">${fi('plus', 14)}<span>Neues Dokument</span></button></div>
+      <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Dokumente durchsuchen" aria-label="Dokumente durchsuchen" /></label>
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const row = (d, i) => `<div class="cl-row" data-open-doc="${d.id}" data-key="${d.id}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
-        <span class="cl-av">${docIcon(d) ? `<svg width="16" height="16" style="color:${esc(d.icon.c)}"><use href="#d-${d.icon.name}"/></svg>` : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span><span class="cl-title">${esc(d.title || 'Untitled')}</span><span class="cl-time">${relTime(d.updated)}</span>
-        <span class="cl-acts"><button type="button" class="lb-act cl-pin${d.pinned ? ' on' : ''}" data-row="pin" aria-label="${d.pinned ? 'Unpin' : 'Pin'}" title="${d.pinned ? 'Unpin' : 'Pin'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Delete document" title="Delete">${fi('trash', 14)}</button></span></div>`;
+        <span class="cl-av">${docIcon(d) ? `<svg width="16" height="16" style="color:${esc(d.icon.c)}"><use href="#d-${d.icon.name}"/></svg>` : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span><span class="cl-title">${esc(d.title || 'Ohne Titel')}</span><span class="cl-time">${relTime(d.updated)}</span>
+        <span class="cl-acts"><button type="button" class="lb-act cl-pin${d.pinned ? ' on' : ''}" data-row="pin" aria-label="${d.pinned ? 'Unpin' : 'Pin'}" title="${d.pinned ? 'Unpin' : 'Pin'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Dokument löschen" title="Löschen">${fi('trash', 14)}</button></span></div>`;
     const api = {
       open: false,
       setProject() { api.render(); }, // Projekte gibt es in der Liste nicht mehr
@@ -562,9 +562,9 @@ const Docs = (() => {
         const items = docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
           .sort((a, b) => b.updated - a.updated);
         let i = 0;
-        rows.innerHTML = [['Pinned', items.filter((d) => d.pinned)], ['Recent', items.filter((d) => !d.pinned)]]
+        rows.innerHTML = [['Angeheftet', items.filter((d) => d.pinned)], ...UIKit.timeGroups(items.filter((d) => !d.pinned), (d) => d.updated)]
           .filter(([, r]) => r.length).map(([label, r]) => `<div class="cl-label">${label}</div>${r.map((d) => row(d, i++)).join('')}`).join('')
-          || `<div class="cl-empty">${q ? 'No documents found' : 'No documents yet'}</div>`;
+          || `<div class="cl-empty">${q ? 'Keine Dokumente gefunden' : 'Noch keine Dokumente'}</div>`;
       },
       show() {
         if (!view.isConnected) panel()?.append(view);
@@ -582,7 +582,7 @@ const Docs = (() => {
         const d = docOf(ra.closest('[data-open-doc]').dataset.openDoc); if (!d) return;
         if (ra.dataset.row === 'pin') { window.flipList(rows, () => { d.pinned = !d.pinned; save(); renderSide(); api.render(); }, d.id); return; }
         // Löschen: erster Klick färbt rot, zweiter löscht
-        if (!ra.classList.contains('confirm')) { ra.classList.add('confirm'); ra.title = 'Click again to delete'; setTimeout(() => { ra.classList.remove('confirm'); ra.title = 'Delete'; }, 2500); return; }
+        if (!ra.classList.contains('confirm')) { ra.classList.add('confirm'); ra.title = 'Zum Löschen nochmal klicken'; setTimeout(() => { ra.classList.remove('confirm'); ra.title = 'Löschen'; }, 2500); return; }
         window.flipList(rows, () => remove(d.id));
         return;
       }
@@ -781,7 +781,7 @@ const Docs = (() => {
     // Bilder der Antwort erzeugen: oben „Generating picture“ (schimmernd, mit Sekunden), danach blendet das Bild weich ein
     async function dccPictures(a, body, list, signal) {
       if (!body?.querySelector('.chat-illustration[data-prompt]') || !window.hydrateIllustrations) return;
-      const line = dccThink(a, list, 'Generating picture', 'Generated picture');
+      const line = dccThink(a, list, 'Bild erzeugen', 'Bild erzeugt');
       await hydrateIllustrations(body, signal).catch(() => {});
       line.end(true); list.scrollTop = list.scrollHeight;
     }
@@ -993,7 +993,7 @@ const Docs = (() => {
     /* „Thinking“ wie im Haupt-Chat: Zeile mit schimmerndem Text und Sekunden; sobald die Antwort kommt,
        wird daraus „Done thinking Xs“ (sehr schnelle Antworten zeigen gar nichts).
        thought(): echte Gedanken des Modells live darunter; danach „Thought for Xs“, ein Klick klappt sie auf */
-    function dccThink(a, list, label = 'Thinking', doneLabel = 'Done thinking') {
+    function dccThink(a, list, label = 'Nachdenken', doneLabel = 'Fertig gedacht') {
       // GENAU die Zeitleiste des Haupt-Chats (createWork/stepLine aus app.js) und derselbe Ablauf je Agent (thinking.js):
       // Kopf mit Hauptstatus und Hund (PixelDogs.actor) → Schritte → Gedanken als einzelne Schritte → am Ende „Completed Xs“
       // und ein blauer Haken mit „… ready · n steps“; danach klappt die Zeitleiste weich zu. Im Seitenfenster nur etwas kleiner.
@@ -1005,7 +1005,7 @@ const Docs = (() => {
       w.work.classList.add('active');
       const act = w.head.querySelector('.act'), title = w.head.querySelector('.work-title'), tEl = w.head.querySelector('.t');
       const setAct = (kind, text) => { if (over) return; if (act.dataset.kind !== kind) { act.dataset.kind = kind; act.innerHTML = ACT_MARKUP[kind] || ACT_MARKUP.work; } title.classList.add('sweep'); swapText(title, text); };
-      const P = (k) => window.Thinking ? Thinking.of(agent, k) : { main: 'Working', sub: k, kind: 'work', anim: 'think' };
+      const P = (k) => window.Thinking ? Thinking.of(agent, k) : { main: 'Arbeiten', sub: k, kind: 'work', anim: 'think' };
       // Hund neben dem Hauptstatus wie im Haupt-Chat
       let actor = null;
       if (window.PixelDogs?.actor) { actor = PixelDogs.actor(agent); a.prepend(actor.el); a.classList.add('acting'); }
@@ -1034,12 +1034,12 @@ const Docs = (() => {
         if (rows.picture) finishStep(rows.picture, doneLabel);
         Object.values(rows).forEach((r) => { if (r.querySelector('.spinner')) finishStep(r); });
         clearTimeout(title._swap); title.getAnimations?.().forEach((an) => an.cancel());
-        swapText(title, ok ? P('done').main : 'Stopped after'); tEl.classList.remove('live'); tEl.textContent = sec();
+        swapText(title, ok ? P('done').main : 'Gestoppt nach'); tEl.classList.remove('live'); tEl.textContent = sec();
         actor?.finish(ok);
         // Abschluss wie im Haupt-Chat: blauer Haken mit kurzer Zusammenfassung
         if (ok && !w.steps.querySelector('.step.finished')) {
           const n = w.steps.querySelectorAll(':scope > .step:not([hidden])').length;
-          const fin = stepLine('dot', `<strong>${P('done').sub}</strong>${n ? ` <span class="t">${n} ${n === 1 ? 'step' : 'steps'}</span>` : ''}`);
+          const fin = stepLine('dot', `<strong>${P('done').sub}</strong>${n ? ` <span class="t">${n} ${n === 1 ? 'Schritt' : 'Schritte'}</span>` : ''}`);
           fin.classList.add('finished');
           markerIcon(fin, 'check-circle', 'done');
           w.steps.append(fin);
@@ -1090,21 +1090,21 @@ const Docs = (() => {
             if (list2.length) ph(list2[list2.length - 1][0]);
           }
         }
-        else if (d.stage === 'browsing' || d.stage === 'searching_sources') { const k = m.news ? 'news' : 'search'; step('src', done ? x(m.news ? 'gather' : 'gather', m.read ? `${m.read} ${m.read === 1 ? 'source' : 'sources'}` : '') : live(P(k).sub), !done); if (!done) ph(k); }
-        else if (d.stage === 'verifying') { step('check', done ? x('review', m.corrected ? `corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : '') : live(P('review').sub), !done); if (!done) ph('review'); }
+        else if (d.stage === 'browsing' || d.stage === 'searching_sources') { const k = m.news ? 'news' : 'search'; step('src', done ? x(m.news ? 'gather' : 'gather', m.read ? `${m.read} ${m.read === 1 ? 'Quelle' : 'Quellen'}` : '') : live(P(k).sub), !done); if (!done) ph(k); }
+        else if (d.stage === 'verifying') { step('check', done ? x('review', m.corrected ? `${m.corrected} ${m.corrected === 1 ? 'Punkt' : 'Punkte'} korrigiert` : '') : live(P('review').sub), !done); if (!done) ph('review'); }
         else if (d.stage === 'answering') { step('write', done ? x('work') : live(P('work').sub), !done); if (!done && !pic) ph('work'); }
       }, paint() { // Text ist fertig, jetzt entsteht noch ein Bild: Hund an die Staffelei, Schritt „Generating picture“
         if (over) return;
         ph('picture');
         if (!rows.picture) step('picture', `<span class="shimmer ill-ico"></span><span class="shimmer">Generating picture</span>`, true);
-        doneLabel = 'Generated picture';
+        doneLabel = 'Bild erzeugt';
       }, drop() { over = true; clearInterval(tick); w.work.remove(); actor?.el.remove(); a.classList.remove('acting'); } }; // drop: Zeile ganz weg (z. B. doch kein Bild)
     }
     // Bildwunsch? Dann steht oben von Anfang an „Generating picture“ statt „Thinking“
     // Bildwunsch? Nur wenn ausdrücklich ein Bild erstellt/gezeigt werden soll (nicht schon, wenn das Wort „Bild“ vorkommt)
     const wantsPicture = (q) => /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(q || '') && /(erstell|mach|zeichne|generier|zeig|gib|füg|such|nimm|einbau|rein)/i.test(q || '');
     const webPicture = (q) => /(internet|im netz|online|website|webseite|echte?s? (bild|foto)|such)/i.test(q || '');
-    const pictureLabel = (q) => (webPicture(q) ? 'Searching picture' : 'Generating picture');
+    const pictureLabel = (q) => (webPicture(q) ? 'Bild suchen' : 'Bild erzeugen');
     /* Antwort weich einblenden wie im Haupt-Chat: Text kommt in kleinen Schritten, neue Absätze gleiten herein.
        filter = was vom Rohtext sichtbar sein darf (z. B. ohne [[ÄNDERN …]] und Rückfrage-Block) */
     function dccReveal(body, list, filter) {

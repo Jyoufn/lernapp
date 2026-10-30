@@ -227,30 +227,29 @@ const Tasks = (() => {
     el.tabIndex = 0;
     el.setAttribute('aria-expanded', String(openRows.has(t.id)));
     const st = ckState(t), busy = st === 'run';
-    const dueText = du ? (du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text) : '';
+    const dueText = du ? `${du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text}${t.time ? ` ${t.time}` : ''}` : '';
     const agentBit = agents && t.agent && AGENT_NAMES[t.agent] && !done ? `<span class="tk-row-dog" title="${esc(AGENT_NAMES[t.agent])}${busy ? ' arbeitet …' : ''}">${dog(t.agent, 20)}</span>` : '';
     const r = t.run || {};
-    const agentLine = agents && t.agent && AGENT_NAMES[t.agent] ? `<div class="tk-more-agent"><span class="tk-dog">${dog(t.agent, 20)}</span><span>${esc(AGENT_NAMES[t.agent])}${r.state === 'done' ? ' · fertig' : r.state === 'failed' ? ' · hat nicht geklappt' : busy ? ' · arbeitet …' : ''}</span>`
-      + (r.state === 'done' ? `<button type="button" class="tk-more-btn" data-result="${t.id}">${fi(t.output === 'doc' ? 'file' : 'chat', 12)}${t.output === 'doc' ? 'Dokument' : 'Chat'} öffnen</button>` : r.state === 'failed' ? `<button type="button" class="tk-more-btn" data-retry="${t.id}">${fi('refresh', 11)}Nochmal</button>` : '') + '</div>' : '';
+    // fertig vom Agenten: rechts der Hund + Name des Ergebnisses (Dokument/Chat) – Klick öffnet es
+    const result = agents && t.agent && AGENT_NAMES[t.agent] && r.state === 'done' ? `<button type="button" class="tk-row-res" data-result="${t.id}" title="${t.output === 'doc' ? 'Dokument' : 'Chat'} öffnen"><span class="tk-dog">${dog(t.agent, 20)}</span><span class="tk-row-res-t">${esc(r.title || t.title)}</span></button>` : '';
     // An einen Agenten geben – solange die Aufgabe offen ist und noch kein Agent daran arbeitet
-    const canSend = agents && !done && !(r.state === 'queued' || r.state === 'running' || r.state === 'done');
-    const sendRow = canSend ? `<div class="tk-send"><span class="tk-send-l">An Agent geben</span>${Object.entries(AGENT_NAMES).filter(([aid]) => !window.PixelDogs?.UNAVAILABLE?.has(aid)).map(([aid, n]) => `<button type="button" class="tk-send-a${t.agent === aid ? ' on' : ''}" data-send="${aid}" title="An ${esc(n)} geben"><span class="tk-dog">${dog(aid, 20)}</span>${esc(n)}</button>`).join('')}</div>` : '';
+    // nur wenn im Fenster ein Agent gewählt wurde: EIN Knopf „An Lernen geben“ (sonst gibt es nichts zum Aufklappen)
+    const canSend = agents && !done && !t.repeat && t.agent && AGENT_NAMES[t.agent] && !window.PixelDogs?.UNAVAILABLE?.has(t.agent) && !(r.state === 'queued' || r.state === 'running' || r.state === 'done');
+    const sendRow = canSend ? `<div class="tk-send"><button type="button" class="tk-send-a" data-send="${t.agent}"><span class="tk-dog">${dog(t.agent, 20)}</span>An ${esc(AGENT_NAMES[t.agent])} geben</button></div>` : '';
+    const notes = t.notes ? `<p class="tk-row-notes">${esc(t.notes)}</p>` : '';
+    if (!notes && !sendRow) el.classList.add('bare'); // nichts zum Aufklappen – Klick zeigt nur den Stift
     el.innerHTML = `<div class="tk-row-line">
         <button type="button" class="tk-ck s-${st}" data-check aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}" ${busy ? 'disabled' : ''}>${CHECK}</button>
         <b class="tk-row-title">${esc(t.title)}</b>
         ${ts.length ? `<span class="tk-row-tags">${ts.slice(0, 3).map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}${ts.length > 3 ? `<span class="tk-more-n">+${ts.length - 3}</span>` : ''}</span>` : ''}
         <span class="grow"></span>
-        ${agentBit}
+        ${result || agentBit}
         ${t.repeat ? `<span class="tk-row-rep" title="${esc(repText(t.repeat))}">${fi('refresh', 11)}${esc(repShort(t.repeat))}</span>` : ''}
-        ${dueText ? `<span class="tk-row-due${du.cls}">${dueText}</span>` : ''}
+        ${dueText && !result ? `<span class="tk-row-due${du.cls}">${dueText}</span>` : ''}
         <span class="tk-row-prio" title="${prio.id === 'none' ? 'Keine Priorität' : `Priorität: ${prio.name}`}">${prio.id === 'none' ? '' : prioIcon(prio.id, 15)}</span>
         <button type="button" class="tk-row-edit" data-edit aria-label="Bearbeiten" title="Bearbeiten" tabindex="-1">${fi('pencil', 12)}</button>
       </div>
-      <div class="tk-row-more"><div class="tk-row-more-in">
-        <p class="tk-row-notes${t.notes ? '' : ' empty'}">${t.notes ? esc(t.notes) : 'Keine Beschreibung'}</p>
-        ${agentLine}
-        ${sendRow}
-      </div></div>`;
+      <div class="tk-row-more"><div class="tk-row-more-in">${notes}${sendRow}</div></div>`;
     return el;
   }
   // Auf-/Zuklappen läuft über die Höhe (wie die Chancen-Karten)
@@ -262,7 +261,12 @@ const Tasks = (() => {
     if (open) openRows.add(id); else openRows.delete(id);
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const to = box.offsetHeight;
-    box.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: open ? 420 : 320, easing: open ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)' });
+    if (from === to) return; // nichts zum Aufklappen (nur der Stift gleitet herein)
+    const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+    box.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: open ? 380 : 300, easing: ease });
+    // Inhalt blendet mit und gleitet leicht – öffnen: kommt von oben nach, schließen: geht zuerst
+    box.firstElementChild?.animate(open ? [{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }] : [{ opacity: 1 }, { opacity: 0 }],
+      { duration: open ? 320 : 160, delay: open ? 60 : 0, easing: open ? ease : 'ease-out', fill: 'backwards' });
   }
   function renderList() {
     const open = tasks.filter((t) => t.status !== 'done' && matches(t));
@@ -307,9 +311,15 @@ const Tasks = (() => {
     el.classList.toggle('done', nowDone);
     const ck = el.querySelector('.tk-ck');
     if (ck) ck.className = `tk-ck s-${nowDone ? 'done' : 'open'} pop`;
-    el.classList.add('leaving');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    setTimeout(() => { render(); board.querySelector(`.tk-row[data-id="${id}"]`)?.classList.add('fresh'); }, reduce ? 0 : 420);
+    if (reduce) { render(); return; }
+    // Haken zeichnet sich → Zeile blendet aus und die Lücke schließt sich weich → taucht im anderen Block wieder auf
+    setTimeout(() => {
+      const h = el.offsetHeight;
+      el.style.overflow = 'hidden';
+      el.animate([{ opacity: 1, height: `${h}px` }, { opacity: 0, height: `${h}px`, offset: 0.4 }, { opacity: 0, height: '0px' }], { duration: 420, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' })
+        .onfinish = () => { render(); board.querySelector(`.tk-row[data-id="${id}"]`)?.classList.add('fresh'); };
+    }, 300);
   }
   if (listMode) board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-toggle-done]')) e.target.click(); });
 
@@ -360,7 +370,7 @@ const Tasks = (() => {
   function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
+    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, time: '', progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
     const hadRepeat = !!t0?.repeat; // war vorher eine Automatisierung → beim Entfernen auch beim Server löschen
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
@@ -374,18 +384,22 @@ const Tasks = (() => {
         <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
       </div>
       <div class="tk-sheet-rows">
-        ${pill('date', `<div class="tk-cal"></div><button type="button" class="tk-mi tk-date-none" data-qdate=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Kein Datum</span>${fi('check', 12)}</button>`, 'date')}
+        ${pill('date', `<div class="tk-cal"></div>
+          <div class="tk-dt-time"><span class="tk-dt-l">${fi('clock', 13)}Uhrzeit</span><button type="button" class="ce-switch" data-ttime role="switch" aria-label="Uhrzeit"><i></i></button></div>
+          <div class="tk-dt-wheel" hidden><div data-wheel="due"></div></div>
+          <button type="button" class="tk-mi tk-date-none" data-qdate=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Kein Datum</span>${fi('check', 12)}</button>`, 'date')}
+        ${listMode && agents && !locked ? pill('sched', `<button type="button" class="tk-mi" data-rep="daily"><span class="tk-mi-ic">${fi('refresh', 12)}</span><span>Täglich</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-rep="weekdays"><span class="tk-mi-ic">${fi('briefcase', 12)}</span><span>Werktags (Mo–Fr)</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-rep="weekly"><span class="tk-mi-ic">${fi('calendar', 12)}</span><span>Wöchentlich</span>${fi('check', 12)}</button>
+          <div class="tk-rep-days" hidden>${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-repday="${d}">${WD_LONG[d].slice(0, 2)}</button>`).join('')}</div>
+          <div class="tk-rep-time"><span>Uhrzeit</span><div data-wheel="rep"></div></div>`, 'sched') : ''}
         ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}"><span class="tk-mi-ic">${prioIcon(p.id, 15)}</span><span>${p.id === 'none' ? 'Keine Priorität' : p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
-        ${listMode && agents && !locked ? pill('repeat', `<button type="button" class="tk-mi" data-rep=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Nicht wiederholen</span>${fi('check', 12)}</button>
-          <button type="button" class="tk-mi" data-rep="daily"><span class="tk-mi-ic">${fi('refresh', 12)}</span><span>Täglich</span>${fi('check', 12)}</button>
-          <button type="button" class="tk-mi" data-rep="weekdays"><span class="tk-mi-ic">${fi('briefcase', 12)}</span><span>Werktags (Mo–Fr)</span>${fi('check', 12)}</button>
-          <button type="button" class="tk-mi" data-rep="weekly"><span class="tk-mi-ic">${fi('calendar', 12)}</span><span>Wöchentlich</span>${fi('check', 12)}</button>
-          <div class="tk-rep-days" hidden>${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-repday="${d}">${WD_LONG[d].slice(0, 2)}</button>`).join('')}</div>
-          <div class="tk-rep-time" hidden><span>Uhrzeit</span><div data-wheel="rep"></div></div>
-          <p class="tk-rep-note" hidden>Der Agent erledigt die Aufgabe dann automatisch – das Ergebnis kommt jedes Mal als neues Dokument.</p>`, 'repeat') : ''}
+        ${listMode && agents && !locked ? pill('auto', `<button type="button" class="tk-mi" data-auto="0"><span class="tk-mi-ic">${fi('x', 11)}</span><span>Nein</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-auto="1"><span class="tk-mi-ic">${fi('bolt', 12)}</span><span>Ja – der Agent erledigt sie regelmäßig</span>${fi('check', 12)}</button>`) : ''}
+        ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
       </div>
       <div class="tk-sheet-foot">
         <span class="grow"></span>
@@ -422,6 +436,7 @@ const Tasks = (() => {
     const grow = listMode ? UIKit.autoGrow(notes) : () => { notes.style.height = 'auto'; notes.style.height = `${Math.min(notes.scrollHeight, 200)}px`; };
     if (!listMode) notes.addEventListener('input', grow);
 
+    let swapping = false; // läuft gerade der Wechsel Datum ↔ Zeitplan
     /* Pillen beschriften */
     const draw = () => {
       const st = byId(COLS, t.status), pr = byId(PRIOS, t.prio), du = dueInfo(t.date);
@@ -455,19 +470,31 @@ const Tasks = (() => {
       if (listMode) {
         const set = (k, html, empty) => { const b = form.querySelector(`[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${html[0]}</span><span class="tk-rv">${html[1]}</span>`; b.classList.toggle('empty', !!empty); } };
         const dd = t.date ? new Date(`${t.date}T12:00:00`) : null;
-        set('date', [fi('calendar', 14), dd ? `${dd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}` : 'Datum hinzufügen'], !dd);
+        set('date', [fi('calendar', 14), dd ? `${dd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${t.time ? `, ${t.time} Uhr` : ''}${du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}` : 'Datum hinzufügen'], !dd);
         set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
         set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
         form.querySelector('.tk-date-none')?.classList.toggle('on', !t.date); // „Kein Datum“ immer wählbar, Haken, wenn keins gesetzt ist
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
-        if (form.querySelector('[data-open="repeat"]')) {
-          set('repeat', [fi('refresh', 14), t.repeat ? repText(t.repeat) : 'Wiederholen'], !t.repeat);
+        // Datum: Uhrzeit-Schalter + Rad
+        const tsw = form.querySelector('[data-ttime]');
+        if (tsw) { tsw.classList.toggle('on', !!t.time); tsw.closest('.tk-dt-time').classList.toggle('off', !t.date); form.querySelector('.tk-dt-wheel').hidden = !t.time || !t.date; }
+        // Automatisierung: statt des Datums steht der Zeitplan (anderes Icon), darunter die Zahl der Wiederholungen
+        if (form.querySelector('[data-open="auto"]')) {
+          set('auto', [fi('bolt', 14), t.repeat ? 'Automatisierung: Ja' : 'Automatisierung'], !t.repeat);
+          set('sched', [fi('refresh', 14), t.repeat ? repText(t.repeat) : ''], false);
+          const lim = t.repeat?.limit || 0;
+          set('limit', [fi('hash', 14), lim ? `${lim}-mal wiederholen` : 'Ohne Limit wiederholen'], false);
+          form.querySelectorAll('[data-auto]').forEach((b) => b.classList.toggle('on', b.dataset.auto === (t.repeat ? '1' : '0')));
           form.querySelectorAll('[data-rep]').forEach((b) => b.classList.toggle('on', b.dataset.rep === (t.repeat?.every || '')));
+          form.querySelectorAll('[data-limit]').forEach((b) => b.classList.toggle('on', +b.dataset.limit === lim));
           form.querySelector('.tk-rep-days').hidden = t.repeat?.every !== 'weekly';
           form.querySelectorAll('[data-repday]').forEach((b) => b.classList.toggle('on', +b.dataset.repday === t.repeat?.day));
-          form.querySelector('.tk-rep-time').hidden = !t.repeat;
-          form.querySelector('.tk-rep-note').hidden = !t.repeat;
+          if (!swapping) { // beim ersten Zeichnen ohne Animation
+            form.querySelector('.tk-pop[data-k="date"]').hidden = !!t.repeat;
+            form.querySelector('.tk-pop[data-k="sched"]').hidden = !t.repeat;
+            form.querySelector('.tk-pop[data-k="limit"]').hidden = !t.repeat;
+          }
         }
       }
     };
@@ -494,7 +521,7 @@ const Tasks = (() => {
     /* Datum: kleiner Kalender zum Anklicken (zweiter Klick auf den Tag entfernt das Datum) */
     const calBox = form.querySelector('.tk-cal');
     let calMonth = null;
-    const drawCal = () => {
+    const drawCal = (dir = 0) => {
       const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1, 12);
       const start = new Date(first); start.setDate(1 - ((first.getDay() + 6) % 7));
       const today = isoOf(new Date());
@@ -502,12 +529,20 @@ const Tasks = (() => {
       for (let i = 0; i < 42; i++) {
         const d = new Date(start); d.setDate(start.getDate() + i);
         const k = isoOf(d);
-        if (i === 35 && d.getMonth() !== calMonth.getMonth()) break; // nur so viele Wochen wie nötig
+        // immer 6 Wochen: der Kasten springt beim Blättern nicht in der Höhe
         cells += `<button type="button" class="${d.getMonth() !== calMonth.getMonth() ? 'other' : ''}${k === today ? ' today' : ''}${k === t.date ? ' on' : ''}" data-day="${k}">${d.getDate()}</button>`;
       }
-      calBox.innerHTML = `<div class="tk-cal-head"><span>${MONTHS_LONG[calMonth.getMonth()]} ${calMonth.getFullYear()}</span>
-          <button type="button" data-cal="-1" aria-label="Vorheriger Monat">${fi('back', 12)}</button><button type="button" data-cal="1" aria-label="Nächster Monat">${fi('forward', 12)}</button></div>
-        <div class="tk-cal-grid">${WD.map((w) => `<span>${w}</span>`).join('')}${cells}</div>`;
+      const label = `${MONTHS_LONG[calMonth.getMonth()]} ${calMonth.getFullYear()}`;
+      if (!calBox.firstElementChild) {
+        calBox.innerHTML = `<div class="tk-cal-head"><span></span>
+            <button type="button" data-cal="-1" aria-label="Vorheriger Monat">${fi('back', 12)}</button><button type="button" data-cal="1" aria-label="Nächster Monat">${fi('forward', 12)}</button></div>
+          <div class="tk-cal-wd tk-cal-grid">${WD.map((w) => `<span>${w}</span>`).join('')}</div><div class="tk-cal-grid tk-cal-days"></div>`;
+      }
+      const lab = calBox.querySelector('.tk-cal-head span'), days = calBox.querySelector('.tk-cal-days');
+      if (lab.textContent !== label) { lab.textContent = label; if (dir) { lab.classList.remove('swap'); void lab.offsetWidth; lab.classList.add('swap'); } }
+      days.innerHTML = cells;
+      // Blättern: die Tage gleiten weich aus der Richtung herein
+      if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) { days.classList.remove('slide-l', 'slide-r'); void days.offsetWidth; days.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
     };
     /* Tags: tippen → oben erscheint „„X“ hinzufügen“ → Farbe antippen = angelegt. Ganz rechts eigene Farbe zum Ziehen.
        Bearbeiten (Stift) zum Umbenennen, Umfärben, Löschen */
@@ -584,9 +619,38 @@ const Tasks = (() => {
     const repWheelHost = form.querySelector('[data-wheel="rep"]');
     const repWheel = repWheelHost ? UIKit.timeWheel(t.repeat?.time || '07:00', (v) => { if (t.repeat) { t.repeat.time = v; draw(); } }, 5) : null;
     if (repWheel) repWheelHost.append(repWheel);
+    const dueWheelHost = form.querySelector('[data-wheel="due"]');
+    const dueWheel = dueWheelHost ? UIKit.timeWheel(t.time || '14:00', (v) => { if (t.time) { t.time = v; draw(); } }, 5) : null;
+    if (dueWheel) dueWheelHost.append(dueWheel);
+    // Zeile weich ein-/ausblenden (Höhe + Deckkraft) – für den Wechsel Datum ↔ Zeitplan und die Wiederholungs-Zeile
+    const slideRow = (pop, show, delay = 0) => {
+      if (!pop || pop.hidden === !show) return;
+      pop.getAnimations().forEach((a) => a.cancel());
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { pop.hidden = !show; return; }
+      pop.hidden = false;
+      const h = pop.offsetHeight, ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+      pop.style.overflow = 'hidden';
+      const an = pop.animate(show ? [{ height: '0px', opacity: 0, transform: 'translateY(-4px)' }, { height: `${h}px`, opacity: 1, transform: 'none' }]
+        : [{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: show ? 360 : 260, delay, easing: ease, fill: 'backwards' });
+      an.onfinish = () => { pop.style.overflow = ''; if (!show) pop.hidden = true; };
+    };
+    const setAuto = (on) => {
+      if (!!t.repeat === on) return;
+      t.repeat = on ? { every: 'daily', time: t.time || '07:00', limit: 0 } : null;
+      if (on && !t.agent) t.agent = 'general'; // Automatisierung braucht einen Agenten
+      swapping = true; draw();
+      const q = (k) => form.querySelector(`.tk-pop[data-k="${k}"]`);
+      q('date').classList.remove('open'); q('sched').classList.remove('open');
+      // erst geht die alte Zeile, dann kommt die neue an derselben Stelle (und darunter die Wiederholungen)
+      slideRow(q(on ? 'date' : 'sched'), false);
+      slideRow(q(on ? 'sched' : 'date'), true, 120);
+      slideRow(q('limit'), on, on ? 200 : 0);
+      setTimeout(() => { swapping = false; }, 600);
+    };
     const openPop = (k) => {
       form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open')));
-      if (k === 'repeat' && repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat?.time || '07:00'));
+      if (k === 'sched' && repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat?.time || '07:00'));
+      if (k === 'date' && dueWheel && t.time) requestAnimationFrame(() => dueWheel.setValue(t.time));
       const p = form.querySelector(`.tk-pop[data-k="${k}"].open`);
       if (k === 'date' && p) { const d = t.date ? new Date(`${t.date}T12:00:00`) : new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1, 12); drawCal(); }
       if (k === 'tags' && p) { creating = false; editing = null; tagIn.value = ''; drawTags(); drawSide(); setTimeout(() => tagIn.focus(), 30); }
@@ -604,13 +668,25 @@ const Tasks = (() => {
       if (ag) { t.agent = ag.dataset.tagent; if (!t.output) t.output = 'chat'; draw(); ag.closest('.tk-pop').classList.remove('open'); return; }
       const ou = e.target.closest('[data-toutput]');
       if (ou) { t.output = ou.dataset.toutput; draw(); ou.closest('.tk-pop').classList.remove('open'); return; }
+      const au = e.target.closest('[data-auto]');
+      if (au) { au.closest('.tk-pop').classList.remove('open'); setTimeout(() => setAuto(au.dataset.auto === '1'), 160); return; }
+      const li = e.target.closest('[data-limit]');
+      if (li) { if (t.repeat) { t.repeat.limit = +li.dataset.limit; draw(); } li.closest('.tk-pop').classList.remove('open'); return; }
+      const tt = e.target.closest('[data-ttime]');
+      if (tt) {
+        if (!t.date) return; // Uhrzeit nur mit Datum
+        t.time = t.time ? '' : (dueWheel ? '14:00' : '');
+        draw();
+        if (t.time && dueWheel) requestAnimationFrame(() => dueWheel.setValue(t.time));
+        return;
+      }
       const rp = e.target.closest('[data-rep]');
       if (rp) {
         const ev = rp.dataset.rep;
-        t.repeat = ev ? { every: ev, time: t.repeat?.time || '07:00', ...(ev === 'weekly' ? { day: t.repeat?.day ?? 1 } : {}) } : null;
-        if (t.repeat && !t.agent) t.agent = 'general'; // Automatisierung braucht einen Agenten
+        t.repeat = { ...(t.repeat || { time: '07:00', limit: 0 }), every: ev, ...(ev === 'weekly' ? { day: t.repeat?.day ?? 1 } : {}) };
+        if (ev !== 'weekly') delete t.repeat.day;
         draw();
-        if (!ev) rp.closest('.tk-pop').classList.remove('open'); else if (repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat.time));
+        if (repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat.time));
         return;
       }
       const rd = e.target.closest('[data-repday]');
@@ -621,12 +697,12 @@ const Tasks = (() => {
       if (qd) {
         const d = new Date(); const k = qd.dataset.qdate;
         if (k === 'tomorrow') d.setDate(d.getDate() + 1); if (k === 'week') d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7));
-        t.date = k ? isoOf(d) : ''; draw(); drawCal(); setTimeout(() => qd.closest('.tk-pop')?.classList.remove('open'), 120); return;
+        t.date = k ? isoOf(d) : ''; if (!t.date) t.time = ''; draw(); drawCal(); setTimeout(() => qd.closest('.tk-pop')?.classList.remove('open'), 120); return;
       }
       const cal = e.target.closest('[data-cal]');
-      if (cal) { calMonth.setMonth(calMonth.getMonth() + +cal.dataset.cal); drawCal(); return; }
+      if (cal) { calMonth.setMonth(calMonth.getMonth() + +cal.dataset.cal); drawCal(+cal.dataset.cal); return; }
       const day = e.target.closest('[data-day]');
-      if (day) { t.date = t.date === day.dataset.day ? '' : day.dataset.day; draw(); drawCal(); setTimeout(() => day.closest('.tk-pop')?.classList.remove('open'), 120); return; }
+      if (day) { t.date = t.date === day.dataset.day ? '' : day.dataset.day; if (!t.date) t.time = ''; draw(); drawCal(); if (!t.time) setTimeout(() => day.closest('.tk-pop')?.classList.remove('open'), 160); return; }
       if (e.target.closest('[data-tag-plus]')) { startCreate(); return; }
       const cu = e.target.closest('[data-custom]');
       if (cu) { openPicker(cu); return; }
@@ -678,6 +754,7 @@ const Tasks = (() => {
       // neue Aufgabe mit Agent (oder ein Agent wurde nachträglich gewählt) → sofort an den Agenten
       const target = t0 || t;
       if (listMode && target.agent) target.output = 'doc'; // Liste: Ergebnis immer als Dokument
+      if (listMode && target.repeat) { target.date = ''; target.time = ''; } // Automatisierung: Zeitplan statt Datum
       if (listMode && (target.repeat || hadRepeat)) syncAuto(target, !target.repeat); // Automatisierung beim Server anlegen/ändern/entfernen
       // Liste: „Aufgabe erstellen“ schickt NICHT sofort ab – abgeschickt wird in der Zeile über „An Agent geben“
       const go = agents && !listMode && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
@@ -812,7 +889,7 @@ const Tasks = (() => {
         if (!s) { if (t.run?.state === 'queued' && Date.now() - (t.run.updated || 0) > 20000) { t.run.updated = Date.now(); startRun(t); } return; }
         if ((s.updated || 0) <= (t.run?.updated || 0) && t.run?.state === s.state) return;
         const was = t.run?.state;
-        t.run = { state: s.state, chatId: s.chatId || '', docId: s.docId || '', error: s.error || '', updated: s.updated };
+        t.run = { state: s.state, chatId: s.chatId || '', docId: s.docId || '', title: s.title || '', error: s.error || '', updated: s.updated };
         if (s.state === 'running' && t.status === 'backlog' && hasCol('doing')) { t.status = 'doing'; t.order = -1; }
         if (s.state === 'done' && was !== 'done') {
           if (t.status !== 'done' && hasCol('review')) { t.status = 'review'; t.order = -1; }

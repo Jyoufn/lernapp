@@ -77,3 +77,18 @@ test('Aufgabe im Hintergrund: Titel geht immer mit, keine Rückfragen (noClarify
   assert.strictEqual(seen[0].noClarify, true);
   assert.match(seen[0].messages[0].text, /AUFGABE: Referat über Vulkane/);
 });
+
+test('Automatisierung mit Limit: läuft genau so oft, danach aus dem Zeitplan', async () => {
+  const store = require('../lib/store').memoryStore();
+  const t0 = Date.UTC(2026, 9, 26, 5, 0); // Mo 06:00 Berlin
+  assert.strictEqual(T.cleanRepeat({ every: 'daily', time: '7:00', limit: 2 }).limit, 2);
+  assert.strictEqual(T.cleanRepeat({ every: 'daily', time: '07:00', limit: 0 }).limit, undefined, '0 = ohne Limit');
+  await T.saveAuto(store, 'u1', { id: 'tlim01', title: 'Vokabeln', repeat: { every: 'daily', time: '07:00', limit: 2 } }, t0);
+  const start = async () => {};
+  let now = t0;
+  const runs = [];
+  for (let i = 0; i < 4; i++) { now += 86400000; runs.push((await T.runDue(store, { now, start })).length); }
+  assert.deepEqual(runs, [1, 1, 0, 0]);
+  const a = (await T.listAuto(store, 'u1')).tlim01;
+  assert.ok(a.finished && a.runs === 2);
+});

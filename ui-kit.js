@@ -180,6 +180,15 @@ const UIKit = (() => {
     return fit;
   }
 
-  return { pad2, isoOf, COLORS, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  /* Zeit-Gruppen für Listen (Chats, Bibliothek): Zuletzt (heute) · Gestern · Letzte Woche · Letzter Monat · Letztes Jahr · Älter */
+  function timeGroups(items, timeOf, now = new Date()) {
+    const day0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), D = 86400000;
+    const G = [['Zuletzt', day0], ['Gestern', day0 - D], ['Letzte Woche', day0 - 7 * D], ['Letzter Monat', day0 - 30 * D], ['Letztes Jahr', day0 - 365 * D], ['Älter', -Infinity]];
+    const out = G.map(([label]) => [label, []]);
+    items.forEach((x) => { const t = timeOf(x) || 0; out[G.findIndex(([, from]) => t >= from)][1].push(x); });
+    return out.filter(([, list]) => list.length);
+  }
+
+  return { pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

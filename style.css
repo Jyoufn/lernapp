@@ -8724,3 +8724,95 @@ div.tl4-h { cursor: default; }
 .tk-rep-note { margin: 4px 8px 6px; color: var(--text-4); font-size: 11.5px; line-height: 1.45; }
 .tk-row-rep { flex: none; display: inline-flex; align-items: center; gap: 5px; color: var(--text-3); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tk-row-rep svg { color: var(--text-4); }
+
+/* =====================================================================
+   Aufgaben v9 (30.10., 22:30) – Liste schmaler, Tags mit leichter Fläche, Ergebnis rechts (Hund + Name),
+   Datum-Kasten kompakt mit Uhrzeit, Automatisierung als eigenes Menü (Zeitplan statt Datum, darunter Wiederholungen)
+   ===================================================================== */
+.tk-rows-in .tk-row, .tk-rows-in .tk-row * { -webkit-tap-highlight-color: transparent; }
+.tk-rows-in .tk-row:focus { outline: none; }
+.tk-row-line { min-height: 46px; gap: 11px; }
+.tk-rows-in .tk-row .tk-ck { width: 15px; height: 15px; border-width: 1.5px; }
+.tk-rows-in .tk-row .tk-ck .tk-ck-mark { width: 9px; height: 9px; }
+.tk-rows-in .tk-row-title { font-size: 14px; line-height: 19px; }
+.tk-row-more-in { gap: 10px; padding: 0 16px 12px 42px; }
+.tk-row-notes { font-size: 13px; color: var(--text-3); }
+/* Tags: ganz leicht getönte Fläche in der Tag-Farbe, ohne Punkt */
+.tk-row-tags { gap: 6px; }
+.tk-row-tags .tk-sub-tag { height: 20px; padding: 0 7px; border-radius: 6px; background: color-mix(in srgb, var(--c) 12%, transparent); color: color-mix(in srgb, var(--c) 72%, #fff); font-size: 11.5px; font-weight: 500; }
+.tk-row-tags .tk-sub-tag i { display: none; }
+/* fertig vom Agenten: ganz rechts Hund + Name des Chats/Dokuments */
+.tk-row-res { flex: none; display: inline-flex; align-items: center; gap: 7px; max-width: 240px; height: 26px; padding: 0 9px 0 4px; border: 0; border-radius: 7px; background: none; color: var(--text-3); font: 500 12.5px Inter, sans-serif; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; }
+.tk-row-res:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+.tk-row-res .tk-dog { display: grid; place-items: center; width: 20px; height: 20px; flex: none; }
+.tk-row-res .tk-dog svg { image-rendering: pixelated; }
+.tk-row-res-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 600px) { .tk-row-res { max-width: 130px; } }
+/* „An Lernen geben“ – ein ruhiger Knopf */
+.tk-send-a { height: 28px; padding: 0 11px 0 5px; border-color: var(--menu-border); background: var(--menu-bg); }
+
+/* ---- Datum-Kasten: kompakter Kalender (Monat bündig über der ersten Spalte), Uhrzeit-Zeile mit Schalter, „Kein Datum“ ohne Fläche ---- */
+.tk-sheet-rows .tk-menu.date .tk-box { padding: 10px 10px 4px; }
+.tk-sheet-rows .tk-menu .tk-cal { max-width: 280px; }
+.tk-sheet-rows .tk-menu .tk-cal-head { height: 28px; padding: 0 0 0 9px; }
+.tk-sheet-rows .tk-menu .tk-cal-head span { font-size: 13px; }
+.tk-sheet-rows .tk-menu .tk-cal-grid { gap: 2px 0; margin-top: 4px; }
+.tk-sheet-rows .tk-menu .tk-cal-grid span { height: 20px; font-size: 10.5px; }
+.tk-sheet-rows .tk-menu .tk-cal-grid button { justify-self: center; width: 32px; height: 32px; border-radius: 50%; font-size: 12.5px; }
+.tk-sheet-rows .tk-menu .tk-cal-grid button.on { background: var(--accent); color: #fff; }
+.tk-cal-grid.slide-l { animation: tk-cal-l 280ms cubic-bezier(0.32, 0.72, 0, 1); }
+.tk-cal-grid.slide-r { animation: tk-cal-r 280ms cubic-bezier(0.32, 0.72, 0, 1); }
+@keyframes tk-cal-l { from { opacity: 0; transform: translateX(14px); } }
+@keyframes tk-cal-r { from { opacity: 0; transform: translateX(-14px); } }
+.tk-cal-head span.swap { animation: tk-cal-t 240ms ease; }
+@keyframes tk-cal-t { from { opacity: 0; } }
+.tk-dt-time { display: flex; align-items: center; justify-content: space-between; height: 34px; margin-top: 6px; padding: 0 8px; border-top: 1px solid var(--menu-border); color: var(--text-2); font-size: 12.5px; }
+.tk-dt-time .tk-dt-l { display: inline-flex; align-items: center; gap: 9px; }
+.tk-dt-time .tk-dt-l svg { color: var(--text-3); }
+.tk-dt-time.off { opacity: 0.4; pointer-events: none; }
+.tk-dt-wheel { display: grid; grid-template-rows: 1fr; transition: grid-template-rows 320ms cubic-bezier(0.32, 0.72, 0, 1), opacity 220ms ease; }
+.tk-dt-wheel > div { min-height: 0; overflow: hidden; display: flex; justify-content: center; }
+.tk-dt-wheel[hidden] { display: grid; grid-template-rows: 0fr; opacity: 0; }
+.tk-dt-wheel .tk-wheel { width: 140px; height: 120px; }
+.tk-sheet-rows .tk-box .tk-date-none.on { background: none; color: var(--text-2); }
+.tk-sheet-rows .tk-box .tk-date-none.on:hover { background: var(--menu-hover); }
+.tk-sheet-rows .tk-box .tk-date-none.on > svg:last-of-type { color: var(--text-2); }
+/* Auswahl in den Menüs: Haken statt grauer/blauer Fläche */
+.tk-sheet-rows .tk-box .tk-mi.on { background: none; color: var(--text); }
+.tk-sheet-rows .tk-box .tk-mi.on:hover { background: var(--menu-hover); }
+.tk-sheet-rows .tk-box .tk-mi.on > svg:last-of-type:not(.tk-pi) { color: var(--accent); }
+.tk-rep-days button.on { background: var(--accent); color: #fff; }
+/* Wiederholungen: Zahl statt Icon */
+.tk-lim-n { color: var(--text-3); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.tk-rep-time { padding: 2px 8px; }
+.tk-rep-time .tk-wheel { height: 120px; }
+.tk-sheet-rows .tk-menu .tk-cal-wd { margin-top: 4px; }
+.tk-sheet-rows .tk-menu .tk-cal-days { margin-top: 0; }
+.tk-sheet-rows .tk-menu .tk-cal-days button.other { color: #464646; }
+
+/* =====================================================================
+   Kalender v5 (30.10., 22:30) – Kopf auf Höhe des Ein-/Ausklapp-Knopfs: Strich, dann „Oktober 2026“ klein;
+   Heute/Neu auf derselben Höhe; keine Ganztägig-Zeile (Farbband durch den Tag), keine Jetzt-Linie, kein Überscrollen
+   ===================================================================== */
+.cal-week.cal-view { padding-top: 10px; }
+.cal-week .cal-head { align-items: center; min-height: 28px; padding-left: 20px; }
+.cal-week .cal-title { position: relative; flex-direction: row; align-items: center; padding-left: 14px; }
+.cal-week .cal-title::before { content: ''; position: absolute; left: 0; top: 50%; width: 1px; height: 16px; margin-top: -8px; background: var(--menu-border); }
+.cal-week .cal-month, .cal-week .cal-year { font-size: 15px; font-weight: 600; letter-spacing: -0.1px; line-height: 28px; }
+.cal-week .cal-year { color: var(--text-3); font-weight: 500; }
+.cal-week .cal-nav { padding-bottom: 0; }
+.cal-week .cal-seg { height: 28px; }
+.cal-week .cal-new { height: 28px; padding: 0 12px 0 10px; border-radius: 14px; font-size: 12.5px; }
+.cal-week .cw-day, .cal-week .cw-col { cursor: default; }
+.cal-week .cw-day { cursor: pointer; }
+.cw-scroll, .cal-dv-scroll { overscroll-behavior: none; }
+/* ganztägig: Band in der Tagesfarbe von oben bis unten, Titel bleibt oben stehen */
+.cw-band { position: absolute; top: 0; bottom: 0; z-index: 0; display: block; height: auto; padding: 0; border: 0; border-radius: 0 0 6px 6px; background: color-mix(in srgb, var(--c) 10%, transparent); border-left: 2px solid color-mix(in srgb, var(--c) 70%, transparent); text-align: left; cursor: pointer; }
+.cw-band:hover { background: color-mix(in srgb, var(--c) 15%, transparent); }
+.cw-band-t { position: sticky; top: 0; display: flex; align-items: center; gap: 5px; padding: 6px 6px 6px 7px; overflow: hidden; color: color-mix(in srgb, var(--c) 70%, #fff); font-size: 11.5px; font-weight: 600; white-space: nowrap; text-overflow: ellipsis; }
+.cw-band-t svg { flex: none; width: 12px; height: 12px; }
+.cw-band-t span { overflow: hidden; text-overflow: ellipsis; }
+.cal-week .cw-col .cw-ev, .cal-dv-events .cal-dv-ev { z-index: 1; }
+.cw-band { pointer-events: auto; }
+.tk-rows-in .tk-row.bare .tk-row-more { display: none; }
+.tk-sheet-rows .tk-menu .tk-cal { margin: 0 auto; }

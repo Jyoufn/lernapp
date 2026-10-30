@@ -50,15 +50,14 @@ const Calendar = (() => {
       </div>
     </header>
     <div class="cw">
-      <div class="cw-top"><div class="cw-days"><span class="cw-tz"></span></div><div class="cw-all"><span class="cw-all-l">Ganztägig</span></div></div>
+      <div class="cw-top"><div class="cw-days"><span class="cw-tz"></span></div></div>
       <div class="cw-scroll"><div class="cw-body" style="height:${24 * WEEK_HOUR}px">
-        <div class="cw-hours">${Array.from({ length: 24 }, (_, h) => `<span style="top:${h * WEEK_HOUR}px">${h ? `${pad(h)}:00` : ''}</span>`).join('')}<b class="cw-now-tag" hidden></b></div>
-        <div class="cw-now-all" hidden></div>
+        <div class="cw-hours">${Array.from({ length: 24 }, (_, h) => `<span style="top:${h * WEEK_HOUR}px">${h ? `${pad(h)}:00` : ''}</span>`).join('')}</div>
         <div class="cw-cols"></div>
       </div></div>
     </div>`;
   const grid = view.querySelector('.cw'); // Ziel der Blätter-Animation
-  const daysBox = view.querySelector('.cw-days'), allBox = view.querySelector('.cw-all'), colsBox = view.querySelector('.cw-cols'), scroller = view.querySelector('.cw-scroll');
+  const daysBox = view.querySelector('.cw-days'), colsBox = view.querySelector('.cw-cols'), scroller = view.querySelector('.cw-scroll');
   let scrolledOnce = false;
 
   // Termine eines Tages nebeneinander legen, wenn sie sich überschneiden
@@ -86,20 +85,16 @@ const Calendar = (() => {
     const today = todayIso();
     daysBox.querySelectorAll('.cw-day').forEach((x) => x.remove());
     daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); return `<button type="button" class="cw-day${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${DAYS[i]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
-    // ganztägig
-    const allCells = days.map((d) => {
-      const k = iso(d), c = document.createElement('div');
-      c.className = 'cw-all-cell'; c.dataset.date = k;
-      events.filter((e) => e.date === k && minsOf(e.time) == null).forEach((e) => c.append(pill(e)));
-      return c;
-    });
-    allBox.replaceChildren(allBox.firstElementChild, ...allCells);
-    allBox.classList.toggle('empty', !allCells.some((c) => c.children.length));
     // Spalten mit Terminen
     colsBox.replaceChildren(...days.map((d, i) => {
       const k = iso(d), col = document.createElement('div');
       col.className = `cw-col${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}`;
       col.dataset.date = k;
+      // ganztägig: keine eigene Zeile oben – der Termin zieht sich als Farbband von oben bis unten durch den Tag
+      const allDay = events.filter((e) => e.date === k && minsOf(e.time) == null);
+      allDay.forEach((e, j) => {
+        col.append(band(e, j, allDay.length));
+      });
       layoutDay(events.filter((e) => e.date === k)).forEach(({ e, s, en, lane, n }) => {
         const p = pill(e);
         p.classList.add('cw-ev');
@@ -110,32 +105,26 @@ const Calendar = (() => {
         const t = p.querySelector('.cal-pill-time'); if (t && e.end && (en - s) >= 45) t.textContent = `${e.time} – ${e.end}`;
         col.append(p);
       });
-      if (k === today) {
-        const line = document.createElement('div');
-        line.className = 'cw-now';
-        col.append(line);
-      }
       return col;
     }));
-    placeNow();
     if (!scrolledOnce && !view.hidden) {
       // beim ersten Öffnen: zur aktuellen Uhrzeit (bzw. 7 Uhr), damit der Tag sichtbar ist
       const n = new Date(); scroller.scrollTop = Math.max(0, Math.min(n.getHours() - 2, 7)) * WEEK_HOUR; scrolledOnce = true;
     }
     if (dir) { grid.classList.remove('slide-l', 'slide-r'); void grid.offsetWidth; grid.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
   }
-  // Jetzt: rote Pille mit der Uhrzeit links, feine rote Linie über die Woche, kräftig im heutigen Tag – wandert jede Minute mit
-  function placeNow() {
-    const n = new Date(), top = `${((n.getHours() * 60 + n.getMinutes()) / 60) * WEEK_HOUR}px`;
-    const inWeek = view.querySelector('.cw-col.today');
-    const tag = view.querySelector('.cw-now-tag'), all = view.querySelector('.cw-now-all');
-    tag.hidden = all.hidden = !inWeek;
-    tag.textContent = `${pad(n.getHours())}:${pad(n.getMinutes())}`;
-    tag.style.top = all.style.top = top;
-    view.querySelectorAll('.cw-now').forEach((l) => { l.style.top = top; });
-    view.querySelectorAll('.cw-hours > span').forEach((sp, h) => { sp.classList.toggle('near', !!inWeek && Math.abs(h * 60 - (n.getHours() * 60 + n.getMinutes())) < 18); });
+  // ganztägiger Termin als Band (div statt button: ein Knopf zentriert den Titel senkrecht, das Band soll ihn oben halten)
+  function band(e, j, n) {
+    const b = document.createElement('div');
+    b.className = 'cal-pill cw-band';
+    b.dataset.id = e.id;
+    b.setAttribute('role', 'button'); b.tabIndex = 0;
+    b.style.setProperty('--c', e.color || COLORS[0]);
+    b.title = [e.title, e.description].filter(Boolean).join(' · ');
+    b.innerHTML = `<span class="cw-band-t">${icon(e.icon || 'i-calendar')}<span>${esc(e.title)}</span></span>`;
+    Object.assign(b.style, { left: `calc(${(j / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` });
+    return b;
   }
-  setInterval(() => { if (open && !view.hidden) placeNow(); }, 30000);
   function pill(e) {
     const b = document.createElement('button');
     b.type = 'button';
@@ -158,22 +147,7 @@ const Calendar = (() => {
     if (p) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
     const day = ev.target.closest('[data-day]');
     if (day) { openDay(day.dataset.day, day); return; }
-    const ac = ev.target.closest('.cw-all-cell');
-    if (ac) { edit(null, ac.dataset.date); return; }
-    // Klick in eine Stunde → Termin um diese Uhrzeit (halbe Stunden)
-    const col = ev.target.closest('.cw-col');
-    if (col) {
-      const y = ev.clientY - col.getBoundingClientRect().top;
-      const m = Math.max(0, Math.min(23 * 60, Math.floor(y / (WEEK_HOUR / 2)) * 30));
-      const hm = (x) => `${pad(Math.floor(x / 60))}:${pad(x % 60)}`;
-      // Platzhalter-Termin an der Stelle zeigen, an den das Popover andockt (verschwindet mit dem Fenster)
-      col.querySelector('.cw-ghost')?.remove();
-      const g = document.createElement('div');
-      g.className = 'cw-ghost';
-      Object.assign(g.style, { top: `${(m / 60) * WEEK_HOUR + 1}px`, height: `${WEEK_HOUR - 3}px` });
-      col.append(g);
-      edit(null, col.dataset.date, hm(m), hm(Math.min(23 * 60 + 30, m + 60)), null, g);
-    }
+    // Klick in ein leeres Feld legt nichts an – neue Termine nur über „Neu“
   });
   // Wischen auf dem iPad: links/rechts = Woche vor/zurück
   let swipe = null;
@@ -215,13 +189,15 @@ const Calendar = (() => {
           <button class="tk-x cal-dv-x" type="button" data-dv="back" aria-label="Schließen" title="Schließen">${icon('f-x')}</button>
         </div>
       </header>
-      ${allDay.length ? `<div class="cal-dv-all"><span>Ganztägig</span><div></div></div>` : ''}
       <div class="cal-dv-scroll"><div class="cal-dv-hours" style="height:${24 * HOUR}px">
         ${Array.from({ length: 24 }, (_, h) => `<div class="cal-dv-row" data-hour="${h}" style="top:${h * HOUR}px"><span>${pad(h)}:00</span></div>`).join('')}
         <div class="cal-dv-events"></div>
       </div></div>`;
-    if (allDay.length) dv.querySelector('.cal-dv-all > div').append(...allDay.map(pill));
     const box = dv.querySelector('.cal-dv-events');
+    // ganztägig: Farbband über den ganzen Tag (wie in der Woche)
+    allDay.forEach((e, j) => {
+      box.append(band(e, j, allDay.length));
+    });
     // Überschneidungen nebeneinander legen
     const lanes = [];
     timed.forEach((e) => {
@@ -238,12 +214,6 @@ const Calendar = (() => {
       if (e.end) b.querySelector('.cal-pill-time').textContent = `${e.time} – ${e.end}`;
       box.append(b);
     });
-    if (dayDate === todayIso()) {
-      const n = new Date(), line = document.createElement('div');
-      line.className = 'cal-dv-now';
-      line.style.top = `${((n.getHours() * 60 + n.getMinutes()) / 60) * HOUR}px`;
-      dv.querySelector('.cal-dv-hours').append(line);
-    }
     const sc = dv.querySelector('.cal-dv-scroll');
     const first = timed[0] ? timed[0]._s / 60 - 1 : dayDate === todayIso() ? new Date().getHours() - 2 : 7;
     sc.scrollTop = Math.max(0, first) * HOUR;
@@ -285,13 +255,7 @@ const Calendar = (() => {
     if (a === 'new') { edit(null, dayDate); return; }
     const p = ev.target.closest('.cal-pill');
     if (p) { edit(events.find((e) => e.id === p.dataset.id)); return; }
-    // Klick in eine Stunde → Termin um diese Uhrzeit
-    const hours = ev.target.closest('.cal-dv-hours');
-    if (hours) {
-      const y = ev.clientY - hours.getBoundingClientRect().top;
-      const h = Math.max(0, Math.min(23, Math.floor(y / HOUR)));
-      edit(null, dayDate, `${pad(h)}:00`, `${pad(Math.min(23, h + 1))}:00`);
-    }
+    // Klick in eine leere Stunde legt nichts an – neue Termine nur über „+“
   });
   document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape' && !dv.hidden && modal.hidden && emodal.hidden) closeDay(); });
 

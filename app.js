@@ -83,7 +83,7 @@ window.markDrafts = markDrafts;
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
-  docs: { title: 'Library', icon: 'f-file', view: () => window.Docs?.list },
+  docs: { title: 'Bibliothek', icon: 'f-file', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
 function openViewTab(kind) {
@@ -1370,7 +1370,7 @@ function illustrationFigure(data) {
   if (data.source) figure.dataset.source = data.source;
   if (data.edit) figure.dataset.edit = data.edit;
   // während das Bild entsteht: nur eine Zeile mit Lade-Icon (wie „Thinking“), kein Kasten – dann erscheint das Bild
-  const pending = el('div', 'illustration-pending', `<span class="shimmer ill-ico"></span><span class="shimmer">${data.source ? 'Searching picture' : 'Generating picture'}</span>`);
+  const pending = el('div', 'illustration-pending', `<span class="shimmer ill-ico"></span><span class="shimmer">${data.source ? 'Bild suchen' : 'Bild erzeugen'}</span>`);
   figure.append(pending);
   figure.insertAdjacentHTML('beforeend', illustrationWave());
   sweepRow(pending); // ein durchgehender Lichtstreifen über Icon und Text
@@ -1589,12 +1589,12 @@ const PENDING_DELAY = 700;    // „Working“-Hinweis, falls noch nichts zu seh
 const THINK_SHOW_DELAY = 900; // Thinking erst zeigen, wenn die Analyse nicht sofort fertig ist
 const THINK_HOLD_MS = 700;    // geschriebenes Vorgehen kurz stehen lassen, dann „Planned the answer“
 const STAGE_TEXT = {
-  material: 'Analyzing your sources', // angehängte Fotos/PDFs: passt das Material zur Frage?
-  market: 'Checking the charts', // Börsen-Agent: Live-Kurse, Signale, Depot, Marktscan
-  browsing: 'Searching sources',
-  searching_sources: 'Searching sources',
-  processing: 'Drafting the answer',
-  verifying: 'Checking facts and sources',
+  material: 'Dein Material prüfen', // angehängte Fotos/PDFs: passt das Material zur Frage?
+  market: 'Kurse prüfen', // Börsen-Agent: Live-Kurse, Signale, Depot, Marktscan
+  browsing: 'Quellen suchen',
+  searching_sources: 'Quellen suchen',
+  processing: 'Antwort entwerfen',
+  verifying: 'Fakten und Quellen prüfen',
 };
 
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
@@ -1883,12 +1883,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const web = /"source"\s*:\s*"web"/.test(answerR?.text || '');
     // Bildbitte: der Schritt steht schon von Anfang an – stellt sich heraus, dass das Bild gesucht wird, heißt er „Searching picture“
     if (picStep) {
-      if (!picStep.done && web && !picStep.web) { picStep.web = true; picStep.step.querySelector('.step-line > .shimmer:not(.ill-ico)').textContent = 'Searching picture'; }
+      if (!picStep.done && web && !picStep.web) { picStep.web = true; picStep.step.querySelector('.step-line > .shimmer:not(.ill-ico)').textContent = 'Bild suchen'; }
       return;
     }
     if (!work) return;
     const from = Date.now();
-    const step = stepLine('spin', `<span class="shimmer ill-ico"></span><span class="shimmer">${web ? 'Searching picture' : 'Generating picture'}</span><span class="t">1s</span>`);
+    const step = stepLine('spin', `<span class="shimmer ill-ico"></span><span class="shimmer">${web ? 'Bild suchen' : 'Bild erzeugen'}</span><span class="t">1s</span>`);
     step.classList.add('pic-step');
     work.steps.append(step);
     sweepRow(step.querySelector('.step-line'));
@@ -1906,8 +1906,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (!stopped && !answer.querySelector('.chat-illustration')) { picStep.step.remove(); msgEl.classList.remove('pic-in-timeline'); return; }
     const failed = !stopped && answer.querySelector('.ill-error, .limit-note');
     const n = answer.querySelectorAll('.chat-illustration.ready').length;
-    const what = picStep.web ? (n > 1 ? 'Found pictures' : 'Found picture') : (n > 1 ? 'Generated pictures' : 'Generated picture');
-    finishStep(picStep.step, stopped ? `${picStep.web ? 'Searching' : 'Generating'} picture – stopped` : failed && !n ? 'Picture not available' : `${what} <span class="t">${secs(picStep.from)}</span>`);
+    const what = picStep.web ? (n > 1 ? 'Bilder gefunden' : 'Bild gefunden') : (n > 1 ? 'Bilder erzeugt' : 'Bild erzeugt');
+    finishStep(picStep.step, stopped ? `Bild ${picStep.web ? 'suchen' : 'erzeugen'} – gestoppt` : failed && !n ? 'Bild nicht verfügbar' : `${what} <span class="t">${secs(picStep.from)}</span>`);
     picStep.step.querySelector('.step-line').classList.remove('sweep-row');
     if (!stopped) markerIcon(picStep.step, 'image');
   };
@@ -1922,7 +1922,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Rückfrage statt Antwort → „Asked a question“ (bzw. „Asked 2 questions“) statt „Wrote the answer“
   const wroteLabel = () => {
     const n = /```ask/.test(answerR?.text || '') ? parseAskBlock(answerR.text)?.length || 1 : 0;
-    if (n) return `Asked ${n === 1 ? 'a question' : `${n} questions`}`;
+    if (n) return n === 1 ? 'Eine Frage gestellt' : `${n} Fragen gestellt`;
     // Format gebaut: „Built mind map · 5 branches · 19 points“ (Zahlen aus dem Block)
     const F = fmt && window.Thinking?.FORMATS?.[fmt];
     if (F && workKey === 'work' && window.Thinking.blockFormat(answerR?.text || '') === fmt) {
@@ -1948,7 +1948,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const agentId = msgEl.dataset.dog || window.PixelDogs?.mode || 'general';
   // Format (Präsentation, Mindmap, Zeitstrahl …): eigene Schritte – aus der Frage, sonst sobald die KI einen solchen Block schreibt
   let fmt = window.Thinking?.formatOf?.(lastAsk, agentId) || null;
-  const P = (k) => window.Thinking ? Thinking.of(agentId, k, fmt) : { main: 'Working', sub: k, kind: 'work' };
+  const P = (k) => window.Thinking ? Thinking.of(agentId, k, fmt) : { main: 'Arbeiten', sub: k, kind: 'work' };
   // Hund neben dem Hauptstatus (PixelDogs.actor): tut je Zustand etwas anderes; Wechsel weich und nie zu hektisch
   let actor = null;
   const ensureActor = () => {
@@ -1967,7 +1967,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (pictureAsk) { ensureWork(); showPicStep(); return; } // Bildbitte: „Generating picture“ als Schritt in der Zeitleiste, nicht frei
     if (answerR || work) return;
     pending = el('div', 'pending');
-    pending.append(el('span', 'spinner'), el('span', 'shimmer', 'Working'));
+    pending.append(el('span', 'spinner'), el('span', 'shimmer', 'Arbeiten'));
     msgEl.append(pending);
     scrollToBottom();
   }, pictureAsk ? 0 : PENDING_DELAY);
@@ -1978,7 +1978,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     removePending();
     if (cont) {
       work = cont;
-      setActivity('work', 'Working');
+      setActivity('work', 'Arbeiten');
       const t = work.head.querySelector('.t');
       t.hidden = false;
       t.classList.add('live');
@@ -2067,7 +2067,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (!think || think.closed || think.hidden) return;
     think.closed = true;
     const dur = think.serverFrom && think.serverTo ? secs(think.serverFrom, think.serverTo) : secs(think.from);
-    const label = think.failed ? `${P('plan').sub} <span class="ph-x">· not available</span> <span class="t">${dur}</span>` : doneLine('plan', cont ? 'continued' : '', dur);
+    const label = think.failed ? `${P('plan').sub} <span class="ph-x">· nicht verfügbar</span> <span class="t">${dur}</span>` : doneLine('plan', cont ? 'fortgesetzt' : '', dur);
     if (think.el) { finishStep(think.el, label); attachPlan(think.el, think.points); return; }
     const step = stepLine('dot', label);
     work.steps.append(step);
@@ -2203,7 +2203,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         list.append(row);
         deep.subs.set(x.id, row);
       });
-      deepDone('plan', doneLine('strategy', `${e.subs.length} ${e.subs.length === 1 ? 'question' : 'questions'}`));
+      deepDone('plan', doneLine('strategy', `${e.subs.length} ${e.subs.length === 1 ? 'Frage' : 'Fragen'}`));
     }
     const key = deep.steps.gaps && !deep.steps.gaps.done ? 'gaps' : 'search';
     if (e.phase === 'deepen' && !e.done) { deepStep('gaps'); phase('crosscheck'); }
@@ -2227,20 +2227,20 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (e.phase === 'read' && e.done && !deep.steps.gaps) {
       deepStep('search');
       const nq = deep.queries.size, ns = deep.all.length;
-      deepDone('search', ns ? doneLine('web', `${nq} ${nq === 1 ? 'search' : 'searches'}`) : `${P('web').sub} <span class="ph-x">· no suitable sources found</span>`);
-      if (ns) { noteStep('discover', `${ns} relevant ${ns === 1 ? 'source' : 'sources'}`); noteStep('gather', ''); phase('gather'); }
+      deepDone('search', ns ? doneLine('web', `${nq} ${nq === 1 ? 'Suche' : 'Suchen'}`) : `${P('web').sub} <span class="ph-x">· keine passenden Quellen</span>`);
+      if (ns) { noteStep('discover', `${ns} passende ${ns === 1 ? 'Quelle' : 'Quellen'}`); noteStep('gather', ''); phase('gather'); }
       deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') settle(it, it.list.length ? 'done' : 'empty'); });
       if (!ns) deep.steps.search.step.classList.add('warn');
     }
     if (e.phase === 'compare' && !e.done) { deepStep('compare'); phase('compare'); }
     if (e.phase === 'compare' && e.done) {
       const st = e.stats;
-      deepDone('compare', doneLine('compare', st ? `${st.agree} agree · ${st.conflict} conflicting · ${st.single} single-source` : ''));
-      noteStep('credibility', st?.high ? `${st.high} high-quality ${st.high === 1 ? 'source' : 'sources'}` : '');
+      deepDone('compare', doneLine('compare', st ? `${st.agree} übereinstimmend · ${st.conflict} widersprüchlich · ${st.single} nur eine Quelle` : ''));
+      noteStep('credibility', st?.high ? `${st.high} ${st.high === 1 ? 'verlässliche Quelle' : 'verlässliche Quellen'}` : '');
     }
     if (e.phase === 'deepen' && e.done) {
       const n = [...deep.queries.values()].filter((it) => it.row.parentElement === deep.steps.gaps?.list).reduce((t, it) => t + it.list.length, 0);
-      deepDone('gaps', doneLine('crosscheck', n ? `+${n} ${n === 1 ? 'source' : 'sources'}` : 'nothing new'));
+      deepDone('gaps', doneLine('crosscheck', n ? `+${n} ${n === 1 ? 'Quelle' : 'Quellen'}` : 'nichts Neues'));
       deep.queries.forEach((it) => { if (it.row.dataset.state === 'active') settle(it, it.list.length ? 'done' : 'empty'); });
     }
     if (e.phase === 'write') { deepStep('synth'); phase('synthesize'); }
@@ -2255,7 +2255,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const n = renderOpts.sources.filter(Boolean).length || stages.browsing?.pages?.length || 0;
     if (!n) return;
     analyzedNoted = true;
-    noteStep('analyze', `${n} ${n === 1 ? 'source' : 'sources'}`);
+    noteStep('analyze', `${n} ${n === 1 ? 'Quelle' : 'Quellen'}`);
     phase('analyze');
   };
   const startStage = (s) => {
@@ -2291,13 +2291,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (s.stage === 'browsing') {
       const n = st.pages.length;
       const k = st.gathering ? 'gather' : st.key;
-      line.innerHTML = n ? `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? (n === 1 ? 'article' : 'articles') : (n === 1 ? 'source' : 'sources')}</span> ${dur}`
+      line.innerHTML = n ? `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? (n === 1 ? 'Artikel' : 'Artikel') : (n === 1 ? 'Quelle' : 'Quellen')}</span> ${dur}`
         : `${P(st.key).sub} <span class="ph-x">· ${st.news ? 'no recent articles from trusted sources' : 'no suitable sources found'}</span> ${dur}`;
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
-      line.innerHTML = used.length ? doneLine('search', '', dur.replace(/<[^>]+>/g, '')) : `${P('search').sub} <span class="ph-x">· no suitable sources found</span> ${dur}`;
+      line.innerHTML = used.length ? doneLine('search', '', dur.replace(/<[^>]+>/g, '')) : `${P('search').sub} <span class="ph-x">· keine passenden Quellen</span> ${dur}`;
       if (used.length) {
-        const g = noteStep('gather', `${used.length} ${used.length === 1 ? 'source' : 'sources'}`);
+        const g = noteStep('gather', `${used.length} ${used.length === 1 ? 'Quelle' : 'Quellen'}`);
         const chips = el('div', 'chips');
         g.append(chips);
         fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
@@ -2309,13 +2309,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const notes = Array.isArray(m.steps) ? m.steps.map(([k, x]) => [k, x || '']) : []; // vom Server: genau die Schritte dieser Frage
       if (!Array.isArray(m.steps)) {
       if (m.depot != null) {
-        notes.push(['portfolio', `${m.depot} ${m.depot === 1 ? 'position' : 'positions'}`]);
+        notes.push(['portfolio', `${m.depot} ${m.depot === 1 ? 'Position' : 'Positionen'}`]);
         if (m.depot > 1) notes.push(['allocation', '']);
       }
-      if (m.indices || m.headlines) notes.push(['market', [m.indices ? `${m.indices} indices` : '', m.headlines ? `${m.headlines} headlines` : ''].filter(Boolean).join(' · ')]);
-      if (n) notes.push(['charts', `${n} ${n === 1 ? 'stock' : 'stocks'}${m.frames ? ' · day, week, month' : ''}`]);
+      if (m.indices || m.headlines) notes.push(['market', [m.indices ? `${m.indices} Indizes` : '', m.headlines ? `${m.headlines} Schlagzeilen` : ''].filter(Boolean).join(' · ')]);
+      if (n) notes.push(['charts', `${n} ${n === 1 ? 'Aktie' : 'Aktien'}${m.frames ? ' · Tag, Woche, Monat' : ''}`]);
       if (m.fundamentals) notes.push(['fundamentals', '']);
-      if (n && (m.mode === 'ideas' || m.mode === 'both')) notes.push(['opportunities', m.radar ? `${m.radar} ${m.radar === 1 ? 'chance' : 'chances'}` : 'none right now']);
+      if (n && (m.mode === 'ideas' || m.mode === 'both')) notes.push(['opportunities', m.radar ? `${m.radar} ${m.radar === 1 ? 'Chance' : 'Chancen'}` : 'gerade keine']);
       if (n || m.depot) notes.push(['risk', '']);
       }
       if (!notes.length) { line.innerHTML = `${P('market').sub} <span class="ph-x">· market data not reachable</span> ${dur}`; st.step.classList.add('warn'); }
@@ -2328,12 +2328,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
-      line.innerHTML = `${doneLine('material', m.relevant === true ? 'answering from them' : m.relevant === false ? 'nothing on this topic' : '')} ${dur}`;
+      line.innerHTML = `${doneLine('material', m.relevant === true ? 'passt zur Frage' : m.relevant === false ? 'nichts zum Thema' : '')} ${dur}`;
     } else if (s.stage === 'processing') {
-      line.innerHTML = `${doneLine('work', 'draft')} ${dur}`;
+      line.innerHTML = `${doneLine('work', 'Entwurf')} ${dur}`;
     } else if (s.stage === 'verifying') {
       const m = s.meta || {};
-      line.innerHTML = `${doneLine('review', m.checked === false ? 'not available' : m.corrected ? `corrected ${m.corrected} ${m.corrected === 1 ? 'point' : 'points'}` : 'no issues found')} ${dur}`;
+      line.innerHTML = `${doneLine('review', m.checked === false ? 'nicht verfügbar' : m.corrected ? `${m.corrected} ${m.corrected === 1 ? 'Punkt' : 'Punkte'} korrigiert` : 'alles stimmt')} ${dur}`;
     }
     scrollToBottom();
   };
@@ -2381,7 +2381,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st = stages.web = { step, chips: el('div', 'chips'), ended: true };
         step.append(st.chips);
       }
-      st.step.querySelector('.web-line').innerHTML = `Searched the web · <strong>${r.sources.length} ${r.sources.length === 1 ? 'source' : 'sources'}</strong>`;
+      st.step.querySelector('.web-line').innerHTML = `Im Web gesucht · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
       fillChips(st.chips, r.sources, () => openSourcesModal(r.sources, null));
       return;
     }
@@ -2583,7 +2583,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (work) {
       work.endStart?.();
       const wTitle = work.head.querySelector('.work-title');
-      const endTitle = () => { work.work.classList.remove('active'); wTitle.classList.remove('sweep'); swapText(wTitle, signal.aborted || failed ? 'Stopped after' : P('done').main); };
+      const endTitle = () => { work.work.classList.remove('active'); wTitle.classList.remove('sweep'); swapText(wTitle, signal.aborted || failed ? 'Gestoppt nach' : P('done').main); };
       if (picsPending) {
         setActivity(P('picture').kind, P('picture').main);
         pictures.finally(() => { endTitle(); const tt = work.head.querySelector('.t'); tt.classList.remove('live'); tt.textContent = secs(); });
@@ -2592,7 +2592,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (!signal.aborted && !failed && !/```ask/.test(answerR?.text || '') && !work.steps.querySelector('.step.finished')) {
         const n = work.steps.querySelectorAll(':scope > .step:not([hidden])').length;
         const used = renderOpts.sources.filter(Boolean).length;
-        const meta = [n ? `${n} ${n === 1 ? 'step' : 'steps'}` : '', used ? `${used} ${used === 1 ? 'source' : 'sources'}` : ''].filter(Boolean).join(' · ');
+        const meta = [n ? `${n} ${n === 1 ? 'Schritt' : 'Schritte'}` : '', used ? `${used} ${used === 1 ? 'Quelle' : 'Quellen'}` : ''].filter(Boolean).join(' · ');
         const fin = stepLine('dot', `<strong>${P('done').sub}</strong>${meta ? ` <span class="t">${meta}</span>` : ''}`);
         fin.classList.add('finished');
         markerIcon(fin, 'check-circle', 'done');
@@ -2645,7 +2645,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const w = ensureWork();
     const step = stepLine('spin', '<span class="shimmer">Waiting for your answer</span>');
     w.steps.append(step);
-    setActivity('wait', 'Needs your input');
+    setActivity('wait', 'Wartet auf dich');
     w.head.querySelector('.t').hidden = true;
     tab._pendingAsk = { msgEl, work: w, step, questions };
     if (tab === activeTab()) setTimeout(() => { if (tab === activeTab()) showAskPanel(questions); }, 150); // sonst beim Öffnen des Chats
@@ -2695,10 +2695,10 @@ function skipAsk() {
   const pa = pendingOf();
   if (!pa) return;
   activeTab()._pendingAsk = null;
-  finishStep(pa.step, 'Question skipped');
+  finishStep(pa.step, 'Frage übersprungen');
   const w = pa.work;
   w.work.classList.remove('active');
-  swapText(w.head.querySelector('.work-title'), 'Stopped after');
+  swapText(w.head.querySelector('.work-title'), 'Gestoppt nach');
   w.head.querySelector('.t').hidden = false;
   pa.msgEl.querySelector('.answer')?.remove();
   if (!pa.msgEl.querySelector('.msg-actions')) pa.msgEl.append(restartBar(pa.msgEl));
@@ -3166,8 +3166,8 @@ async function sendMessage(text, images) {
   if (ask) hideAskPanel(); // offenes Fragefeld schließen, wenn stattdessen normal geschrieben wird
   const pa = pendingOf();
   if (pa) { // Rückfrage übersprungen → ganz normal weiter
-    finishStep(pa.step, 'Question skipped');
-    swapText(pa.work.head.querySelector('.work-title'), 'Completed');
+    finishStep(pa.step, 'Frage übersprungen');
+    swapText(pa.work.head.querySelector('.work-title'), 'Fertig');
     pa.work.head.querySelector('.t').hidden = false;
     activeTab()._pendingAsk = null;
   }
@@ -4168,7 +4168,7 @@ const chatMenu = $('chatMenu');
 const chatsBtn = $('chatsBtn');
 const chatsPop = $('chatsPop');
 const cpList = $('cpList');
-const DEFAULT_TITLES = new Set(['New Agent', 'Neuer Chat']);
+const DEFAULT_TITLES = new Set(['New Agent', 'Neuer Agent', 'Neuer Chat']);
 
 function chatOf(tab) {
   if (!tab) return null;
@@ -4396,7 +4396,7 @@ const chatsView = (() => {
     const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t)).map((t) => ({ tab: t, c: chatOf(t) })); // leere Chats zählen nicht
     const items = all.filter((x) => !q || x.c.title.toLowerCase().includes(q)).sort((a, b) => b.c.updated - a.c.updated);
     const frag = document.createDocumentFragment();
-    [['Angeheftet', items.filter((x) => x.c.pinned)], ['Zuletzt', items.filter((x) => !x.c.pinned)]].forEach(([label, rows]) => {
+    [['Angeheftet', items.filter((x) => x.c.pinned)], ...(window.UIKit ? UIKit.timeGroups(items.filter((x) => !x.c.pinned), (x) => x.c.updated) : [['Zuletzt', items.filter((x) => !x.c.pinned)]])].forEach(([label, rows]) => {
       if (!rows.length) return;
       frag.append(el('div', 'cl-label', label));
       rows.forEach(({ tab, c }, i) => {
@@ -4661,7 +4661,7 @@ function writeChats() {
    Klick auf einen Gedanken zeigt seinen Text */
 function savedThoughts(h) {
   const w = createWork();
-  w.head.querySelector('.work-title').textContent = 'Completed';
+  w.head.querySelector('.work-title').textContent = 'Fertig';
   const t = w.head.querySelector('.t');
   t.classList.remove('live');
   t.textContent = h.workTime || '';

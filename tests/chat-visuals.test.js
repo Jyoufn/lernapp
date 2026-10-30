@@ -114,10 +114,19 @@ test('Denk-Ablauf je Format: Präsentation, Mindmap, Zeitstrahl haben eigene Sch
   assert.equal(T.formatOf('Erstelle eine Mindmap zum demografischen Wandel', 'general'), 'mindmap');
   assert.equal(T.formatOf('Zeitstrahl zur Deutschen Einheit', 'general'), 'timeline');
   assert.equal(T.formatOf('Zeig mir das Diagramm von SAP', 'boerse'), null);
-  assert.equal(T.of('learn', 'start', 'praesentation').main, 'Understanding your goal');
-  assert.equal(T.of('learn', 'work', 'praesentation').main, 'Creating presentation');
+  assert.equal(T.of('learn', 'start', 'praesentation').main, 'Ziel verstehen');
+  assert.equal(T.of('learn', 'work', 'praesentation').main, 'Präsentation erstellen');
   assert.equal(T.of('learn', 'work', 'praesentation').anim, 'book', 'der Hund bleibt der des Agenten');
-  assert.equal(T.of('general', 'work', null).sub, 'Preparing response');
+  assert.equal(T.of('general', 'work', null).sub, 'Antwort vorbereiten');
   assert.equal(T.blockFormat('Text\n```mindmap\n{}'), 'mindmap');
-  assert.equal(T.statsOf('timeline', '```timeline\n{"events":[{},{},{}]}\n```'), '3 events');
+  assert.equal(T.statsOf('timeline', '```timeline\n{"events":[{},{},{}]}\n```'), '3 Ereignisse');
+});
+
+test('Listen-Gruppen nach Zeit: Zuletzt, Gestern, Letzte Woche, Letzter Monat, Letztes Jahr, Älter', () => {
+  global.window = global.window || {}; global.document = global.document || { createElement: () => ({}) };
+  const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'ui-kit.js'), 'utf8');
+  const UIKit = new Function('window', 'document', `${src}; return UIKit;`)({}, {});
+  const now = new Date(2026, 9, 30, 22, 0), D = 86400000, at = (d) => now.getTime() - d * D;
+  const g = UIKit.timeGroups([at(0), at(1), at(3), at(20), at(200), at(500)], (x) => x, now);
+  assert.deepEqual(g.map(([l, xs]) => [l, xs.length]), [['Zuletzt', 1], ['Gestern', 1], ['Letzte Woche', 1], ['Letzter Monat', 1], ['Letztes Jahr', 1], ['Älter', 1]]);
 });
