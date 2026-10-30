@@ -85,14 +85,15 @@ test('Gedanken werden zu Arbeitsschritten – Gemini (Überschriften) und Nemotr
   assert.match(many[7].body, /Absatz Nummer 12/);
 });
 
-test('Mindmap ist ein Baum: Äste mit eigenen Unterpunkten (mehrere Ebenen), „text“ für Erklärungen, alte „items“ werden Kinder', () => {
+test('Mindmap ist ein Baum: Äste mit eigenen Unterpunkten (mehrere Ebenen), nur Stichpunkte („text“ wird zerlegt), alte „items“ werden Kinder', () => {
   const m = visuals.mindmap({ center: 'Demografischer Wandel', branches: [
     { label: 'Definition', text: 'Veränderung von Größe und Altersaufbau.' },
     { label: 'Hauptursachen', children: [{ label: 'Niedrige Geburtenrate' }, { label: 'Höhere Lebenserwartung' }] },
     { label: 'Deutschland', children: [{ label: 'Hauptursachen', children: [{ label: '1,4 Kinder pro Frau' }] }] },
     { label: 'Alt', items: ['eins', 'zwei'] },
   ] });
-  assert.equal(m.branches[0].text, 'Veränderung von Größe und Altersaufbau.');
+  assert.deepEqual(m.branches[0].children.map((c) => c.label), ['Veränderung von Größe und Altersaufbau'], 'Text wird zu Stichpunkten');
+  assert.equal(m.branches[0].text, undefined);
   assert.deepEqual(m.branches[1].children.map((c) => c.label), ['Niedrige Geburtenrate', 'Höhere Lebenserwartung']);
   assert.equal(m.branches[2].children[0].children[0].label, '1,4 Kinder pro Frau');
   assert.deepEqual(m.branches[3].children.map((c) => c.label), ['eins', 'zwei']);

@@ -52,8 +52,8 @@ const ChatVisuals = (() => {
     })).filter((e) => e.date && e.title).slice(0, 60);
     return events.length >= 2 ? { title: String(data.title || '').slice(0, 120), events } : null;
   }
-  /* Mindmap als Baum: Thema → Äste → Unteräste (bis 4 Ebenen). Jeder Knoten: "label", optional "text" (kurze Erklärung im Kästchen)
-     und "children". Ältere Blöcke mit "items" (Stichworte) werden zu Kindern. */
+  /* Mindmap als Baum: Thema → Äste → Unteräste (bis 4 Ebenen). Jeder Knoten: "label" und "children" – nur Stichpunkte, kein Fließtext.
+     Ältere Blöcke: "items" werden Kinder, "text" wird in Stichpunkte zerlegt. */
   function mindmap(raw) {
     let data;
     try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
@@ -63,10 +63,12 @@ const ChatVisuals = (() => {
       const label = String((typeof n === 'string' ? n : n?.label ?? n?.title) ?? '').trim().slice(0, 80);
       if (!label) return null;
       count++;
-      const text = typeof n === 'object' ? String(n?.text ?? '').trim().slice(0, 320) : '';
-      const kids = depth >= 4 || typeof n !== 'object' ? [] : [...(Array.isArray(n?.children) ? n.children : []), ...(Array.isArray(n?.items) ? n.items : [])]
+      // nur Stichpunkte: ein „text“ (ältere Blöcke) wird in einzelne Stichpunkt-Kästchen zerlegt
+      const text = typeof n === 'object' ? String(n?.text ?? '').trim().slice(0, 400) : '';
+      const fromText = text && depth < 4 ? text.split(/(?<=[.!?;])\s+/).map((x) => x.replace(/[.;]\s*$/, '').trim()).filter(Boolean) : [];
+      const kids = depth >= 4 || typeof n !== 'object' ? [] : [...fromText, ...(Array.isArray(n?.children) ? n.children : []), ...(Array.isArray(n?.items) ? n.items : [])]
         .slice(0, 12).map((c) => node(c, depth + 1)).filter(Boolean);
-      return { label, ...(text ? { text } : {}), children: kids };
+      return { label, children: kids };
     };
     const center = String(data?.center ?? '').trim().slice(0, 80);
     const branches = (Array.isArray(data?.branches) ? data.branches : []).slice(0, 12).map((b) => node(b, 1)).filter(Boolean);

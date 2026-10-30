@@ -864,7 +864,7 @@ function chartFigure(data) {
   return figure;
 }
 
-/* Zeitstrahl (README.md): links das Datum, daneben die Linie mit Punkt, rechts der Titel im Kästchen (ohne Fläche, feiner Rand).
+/* Zeitstrahl (README.md): links die Linie mit Punkt, daneben das Kästchen (ohne Fläche, feiner Rand) – darin links das Datum, rechts der Titel.
    Klick klappt Text und Stichpunkte IM selben Kästchen weich auf (nur die Höhe läuft); mehrere können offen sein. Keine Obergrenze. */
 function timelineFigure(data) {
   const figure = el('figure', 'chat-timeline tl4');
@@ -875,13 +875,13 @@ function timelineFigure(data) {
   data.events.forEach((e, i) => {
     const row = el('div', 'tl4-row');
     row.style.animationDelay = `${Math.min(i, 14) * 45}ms`;
-    const date = el('div', 'tl4-date'); date.textContent = e.date;
     const rail = el('div', 'tl4-rail', '<i class="tl4-dot"></i>');
     const box = el('div', 'tl4-box');
     const has = !!(e.text || e.points.length);
     const head = el(has ? 'button' : 'div', 'tl4-h');
     if (has) { head.type = 'button'; head.setAttribute('aria-expanded', 'false'); }
-    head.innerHTML = `<span class="tl4-t"></span>${has ? icon('f-chevron-down', 12).replace('<svg', '<svg class="tl4-chev"') : ''}`;
+    head.innerHTML = `<span class="tl4-date"></span><span class="tl4-t"></span>${has ? icon('f-chevron-down', 12).replace('<svg', '<svg class="tl4-chev"') : ''}`;
+    head.querySelector('.tl4-date').textContent = e.date;
     head.querySelector('.tl4-t').textContent = e.title;
     box.append(head);
     if (has) {
@@ -890,7 +890,7 @@ function timelineFigure(data) {
       if (e.points.length) { const ul = el('ul'); e.points.forEach((x) => { const li = el('li'); li.textContent = x; ul.append(li); }); inner.append(ul); }
       more.append(inner); box.append(more);
     }
-    row.append(date, rail, box);
+    row.append(rail, box);
     list.append(row);
   });
   figure.append(list);
@@ -936,16 +936,16 @@ function heftFigure(code) {
 function mindmapFigure(data) {
   const figure = el('figure', 'chat-mindmap mm4');
   figure.setAttribute('aria-label', `Mindmap ${data.center}: ${data.branches.map((b) => b.label).join(', ')}`);
-  const tools = el('div', 'mm4-tools', `<button type="button" data-z="out" aria-label="Verkleinern" title="Verkleinern">${FadeIcons.svg('minus', 13)}</button>`
+  const tools = el('div', 'mm4-tools', `<button type="button" data-z="out" aria-label="Verkleinern" title="Verkleinern">${FadeIcons.svg('minus', 11)}</button>`
     + '<button type="button" class="mm4-pct" data-z="fit" title="Alles einpassen">100 %</button>'
-    + `<button type="button" data-z="in" aria-label="Vergrößern" title="Vergrößern">${FadeIcons.svg('plus', 13)}</button>`
-    + `<button type="button" data-z="full" aria-label="Vollbild" title="Vollbild">${FadeIcons.svg('expand', 13)}</button>`);
+    + `<button type="button" data-z="in" aria-label="Vergrößern" title="Vergrößern">${FadeIcons.svg('plus', 11)}</button>`
+    + `<button type="button" data-z="full" aria-label="Vollbild" title="Vollbild">${FadeIcons.svg('expand', 11)}</button>`);
   const view = el('div', 'mm4-view');
   const stage = el('div', 'mm4-stage');
   const svg = svgNode('svg', { class: 'mm4-lines', 'aria-hidden': 'true' });
   stage.append(svg);
-  view.append(stage);
-  figure.append(tools, view);
+  view.append(stage, tools); // Zoom-Leiste sitzt klein oben rechts IM Kasten
+  figure.append(view);
   // Knoten anlegen (Maße erst, wenn die Mindmap im Chat steht)
   const all = [];
   const make = (n, depth, i) => {
@@ -983,8 +983,9 @@ function mindmapFigure(data) {
     let y = (total - side(R)) / 2; R.forEach((b) => { place(b, root.w + GX1, y, 1); y += sh(b) + GY1; });
     y = (total - side(L)) / 2; L.forEach((b) => { place(b, -GX1, y, -1); y += sh(b) + GY1; });
     const minX = Math.min(...all.map((n) => n.x)), maxX = Math.max(...all.map((n) => n.x + n.w));
-    W = maxX - minX + PAD * 2; H = total + PAD * 2;
-    all.forEach((n) => { n.x += PAD - minX; n.y += PAD; n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; });
+    const TOP = 36; // oben Platz für die Zoom-Leiste
+    W = maxX - minX + PAD * 2; H = total + TOP + PAD;
+    all.forEach((n) => { n.x += PAD - minX; n.y += TOP; n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; });
     stage.style.width = `${W}px`; stage.style.height = `${H}px`;
     svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     // Linien: vom Rand des Elternteils (Mitte) zum Rand des Kindes (Mitte), weiche Kurve in der freien Spalte
@@ -1020,7 +1021,7 @@ function mindmapFigure(data) {
     st.s = s;
     const cx = root.x + root.w / 2, cy = root.y + root.h / 2;
     st.tx = W * s <= vw ? (vw - W * s) / 2 : laid ? 4 : vw / 2 - cx * s; // schmal (alle Äste rechts): am linken Rand beginnen
-    st.ty = H * s <= vh ? (vh - H * s) / 2 : vh / 2 - cy * s;
+    st.ty = H * s <= vh ? (vh - H * s) / 2 : Math.min(0, vh / 2 - cy * s);
     apply();
   };
   const clampS = (s) => Math.max(Math.min(0.25, st.fitS), Math.min(2.5, s));
@@ -1042,11 +1043,11 @@ function mindmapFigure(data) {
   let keep = '';
   const toggleFull = () => {
     const on = !full();
-    if (on) { keep = view.style.height; figure.style.height = `${figure.offsetHeight}px`; view.style.height = ''; overlay.append(tools, view); document.body.append(overlay); }
-    else { figure.append(tools, view); overlay.remove(); figure.style.height = ''; view.style.height = keep; }
+    if (on) { keep = view.style.height; figure.style.height = `${figure.offsetHeight}px`; view.style.height = ''; overlay.append(view); document.body.append(overlay); }
+    else { figure.append(view); overlay.remove(); figure.style.height = ''; view.style.height = keep; }
     figure.classList.toggle('full', on); overlay.classList.toggle('full', on);
     document.documentElement.classList.toggle('mm4-lock', on);
-    tools.querySelector('[data-z="full"]').innerHTML = FadeIcons.svg(on ? 'shrink' : 'expand', 13);
+    tools.querySelector('[data-z="full"]').innerHTML = FadeIcons.svg(on ? 'shrink' : 'expand', 11);
     if (on) document.addEventListener('keydown', onKey); else document.removeEventListener('keydown', onKey);
     requestAnimationFrame(() => fit(on));
   };
@@ -1054,12 +1055,12 @@ function mindmapFigure(data) {
     if (e.ctrlKey || e.metaKey) { e.preventDefault(); const r = view.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - r.left, e.clientY - r.top); }
     else if (full()) { e.preventDefault(); st.tx -= e.deltaX; st.ty -= e.deltaY; apply(); }
   }, { passive: false });
-  view.addEventListener('dblclick', (e) => { const r = view.getBoundingClientRect(); zoomAt(1.5, e.clientX - r.left, e.clientY - r.top); });
+  view.addEventListener('dblclick', (e) => { if (e.target.closest('.mm4-tools')) return; const r = view.getBoundingClientRect(); zoomAt(1.5, e.clientX - r.left, e.clientY - r.top); });
   // ziehen = verschieben; zwei Finger = zoomen
   const pts = new Map(); let last = null;
   const mid = () => { const a = [...pts.values()]; return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) }; };
   view.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if ((e.button !== 0 && e.pointerType === 'mouse') || e.target.closest('.mm4-tools')) return;
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); view.setPointerCapture(e.pointerId);
     last = pts.size === 2 ? mid() : { x: e.clientX, y: e.clientY };
     view.classList.add('grab');

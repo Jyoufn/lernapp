@@ -8646,3 +8646,16 @@ div.tl4-h { cursor: default; }
 .md .tl4-mi li { position: relative; margin: 0; padding-left: 14px; }
 .md .tl4-mi li::before { content: ''; position: absolute; top: 8.5px; left: 1px; width: 5px; height: 5px; border-radius: 50%; background: var(--text-4); }
 @media (prefers-reduced-motion: reduce) { .tl4-row { animation: none; } }
+
+/* Zeitstrahl v4.1: Datum IM Kästchen links vor dem Titel; Linie mit Punkt links daneben */
+.tl4-row { grid-template-columns: 16px minmax(0, 1fr); }
+.tl4-h .tl4-date { flex: none; min-width: var(--tl-dw, 64px); padding: 0; color: var(--text-3); font-size: 12.5px; font-weight: 500; line-height: 20px; text-align: left; font-variant-numeric: tabular-nums; }
+.tl4-row.open .tl4-h .tl4-date { color: var(--accent); }
+.tl4-mi { padding-left: calc(12px + var(--tl-dw, 64px) + 10px); }
+@media (max-width: 520px) { .tl4-mi { padding-left: 12px; } }
+/* Mindmap v4.1: Zoom-Leiste klein oben rechts im Kasten, ohne graue Fläche */
+.mm4-view > .mm4-tools, .mm4-overlay .mm4-tools { position: absolute; top: 6px; right: 6px; gap: 0; padding: 0; border: 0; background: none; }
+.mm4-tools button { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 6px; color: var(--text-4); font-size: 11px; }
+.mm4-tools button:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-2); }
+.mm4-overlay .mm4-tools { top: max(12px, env(safe-area-inset-top)); right: 12px; }
+.mm4-view > .mm4-tools, .mm4-overlay .mm4-tools { padding: 1px; border-radius: 7px; background: var(--main-bg); box-shadow: 0 0 0 4px var(--main-bg); }
