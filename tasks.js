@@ -195,6 +195,16 @@ const Tasks = (() => {
     const text = d.diff > 1 && d.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : d.text;
     return `<span class="tk-chip due${d.cls}">${fi('calendar', 11)}${text}</span>`;
   };
+  // Zeile wie in der Vorlage: Kreis (zeigt nur den Stand – abhaken tut der Agent) · Titel · rechts Agent, Datum, Flagge
+  // Kreis: leer = offen · dreht sich = Agent arbeitet · rot = hat nicht geklappt · blau mit Haken = erledigt
+  const ckState = (t) => (t.status === 'done' ? 'done' : t.run?.state === 'queued' || t.run?.state === 'running' ? 'run' : t.run?.state === 'failed' ? 'fail' : t.agent ? 'wait' : 'open');
+  function agentChip(t) {
+    if (!agents || !t.agent || !AGENT_NAMES[t.agent]) return '';
+    const r = t.run || {};
+    if (r.state === 'done') return `<button type="button" class="tk-chip agent res" data-result="${t.id}">${fi(t.output === 'doc' ? 'file' : 'chat', 11)}${t.output === 'doc' ? 'Dokument' : 'Chat'} öffnen</button>`;
+    if (r.state === 'failed') return `<button type="button" class="tk-chip agent fail" data-retry="${t.id}">${fi('refresh', 11)}Nochmal</button>`;
+    return `<span class="tk-chip agent${r.state === 'queued' || r.state === 'running' ? ' run' : ''}"><span class="tk-dog">${dog(t.agent, 20)}</span>${r.state === 'queued' || r.state === 'running' ? 'arbeitet …' : AGENT_NAMES[t.agent]}</span>`;
+  }
   function row(t) {
     const done = t.status === 'done', prio = byId(PRIOS, t.prio);
     const ts = t.tags.map(tagOf).filter(Boolean);
@@ -202,19 +212,16 @@ const Tasks = (() => {
     el.className = `tk-row${done ? ' done' : ''}`;
     el.dataset.id = t.id;
     el.tabIndex = 0;
+    const st = ckState(t);
     const chips = [
-      ...ts.slice(0, 2).map((g) => `<span class="tk-chip tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`),
-      t.comments?.length ? `<span class="tk-chip">${fi('chat', 11)}${t.comments.length}</span>` : '',
+      agentChip(t),
+      ...ts.slice(0, 1).map((g) => `<span class="tk-chip tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`),
       dueChip(t, done),
-      FLAG[prio.id] ? `<span class="tk-flag${prio.id === 'urgent' ? ' urgent' : ''}" style="--c:${FLAG[prio.id]}" aria-label="Priorität ${prio.name}">${fi('flag', 11)}</span>` : '',
+      FLAG[prio.id] ? `<span class="tk-flag" style="--c:${FLAG[prio.id]}" aria-label="Priorität ${prio.name}">${fi('flag', 12)}</span>` : '',
     ].filter(Boolean).join('');
-    el.innerHTML = `<button type="button" class="tk-ck" data-check="${t.id}" role="checkbox" aria-checked="${done}" aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}">${CHECK}</button>
-      <div class="tk-row-main">
-        <div class="tk-row-title">${esc(t.title)}</div>
-        ${t.notes ? `<div class="tk-row-notes">${esc(t.notes)}</div>` : ''}
-      </div>
+    el.innerHTML = `<span class="tk-ck s-${st}" role="img" aria-label="${{ done: 'Erledigt', run: 'Agent arbeitet', fail: 'Hat nicht geklappt', wait: 'Wartet auf den Agenten', open: 'Offen' }[st]}">${CHECK}</span>
+      <div class="tk-row-main"><div class="tk-row-title">${esc(t.title)}</div></div>
       ${chips ? `<div class="tk-row-chips">${chips}</div>` : ''}`;
-    if (agents && t.agent && AGENT_NAMES[t.agent]) el.querySelector('.tk-row-main').append(agentRow(t));
     return el;
   }
   function renderList() {
@@ -229,21 +236,31 @@ const Tasks = (() => {
       g.querySelector('.tk-rows-in').append(...items.map(row));
       return g;
     };
-    const quick = document.createElement('label');
-    quick.className = 'tk-quick';
-    quick.innerHTML = `<span class="tk-ck ghost">${fi('plus', 11)}</span><input class="tk-quick-in" placeholder="Aufgabe hinzufügen …" maxlength="120" aria-label="Aufgabe hinzufügen" />`;
-    const parts = [quick];
+    const parts = [];
     GROUPS.forEach((gr) => { const items = open.filter((t) => gr.test(dueInfo(t.date))).sort(sortOpen); if (items.length) parts.push(block(gr.id, gr.name, items)); });
     if (!open.length) {
       const e = document.createElement('div');
       e.className = 'tk-empty';
-      e.textContent = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : 'Alles erledigt.';
+      e.innerHTML = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : `<b>Keine offenen Aufgaben</b><span>Leg eine an und gib sie an einen Agenten.</span><button type="button" class="tk-empty-new" data-act="new">${fi('plus', 12)}Neue Aufgabe</button>`;
       parts.push(e);
     }
     if (done.length) parts.push(block('done', 'Erledigt', done, doneOpen ? ' open' : ''));
-    const keep = document.activeElement?.classList.contains('tk-quick-in');
+    // „Delegieren“ unten wie in der Vorlage: gibt alle Aufgaben, für die ein Agent gewählt ist, an die Agenten (erst dann, nicht beim Anlegen)
+    if (agents) {
+      const n = pendingAgent().length;
+      const d = document.createElement('div');
+      d.className = 'tk-deleg';
+      d.innerHTML = `<button type="button" class="tk-deleg-btn" data-act="delegate"${n ? '' : ' disabled'}>${fi('sparkle', 13)}Delegieren${n ? `<b>${n}</b>` : ''}</button>`;
+      parts.push(d);
+    }
     board.replaceChildren(...parts);
-    if (keep) board.querySelector('.tk-quick-in').focus();
+  }
+  const pendingAgent = () => tasks.filter((t) => t.status !== 'done' && t.agent && AGENT_NAMES[t.agent] && !t.run);
+  function delegate() {
+    const list = pendingAgent(); if (!list.length) return;
+    list.forEach((t) => { t.run = { state: 'queued', updated: Date.now() }; });
+    save(); render();
+    list.forEach((t, i) => setTimeout(() => startRun(t), i * 250));
   }
   function toggleDone(id) {
     const t = tasks.find((x) => x.id === id); if (!t) return;
@@ -255,24 +272,12 @@ const Tasks = (() => {
     if (!el) { render(); return; }
     // erst der Haken, dann gleitet die Zeile weich weg und taucht im anderen Block auf
     el.classList.toggle('done', nowDone);
-    el.querySelector('.tk-ck').setAttribute('aria-checked', String(nowDone));
+    el.querySelector('.tk-ck').className = `tk-ck s-${nowDone ? 'done pop' : 'open'}`;
     el.classList.add('leaving');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => { render(); board.querySelector(`.tk-row[data-id="${id}"]`)?.classList.add('fresh'); }, reduce ? 0 : 420);
   }
-  function quickAdd(input) {
-    const title = input.value.trim(); if (!title) return;
-    const t = { id: newId(), title: title.slice(0, 120), notes: '', status: 'backlog', tags: [], prio: 'none', date: '', progress: 0, comments: [], order: -1, created: Date.now() };
-    tasks.push(t); normalize(); save(); render();
-    board.querySelector(`.tk-row[data-id="${t.id}"]`)?.classList.add('fresh');
-    board.querySelector('.tk-quick-in')?.focus();
-  }
-  if (listMode) {
-    board.addEventListener('keydown', (e) => {
-      if (e.target.matches('.tk-quick-in')) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); quickAdd(e.target); } if (e.key === 'Escape') { e.target.value = ''; e.target.blur(); } return; }
-      if (e.key === 'Enter' && e.target.matches('[data-toggle-done]')) e.target.click();
-    });
-  }
+  if (listMode) board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-toggle-done]')) e.target.click(); });
 
   function render() {
     if (listMode) { renderList(); const n = filter.tags.size + filter.prios.size + (filter.due ? 1 : 0); const fc = view.querySelector('.tk-fcount'); fc.hidden = !n; fc.textContent = n; return; }
@@ -321,12 +326,35 @@ const Tasks = (() => {
   function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: startAgent, output: 'chat' } : {}) };
+    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: 'chat' } : {}) };
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${menu}</div></div>`;
-    modal.innerHTML = `<form class="tk-form" autocomplete="off">
+    if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
+      <div class="tk-sheet-head">
+        <span class="tk-ck s-${t0 ? ckState(t0) : 'open'}">${CHECK}</span>
+        <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Neue Aufgabe" maxlength="120" aria-label="Titel" required />
+        <button type="button" class="tk-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
+      </div>
+      <div class="tk-sheet-rows">
+        ${pill('date', '<div class="tk-cal"></div>', 'date')}
+        ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${p.name}</span>${fi('check', 12)}</button>`).join(''))}
+        ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
+        <label class="tk-sheet-note"><span class="tk-si">${fi('file', 14)}</span><textarea class="tk-f-notes" name="notes" rows="1" placeholder="Notizen hinzufügen" maxlength="1000" aria-label="Notizen">${esc(t.notes)}</textarea></label>
+        ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" placeholder="Kommentar schreiben …" maxlength="500" aria-label="Kommentar schreiben" /><button type="button" class="tk-tag-plus" data-cm-send aria-label="Kommentar senden">' + fi('arrow-up', 12) + '</button></div>', 'comments')}
+      </div>
+      <div class="tk-sheet-foot">
+        ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`, 'up') : agents && t0?.agent ? `<span class="tk-pill static"><span class="tk-dog">${dog(t0.agent, 20)}</span>${AGENT_NAMES[t0.agent] || ''}</span>` : ''}
+        ${agents && !locked ? pill('output', `<button type="button" class="tk-mi" data-toutput="chat">${fi('chat', 13)}<span>Ergebnis als Chat</span>${fi('check', 12)}</button><button type="button" class="tk-mi" data-toutput="doc">${fi('file', 13)}<span>Ergebnis als Dokument</span>${fi('check', 12)}</button>`, 'up') : ''}
+        <span class="grow"></span>
+        ${t0 && !(t0.agent && t0.run) ? `<button type="button" class="tk-sheet-ib" data-act="done" aria-label="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}" title="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}">${fi(t0.status === 'done' ? 'refresh' : 'check', 13)}</button>` : ''}
+        ${t0 ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen" title="Löschen">${fi('trash', 13)}</button>` : ''}
+        <button type="submit" class="tk-create">${t0 ? 'Fertig' : 'Erstellen'}</button>
+        <div class="tk-progress" hidden><div class="tk-slider" role="slider" tabindex="0" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100"><i class="tk-sl-fill"></i><b class="tk-sl-knob"></b></div><span class="tk-pv"></span></div>
+      </div>
+    </form>`;
+    else modal.innerHTML = `<form class="tk-form" autocomplete="off">
       <div class="tk-form-head">
         <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Neue Aufgabe" maxlength="120" aria-label="Titel" required />
         <button type="button" class="tk-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
@@ -347,7 +375,7 @@ const Tasks = (() => {
     </form>`;
     const form = modal.querySelector('form');
     const notes = form.querySelector('.tk-f-notes');
-    const grow = () => { notes.style.height = 'auto'; notes.style.height = `${Math.min(notes.scrollHeight, 200)}px`; };
+    const grow = () => { notes.style.height = listMode ? '0px' : 'auto'; notes.style.height = `${Math.max(listMode ? 20 : 0, Math.min(notes.scrollHeight, 200))}px`; };
     notes.addEventListener('input', grow);
 
     /* Pillen beschriften */
@@ -375,7 +403,20 @@ const Tasks = (() => {
         op.innerHTML = `${fi(t.output === 'doc' ? 'file' : 'chat', 13)}${t.output === 'doc' ? 'Dokument' : 'Chat'}`;
         form.querySelectorAll('[data-tagent]').forEach((b) => b.classList.toggle('on', b.dataset.tagent === (t.agent || '')));
         form.querySelectorAll('[data-toutput]').forEach((b) => b.classList.toggle('on', b.dataset.toutput === t.output));
-        form.querySelector('.tk-create').textContent = t0 ? 'Speichern' : t.agent ? 'An Agent geben' : 'Aufgabe erstellen';
+        if (!listMode) form.querySelector('.tk-create').textContent = t0 ? 'Speichern' : t.agent ? 'An Agent geben' : 'Aufgabe erstellen';
+      }
+      // Zeilen wie im Termin-Fenster: Icon + Wert, leer = grauer Hinweis („Datum hinzufügen“)
+      if (listMode) {
+        const set = (k, html, empty) => { const b = form.querySelector(`[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${html[0]}</span><span class="tk-rv">${html[1]}</span>`; b.classList.toggle('empty', !!empty); } };
+        const dd = t.date ? new Date(`${t.date}T12:00:00`) : null;
+        set('date', [fi('calendar', 14), dd ? `${dd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}` : 'Datum hinzufügen'], !dd);
+        set('prio', [FLAG[pr.id] ? `<span style="color:${FLAG[pr.id]}">${fi('flag', 14)}</span>` : fi('flag', 14), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität ${pr.name.toLowerCase()}`], pr.id === 'none');
+        set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
+        set('comments', [fi('chat', 14), t.comments.length ? `${t.comments.length} ${t.comments.length === 1 ? 'Kommentar' : 'Kommentare'}` : 'Kommentar hinzufügen'], !t.comments.length);
+        const ag = form.querySelector('[data-open="agent"]');
+        if (ag) ag.innerHTML = t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}<span class="tk-chev">${fi('chevron-down', 10)}</span>` : `${fi('user', 13)}Agent wählen<span class="tk-chev">${fi('chevron-down', 10)}</span>`;
+        const ou = form.querySelector('[data-open="output"]');
+        if (ou) ou.innerHTML = `${fi(t.output === 'doc' ? 'file' : 'chat', 13)}${t.output === 'doc' ? 'Dokument' : 'Chat'}<span class="tk-chev">${fi('chevron-down', 10)}</span>`;
       }
     };
 
@@ -531,6 +572,7 @@ const Tasks = (() => {
       if (!e.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = e.target.closest('[data-act]')?.dataset.act;
       if (act === 'close') close();
+      if (act === 'done') { close(); setTimeout(() => toggleDone(t.id), 230); return; }
       if (act === 'delete') { tasks = tasks.filter((x) => x.id !== t.id); if (t.agent) forget([t.id]); save(); render(); close(); }
     });
     form.addEventListener('keydown', (e) => {
@@ -560,7 +602,7 @@ const Tasks = (() => {
       }
       // neue Aufgabe mit Agent (oder ein Agent wurde nachträglich gewählt) → sofort an den Agenten
       const target = t0 || t;
-      const go = agents && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
+      const go = agents && !listMode && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
       if (go) { if (hasCol('doing')) target.status = 'doing'; target.order = -1; target.run = { state: 'queued', updated: Date.now() }; }
       normalize(); save();
       if (go) startRun(target);
@@ -616,6 +658,7 @@ const Tasks = (() => {
   view.addEventListener('click', (e) => {
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (act === 'new') { edit(null); return; }
+    if (act === 'delegate') { delegate(); return; }
     if (act === 'filter') { e.stopPropagation(); drawFilter(); view.querySelector('.tk-filter-wrap').classList.toggle('open'); return; }
     const res = e.target.closest('[data-result]');
     if (res) { openResult(tasks.find((x) => x.id === res.dataset.result)); return; }
@@ -623,8 +666,7 @@ const Tasks = (() => {
     if (rt) { const t = tasks.find((x) => x.id === rt.dataset.retry); if (t) { if (hasCol('doing')) t.status = 'doing'; t.run = { state: 'queued', updated: Date.now() }; normalize(); save(); render(); startRun(t); } return; }
     const add = e.target.closest('[data-add]');
     if (add) { edit(null, add.dataset.add); return; }
-    const ck = e.target.closest('[data-check]');
-    if (ck) { toggleDone(ck.dataset.check); return; }
+
     const ga = e.target.closest('[data-grp-add]');
     if (ga) { const k = ga.dataset.grpAdd, d = new Date(); if (k === 'soon') d.setDate(d.getDate() + 1); edit(null, 'backlog', ['late', 'today', 'soon'].includes(k) ? isoOf(d) : ''); return; }
     if (e.target.closest('[data-toggle-done]')) {
@@ -637,7 +679,7 @@ const Tasks = (() => {
     const c = e.target.closest('.tk-card, .tk-row');
     if (c) edit(c.dataset.id);
   });
-  board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card, .tk-row')) edit(e.target.dataset.id); if (e.key === ' ' && e.target.matches('.tk-row')) { e.preventDefault(); toggleDone(e.target.dataset.id); } });
+  board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card, .tk-row')) edit(e.target.dataset.id); });
 
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
@@ -655,6 +697,7 @@ const Tasks = (() => {
     if (r.chatId && !(await window.openSavedChat?.(r.chatId))) { r.state = 'failed'; r.error = 'Chat nicht mehr da'; save(); render(); }
   }
   let pullT = 0, pulling = false;
+  const justDone = new Set();
   async function pull() {
     if (!agents || pulling) return;
     clearTimeout(pullT);
@@ -674,12 +717,23 @@ const Tasks = (() => {
         if (s.state === 'running' && t.status === 'backlog' && hasCol('doing')) { t.status = 'doing'; t.order = -1; }
         if (s.state === 'done' && was !== 'done') {
           if (t.status !== 'done' && hasCol('review')) { t.status = 'review'; t.order = -1; }
+          if (listMode && t.status !== 'done') { t.status = 'done'; t.doneAt = Date.now(); justDone.add(t.id); } // Liste: der Agent hakt die Aufgabe selbst ab
           t.progress = 100;
           t.comments = [...(t.comments || []), { text: `${AGENT_NAMES[t.agent] || 'Agent'}: fertig – ${t.output === 'doc' ? 'Dokument' : 'Chat'} „${s.title || t.title}“ ist bereit.`, at: s.finished || Date.now() }];
         }
         changed = true;
       });
-      if (changed) { normalize(); save(); render(); }
+      if (changed) {
+        normalize(); save();
+        // eben fertig geworden: Zeile bleibt kurz oben, der Kreis füllt sich mit Haken, dann gleitet sie zu „Erledigt“
+        const fresh = [...justDone].map((id) => board.querySelector(`.tk-row[data-id="${id}"]`)).filter(Boolean);
+        justDone.clear();
+        if (fresh.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          fresh.forEach((r) => { const c = r.querySelector('.tk-ck'); c.className = 'tk-ck s-done pop'; r.classList.add('done'); });
+          setTimeout(() => { fresh.forEach((r) => r.classList.add('leaving')); }, 900);
+          setTimeout(render, 1300);
+        } else render();
+      }
     }
     if (tasks.some((t) => t.agent && (t.run?.state === 'queued' || t.run?.state === 'running'))) pullT = setTimeout(pull, 5000);
   }

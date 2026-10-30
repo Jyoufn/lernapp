@@ -63,9 +63,10 @@ test('Tiefen-Recherche: ohne Plan-Modell trotzdem Suche aus der Frage; ohne Quel
   assert.equal(r.comparison, null);
 });
 
-test('Quellen-Rang: Wissenschaft vor Fachseite vor Nachrichten vor Rest, Foren gar nicht', () => {
+test('Quellen-Rang: deutsche Quellen zuerst, Wissenschaft/Fachseite vor Nachrichten vor Rest, Foren gar nicht', () => {
   const rk = (u) => DEEP.rankDeep({ url: u }, quality);
-  assert.ok(rk('https://nature.com/x') > rk('https://bpb.de/x'));
+  assert.ok(rk('https://bpb.de/x') > rk('https://nature.com/x'), 'deutsche Fachseite vor englischer Wissenschaft');
+  assert.ok(rk('https://nature.com/x') > rk('https://irgendwas.com/x'));
   assert.ok(rk('https://bpb.de/x') > rk('https://tagesschau.de/x'));
   assert.ok(rk('https://tagesschau.de/x') > rk('https://irgendwas.com/x'));
   assert.equal(rk('https://reddit.com/x'), null);
