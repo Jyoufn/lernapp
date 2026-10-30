@@ -771,3 +771,20 @@ test('Fachwissenschaftliche Quellen (OpenAlex) nur beim Lern-Agenten', async () 
   await run({ ...msg('Erkläre die Photosynthese.'), effort: 'high', agent: 'learn' });
   assert.ok(fx.calls.some((c) => c.url.includes('openalex')), 'Lernen fragt Fachliteratur ab');
 });
+
+/* ---------- Präsentation: Recherche läuft auf Auto, die Quellenfolie bekommt die echten Quellen ---------- */
+test('Präsentation (Lernen): recherchiert immer und hängt die echten Quellen als ```belege an', async () => {
+  const block = '```praesentation\n{"title":"Photosynthese","slides":[{"type":"punkte","title":"Pflanzen machen Zucker","points":["Licht wird genutzt"]}],"sources":[1,"Arbeitsblatt des Nutzers"]}\n```';
+  fx = M.installFetch([
+    { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false }) },
+    ...researchRoutes(),
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Hier ist deine Präsentation.\n\n', block])) },
+  ]);
+  const r = await run({ ...msg('Erstelle eine Präsentation über Photosynthese'), agent: 'learn' });
+  assert.ok(r.stages().includes('searching_sources:active'));
+  const m = /```belege\n(.*)\n```/.exec(r.result.answer);
+  assert.ok(m, 'belege-Block fehlt');
+  const list = JSON.parse(m[1]);
+  assert.ok(/https?:\/\//.test(list[0]));
+  assert.ok(list.includes('Arbeitsblatt des Nutzers'));
+});

@@ -23,12 +23,12 @@ const Praesentation = (() => {
     minimal: { name: 'Minimal', bg: '#FAFAFA', text: '#0A0A0A', sub: '#6B6B6B', panel: '#FFFFFF', line: '#D9D9D9', accent: '#0A0A0A', onAccent: '#FFFFFF', head: 'sans', title: 'minimal', radius: 0, fixedAccent: true },
   };
   const ALIAS = { hell: 'klar', dunkel: 'nacht', warm: 'papier' };
-  const themeOf = (deck) => { const T = THEMES[deck.theme] || THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.theme === deck.aiTheme ? { accent: deck.accent } : {}) }; };
+  const themeOf = (deck) => { const T = THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.accent ? { accent: deck.accent } : {}) }; };
   const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'fazit', 'quellen', 'ende'];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
   const str = (x, n) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
-  const plain = (x) => String(x ?? '').replace(/\*\*|__/g, '').replace(/(^|\s)\*(\S)/g, '$1$2').replace(/(\S)\*(\s|$)/g, '$1$2');
+  const plain = (x) => String(x ?? '').replace(/\s?\[\d{1,2}(?:\s*[,;–-]\s*\d{1,2})*\](?!\()/g, '').replace(/\*\*|__/g, '').replace(/(^|\s)\*(\S)/g, '$1$2').replace(/(\S)\*(\s|$)/g, '$1$2');
   const hex = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : null);
 
   /* ---------- Daten prüfen ---------- */
@@ -53,11 +53,11 @@ const Praesentation = (() => {
       if (items.length >= 2) slides.splice(slides[0].type === 'titel' ? 1 : 0, 0, { type: 'gliederung', title: 'Gliederung', text: '', points: items, left: null, right: null, image: null, notes: '' });
     }
     // Ende immer mit Quellen und Schluss-Folie (fehlen sie, setzt die App sie dazu; Bildnachweise kommen beim Zeichnen dazu)
-    const sources = (Array.isArray(o.sources) ? o.sources : []).map((x) => str(typeof x === 'string' ? x : [x?.title, x?.publisher, x?.year, x?.url].filter(Boolean).join(' · '), 220)).filter(Boolean).slice(0, 14);
+    const sources = (Array.isArray(o.sources) ? o.sources : []).filter((x) => typeof x !== 'number' && !/^\s*\[?\d{1,2}\]?\s*$/.test(String(x))).map((x) => str(typeof x === 'string' ? x : [x?.title, x?.publisher, x?.year, x?.url].filter(Boolean).join(' · '), 220)).filter(Boolean).slice(0, 14);
     if (!slides.some((x) => x.type === 'ende')) slides.push({ type: 'ende', title: 'Vielen Dank!', text: 'Fragen?', points: [], left: null, right: null, image: null, notes: '' });
     if (!slides.some((x) => x.type === 'quellen')) slides.splice(slides.length - 1, 0, { type: 'quellen', title: 'Quellen', text: '', points: [], left: null, right: null, image: null, notes: '' });
-    const theme = THEMES[o.theme] ? o.theme : ALIAS[o.theme] || 'klar';
-    return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: o.aiTheme && THEMES[o.aiTheme] ? o.aiTheme : theme, accent: hex(o.accent), sources, slides };
+    const theme = 'klar'; // nur noch ein Design: „Klar“
+    return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: theme, accent: hex(o.accent), sources, slides };
   }
 
   /* ---------- Text: **fett** in Läufe zerlegen, messen und umbrechen (eine Messung für alle drei Ausgaben) ---------- */
@@ -114,7 +114,7 @@ const Praesentation = (() => {
     };
     // Abschnitt, zu dem die Folie gehört (Kicker über der Überschrift)
     let sec = '';
-    for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
+    if (!['quellen', 'ende', 'fazit'].includes(slide.type)) for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
     const heading = (t, w = W - 2 * M) => {
       let y = 0.62;
       if (sec && T.title !== 'minimal') { out.push({ k: 'text', x: M, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
@@ -168,7 +168,7 @@ const Praesentation = (() => {
         else { out.push({ k: 'ellipse', x: 9.3, y: -1.7, w: 6.2, h: 6.2, fill: T.panel }); out.push({ k: 'ellipse', x: 11.0, y: 4.5, w: 2.8, h: 2.8, fill: T.accent, alpha: 0.18 }); }
         out.push({ k: 'rect', x: M + 0.05, y: 2.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
         const f = text(s.title || deck.title, { x: M + 0.05, y: 2.4, w: tw, h: 2.6, max: T.head === 'serif' ? 50 : 46, min: 30, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 3, lh: 1.06 });
-        if (sub) text(sub, { x: M + 0.05, y: f.bottom + 0.3, w: tw, h: 1.4, max: 20, min: 14, color: T.sub, maxLines: 3, lh: 1.3 });
+        if (sub) text(sub, { x: M + 0.05, y: f.bottom + 0.3, w: tw, h: 1.4, max: 22, min: 16, color: T.text, maxLines: 3, lh: 1.3 });
       }
     } else if (s.type === 'gliederung') {
       sec = '';
@@ -193,7 +193,7 @@ const Praesentation = (() => {
       const tw = im && T.title !== 'minimal' ? 6.8 : W - 2 * M;
       out.push({ k: 'text', x: M, y: 1.55, w: 4, lines: [words(String(num).padStart(2, '0'), true)], size: T.title === 'minimal' ? 120 : 84, bold: true, color: T.title === 'full' ? T.accent : fg, alpha: T.title === 'full' ? 1 : 0.35, lh: 1, font: T.head });
       const f = text(s.title, { x: M, y: 3.35, w: tw, h: 1.9, max: 46, min: 28, bold: T.head !== 'serif', font: T.head, color: fg, maxLines: 2, lh: 1.06 });
-      if (s.text) text(s.text, { x: M, y: f.bottom + 0.25, w: tw, h: 1.2, max: 20, min: 14, color: fg, alpha: 0.85, maxLines: 2 });
+      void f;
     } else if (s.type === 'bild' && im) {
       out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im });
       out.push({ k: 'rect', x: 0, y: H * 0.5, w: W, h: H * 0.5, fill: '#05070C', alpha: 0.58 });
@@ -274,7 +274,7 @@ const Praesentation = (() => {
       const bw = hasImg ? 6.35 : W - 2 * M;
       const top = heading(s.title, bw);
       let y = top;
-      if (s.text) { const f = text(s.text, { x: M, y, w: bw, h: s.points.length ? 1.45 : H - y - 1, max: 19, min: 13, color: T.sub, maxLines: s.points.length ? 3 : 12, lh: 1.38 }); y = f.bottom + 0.3; }
+      if (s.text && !s.points.length) { const f = text(s.text, { x: M, y, w: bw, h: H - y - 1, max: 21, min: 14, color: T.text, maxLines: 12, lh: 1.4 }); y = f.bottom + 0.3; }
       if (s.points.length) bullets(s.points, { x: M, y, w: bw, h: H - y - 0.9 });
       if (hasImg) out.push({ k: 'image', x: 7.55, y: T.title === 'minimal' ? M : 0.6, w: W - 7.55 - M, h: H - (T.title === 'minimal' ? 2 * M : 1.4), src: im, r: R });
       footer();
@@ -570,7 +570,6 @@ const Praesentation = (() => {
     if (!deck) return null;
     const key = editKey(raw);
     try { const saved = localStorage.getItem(key); if (saved) { const d = parse(saved); if (d) deck = d; } } catch {}
-    try { const d = localStorage.getItem(`pz.design.${deck.title.slice(0, 60)}`); if (THEMES[d] && !localStorage.getItem(key)) deck.theme = d; } catch {}
     const st = { deck, images: new Map(), items: [], listeners: new Set(), loading: null };
     st.relayout = () => { st.items = deck.slides.map((x, i) => layout(deck, x, i, deck.slides.length, st.images)); st.listeners.forEach((f) => f()); };
     let saveT = 0;
@@ -606,8 +605,7 @@ const Praesentation = (() => {
         <span class="pz-count"></span></div>
       <div class="pz-strip"></div>
       <div class="pz-bar">
-        <div class="pz-row1"><div class="pz-designs" role="radiogroup" aria-label="Design">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}" role="radio" aria-label="Design ${t.name}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
-          <button type="button" class="pz-edit" data-edit>${fi('pencil', 13)}Bearbeiten</button></div>
+        <div class="pz-row1"><button type="button" class="pz-edit" data-edit>${fi('pencil', 13)}Bearbeiten</button></div>
         <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${o.badge}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
       </div>
       <div class="pz-msg" aria-live="polite"></div>`;
@@ -626,7 +624,6 @@ const Praesentation = (() => {
     const draw = () => {
       if (strip.children.length !== deck.slides.length) strip.innerHTML = deck.slides.map((_, i) => `<button type="button" class="pz-thumb" data-i="${i}" aria-label="Folie ${i + 1}"><span class="pz-slide"></span></button>`).join('');
       strip.querySelectorAll('.pz-thumb .pz-slide').forEach((t, i) => { t.innerHTML = slideHtml(st.items[i]); });
-      fig.querySelectorAll('[data-design]').forEach((b) => { const on = b.dataset.design === deck.theme; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       show(cur, 0);
     };
     st.listeners.add(() => { if (fig.isConnected || !fig.parentNode) draw(); });
@@ -637,8 +634,6 @@ const Praesentation = (() => {
       const go = ev.target.closest('[data-go]'); if (go) { show(cur + +go.dataset.go, +go.dataset.go); return; }
       const th = ev.target.closest('[data-i]'); if (th) { show(+th.dataset.i, +th.dataset.i - cur || 1); return; }
       if (ev.target.closest('[data-edit]')) { editor(st, cur, (i) => { cur = i; draw(); }); return; }
-      const ds = ev.target.closest('[data-design]');
-      if (ds) { deck.theme = ds.dataset.design; st.save(); big.classList.add('pz-swap'); setTimeout(() => big.classList.remove('pz-swap'), 380); st.relayout(); return; }
       const out = ev.target.closest('[data-out]'); if (!out || fig.classList.contains('busy')) return;
       fig.classList.add('busy'); out.classList.add('working');
       say('Wird erstellt …');
@@ -671,7 +666,6 @@ const Praesentation = (() => {
     wrap.innerHTML = `<div class="pz-ed" role="dialog" aria-label="Präsentation bearbeiten">
       <header class="pz-ed-head">
         <b>Präsentation bearbeiten</b>
-        <div class="pz-designs">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
         <div class="pz-accents" aria-label="Akzentfarbe">${ACCENTS.map((c) => `<button type="button" class="pz-acc" data-acc="${c}" style="--c:${c}" aria-label="Farbe ${c}"></button>`).join('')}<label class="pz-acc custom" aria-label="Eigene Farbe"><input type="color" data-acc-in /></label></div>
         <span class="grow"></span>
         <button type="button" class="pz-ed-done" data-close>Fertig</button>
@@ -696,7 +690,6 @@ const Praesentation = (() => {
     };
     const drawBig = (anim) => { big.innerHTML = slideHtml(st.items[cur] || [], anim); };
     const drawHead = () => {
-      wrap.querySelectorAll('[data-design]').forEach((b) => b.classList.toggle('on', b.dataset.design === deck.theme));
       wrap.querySelectorAll('[data-acc]').forEach((b) => b.classList.toggle('on', b.dataset.acc.toUpperCase() === (T().accent || '').toUpperCase()));
     };
     const lines = (a) => (a || []).join('\n');
@@ -774,7 +767,6 @@ const Praesentation = (() => {
     wrap.addEventListener('click', (e) => {
       if (e.target === wrap || e.target.closest('[data-close]')) { close(); return; }
       const th = e.target.closest('.pz-ed-th'); if (th) { go(+th.dataset.i); return; }
-      const ds = e.target.closest('[data-design]'); if (ds) { deck.theme = ds.dataset.design; deck.accent = null; st.save(); redraw(true, true); return; }
       const ac = e.target.closest('[data-acc]'); if (ac) { deck.accent = ac.dataset.acc; deck.aiTheme = deck.theme; st.save(); redraw(true); return; }
       const sl = e.target.closest('[data-slide]'); if (!sl) return;
       const k = sl.dataset.slide, x = deck.slides[cur];

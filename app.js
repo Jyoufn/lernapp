@@ -1214,9 +1214,16 @@ function renderMarkdown(target, text, opts = {}) {
     pre.replaceWith(target._chnFig);
   });
   // Präsentation (```praesentation, Lern-Agent): Folien-Vorschau mit PowerPoint / Keynote / PDF (praesentation.js) – Karte bleibt beim Weiterschreiben
+  // ```belege: echte Quellen (vom Server nach der Antwort angehängt) → ersetzen die Quellenliste der Präsentation
+  let belege = null;
+  target.querySelectorAll('pre:has(code.language-belege)').forEach((pre) => {
+    try { const b = JSON.parse(pre.querySelector('code').textContent); if (Array.isArray(b) && b.length) belege = b; } catch {}
+    pre.remove();
+  });
   target.querySelectorAll('pre:has(code.language-praesentation)').forEach((pre) => {
     if (!window.Praesentation) { pre.remove(); return; }
-    const raw = pre.querySelector('code').textContent;
+    let raw = pre.querySelector('code').textContent;
+    if (belege) { try { raw = JSON.stringify({ ...JSON.parse(raw), sources: belege }); } catch {} }
     const keep = (target._pz ||= new Map());
     if (!keep.has(raw)) { const ok = !!Praesentation.parse(raw); const f = Praesentation.figure(raw); if (!ok) { pre.replaceWith(f); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
