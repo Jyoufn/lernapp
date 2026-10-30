@@ -38,3 +38,35 @@ test('Agenten-Aufgabe → Dokument (Markdown als HTML, Quellen am Ende); leere A
   assert.strictEqual((await T.list(store, 'u1')).thang1.state, 'failed');
   await assert.rejects(T.run({ store, uid: 'u1', task: { id: '../x', title: 'x' }, env: {} }), /ungültig/);
 });
+
+test('Automatisierung: nächster Lauf in Berliner Zeit (täglich, werktags, wöchentlich, über die Zeitumstellung)', () => {
+  const A = require('../lib/agenttasks');
+  const de = (t) => new Date(t).toLocaleString('de-DE', { timeZone: 'Europe/Berlin' });
+  const fr = Date.parse('2026-10-30T17:40:00Z'); // Freitag 18:40
+  assert.equal(de(A.nextRun({ every: 'daily', time: '07:00' }, fr)), '31.10.2026, 07:00:00');
+  assert.equal(de(A.nextRun({ every: 'weekdays', time: '07:00' }, fr)), '2.11.2026, 07:00:00');
+  assert.equal(de(A.nextRun({ every: 'weekly', time: '08:30', day: 3 }, fr)), '4.11.2026, 08:30:00');
+  assert.equal(de(A.nextRun({ every: 'daily', time: '07:00' }, Date.parse('2026-10-24T12:00:00Z'))), '25.10.2026, 07:00:00');
+  assert.equal(A.cleanRepeat({ every: 'stündlich', time: '07:00' }), null);
+});
+
+test('Automatisierung: fällige Läufe starten genau einmal und werden weitergestellt; Entfernen löscht auch den Index', async () => {
+  const A = require('../lib/agenttasks');
+  const store = require('../lib/store').memoryStore();
+  const t0 = Date.parse('2026-10-30T05:00:00Z'); // 06:00 Berlin
+  const a = await A.saveAuto(store, 'u1', { id: 'tauto1', title: 'Börsen-Update', agent: 'boerse', repeat: { every: 'daily', time: '07:00' } }, t0);
+  assert.ok(a.next > t0);
+  const ran = [];
+  const start = async (uid, task) => { ran.push(`${uid}:${task.id}:${task.output}`); };
+  assert.deepEqual(await A.runDue(store, { now: t0, start }), [], 'noch nicht fällig');
+  const due = a.next + 1000;
+  await Promise.all([A.runDue(store, { now: due, start }), A.runDue(store, { now: due, start })]);
+  assert.equal(ran.length, 1, 'zwei gleichzeitige Aufrufe → nur ein Lauf');
+  assert.equal(ran[0], 'u1:tauto1:doc', 'Ergebnis immer als Dokument');
+  const after = await A.listAuto(store, 'u1');
+  assert.ok(after.tauto1.next > due, 'nächster Termin weitergestellt');
+  assert.deepEqual(await A.runDue(store, { now: due + 5000, start }), [], 'nicht nochmal');
+  await A.removeAuto(store, 'u1', 'tauto1');
+  assert.deepEqual(await A.listAuto(store, 'u1'), {});
+  assert.deepEqual(await store.hgetall(A.AINDEX), {});
+});

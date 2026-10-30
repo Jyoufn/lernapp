@@ -341,7 +341,6 @@ const Calendar = (() => {
     // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
     emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet" autocomplete="off">
-      <button type="button" class="tk-x tk-sheet-x" data-act="close" aria-label="Schließen">${icon('f-x')}</button>
       <div class="tk-sheet-main">
         <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>

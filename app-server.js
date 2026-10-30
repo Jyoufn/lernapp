@@ -102,6 +102,18 @@ function startSse(res) {
   return (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+/* ---------- Automatisierungen ohne offene App: Schlüssel aus dem Konto (Einstellungen → Agenten), sonst die des Servers ---------- */
+async function accountKeys(store, uid) {
+  try {
+    const ls = await ACC.getStorage(store, uid);
+    const obj = JSON.parse(ls?.['settings.keys.v1'] || '{}');
+    return Object.fromEntries(DEVICE_KEYS.filter((k) => typeof obj[k] === 'string' && /^[!-~]{8,400}$/.test(obj[k].trim())).map((k) => [k, obj[k].trim()]));
+  } catch { return {}; }
+}
+async function runAutomations(store) {
+  return AGT.runDue(store, { max: 5, start: async (uid, task) => AGT.run({ store, uid, task, env: { ...serverEnv(), ...(await accountKeys(store, uid)) }, prepareBody: (x) => withAgentData(x, { id: uid }) }) });
+}
+
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
 // Was ein Agent zusätzlich braucht (nicht vom Browser setzbar): Börse → gespeicherter Chancen-Radar und „Meine Käufe“ des Kontos
 function withAgentData(body, user) {
@@ -1264,6 +1276,13 @@ async function handle(req, res) {
         const r = ok ? await RADAR.refresh(store) : await RADAR.latest(store, { maxAgeMs: 10 * 60000 });
         return sendJson(res, 200, { ok: true, asOf: r.asOf, picks: r.picks.map((p) => `${p.name} (${p.type})`) });
       }
+      // Automatisierungen per Zeitplan (cron-job.org o. Ä. alle 5–15 min, oder Vercel-Cron): fällige Aufgaben aller Konten abarbeiten.
+      // Mit CRON_SECRET nur mit „Authorization: Bearer …“ bzw. ?key=…; gestartet wird immer nur, was wirklich fällig ist.
+      if (urlPath === '/api/agent-tasks/cron') {
+        const secret = serverEnv().CRON_SECRET, q = new URL(req.url, 'http://x').searchParams;
+        if (secret && req.headers.authorization !== `Bearer ${secret}` && q.get('key') !== secret) return sendJson(res, 401, { error: 'Nicht erlaubt' });
+        return sendJson(res, 200, { ok: true, started: await runAutomations(store) });
+      }
       user = await ACC.sessionUser(store, cookiesOf(req).sid);
       if (!user) return sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
       if (user.renewed) res.setHeader('Set-Cookie', sessionCookie(req, cookiesOf(req).sid, ACC.SESSION_TTL)); // Cookie mit verlängern
@@ -1302,6 +1321,14 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/agent-tasks/run') {
       const b = await readBody(req, 20000);
       return sendJson(res, 200, await AGT.run({ store, uid: user.id, task: b.task || {}, env: readEnv(), prepareBody: (x) => withAgentData(x, user) }));
+    }
+    // Automatisierungen: speichern/entfernen, auflisten, fällige anstoßen (bei offener App)
+    if (urlPath === '/api/agent-tasks/automation' && req.method === 'POST') { const b = await readBody(req, 20000); return sendJson(res, 200, { automation: await AGT.saveAuto(store, user.id, b.task || {}) }); }
+    if (urlPath === '/api/agent-tasks/automation' && req.method === 'DELETE') { const b = await readBody(req, 4000); await AGT.removeAuto(store, user.id, String(b.id || '')); return sendJson(res, 200, { ok: true }); }
+    if (req.method === 'GET' && urlPath === '/api/agent-tasks/automations') return sendJson(res, 200, await AGT.listAuto(store, user.id));
+    if (req.method === 'POST' && urlPath === '/api/agent-tasks/due') {
+      const env = readEnv();
+      return sendJson(res, 200, { started: await AGT.runDue(store, { uid: user.id, start: (u, task) => AGT.run({ store, uid: u, task, env, prepareBody: (x) => withAgentData(x, user) }) }) });
     }
     if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 20000); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
     // Geteilte Workspaces (lib/workspaces.js)
@@ -1376,5 +1403,7 @@ if (require.main === module) {
     res.writeHead(404); res.end('Nicht gefunden');
   }).listen(PREVIEW_PORT, HOST, () => console.log(`Vorschau auf http://localhost:${PREVIEW_PORT}`)).on('error', (e) => console.log(`Vorschau-Port ${PREVIEW_PORT} nicht frei: ${e.message}`));
   http.createServer(handler).listen(PORT, '::1').on('error', () => {}); // ohne IPv6 einfach weglassen
+  // am PC läuft der Server dauerhaft: jede Minute nachsehen, ob eine Automatisierung fällig ist
+  setInterval(() => { const st = accountStore(); if (st) runAutomations(st).catch(() => {}); }, 60000).unref?.();
 }
 module.exports = { handler, PUBLIC_FILES };

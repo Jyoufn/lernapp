@@ -105,7 +105,7 @@ const Tasks = (() => {
   view.innerHTML = `<header class="tk-head">
       ${title ? `<h2>${esc(title)}</h2>` : ''}
       <div class="tk-tools">
-        <label class="tk-search">${fi('search', 13)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" /></label>
+        <label class="tk-search">${fi('search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" /></label>
         <div class="tk-filter-wrap">
           <button type="button" class="tk-ib" data-act="filter" aria-haspopup="menu" aria-label="Filter" title="Filter">${SLIDERS}<b class="tk-fcount" hidden></b></button>
           <div class="tk-filter" role="menu"></div>
@@ -208,6 +208,13 @@ const Tasks = (() => {
     if (r.state === 'queued' || r.state === 'running') return '<span class="tk-state run"><i class="tk-spin"></i>arbeitet …</span>';
     return `<span class="tk-state wait"><span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}</span>`;
   }
+  // Wiederholung als Text: „Täglich um 07:00“, „Werktags um 07:00“, „Jeden Montag um 08:30“
+  const repText = (r) => (r.every === 'daily' ? `Täglich um ${r.time}` : r.every === 'weekdays' ? `Werktags um ${r.time}` : `Jeden ${WD_LONG[r.day ?? 1]} um ${r.time}`);
+  const repShort = (r) => (r.every === 'daily' ? `Täglich ${r.time}` : r.every === 'weekdays' ? `Mo–Fr ${r.time}` : `${WD_LONG[r.day ?? 1].slice(0, 2)} ${r.time}`);
+  function syncAuto(t, removeIt = false) {
+    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent || 'general', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
+    fetch('/api/agent-tasks/automation', { method: removeIt ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
+  }
   const openRows = new Set(); // aufgeklappte Zeilen bleiben beim Neuzeichnen offen
   // Zeile: links der Kreis zum Abhaken, daneben groß der Titel; rechts das Datum und ganz rechts das Prioritäts-Icon.
   // Klick auf die Zeile klappt darunter die Beschreibung (und Tags, Agent, „Bearbeiten“) weich auf
@@ -221,22 +228,28 @@ const Tasks = (() => {
     el.setAttribute('aria-expanded', String(openRows.has(t.id)));
     const st = ckState(t), busy = st === 'run';
     const dueText = du ? (du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text) : '';
-    const agentBit = agents && t.agent && AGENT_NAMES[t.agent] && !done ? `<span class="tk-row-dog" title="${esc(AGENT_NAMES[t.agent])}${busy ? ' arbeitet …' : ''}">${dog(t.agent, 18)}</span>` : '';
+    const agentBit = agents && t.agent && AGENT_NAMES[t.agent] && !done ? `<span class="tk-row-dog" title="${esc(AGENT_NAMES[t.agent])}${busy ? ' arbeitet …' : ''}">${dog(t.agent, 20)}</span>` : '';
     const r = t.run || {};
-    const agentLine = agents && t.agent && AGENT_NAMES[t.agent] ? `<div class="tk-more-agent"><span class="tk-dog">${dog(t.agent, 18)}</span><span>${esc(AGENT_NAMES[t.agent])}${r.state === 'done' ? ' · fertig' : r.state === 'failed' ? ' · hat nicht geklappt' : busy ? ' · arbeitet …' : ''}</span>`
+    const agentLine = agents && t.agent && AGENT_NAMES[t.agent] ? `<div class="tk-more-agent"><span class="tk-dog">${dog(t.agent, 20)}</span><span>${esc(AGENT_NAMES[t.agent])}${r.state === 'done' ? ' · fertig' : r.state === 'failed' ? ' · hat nicht geklappt' : busy ? ' · arbeitet …' : ''}</span>`
       + (r.state === 'done' ? `<button type="button" class="tk-more-btn" data-result="${t.id}">${fi(t.output === 'doc' ? 'file' : 'chat', 12)}${t.output === 'doc' ? 'Dokument' : 'Chat'} öffnen</button>` : r.state === 'failed' ? `<button type="button" class="tk-more-btn" data-retry="${t.id}">${fi('refresh', 11)}Nochmal</button>` : '') + '</div>' : '';
+    // An einen Agenten geben – solange die Aufgabe offen ist und noch kein Agent daran arbeitet
+    const canSend = agents && !done && !(r.state === 'queued' || r.state === 'running' || r.state === 'done');
+    const sendRow = canSend ? `<div class="tk-send"><span class="tk-send-l">An Agent geben</span>${Object.entries(AGENT_NAMES).filter(([aid]) => !window.PixelDogs?.UNAVAILABLE?.has(aid)).map(([aid, n]) => `<button type="button" class="tk-send-a${t.agent === aid ? ' on' : ''}" data-send="${aid}" title="An ${esc(n)} geben"><span class="tk-dog">${dog(aid, 20)}</span>${esc(n)}</button>`).join('')}</div>` : '';
     el.innerHTML = `<div class="tk-row-line">
         <button type="button" class="tk-ck s-${st}" data-check aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}" ${busy ? 'disabled' : ''}>${CHECK}</button>
         <b class="tk-row-title">${esc(t.title)}</b>
+        ${ts.length ? `<span class="tk-row-tags">${ts.slice(0, 3).map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}${ts.length > 3 ? `<span class="tk-more-n">+${ts.length - 3}</span>` : ''}</span>` : ''}
+        <span class="grow"></span>
         ${agentBit}
+        ${t.repeat ? `<span class="tk-row-rep" title="${esc(repText(t.repeat))}">${fi('refresh', 11)}${esc(repShort(t.repeat))}</span>` : ''}
         ${dueText ? `<span class="tk-row-due${du.cls}">${dueText}</span>` : ''}
         <span class="tk-row-prio" title="${prio.id === 'none' ? 'Keine Priorität' : `Priorität: ${prio.name}`}">${prio.id === 'none' ? '' : prioIcon(prio.id, 15)}</span>
+        <button type="button" class="tk-row-edit" data-edit aria-label="Bearbeiten" title="Bearbeiten" tabindex="-1">${fi('pencil', 12)}</button>
       </div>
       <div class="tk-row-more"><div class="tk-row-more-in">
         <p class="tk-row-notes${t.notes ? '' : ' empty'}">${t.notes ? esc(t.notes) : 'Keine Beschreibung'}</p>
-        ${ts.length ? `<div class="tk-row-tags">${ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}</div>` : ''}
         ${agentLine}
-        <div class="tk-row-acts"><button type="button" class="tk-more-btn" data-edit>${fi('pencil', 11)}Bearbeiten</button></div>
+        ${sendRow}
       </div></div>`;
     return el;
   }
@@ -265,7 +278,8 @@ const Tasks = (() => {
     };
     const parts = [];
     GROUPS.forEach((gr) => { const items = open.filter((t) => gr.test(dueInfo(t.date))).sort(sortOpen); if (items.length) parts.push(block(gr.id, gr.name, items)); });
-    if (!open.length) {
+    const filtering = !!(filter.q || filter.tags.size || filter.prios.size || filter.due);
+    if (!open.length && (!done.length || filtering)) { // alles erledigt → nur „Erledigt“, kein Leer-Hinweis
       const e = document.createElement('div');
       e.className = 'tk-empty';
       e.innerHTML = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : `<b>Keine offenen Aufgaben</b><span>Leg eine an und gib sie an einen Agenten.</span><button type="button" class="tk-empty-new" data-act="new">${fi('plus', 12)}Neue Aufgabe</button>`;
@@ -346,7 +360,8 @@ const Tasks = (() => {
   function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])] } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: 'chat' } : {}) };
+    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
+    const hadRepeat = !!t0?.repeat; // war vorher eine Automatisierung → beim Entfernen auch beim Server löschen
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
     t.progress = Math.max(0, Math.min(100, t.progress || 0));
@@ -354,7 +369,6 @@ const Tasks = (() => {
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}">${listMode ? `<div class="tk-box">${menu}</div>` : menu}</div></div>`;
     // Liste: Fenster mit Zeilen wie das Termin-Fenster der Kalender-Vorlage – nur Beschreibung, Datum, Priorität, Tags; unten Agent + Aktionen
         if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
-      <button type="button" class="tk-x tk-sheet-x" data-act="close" aria-label="Schließen">${fi('x', 12)}</button>
       <div class="tk-sheet-main">
         <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="120" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
@@ -365,15 +379,20 @@ const Tasks = (() => {
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
-        ${agents && !locked ? pill('output', `<button type="button" class="tk-mi" data-toutput="chat">${fi('chat', 13)}<span>Ergebnis als Chat</span>${fi('check', 12)}</button><button type="button" class="tk-mi" data-toutput="doc">${fi('file', 13)}<span>Ergebnis als Dokument</span>${fi('check', 12)}</button>`) : ''}
+        ${listMode && agents && !locked ? pill('repeat', `<button type="button" class="tk-mi" data-rep=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Nicht wiederholen</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-rep="daily"><span class="tk-mi-ic">${fi('refresh', 12)}</span><span>Täglich</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-rep="weekdays"><span class="tk-mi-ic">${fi('briefcase', 12)}</span><span>Werktags (Mo–Fr)</span>${fi('check', 12)}</button>
+          <button type="button" class="tk-mi" data-rep="weekly"><span class="tk-mi-ic">${fi('calendar', 12)}</span><span>Wöchentlich</span>${fi('check', 12)}</button>
+          <div class="tk-rep-days" hidden>${[1, 2, 3, 4, 5, 6, 0].map((d) => `<button type="button" data-repday="${d}">${WD_LONG[d].slice(0, 2)}</button>`).join('')}</div>
+          <div class="tk-rep-time" hidden><span>Uhrzeit</span><div data-wheel="rep"></div></div>
+          <p class="tk-rep-note" hidden>Der Agent erledigt die Aufgabe dann automatisch – das Ergebnis kommt jedes Mal als neues Dokument.</p>`, 'repeat') : ''}
       </div>
       <div class="tk-sheet-foot">
         <span class="grow"></span>
         ${t0?.run?.state === 'done' ? `<button type="button" class="tk-sheet-ib" data-result="${t0.id}" aria-label="Ergebnis öffnen" title="Ergebnis öffnen">${fi(t0.output === 'doc' ? 'file' : 'chat', 13)}</button>` : ''}
         ${t0 && !(t0.agent && t0.run) ? `<button type="button" class="tk-sheet-ib" data-act="done" aria-label="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}" title="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}">${fi(t0.status === 'done' ? 'refresh' : 'check', 13)}</button>` : ''}
         ${t0 ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen" title="Löschen">${fi('trash', 13)}</button>` : ''}
-        <button type="submit" class="tk-create tk-make">${t0 ? 'Speichern' : 'Erstellen'}</button>
-        ${agents && !locked ? `<button type="button" class="tk-create tk-go" data-act="go" hidden>${fi('sparkle', 12)}An Agent geben</button>` : ''}
+        <button type="submit" class="tk-create tk-make">${t0 ? 'Speichern' : 'Aufgabe erstellen'}</button>
         <div class="tk-progress" hidden><div class="tk-slider" role="slider" tabindex="0" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100"><i class="tk-sl-fill"></i><b class="tk-sl-knob"></b></div><span class="tk-pv"></span></div>
       </div>
     </form>`;
@@ -424,8 +443,10 @@ const Tasks = (() => {
       if (ap) {
         ap.innerHTML = t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}` : `${fi('user', 13)}Agent`;
         ap.classList.toggle('empty', !t.agent);
-        op.closest('.tk-pop').hidden = !t.agent;
-        op.innerHTML = `${fi(t.output === 'doc' ? 'file' : 'chat', 13)}${t.output === 'doc' ? 'Dokument' : 'Chat'}`;
+        if (op) { // Board: Ergebnis wählbar; Liste: immer Dokument (keine Zeile)
+          op.closest('.tk-pop').hidden = !t.agent;
+          op.innerHTML = `${fi(t.output === 'doc' ? 'file' : 'chat', 13)}${t.output === 'doc' ? 'Dokument' : 'Chat'}`;
+        }
         form.querySelectorAll('[data-tagent]').forEach((b) => b.classList.toggle('on', b.dataset.tagent === (t.agent || '')));
         form.querySelectorAll('[data-toutput]').forEach((b) => b.classList.toggle('on', b.dataset.toutput === t.output));
         if (!listMode) form.querySelector('.tk-create').textContent = t0 ? 'Speichern' : t.agent ? 'An Agent geben' : 'Aufgabe erstellen';
@@ -438,12 +459,16 @@ const Tasks = (() => {
         set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
         set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
-        const go = form.querySelector('[data-act="go"]');
-        if (go) { go.hidden = !t.agent; go.innerHTML = `${fi('sparkle', 12)}An ${AGENT_NAMES[t.agent] || 'Agent'} geben`; }
         form.querySelector('.tk-date-none')?.classList.toggle('on', !t.date); // „Kein Datum“ immer wählbar, Haken, wenn keins gesetzt ist
-        form.querySelector('.tk-make')?.classList.toggle('ghost', !!(go && !go.hidden)); // Agent gewählt: „An … geben“ ist der Hauptknopf
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
-        set('output', [fi(t.output === 'doc' ? 'file' : 'chat', 14), `Ergebnis als ${t.output === 'doc' ? 'Dokument' : 'Chat'}`], false);
+        if (form.querySelector('[data-open="repeat"]')) {
+          set('repeat', [fi('refresh', 14), t.repeat ? repText(t.repeat) : 'Wiederholen'], !t.repeat);
+          form.querySelectorAll('[data-rep]').forEach((b) => b.classList.toggle('on', b.dataset.rep === (t.repeat?.every || '')));
+          form.querySelector('.tk-rep-days').hidden = t.repeat?.every !== 'weekly';
+          form.querySelectorAll('[data-repday]').forEach((b) => b.classList.toggle('on', +b.dataset.repday === t.repeat?.day));
+          form.querySelector('.tk-rep-time').hidden = !t.repeat;
+          form.querySelector('.tk-rep-note').hidden = !t.repeat;
+        }
       }
     };
 
@@ -555,8 +580,13 @@ const Tasks = (() => {
     };
     cmIn.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); addComment(); } });
 
+    // Wiederholen: Uhrzeit-Rad (5-Minuten-Schritte) wie bei Terminen
+    const repWheelHost = form.querySelector('[data-wheel="rep"]');
+    const repWheel = repWheelHost ? UIKit.timeWheel(t.repeat?.time || '07:00', (v) => { if (t.repeat) { t.repeat.time = v; draw(); } }, 5) : null;
+    if (repWheel) repWheelHost.append(repWheel);
     const openPop = (k) => {
       form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open')));
+      if (k === 'repeat' && repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat?.time || '07:00'));
       const p = form.querySelector(`.tk-pop[data-k="${k}"].open`);
       if (k === 'date' && p) { const d = t.date ? new Date(`${t.date}T12:00:00`) : new Date(); calMonth = new Date(d.getFullYear(), d.getMonth(), 1, 12); drawCal(); }
       if (k === 'tags' && p) { creating = false; editing = null; tagIn.value = ''; drawTags(); drawSide(); setTimeout(() => tagIn.focus(), 30); }
@@ -574,6 +604,17 @@ const Tasks = (() => {
       if (ag) { t.agent = ag.dataset.tagent; if (!t.output) t.output = 'chat'; draw(); ag.closest('.tk-pop').classList.remove('open'); return; }
       const ou = e.target.closest('[data-toutput]');
       if (ou) { t.output = ou.dataset.toutput; draw(); ou.closest('.tk-pop').classList.remove('open'); return; }
+      const rp = e.target.closest('[data-rep]');
+      if (rp) {
+        const ev = rp.dataset.rep;
+        t.repeat = ev ? { every: ev, time: t.repeat?.time || '07:00', ...(ev === 'weekly' ? { day: t.repeat?.day ?? 1 } : {}) } : null;
+        if (t.repeat && !t.agent) t.agent = 'general'; // Automatisierung braucht einen Agenten
+        draw();
+        if (!ev) rp.closest('.tk-pop').classList.remove('open'); else if (repWheel) requestAnimationFrame(() => repWheel.setValue(t.repeat.time));
+        return;
+      }
+      const rd = e.target.closest('[data-repday]');
+      if (rd) { if (t.repeat) { t.repeat.day = +rd.dataset.repday; draw(); } return; }
       const pr = e.target.closest('[data-prio]');
       if (pr) { t.prio = pr.dataset.prio; draw(); pr.closest('.tk-pop').classList.remove('open'); return; }
       const qd = e.target.closest('[data-qdate]');
@@ -607,7 +648,7 @@ const Tasks = (() => {
       if (act === 'close') close();
       if (act === 'done') { close(); setTimeout(() => toggleDone(t.id), 230); return; }
       if (act === 'go') { t._go = true; form.requestSubmit(); return; }
-      if (act === 'delete') { tasks = tasks.filter((x) => x.id !== t.id); if (t.agent) forget([t.id]); save(); render(); close(); }
+      if (act === 'delete') { tasks = tasks.filter((x) => x.id !== t.id); if (t.agent) forget([t.id]); if (hadRepeat) syncAuto({ id: t.id }, true); save(); render(); close(); }
     });
     form.addEventListener('keydown', (e) => {
       e.stopPropagation();
@@ -636,7 +677,10 @@ const Tasks = (() => {
       }
       // neue Aufgabe mit Agent (oder ein Agent wurde nachträglich gewählt) → sofort an den Agenten
       const target = t0 || t;
-      const go = agents && (!listMode || t._go) && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
+      if (listMode && target.agent) target.output = 'doc'; // Liste: Ergebnis immer als Dokument
+      if (listMode && (target.repeat || hadRepeat)) syncAuto(target, !target.repeat); // Automatisierung beim Server anlegen/ändern/entfernen
+      // Liste: „Aufgabe erstellen“ schickt NICHT sofort ab – abgeschickt wird in der Zeile über „An Agent geben“
+      const go = agents && !listMode && target.agent && (!target.run || target.run.state === 'failed') && target.status !== 'done';
       delete target._go; delete t._go;
       if (go) { if (hasCol('doing')) target.status = 'doing'; target.order = -1; target.run = { state: 'queued', updated: Date.now() }; }
       normalize(); save();
@@ -716,6 +760,14 @@ const Tasks = (() => {
       if (!rowEl) return;
       if (e.target.closest('[data-check]')) { if (!e.target.closest('[data-check]').disabled) toggleDone(rowEl.dataset.id); return; }
       if (e.target.closest('[data-edit]')) { edit(rowEl.dataset.id); return; }
+      const sendB = e.target.closest('[data-send]');
+      if (sendB) {
+        const t = tasks.find((x) => x.id === rowEl.dataset.id); if (!t) return;
+        t.agent = sendB.dataset.send; t.output = 'doc'; t.order = -1; // Ergebnis immer als Dokument
+        t.run = { state: 'queued', updated: Date.now() };
+        normalize(); save(); render(); startRun(t);
+        return;
+      }
       if (e.target.closest('.tk-row-more') && rowEl.classList.contains('open')) return; // im aufgeklappten Teil: Text markieren u. Ä.
       toggleRow(rowEl);
       return;
@@ -764,7 +816,7 @@ const Tasks = (() => {
         if (s.state === 'running' && t.status === 'backlog' && hasCol('doing')) { t.status = 'doing'; t.order = -1; }
         if (s.state === 'done' && was !== 'done') {
           if (t.status !== 'done' && hasCol('review')) { t.status = 'review'; t.order = -1; }
-          if (listMode && t.status !== 'done') { t.status = 'done'; t.doneAt = Date.now(); justDone.add(t.id); } // Liste: der Agent hakt die Aufgabe selbst ab
+          if (listMode && t.status !== 'done' && !t.repeat) { t.status = 'done'; t.doneAt = Date.now(); justDone.add(t.id); } // Liste: der Agent hakt die Aufgabe selbst ab
           t.progress = 100;
           t.comments = [...(t.comments || []), { text: `${AGENT_NAMES[t.agent] || 'Agent'}: fertig – ${t.output === 'doc' ? 'Dokument' : 'Chat'} „${s.title || t.title}“ ist bereit.`, at: s.finished || Date.now() }];
         }
@@ -784,7 +836,10 @@ const Tasks = (() => {
     }
     if (tasks.some((t) => t.agent && (t.run?.state === 'queued' || t.run?.state === 'running'))) pullT = setTimeout(pull, 5000);
   }
+  // bei offener App: jede Minute fällige Automatisierungen anstoßen (ohne App übernimmt der Zeitplan-Aufruf /api/agent-tasks/cron)
+  const kickDue = () => { if (!tasks.some((t) => t.repeat && t.status !== 'done')) return; fetch('/api/agent-tasks/due', { method: 'POST', keepalive: true }).then((r) => r.json()).then((j) => { if (j?.started?.length) setTimeout(pull, 1500); }).catch(() => {}); };
   if (agents) {
+    setTimeout(kickDue, 3000); setInterval(kickDue, 60000);
     setTimeout(pull, 1200);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); });
   }

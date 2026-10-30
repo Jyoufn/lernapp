@@ -8659,3 +8659,68 @@ div.tl4-h { cursor: default; }
 .mm4-tools button:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-2); }
 .mm4-overlay .mm4-tools { top: max(12px, env(safe-area-inset-top)); right: 12px; }
 .mm4-view > .mm4-tools, .mm4-overlay .mm4-tools { padding: 1px; border-radius: 7px; background: var(--main-bg); box-shadow: 0 0 0 4px var(--main-bg); }
+
+/* =====================================================================
+   Aufgaben v8 (30.10., 18:30)
+   ===================================================================== */
+/* Suchfelder in Chats, Bibliothek und Aufgaben: gleich gebaut (Icon 14, Abstand 10, Schrift 13), etwas runder; Knöpfe passend */
+:is(.chats-view, .dc-list) .cl-search, .tk-view.tk-listmode .tk-search { height: 40px; gap: 10px; padding: 0 16px; border-radius: 12px; color: var(--text-4); }
+.tk-view.tk-listmode .tk-search { padding-right: 48px; }
+:is(.cl-search, .tk-search) input { font-size: 13px; font-weight: 400; letter-spacing: 0; }
+:is(.cl-search, .tk-search) > svg { flex: none; width: 14px; height: 14px; }
+:is(.chats-view, .dc-list) .cl-new, .tk-view.tk-listmode .tk-new { border-radius: 10px; }
+.tk-view.tk-listmode .tk-filter-wrap .tk-ib { border-radius: 8px; }
+/* Liste: Kreis kleiner; Anzahl ganz rechts in normaler Schrift; aufgeklappte Zeile ohne hellere Fläche; nichts drückt sich ein */
+.tk-rows-in .tk-row .tk-ck { width: 17px; height: 17px; border-width: 1.6px; }
+.tk-rows-in .tk-row .tk-ck .tk-ck-mark { width: 10px; height: 10px; }
+.tk-grp .tk-grp-head .grow { order: 1; }
+.tk-grp .tk-grp-head .tk-count { order: 2; color: var(--text-4); font-size: 12.5px; font-weight: 400; }
+.tk-grp .tk-grp-head .tk-grp-chev { order: 3; }
+.tk-rows-in .tk-row.open, .tk-rows-in .tk-row.open:hover { background: none; }
+.tk-rows-in .tk-row:hover, .tk-rows-in .tk-row:focus-visible { background: none; }
+.tk-sheet-rows .tk-pill:active, .tk-sheet-foot .tk-pill:active { transform: none; }
+/* Zeile: Titel · Tags · (frei) · Agent · Datum · Priorität · Stift (erscheint beim Aufklappen, Priorität rutscht weich nach links) */
+.tk-rows-in .tk-row-title { flex: 0 1 auto; }
+.tk-row-line .grow { flex: 1; min-width: 0; }
+.tk-row-tags { flex: none; display: inline-flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.tk-row-tags .tk-sub-tag { display: inline-flex; align-items: center; gap: 5px; }
+.tk-row-tags .tk-sub-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.tk-row-tags .tk-more-n { color: var(--text-4); }
+.tk-row-edit { flex: none; display: grid; place-items: center; width: 0; height: 26px; margin-left: -12px; padding: 0; overflow: hidden; border: 0; border-radius: 7px; background: none; color: var(--text-3); opacity: 0; cursor: pointer;
+  transition: width 300ms cubic-bezier(0.32, 0.72, 0, 1), margin-left 300ms cubic-bezier(0.32, 0.72, 0, 1), opacity 200ms ease, background-color 120ms ease, color 120ms ease; }
+.tk-row.open .tk-row-edit { width: 26px; margin-left: 0; opacity: 1; }
+.tk-row-edit:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+/* an einen Agenten geben (aufgeklappt) */
+.tk-send { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tk-send-l { margin-right: 4px; color: var(--text-4); font-size: 12px; }
+.tk-send-a { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 5px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 8px; background: none; color: var(--text-2); font: 500 12.5px Inter, sans-serif; cursor: pointer; transition: border-color 120ms ease, color 120ms ease; }
+.tk-send-a:hover { border-color: rgba(255, 255, 255, 0.18); color: var(--text); }
+.tk-send-a.on { border-color: var(--accent); }
+.tk-send-a .tk-dog { display: grid; place-items: center; width: 20px; height: 20px; }
+.tk-send-a .tk-dog svg { image-rendering: pixelated; }
+@media (max-width: 600px) { .tk-row-tags { display: none; } }
+.tk-sheet-main { padding: 16px 18px 8px 18px; } /* kein × mehr oben rechts – schließen per Klick daneben oder Esc */
+/* Aufklapp-Kasten wie die normalen Menüs der App (Fläche/Rand der Menüs, Zeilen mit Hover, Auswahl blau hinterlegt);
+   beim Zuklappen wird JEDER Inhalt abgeschnitten (Tags lief sonst über die nächste Zeile) */
+.tk-sheet-rows .tk-pop .tk-menu, .tk-sheet-rows .tk-pop .tk-menu.tags, .tk-sheet-rows .tk-pop .tk-menu.date { overflow: hidden !important; }
+.tk-box { margin: 0 14px 8px; padding: 3px; border: 1px solid var(--menu-border); border-radius: 10px; background: var(--menu-bg); }
+.tk-sheet-rows .tk-box .tk-mi { height: 30px; padding: 0 8px; border-radius: 6px; color: var(--text-2); }
+.tk-sheet-rows .tk-box .tk-mi:hover { background: var(--menu-hover); color: var(--text); }
+.tk-sheet-rows .tk-box .tk-mi.on { background: rgba(47, 134, 255, 0.13); color: #6aa8ff; }
+.tk-sheet-rows .tk-box .tk-mi.on > svg:last-of-type:not(.tk-pi) { color: #6aa8ff; }
+.tk-sheet-rows .tk-menu.date .tk-box { padding: 8px 8px 3px; }
+.tk-sheet-rows .tk-box .tk-date-none { display: flex; align-items: center; height: 30px; margin: 6px 0 0; padding: 0 8px; border: 0; border-radius: 6px; position: relative; }
+.tk-sheet-rows .tk-box .tk-date-none::before { content: ''; position: absolute; top: -4px; left: -5px; right: -5px; height: 1px; background: var(--menu-border); }
+.tk-sheet-rows .tk-box .tk-tag-row { margin: -3px -3px 3px; padding: 0 11px; border-bottom: 1px solid var(--menu-border); }
+.tk-sheet-rows .tk-box .tk-tag-in { height: 32px; }
+/* Wiederholen (Automatisierung): Tage als kleine Knöpfe, Uhrzeit-Rad, kurzer Hinweis; in der Zeile „↻ Täglich 07:00“ */
+.tk-rep-days { display: flex; gap: 4px; padding: 6px 5px 2px; border-top: 1px solid var(--menu-border); margin-top: 3px; }
+.tk-rep-days[hidden], .tk-rep-time[hidden], .tk-rep-note[hidden] { display: none; }
+.tk-rep-days button { flex: 1; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; }
+.tk-rep-days button:hover { background: var(--menu-hover); color: var(--text); }
+.tk-rep-days button.on { background: rgba(47, 134, 255, 0.13); color: #6aa8ff; }
+.tk-rep-time { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 3px; padding: 6px 8px 4px; border-top: 1px solid var(--menu-border); color: var(--text-3); font-size: 12.5px; }
+.tk-rep-time .tk-wheel { width: 120px; }
+.tk-rep-note { margin: 4px 8px 6px; color: var(--text-4); font-size: 11.5px; line-height: 1.45; }
+.tk-row-rep { flex: none; display: inline-flex; align-items: center; gap: 5px; color: var(--text-3); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tk-row-rep svg { color: var(--text-4); }
