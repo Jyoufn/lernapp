@@ -5452,8 +5452,9 @@ document.addEventListener('click', (e) => {
     black: { label: 'Schwarz', main: '#0a0a0a', side: '#060606', field: '#111111', fieldBorder: '#1f1f1f',
       pv: { main: '#0a0a0a', side: '#060606', line: 'rgba(255,255,255,.14)', field: 'rgba(255,255,255,.14)' } },
     // Hell: Werte vor der Umkehrung (#101010 wird zu #efefef)
-    light: { label: 'Hell', main: '#101010', side: '#0a0a0a', field: '#060606', fieldBorder: '#1c1c1c', light: true,
-      pv: { main: '#f2f2f2', side: '#fafafa', line: 'rgba(0,0,0,.16)', field: 'rgba(0,0,0,.16)' } },
+    // Hell: Werte VOR der Umkehrung – ergibt ein ruhiges, warmes Hellgrau (Hauptteil #f7f7f5, Sidebar #efefed, Felder weiß), nicht grelles Weiß
+    light: { label: 'Hell', main: '#08080a', side: '#101012', field: '#000000', fieldBorder: '#1d1d1f', light: true,
+      pv: { main: '#f7f7f5', side: '#efefed', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33 };
@@ -5502,6 +5503,7 @@ document.addEventListener('click', (e) => {
   // eingestellt wird in den Einstellungen → Aussehen (settings.js); früher ein Fenster oben rechts im leeren Chat
   window.Appearance = {
     MODES: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.label])),
+    PREVIEW: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.pv])),
     ACCENTS,
     get: () => ({ ...cfg }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },

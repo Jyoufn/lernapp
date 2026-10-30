@@ -188,6 +188,8 @@ const AppSearch = (() => {
     window.Docs?.refresh?.();
     if (chatsView?.open) chatsView.render?.();
   };
+  // Symbol eines Workspace: eigenes Bild (nur auf diesem Konto) oder Pixel-Tier
+  const wsAvatar = (w, s) => (w?.img && /^data:image\/(jpeg|png|webp);base64,/.test(w.img) ? `<img class="ws-img" src="${w.img}" width="${s}" height="${s}" alt="" />` : dog(w?.dog, s));
   const shareSync = (w, patch) => { if (w.shared) post('update', { ws: w.id, owner: w.owner, ...patch }).then(applyShared).catch(() => {}); };
   window.Workspaces = {
     active: () => wsData.active,
@@ -206,7 +208,9 @@ const AppSearch = (() => {
       return w;
     },
     canAdd: () => wsData.list.filter((w) => !w.guest).length < WS_MAX,
-    setDog(id, dog) { const w = wsData.list.find((x) => x.id === id); if (!w || !window.PixelDogs?.DOGS?.[dog]) return; w.dog = dog; wsSave(); refreshAll(); shareSync(w, { dog }); },
+    setDog(id, dog) { const w = wsData.list.find((x) => x.id === id); if (!w || !window.PixelDogs?.DOGS?.[dog]) return; w.dog = dog; delete w.img; wsSave(); refreshAll(); shareSync(w, { dog }); },
+    setImg(id, url) { const w = wsData.list.find((x) => x.id === id); if (!w) return; if (url) w.img = url; else delete w.img; wsSave(); refreshAll(); },
+    avatar: (id, s = 24) => wsAvatar(wsOf(id), s),
     rename(id, name) {
       const w = wsData.list.find((x) => x.id === id); if (!w) return;
       const n = String(name).trim().slice(0, 32);
@@ -256,7 +260,7 @@ const AppSearch = (() => {
   /* ---------- Workspace-Menü (Name oben links) ---------- */
   const ws = document.querySelector('.sb-ws');
   const av = ws?.querySelector('.sb-ws-av');
-  function paintAv() { if (av) av.innerHTML = dog(wsOf(wsData.active).dog, 20); }
+  function paintAv() { if (av) av.innerHTML = wsAvatar(wsOf(wsData.active), 20); }
   paintAv();
   setTimeout(() => { paintAv(); window.applyWorkspaceName?.(); }, 0); // Hunde-Skript kommt nach diesem Skript
   const pop = document.createElement('div');
@@ -266,9 +270,9 @@ const AppSearch = (() => {
   let adding = false, renaming = null;
   const draw = () => {
     const rows = wsData.list.map((w) => renaming === w.id
-      ? `<div class="ws-row edit"><span class="ws-av">${dog(w.dog, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
+      ? `<div class="ws-row edit"><span class="ws-av">${wsAvatar(w, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
       : `<div class="ws-row${w.id === wsData.active ? ' on' : ''}" data-ws-pick="${w.id}" role="menuitemradio" aria-checked="${w.id === wsData.active}" tabindex="0">
-          <span class="ws-av">${dog(w.dog, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${wsSub(w)}</small></span>
+          <span class="ws-av">${wsAvatar(w, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${wsSub(w)}</small></span>
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
     const full = !window.Workspaces.canAdd();
     pop.innerHTML = `${rows}

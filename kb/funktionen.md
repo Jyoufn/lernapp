@@ -42,6 +42,11 @@
 - Kursverlauf: Yahoo → Stooq → ING (`ingSeries`, per ISIN – ING ist vom Server aus erreichbar, auch wenn Yahoo/Stooq sperren). Live-Kurs: Tradegate/ING.
 
 ## Workspaces und Konto
+- Sidebar-Kopf: Workspace (Symbol 17 px) + Lupe; **kein Zahnrad** – Einstellungen über das Workspace-Menü.
+- Einstellungen → Allgemein → Workspaces: Zeile antippen öffnet ein **großes Fenster** (fast ganzer Bildschirm, `wsModal` in `settings.js`): Kopf Symbol + Name (direkt umbenennen) + Öffnen; Abschnitte Symbol (Agenten-Hunde + Tiere Katze/Fuchs/Panda/Pinguin `PixelDogs.ANIMALS`, oder eigenes Bild 128 px `w.img`, `Workspaces.setImg`), Teilen, Personen (Entfernen), Inhalte (Anzahl Chats/Dokumente), Löschen/Verlassen (2. Klick bestätigt), unten „Fertig“.
+- Neue Pixel-Tiere entstehen mit dem Generator-Prinzip (Brustbild, 1-px-Umriss, runde Licht-Schattierung von links oben, wenig Struktur, Augen mit Lichtpunkt) je Größe 32/24/20 nativ – nie herunterskalieren.
+- Aussehen: Modus als drei **Vorschaubilder** (Dunkel/Schwarz/Hell, gewählt = Akzent-Ring); Umschalter in den Einstellungen gewählt = Umrandung statt grauer Fläche; Felder in Kartenfarbe mit feinem Rand.
+- Heller Modus = Umkehrung (`[data-theme=light]` invertiert body): Werte VOR der Umkehrung setzen (Hauptteil `#08080a` → #f7f7f5, Text `--text #d6d6d6` → grau statt schwarz, Menüs schwarz → weiß); Bilder/Pixel-Tiere/Vorschauen werden zurück-invertiert; Schrift auf blauen Knöpfen vorher schwarz.
 - Nach dem Anmelden: Vorschau wächst zur App, danach bleibt man im leeren Chat (kein Sprung, keine wiederhergestellten Tabs; `window.AUTH_FRESH` → `restoreLayout`). Schon angemeldet (Neuladen): letzter Tab wird wiederhergestellt.
 - Bis 3 Workspaces, teilbar per E-Mail (Einladung beim Öffnen). Alles (Chats, Dokumente, Aufgaben, Einstellungen, API-Keys) gehört zum Konto.
 - Einstellungen in der Sidebar: Allgemein · Aussehen (Dunkel/Schwarz/Hell, Akzentfarbe) · Agenten (Verbindung/Schlüssel).
