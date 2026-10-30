@@ -8816,3 +8816,38 @@ div.tl4-h { cursor: default; }
 .cw-band { pointer-events: auto; }
 .tk-rows-in .tk-row.bare .tk-row-more { display: none; }
 .tk-sheet-rows .tk-menu .tk-cal { margin: 0 auto; }
+
+/* =====================================================================
+   Dokument-Fokusmodus (30.10., 23:00) – nur der Inhalt, ganzer Bildschirm, nichts bearbeitbar;
+   oben mittig ein etwas größerer Knopf zum Beenden
+   ===================================================================== */
+.dc-focus-exit { display: none; }
+.app.doc-focus .panel { margin-left: 8px; }
+.app.doc-focus :is(.panel-toggle, #topStack, .chat-titlebar, .chat-title-btn, .tabs, .rpane) { opacity: 0 !important; pointer-events: none !important; }
+.dc-editor.focus :is(.dc-topbar, .dc-adds, .dc-meta, .dc-gutter, .dc-drop, .dc-nav, .dc-nav-card, .dc-cover-acts) { display: none !important; }
+.dc-editor.focus .dc-page { pointer-events: none; user-select: none; -webkit-user-select: none; }
+.dc-editor.focus .dc-content [data-placeholder]:empty::before, .dc-editor.focus .dc-content:empty::before { content: none; }
+.dc-editor.focus .dc-sub-in:placeholder-shown { display: none; }
+.dc-editor.focus .dc-scroll { padding-top: 56px; }
+.dc-editor.focus .dc-focus-exit { position: absolute; top: 12px; left: 50%; z-index: 40; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--menu-border); border-radius: 20px; background: var(--menu-bg); color: var(--text-2); cursor: pointer; transform: translateX(-50%); animation: dc-focus-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both; transition: color 120ms ease, background-color 120ms ease; }
+.dc-editor.focus .dc-focus-exit:hover { background: var(--menu-hover); color: var(--text); }
+.dc-editor.focus .dc-page { animation: dc-focus-page 420ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes dc-focus-in { from { opacity: 0; transform: translate(-50%, -8px); } }
+@keyframes dc-focus-page { from { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .dc-editor.focus .dc-focus-exit, .dc-editor.focus .dc-page { animation: none; } }
+
+/* =====================================================================
+   „Erstellen“ (30.10., 23:00): statt der Agenten-Leiste oben mittig zwei Wörter – Agenten | Dokumente
+   (gleiche runde Leiste wie vorher), im leeren Chat und im frisch angelegten, leeren Dokument
+   ===================================================================== */
+.dog-modes { display: none !important; }
+.create-switch { position: absolute; top: 12px; left: 50%; z-index: 30; opacity: 0; transform: translate(-50%, -6px); pointer-events: none;
+  transition: opacity 260ms ease, transform 420ms var(--spring), top 420ms var(--spring); }
+.panel.home:not(.view-calendar):not(.view-chats):not(.view-tasks):not(.view-docs) > .create-switch,
+.panel.create-doc.view-docs > .create-switch { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.panel:has(#topStack.dock-on) > .create-switch { top: 72px; }
+.panel:has(.composer.picking) > .create-switch, .panel:has(#topStack.dock-open) > .create-switch, .app.doc-focus .create-switch { opacity: 0 !important; pointer-events: none !important; }
+.cs-pill { position: relative; display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 4px; border: 1px solid #2a2a2a; border-radius: 18px; background: #1a1a1a; }
+.cs-pill button { height: 28px; padding: 0 12px; border: 0; border-radius: 14px; background: none; color: var(--text-4); font: 500 13px Inter, sans-serif; cursor: pointer; transition: color 180ms ease; -webkit-tap-highlight-color: transparent; }
+.cs-pill button:hover { color: var(--text-2); }
+.cs-pill button.on { color: var(--text); cursor: default; }

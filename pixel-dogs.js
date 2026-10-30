@@ -903,7 +903,7 @@ const PixelDogs = (() => {
     peek.title = 'Agenten';
     const hero = document.createElement('div');
     hero.className = 'dog-hero doc-hero';
-    hero.innerHTML = '<button type="button" class="dh-dog" aria-label="Agenten anzeigen" title="Agenten"></button><div class="dh-title">What should we work on today?</div>';
+    hero.innerHTML = '<button type="button" class="dh-dog" aria-label="Agenten anzeigen" title="Agenten"></button><div class="dh-title">Woran arbeiten wir heute?</div>';
     form.append(peek, hero);
     const draw = (id) => {
       peek.innerHTML = scene(id).html; // erstes Bild jeder Spur: Pfoten auf dem Rand
@@ -953,7 +953,7 @@ const PixelDogs = (() => {
     // Leerer Chat: der gewählte Hund mittig über dem Eingabefeld (statt oben rechts), darunter „What should we work on today?“
     const hero = document.createElement('div');
     hero.className = 'dog-hero';
-    hero.innerHTML = '<button type="button" class="dh-dog" aria-label="Agenten anzeigen" title="Agenten"></button><div class="dh-title">What should we work on today?</div>';
+    hero.innerHTML = '<button type="button" class="dh-dog" aria-label="Agenten anzeigen" title="Agenten"></button><div class="dh-title">Woran arbeiten wir heute?</div>';
     composer.append(hero);
     const updateHero = (id, animate) => {
       const box = hero.querySelector('.dh-dog');

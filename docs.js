@@ -571,7 +571,7 @@ const Docs = (() => {
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         api.render();
       },
-      hide() { if (!api.open) return; api.open = false; view.hidden = true; if (!editor.open) panel()?.classList.remove('view-docs'); },
+      hide() { if (!api.open) return; setFocus(false); api.open = false; view.hidden = true; if (!editor.open) panel()?.classList.remove('view-docs'); },
     };
     search.addEventListener('input', () => api.render());
     search.addEventListener('keydown', (e) => e.stopPropagation());
@@ -610,12 +610,13 @@ const Docs = (() => {
     const view = el('section', 'dc-view dc-editor');
     view.hidden = true;
     let doc = null, tab = null;
+    let focusOn = false, focusPrev = null; // Fokusmodus (siehe setFocus)
     let paneOpen = localStorage.getItem('docs.pane') === '1';
     const api = { open: false, focusTitle: false };
     const app = () => document.getElementById('app');
     // Rechtes Seitenfenster (#rpane neben dem Hauptteil): KI-Chat, der sich nur auf dieses Dokument bezieht
     function drawPane() {
-      const on = api.open && paneOpen;
+      const on = api.open && paneOpen && !focusOn;
       app()?.classList.toggle('rpane-open', on);
       if (on) { drawDocChat(); paneResizer(); }
     }
@@ -686,7 +687,7 @@ const Docs = (() => {
             <button type="button" class="mic-btn dcc-mic" aria-label="Diktieren" title="Diktieren"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
             <button type="button" class="voice-btn dcc-voice" aria-label="Sprachmodus" title="Sprachmodus">${fi('voice', 16)}</button>
             <button type="submit" class="dcc-send" aria-label="Senden" title="Senden">${icon('i-arrow-up', 14)}</button></div></form>
-        <div class="status-row dcc-status"><div class="listening dcc-listening" role="status" aria-live="polite"><span class="dot"></span><span>Listening</span></div></div></div>`;
+        <div class="status-row dcc-status"><div class="listening dcc-listening" role="status" aria-live="polite"><span class="dot"></span><span>Hört zu</span></div></div></div>`;
       if (grip) p.append(grip);
       const list = p.querySelector('.dcc-list');
       const srcTab = viewSrc && document.querySelector(`#tabs .tab[data-cid="${viewSrc}"]`);
@@ -1264,6 +1265,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (!doc) { view.innerHTML = '<div class="dc-empty big">Dieses Dokument gibt es nicht mehr.</div>'; return; }
       view.innerHTML = `<div class="dc-topbar"><div class="dc-hist"><button type="button" class="icon-btn" data-act="undo" aria-label="Rückgängig" title="Rückgängig (Strg+Z)">${fi('undo', 15)}</button><button type="button" class="icon-btn redo" data-act="redo" aria-label="Wiederholen" title="Wiederholen (Strg+Umschalt+Z)">${fi('undo', 15)}</button></div><span class="grow"></span>
           <span class="dc-busy" hidden></span>
+          <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('expand', 15)}</button>
           <button type="button" class="icon-btn dc-setbtn" data-act="settings" aria-label="Einstellungen des Dokuments">${fi('sliders', 15)}</button>
           <button type="button" class="icon-btn dc-panebtn" data-act="pane" aria-label="Seitenfenster rechts ein-/ausklappen" title="Seitenfenster">${icon('i-sidebar', 16)}</button></div>
         <div class="dc-body"><div class="dc-scroll">
@@ -1280,12 +1282,44 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           <div class="dc-drop" hidden></div>
         </div></div>
         <nav class="prompt-nav dc-nav" aria-label="Überschriften in diesem Dokument"></nav>
-        <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>`;
+        <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>
+        <button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden">${fi('shrink', 18)}</button>`;
       wireMeta(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
       grow(view.querySelector('.dc-title-in')); grow(view.querySelector('.dc-sub-in'));
       if (writing.has(doc.id)) busy('KI schreibt …');
-      if (api.focusTitle) { api.focusTitle = false; setTimeout(() => view.querySelector('.dc-title-in')?.focus(), 60); }
+      if (api.focusTitle && !focusOn) { api.focusTitle = false; setTimeout(() => view.querySelector('.dc-title-in')?.focus(), 60); }
+      applyFocus();
     }
+    /* ---------- Fokusmodus: nur der Text, ganzer Bildschirm (Sidebar, Leisten, Griffe weg), nichts bearbeitbar;
+       oben mittig ein etwas größerer Knopf beendet ihn (auch Esc) ---------- */
+    function applyFocus() {
+      view.classList.toggle('focus', focusOn);
+      const c = content(); if (c) c.setAttribute('contenteditable', focusOn ? 'false' : 'true');
+      view.querySelectorAll('.dc-title-in, .dc-sub-in').forEach((t) => { t.readOnly = focusOn; });
+    }
+    function setFocus(on) {
+      if (focusOn === on) return;
+      focusOn = on;
+      const a = app();
+      if (on) {
+        focusPrev = { collapsed: !!a?.classList.contains('collapsed') };
+        document.activeElement?.blur?.(); hideFmt();
+        a?.classList.add('collapsed', 'doc-focus');
+        a?.classList.remove('rpane-open');
+        const fs = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+        try { const r = fs?.call(document.documentElement); r?.catch?.(() => {}); } catch {}
+      } else {
+        a?.classList.remove('doc-focus');
+        a?.classList.toggle('collapsed', !!focusPrev?.collapsed);
+        const ex = document.exitFullscreen || document.webkitExitFullscreen;
+        if (document.fullscreenElement || document.webkitFullscreenElement) { try { const r = ex?.call(document); r?.catch?.(() => {}); } catch {} }
+        drawPane();
+      }
+      applyFocus();
+    }
+    // Vollbild vom System beendet (Esc, Wischgeste) → Fokusmodus auch beenden
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach((ev) => document.addEventListener(ev, () => { if (focusOn && !(document.fullscreenElement || document.webkitFullscreenElement)) setFocus(false); }));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && focusOn) { e.preventDefault(); setFocus(false); } });
     const changed = () => { touch(doc); renderSide(); if (list.open) list.render(); window.markDrafts?.(); };
     function wire() {
       const title = view.querySelector('.dc-title-in'), sub = view.querySelector('.dc-sub-in'), c = content();
@@ -2349,6 +2383,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     view.addEventListener('click', (e) => {
       if (!doc) return;
       const act = e.target.closest('[data-act]')?.dataset.act;
+      if (act === 'focus') { setFocus(!focusOn); return; }
+      if (focusOn) return; // im Fokusmodus lässt sich nichts ändern
       if (act === 'undo' || act === 'redo') { stepHist(act === 'undo'); return; }
       if (act === 'pane') { paneOpen = !paneOpen; localStorage.setItem('docs.pane', paneOpen ? '1' : '0'); drawPane(); return; }
       if (act === 'cover') { openCoverPop(); return; }

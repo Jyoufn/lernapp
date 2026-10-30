@@ -120,6 +120,39 @@ document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) 
 }));
 // Lupe oben: Suchfeld (search.js)
 
+/* „Erstellen“: oben mittig zwei Wörter im Stil der alten Agenten-Leiste – Agenten (leerer KI-Chat) | Dokumente (neues leeres Dokument).
+   Steht im leeren Chat und im frisch über „Dokumente“ angelegten, noch leeren Dokument; das Wechseln selbst verwirft den leeren Vorgänger
+   (activateTab → drop). Den Agenten wechselt man über den Hund in der Mitte. */
+const createSwitch = (() => {
+  const panel = document.querySelector('.panel');
+  const box = el('div', 'create-switch');
+  box.innerHTML = '<div class="cs-pill" role="tablist" aria-label="Erstellen"><button type="button" role="tab" data-cs="agents">Agenten</button><button type="button" role="tab" data-cs="docs">Dokumente</button></div>';
+  panel?.append(box);
+  const createDoc = (t) => t?.dataset.view === 'doc' && t.dataset.create === '1' && window.Docs?.isEmpty(t.dataset.doc);
+  const update = () => {
+    const t = activeTab();
+    const docMode = createDoc(t);
+    panel?.classList.toggle('create-doc', !!docMode);
+    const mode = docMode ? 'docs' : 'agents';
+    box.querySelectorAll('[data-cs]').forEach((b) => { const on = b.dataset.cs === mode; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+  };
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-cs]'); if (!b || b.classList.contains('on')) return;
+    if (b.dataset.cs === 'docs') {
+      const d = window.Docs?.create(''); if (!d) return;
+      const tab = tabsEl.querySelector(`.tab[data-view="doc"][data-doc="${d.id}"]`);
+      if (tab) tab.dataset.create = '1';
+    } else {
+      createTab('Neuer Chat');
+      setTimeout(() => $('input')?.focus(), 50);
+    }
+    update(); window.renderSideChats?.();
+  });
+  window.addEventListener('chat-tab-switched', () => requestAnimationFrame(update));
+  document.addEventListener('input', () => { if (panel?.classList.contains('create-doc')) { update(); window.renderSideChats?.(); } }, true);
+  return { update, isCreate: (t) => !!createDoc(t) || (!!t && !t.dataset.view && isDraft(t)) };
+})();
+
 function closeTab(tab) {
   const tabs = [...tabsEl.querySelectorAll('.tab:not([hidden])')];
   if (tabs.length === 1) {
@@ -476,7 +509,7 @@ function startListening() {
 
   try { recognition.start(); } catch {}
   setMicUI(true);
-  showListening('Listening');
+  showListening('Hört zu');
 }
 
 // hard: beim Abschicken – sofort abbrechen, nichts mehr nachliefern lassen (sonst schreibt die Erkennung Reste ins geleerte Feld)
@@ -4552,7 +4585,7 @@ window.renderSideChats = () => {
     closeSbChatMenu();
     // markiert: Bereich des offenen Tabs bzw. „Chatverlauf“, solange die Übersicht offen ist
     const v = activeTab()?.dataset.view;
-    const kind = chatsView.open ? 'history' : v === 'doc' ? 'docs' : v || '';
+    const kind = chatsView.open ? 'history' : createSwitch.isCreate(activeTab()) ? 'new' : v === 'doc' ? 'docs' : v || '';
     document.querySelectorAll('.sidebar .sb-main [data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === kind));
     const items = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
       .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => (b.c.pinned - a.c.pinned) || (b.c.updated - a.c.updated)).slice(0, 8); // angeheftete zuerst
