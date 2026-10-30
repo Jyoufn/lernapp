@@ -130,7 +130,7 @@ async function handleChat(req, res, user = null) {
 async function commonsIllustration(query, count = 1) { // count > 1: Liste der besten Treffer
   const words = String(query || '').trim().slice(0, 100);
   if (!words) return count > 1 ? [] : null;
-  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: words, gsrnamespace: '6', gsrlimit: '8', prop: 'imageinfo', iiprop: 'url|mime|size|extmetadata', iiurlwidth: '900', format: 'json' });
+  const params = new URLSearchParams({ action: 'query', generator: 'search', gsrsearch: words, gsrnamespace: '6', gsrlimit: String(Math.min(30, Math.max(8, count * 2))), prop: 'imageinfo', iiprop: 'url|mime|size|extmetadata', iiurlwidth: '900', format: 'json' });
   const response = await fetch(`https://commons.wikimedia.org/w/api.php?${params}`, { headers: { 'User-Agent': 'BackboneLearningApp/1.0 (local educational app)' }, signal: AbortSignal.timeout(12000) });
   if (!response.ok) return null;
   const pages = Object.values((await response.json()).query?.pages || {});
@@ -760,9 +760,15 @@ async function handleIllustration(req, res) {
   const cached = readImgCache(key) || OLD_IMG_SUFFIXES.map((v) => readImgCache(imgKey(description, v(query || '', source || '')))).find(Boolean);
   if (cached) { if (!readImgCache(key)) writeImgCache(key, cached); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, cached); }
   // Bild aus dem Netz gewünscht: nur nehmen, wenn es wirklich passt – sonst wird eins erzeugt
-  if (source === 'web') {
+  if (source === 'web' || source === 'webonly') {
     const web = await fittingWebImage(env, description, query).catch(() => null);
     if (web) { writeImgCache(key, web); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, web); }
+  }
+  // Präsentationen: NUR echte Bilder (Wikimedia) – nie ein KI-Bild; ohne passenden Treffer der beste Suchtreffer, sonst keins
+  if (source === 'webonly') {
+    const c = await commonsIllustration(query || description).catch(() => null);
+    if (c) { writeImgCache(key, c); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, c); }
+    return sendJson(res, 404, { error: 'Kein passendes Foto gefunden.' });
   }
   // echtes KI-Bild (FLUX über NVIDIA) mit Beschriftung darüber – ein Durchgang (Startwerte und Umformulieren stecken schon drin), sonst ein freies Fachbild.
   // Folgewunsch zu einem früheren Bild: dieses Bild anpassen (findet es kein Rohbild dazu, entsteht ein neues)
@@ -1306,6 +1312,13 @@ async function handle(req, res) {
       if (fn) return sendJson(res, 200, await fn(store, serverEnv(), user.id, b));
     }
     if (req.method === 'POST' && urlPath === '/api/illustration') return await handleIllustration(req, res);
+    // Präsentation bearbeiten: echte Fotos zur Auswahl (Wikimedia Commons, freie Lizenz)
+    if (req.method === 'GET' && urlPath === '/api/photos') {
+      const q = String(new URL(req.url, 'http://x').searchParams.get('q') || '').trim().slice(0, 80);
+      if (!q) return sendJson(res, 400, { error: 'Suchbegriff fehlt' });
+      const items = await commonsIllustration(q, 12).catch(() => []);
+      return sendJson(res, 200, { items: (Array.isArray(items) ? items : [items]).filter(Boolean).slice(0, 12) });
+    }
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {
       // Die Client-ID ist kein Geheimnis (PKCE-Anmeldung ohne Secret) – darf an den Browser

@@ -24,7 +24,7 @@ const Praesentation = (() => {
   };
   const ALIAS = { hell: 'klar', dunkel: 'nacht', warm: 'papier' };
   const themeOf = (deck) => { const T = THEMES[deck.theme] || THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.theme === deck.aiTheme ? { accent: deck.accent } : {}) }; };
-  const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'fazit'];
+  const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'fazit', 'quellen', 'ende'];
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
   const str = (x, n) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -37,8 +37,8 @@ const Praesentation = (() => {
     try { o = JSON.parse(String(raw || '').trim()); } catch { return null; }
     if (!o || typeof o !== 'object' || !Array.isArray(o.slides) || !o.slides.length) return null;
     const pts = (a, n = 6) => (Array.isArray(a) ? a.map((p) => str(p, 180)).filter(Boolean).slice(0, n) : []);
-    const img = (i) => (i && typeof i === 'object' && (i.query || i.prompt) ? { query: str(i.query, 80), prompt: str(i.prompt || i.query, 400) } : null);
-    let slides = o.slides.slice(0, 18).map((s) => ({
+    const img = (i) => (i && typeof i === 'object' && (i.query || i.prompt || i.src) ? { query: str(i.query, 80), prompt: str(i.prompt || i.query, 400), ...(i.src ? { src: String(i.src), credit: str(i.credit, 160) } : {}) } : null);
+    let slides = o.slides.slice(0, 22).map((s) => ({
       type: TYPES.includes(s?.type) ? s.type : 'punkte',
       title: plain(str(s?.title, 110)), text: str(s?.text, 460), points: pts(s?.points, s?.type === 'gliederung' ? 8 : 6),
       left: s?.left ? { title: plain(str(s.left.title, 60)), points: pts(s.left.points) } : null,
@@ -52,8 +52,12 @@ const Praesentation = (() => {
       const items = (secs.length >= 2 ? secs : slides.filter((s) => !['titel', 'fazit', 'zitat'].includes(s.type)).map((s) => s.title)).filter(Boolean).slice(0, 8);
       if (items.length >= 2) slides.splice(slides[0].type === 'titel' ? 1 : 0, 0, { type: 'gliederung', title: 'Gliederung', text: '', points: items, left: null, right: null, image: null, notes: '' });
     }
+    // Ende immer mit Quellen und Schluss-Folie (fehlen sie, setzt die App sie dazu; Bildnachweise kommen beim Zeichnen dazu)
+    const sources = (Array.isArray(o.sources) ? o.sources : []).map((x) => str(typeof x === 'string' ? x : [x?.title, x?.publisher, x?.year, x?.url].filter(Boolean).join(' · '), 220)).filter(Boolean).slice(0, 14);
+    if (!slides.some((x) => x.type === 'ende')) slides.push({ type: 'ende', title: 'Vielen Dank!', text: 'Fragen?', points: [], left: null, right: null, image: null, notes: '' });
+    if (!slides.some((x) => x.type === 'quellen')) slides.splice(slides.length - 1, 0, { type: 'quellen', title: 'Quellen', text: '', points: [], left: null, right: null, image: null, notes: '' });
     const theme = THEMES[o.theme] ? o.theme : ALIAS[o.theme] || 'klar';
-    return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: theme, accent: hex(o.accent), slides };
+    return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: o.aiTheme && THEMES[o.aiTheme] ? o.aiTheme : theme, accent: hex(o.accent), sources, slides };
   }
 
   /* ---------- Text: **fett** in Läufe zerlegen, messen und umbrechen (eine Messung für alle drei Ausgaben) ---------- */
@@ -103,10 +107,10 @@ const Praesentation = (() => {
     };
     const footer = (dark) => {
       const c = dark ? 'rgba(255,255,255,0.75)' : T.sub;
-      if (T.title === 'minimal' || T.head === 'serif') out.push({ k: 'rect', x: M, y: H - 0.62, w: W - 2 * M, h: 0.012, fill: dark ? 'rgba(255,255,255,0.35)' : T.line });
-      out.push({ k: 'text', x: M, y: H - 0.5, w: 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2 });
-      if (imo?.credit) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8 });
-      out.push({ k: 'text', x: W - M - 0.6, y: H - 0.5, w: 0.6, lines: [words(String(i + 1))], size: 10, color: c, align: 'r', lh: 1.2 });
+      if (T.title === 'minimal' || T.head === 'serif') out.push({ k: 'rect', x: M, y: H - 0.62, w: W - 2 * M, h: 0.012, fill: dark ? 'rgba(255,255,255,0.35)' : T.line, foot: true });
+      out.push({ k: 'text', x: M, y: H - 0.5, w: 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2, foot: true });
+      if (imo?.credit) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8, foot: true });
+      out.push({ k: 'text', x: W - M - 0.6, y: H - 0.5, w: 0.6, lines: [words(String(i + 1))], size: 10, color: c, align: 'r', lh: 1.2, foot: true });
     };
     // Abschnitt, zu dem die Folie gehört (Kicker über der Überschrift)
     let sec = '';
@@ -240,6 +244,31 @@ const Praesentation = (() => {
         });
       } else bullets(pts, { x: M, y: top + 0.1, w: W - 2 * M, h: H - top - 1.0 });
       footer();
+    } else if (s.type === 'quellen') {
+      const top = heading(s.title || 'Quellen');
+      const credits = [...images.entries()].filter(([, v]) => v?.credit).map(([sl, v]) => `Bild „${sl.title || deck.title}“: ${v.credit}`.slice(0, 200));
+      const list = [...(s.points.length ? s.points : deck.sources || []), ...credits];
+      if (!list.length) list.push('Eigenes Wissen und Unterrichtsmaterial');
+      const two = list.length > 7, colW = two ? (W - 2 * M - 0.5) / 2 : W - 2 * M, per = two ? Math.ceil(list.length / 2) : list.length;
+      [list.slice(0, per), list.slice(per)].forEach((col, c) => {
+        if (!col.length) return;
+        let y = top;
+        const avail = H - top - 0.9, each = avail / per;
+        col.forEach((x) => {
+          const f = text(x, { x: M + c * (colW + 0.5) + 0.3, y, w: colW - 0.3, h: Math.max(0.35, each - 0.08), max: 15, min: 9, color: T.text, lh: 1.25, maxLines: 3 });
+          out.push({ k: 'ellipse', x: M + c * (colW + 0.5) + 0.04, y: y + f.size * 1.25 * PT / 2 - 0.045, w: 0.09, h: 0.09, fill: T.accent });
+          y = Math.max(f.bottom + 0.12, y + 0.3);
+        });
+      });
+      footer();
+    } else if (s.type === 'ende') {
+      if (T.title === 'full' || T.title === 'block') out[0].fill = T.title === 'full' ? T.bg : T.accent;
+      const fg = T.title === 'block' ? T.onAccent : T.text;
+      if (im && T.title === 'full') { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#060A14', alpha: 0.6 }); }
+      else if (T.title !== 'block') { out.push({ k: 'ellipse', x: 9.6, y: -2, w: 6.4, h: 6.4, fill: T.accent, alpha: 0.12 }); out.push({ k: 'ellipse', x: -1.4, y: 4.8, w: 3.6, h: 3.6, fill: T.accent, alpha: 0.08 }); }
+      const f = text(s.title || 'Vielen Dank!', { x: M, y: 2.6, w: W - 2 * M, h: 1.6, max: 60, min: 36, bold: T.head !== 'serif', font: T.head, color: im && T.title === 'full' ? '#FFFFFF' : fg, align: 'c', maxLines: 1, lh: 1.05 });
+      if (s.text) text(s.text, { x: M, y: f.bottom + 0.25, w: W - 2 * M, h: 0.9, max: 24, min: 16, color: im && T.title === 'full' ? 'rgba(255,255,255,0.85)' : T.title === 'block' ? T.onAccent : T.sub, align: 'c', maxLines: 2 });
+      out.push({ k: 'rect', x: W / 2 - 0.45, y: 2.25, w: 0.9, h: 0.08, fill: T.title === 'block' ? T.onAccent : T.accent, r: 0.04 });
     } else { // punkte (auch „bild“ ohne Bild)
       const hasImg = !!im;
       const bw = hasImg ? 6.35 : W - 2 * M;
@@ -255,19 +284,19 @@ const Praesentation = (() => {
 
   /* ---------- Bilder: freie Bilder über /api/illustration (wie im Chat), passend zugeschnitten ---------- */
   const imgMemo = new Map();
+  const toImg = (src, credit) => new Promise((res, rej) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => res({ img, credit }); img.onerror = rej; img.src = src; });
+  // NUR echte Fotos (Wikimedia, freie Lizenz) – nie KI-Bilder („webonly“); eigenes/ausgewähltes Bild (src) direkt
   function loadImage(want) {
-    const key = `${want.query}|${want.prompt}`;
+    const key = want.src ? `src:${want.src.slice(0, 120)}${want.src.length}` : `${want.query}|${want.prompt}`;
     if (imgMemo.has(key)) return imgMemo.get(key);
     const prompt = want.prompt.length >= 20 ? want.prompt : `Foto zum Thema ${want.query || want.prompt}, sachlich, gut erkennbar`;
-    const p = (typeof requestIllustration === 'function'
-      ? requestIllustration(prompt, want.query || '', 'web')
-      : fetch('/api/illustration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, query: want.query, source: 'web' }) }).then((r) => (r.ok ? r.json() : Promise.reject(new Error('kein Bild')))))
-      .then((r) => {
-        if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return { src: r.url, credit: [r.author, r.license].filter(Boolean).join(' · ').replace(/<[^>]+>/g, '') };
-        if (/^image\/(png|jpeg|webp)$/.test(r.mime) && r.data) return { src: `data:${r.mime};base64,${r.data}`, credit: '' };
-        throw new Error('Bildformat');
-      })
-      .then((r) => new Promise((res, rej) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => res({ img, credit: r.credit }); img.onerror = rej; img.src = r.src; }));
+    const p = (want.src ? toImg(want.src, want.credit || '')
+      : fetch('/api/illustration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt, query: want.query, source: 'webonly' }) })
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('kein Foto'))))
+        .then((r) => {
+          if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return toImg(r.url, [r.author, r.license].filter(Boolean).join(' · ').replace(/<[^>]+>/g, ''));
+          throw new Error('kein Foto');
+        }));
     p.catch(() => imgMemo.delete(key));
     imgMemo.set(key, p);
     return p;
@@ -302,14 +331,17 @@ const Praesentation = (() => {
   const pct = (v, of) => `${((v / of) * 100).toFixed(3)}%`;
   const cq = (pt) => `${((pt * PT) / W * 100).toFixed(3)}cqw`; // Schriftgröße relativ zur Folienbreite
   const lineHtml = (line) => line.map((x, i) => `${i ? ' ' : ''}${x.b ? `<b>${esc(x.w)}</b>` : esc(x.w)}`).join('');
-  function slideHtml(items) {
-    return items.map((it) => {
-      const box = `left:${pct(it.x, W)};top:${pct(it.y, H)};width:${pct(it.w, W)};${it.h != null ? `height:${pct(it.h, H)};` : ''}`;
+  // anim: Elemente blenden nacheinander weich ein (wie die Animationen in PowerPoint/Keynote)
+  function slideHtml(items, anim = false) {
+    let order = 0;
+    return items.map((it, idx) => {
+      const a = anim && idx > 0 && !it.foot ? `animation-delay:${Math.min(order++, 14) * 70}ms;` : '';
+      const box = `left:${pct(it.x, W)};top:${pct(it.y, H)};width:${pct(it.w, W)};${it.h != null ? `height:${pct(it.h, H)};` : ''}${a}`;
       const op = it.alpha != null ? `opacity:${it.alpha};` : '';
-      if (it.k === 'rect') return `<i class="pz-r" style="${box}background:${it.fill};${op}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}"></i>`;
-      if (it.k === 'ellipse') return `<i class="pz-r" style="${box}background:${it.fill};${op}border-radius:50%"></i>`;
-      if (it.k === 'image') { const src = crop(it.src, it.w, it.h); return src ? `<img class="pz-i" alt="" src="${src}" style="${box}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}">` : ''; }
-      return `<span class="pz-t" style="${box}color:${it.color};${op}font-family:${FONTS[it.font || 'sans'].css.replace(/"/g, "'")};font-size:${cq(it.size)};line-height:${it.lh};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(lineHtml).join('<br>')}</span>`;
+      if (it.k === 'rect') return `<i class="pz-r${a ? ' pz-a' : ''}" style="${box}background:${it.fill};${op}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}"></i>`;
+      if (it.k === 'ellipse') return `<i class="pz-r${a ? ' pz-a' : ''}" style="${box}background:${it.fill};${op}border-radius:50%"></i>`;
+      if (it.k === 'image') { const src = crop(it.src, it.w, it.h); return src ? `<img class="pz-i${a ? ' pz-a' : ''}" alt="" src="${src}" style="${box}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}">` : ''; }
+      return `<span class="pz-t${a ? ' pz-a' : ''}" style="${box}color:${it.color};${op}font-family:${FONTS[it.font || 'sans'].css.replace(/"/g, "'")};font-size:${cq(it.size)};line-height:${it.lh};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(lineHtml).join('<br>')}</span>`;
     }).join('');
   }
 
@@ -406,12 +438,30 @@ const Praesentation = (() => {
     const a = (m && m[4] != null ? +m[4] : 1) * alpha;
     return `<a:srgbClr val="${rgb}">${a < 1 ? `<a:alpha val="${Math.round(a * 100000)}"/>` : ''}</a:srgbClr>`;
   };
+  // Übergang (Überblenden) und Einblenden aller Elemente nacheinander, automatisch – PowerPoint und Keynote übernehmen das beim Öffnen
+  function timingXml(targets) {
+    if (!targets.length) return '';
+    let cid = 4;
+    const effects = targets.slice(0, 24).map((t, k) => {
+      const a = cid++, b = cid++, c = cid++;
+      return `<p:par><p:cTn id="${a}" presetID="10" presetClass="entr" presetSubtype="0" fill="hold"${t.text ? ' grpId="0"' : ''} nodeType="withEffect"><p:stCondLst><p:cond delay="${Math.min(k, 14) * 140}"/></p:stCondLst><p:childTnLst>`
+        + `<p:set><p:cBhvr><p:cTn id="${b}" dur="1" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst></p:cTn><p:tgtEl><p:spTgt spid="${t.id}"/></p:tgtEl><p:attrNameLst><p:attrName>style.visibility</p:attrName></p:attrNameLst></p:cBhvr><p:to><p:strVal val="visible"/></p:to></p:set>`
+        + `<p:animEffect transition="in" filter="fade"><p:cBhvr><p:cTn id="${c}" dur="500"/><p:tgtEl><p:spTgt spid="${t.id}"/></p:tgtEl></p:cBhvr></p:animEffect></p:childTnLst></p:cTn></p:par>`;
+    }).join('');
+    const bld = targets.slice(0, 24).filter((t) => t.text).map((t) => `<p:bldP spid="${t.id}" grpId="0"/>`).join('');
+    return `<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="2" dur="indefinite" nodeType="mainSeq"><p:childTnLst>`
+      + `<p:par><p:cTn id="3" fill="hold"><p:stCondLst><p:cond delay="indefinite"/><p:cond evt="onBegin" delay="0"><p:tn val="2"/></p:cond></p:stCondLst><p:childTnLst>`
+      + `<p:par><p:cTn id="${cid++}" fill="hold"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>${effects}</p:childTnLst></p:cTn></p:par>`
+      + `</p:childTnLst></p:cTn></p:par></p:childTnLst></p:cTn><p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst><p:nextCondLst><p:cond evt="onNext" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:nextCondLst></p:seq></p:childTnLst></p:cTn></p:par></p:tnLst>${bld ? `<p:bldLst>${bld}</p:bldLst>` : ''}</p:timing>`;
+  }
   function slideXml(items, media) {
     let id = 2;
+    const targets = [];
     const xfrm = (it) => `<a:xfrm><a:off x="${e(it.x)}" y="${e(it.y)}"/><a:ext cx="${Math.max(1, e(it.w))}" cy="${Math.max(1, e(it.h ?? 0.1))}"/></a:xfrm>`;
     const geomOf = (it) => (it.r ? `<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val ${Math.round(Math.min(50000, (it.r / Math.min(it.w, it.h)) * 100000))}"/></a:avLst></a:prstGeom>` : '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>');
-    const shapes = items.map((it) => {
+    const shapes = items.map((it, idx) => {
       const nid = id++;
+      if (idx > 0 && !it.foot && (it.k !== 'image' || media.get(it))) targets.push({ id: nid, text: it.k === 'text' });
       if (it.k === 'rect' || it.k === 'ellipse') {
         const geom = it.k === 'ellipse' ? '<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>' : geomOf(it);
         return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Form ${nid}"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm(it)}${geom}<a:solidFill>${colorOf(it.fill, it.alpha ?? 1)}</a:solidFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>`;
@@ -433,7 +483,7 @@ const Praesentation = (() => {
       const para = `<a:p><a:pPr algn="${algn}"><a:lnSpc><a:spcPct val="${Math.round(it.lh * 100000 * 0.86)}"/></a:lnSpc></a:pPr>${it.lines.map((l, k) => `${k ? `<a:br><a:rPr lang="de-DE" sz="${Math.round(it.size * 100)}"/></a:br>` : ''}${runs(l)}`).join('')}</a:p>`;
       return `<p:sp><p:nvSpPr><p:cNvPr id="${nid}" name="Text ${nid}"/><p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr><p:spPr>${xfrm({ ...it, h })}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr><p:txBody><a:bodyPr wrap="square" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t"><a:noAutofit/></a:bodyPr><a:lstStyle/>${para}</p:txBody></p:sp>`;
     }).join('');
-    return `${XML}<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${shapes}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>`;
+    return `${XML}<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/><a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>${shapes}</p:spTree></p:cSld><p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr><p:transition spd="med"><p:fade/></p:transition>${timingXml(targets)}</p:sld>`;
   }
   const THEME_XML = (T) => `${XML}<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Lern-App"><a:themeElements>
 <a:clrScheme name="Lern-App"><a:dk1><a:srgbClr val="${T.text.slice(1)}"/></a:dk1><a:lt1><a:srgbClr val="FFFFFF"/></a:lt1><a:dk2><a:srgbClr val="1D1D1F"/></a:dk2><a:lt2><a:srgbClr val="F4F5F7"/></a:lt2><a:accent1><a:srgbClr val="${T.accent.slice(1)}"/></a:accent1><a:accent2><a:srgbClr val="4FCF8A"/></a:accent2><a:accent3><a:srgbClr val="FB9A52"/></a:accent3><a:accent4><a:srgbClr val="B49CFF"/></a:accent4><a:accent5><a:srgbClr val="F07A6E"/></a:accent5><a:accent6><a:srgbClr val="2DD4BF"/></a:accent6><a:hlink><a:srgbClr val="2F86FF"/></a:hlink><a:folHlink><a:srgbClr val="6E6E73"/></a:folHlink></a:clrScheme>
@@ -507,71 +557,244 @@ const Praesentation = (() => {
     { id: 'key', label: 'Keynote', hint: 'iPad & Mac', badge: 'KEY' },
     { id: 'pdf', label: 'PDF', hint: 'Zum Teilen', badge: 'PDF' },
   ];
-  const designKey = (deck) => `pz.design.${deck.title.slice(0, 60)}`;
+  // Änderungen (Bearbeiten, Design, Bilder) je Präsentation im Konto gemerkt – Schlüssel aus dem Inhalt des Blocks
+  const hash = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
+  const editKey = (raw) => `pz.edit.${hash(String(raw || '').trim())}`;
+  const serial = (deck) => JSON.stringify({ title: deck.title, subtitle: deck.subtitle, theme: deck.theme, aiTheme: deck.aiTheme, accent: deck.accent, sources: deck.sources,
+    slides: deck.slides.map((x) => ({ type: x.type, title: x.title, text: x.text, points: x.points, left: x.left, right: x.right, image: x.image, notes: x.notes })) });
+  const TYPE_NAMES = { titel: 'Titel', gliederung: 'Gliederung', punkte: 'Stichpunkte', bild: 'Großes Bild', zahlen: 'Zahlen', zwei: 'Vergleich', zitat: 'Merksatz / Zitat', abschnitt: 'Abschnitt', fazit: 'Fazit', quellen: 'Quellen', ende: 'Schluss' };
+  const ACCENTS = ['#2F6BFF', '#5EA2FF', '#14B8A6', '#22A55B', '#F59E0B', '#FF5A36', '#E11D74', '#8B5CF6', '#B5532A', '#0A0A0A'];
+  // gemeinsamer Zustand einer Präsentation (Karte und Bearbeiten-Fenster): Folien, geladene Bilder, Layout
+  function makeState(raw) {
+    let deck = parse(raw);
+    if (!deck) return null;
+    const key = editKey(raw);
+    try { const saved = localStorage.getItem(key); if (saved) { const d = parse(saved); if (d) deck = d; } } catch {}
+    try { const d = localStorage.getItem(`pz.design.${deck.title.slice(0, 60)}`); if (THEMES[d] && !localStorage.getItem(key)) deck.theme = d; } catch {}
+    const st = { deck, images: new Map(), items: [], listeners: new Set(), loading: null };
+    st.relayout = () => { st.items = deck.slides.map((x, i) => layout(deck, x, i, deck.slides.length, st.images)); st.listeners.forEach((f) => f()); };
+    let saveT = 0;
+    st.save = () => { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(key, serial(deck)); } catch {} }, 400); };
+    // Bilder der Folien laden (nur, was fehlt oder geändert wurde)
+    st.syncImages = () => {
+      const want = deck.slides.filter((x) => x.image && (x.image.src || x.image.query || x.image.prompt)).slice(0, 14);
+      const jobs = want.map((x) => {
+        const k = JSON.stringify(x.image);
+        if (st.images.get(x)?.k === k) return null;
+        return Promise.race([loadImage(x.image), new Promise((r) => setTimeout(() => r(null), 25000))])
+          .then((v) => { if (v?.img && JSON.stringify(x.image) === k) { st.images.set(x, { ...v, k }); st.relayout(); } }).catch(() => {});
+      }).filter(Boolean);
+      [...st.images.keys()].forEach((x) => { if (!deck.slides.includes(x) || !x.image) st.images.delete(x); });
+      st.loading = Promise.all(jobs);
+      return st.loading;
+    };
+    st.relayout();
+    st.syncImages();
+    return st;
+  }
+
+  /* ---------- Karte im Chat: nur die Präsentation (ohne Kopf), Designs, Bearbeiten, Ausgabe als drei Kacheln ---------- */
   function figure(raw) {
-    const deck = parse(raw);
     const fig = document.createElement('figure');
     fig.className = 'pz';
     window.enterOnce?.(fig);
-    if (!deck) { fig.innerHTML = '<div class="pz-wait"><span class="shimmer">Präsentation wird erstellt …</span></div>'; return fig; }
-    try { const d = localStorage.getItem(designKey(deck)); if (THEMES[d]) deck.theme = d; } catch {}
-    const n = deck.slides.length;
+    const st = makeState(raw);
+    if (!st) { fig.innerHTML = '<div class="pz-wait"><span class="shimmer">Präsentation wird erstellt …</span></div>'; return fig; }
+    const deck = st.deck;
     fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div>
         <button type="button" class="pz-nav prev" data-go="-1" aria-label="Vorherige Folie">${fi('back', 14)}</button><button type="button" class="pz-nav next" data-go="1" aria-label="Nächste Folie">${fi('forward', 14)}</button>
         <span class="pz-count"></span></div>
-      <div class="pz-strip">${deck.slides.map((_, i) => `<button type="button" class="pz-thumb" data-i="${i}" aria-label="Folie ${i + 1}"><span class="pz-slide"></span></button>`).join('')}</div>
+      <div class="pz-strip"></div>
       <div class="pz-bar">
-        <div class="pz-designs" role="radiogroup" aria-label="Design">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}" role="radio" aria-label="Design ${t.name}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
+        <div class="pz-row1"><div class="pz-designs" role="radiogroup" aria-label="Design">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}" role="radio" aria-label="Design ${t.name}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
+          <button type="button" class="pz-edit" data-edit>${fi('pencil', 13)}Bearbeiten</button></div>
         <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${o.badge}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
       </div>
       <div class="pz-msg" aria-live="polite"></div>`;
-    let images = new Map(), cur = 0, items = [];
-    const big = fig.querySelector('.pz-big'), thumbs = [...fig.querySelectorAll('.pz-thumb .pz-slide')], msg = fig.querySelector('.pz-msg');
+    let cur = 0;
+    const big = fig.querySelector('.pz-big'), strip = fig.querySelector('.pz-strip'), msg = fig.querySelector('.pz-msg');
+    const show = (i, dir) => {
+      const n = deck.slides.length;
+      cur = Math.max(0, Math.min(n - 1, i));
+      big.innerHTML = slideHtml(st.items[cur], !!dir);
+      if (dir) { big.classList.remove('in-l', 'in-r'); void big.offsetWidth; big.classList.add(dir > 0 ? 'in-l' : 'in-r'); }
+      fig.querySelector('.pz-count').textContent = `${cur + 1} / ${n}`;
+      strip.querySelectorAll('.pz-thumb').forEach((b, k) => b.classList.toggle('on', k === cur));
+      const th = strip.querySelector('.pz-thumb.on');
+      if (th) strip.scrollTo({ left: th.offsetLeft - strip.clientWidth / 2 + th.offsetWidth / 2, behavior: 'smooth' });
+    };
     const draw = () => {
-      items = deck.slides.map((s, i) => layout(deck, s, i, n, images));
-      thumbs.forEach((t, i) => { t.innerHTML = slideHtml(items[i]); });
+      if (strip.children.length !== deck.slides.length) strip.innerHTML = deck.slides.map((_, i) => `<button type="button" class="pz-thumb" data-i="${i}" aria-label="Folie ${i + 1}"><span class="pz-slide"></span></button>`).join('');
+      strip.querySelectorAll('.pz-thumb .pz-slide').forEach((t, i) => { t.innerHTML = slideHtml(st.items[i]); });
       fig.querySelectorAll('[data-design]').forEach((b) => { const on = b.dataset.design === deck.theme; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
       show(cur, 0);
     };
-    const show = (i, dir) => {
-      cur = Math.max(0, Math.min(n - 1, i));
-      big.innerHTML = slideHtml(items[cur]);
-      if (dir) { big.classList.remove('in-l', 'in-r'); void big.offsetWidth; big.classList.add(dir > 0 ? 'in-l' : 'in-r'); }
-      fig.querySelector('.pz-count').textContent = `${cur + 1} / ${n}`;
-      fig.querySelectorAll('.pz-thumb').forEach((b, k) => b.classList.toggle('on', k === cur));
-      const th = fig.querySelector('.pz-thumb.on'), strip = fig.querySelector('.pz-strip');
-      if (th && strip) strip.scrollTo({ left: th.offsetLeft - strip.clientWidth / 2 + th.offsetWidth / 2, behavior: 'smooth' });
-    };
+    st.listeners.add(() => { if (fig.isConnected || !fig.parentNode) draw(); });
     draw();
-    // Bilder kommen nach und nach – Folien werden dann neu gesetzt (Text rückt neben das Bild)
-    const loading = loadAll(deck).then((m) => { images = m; if (m.size) draw(); return m; });
-    if (deck.slides.some((s) => s.image)) { fig.classList.add('loading'); loading.finally(() => fig.classList.remove('loading')); }
+    if (deck.slides.some((x) => x.image)) { fig.classList.add('loading'); st.loading?.finally(() => fig.classList.remove('loading')); }
     const say = (t, ms = 0) => { msg.textContent = t; msg.classList.toggle('on', !!t); if (ms) setTimeout(() => { if (msg.textContent === t) say(''); }, ms); };
     fig.addEventListener('click', async (ev) => {
       const go = ev.target.closest('[data-go]'); if (go) { show(cur + +go.dataset.go, +go.dataset.go); return; }
-      const th = ev.target.closest('[data-i]'); if (th) { show(+th.dataset.i, +th.dataset.i - cur); return; }
+      const th = ev.target.closest('[data-i]'); if (th) { show(+th.dataset.i, +th.dataset.i - cur || 1); return; }
+      if (ev.target.closest('[data-edit]')) { editor(st, cur, (i) => { cur = i; draw(); }); return; }
       const ds = ev.target.closest('[data-design]');
-      if (ds) { deck.theme = ds.dataset.design; try { localStorage.setItem(designKey(deck), deck.theme); } catch {} big.classList.add('pz-swap'); setTimeout(() => big.classList.remove('pz-swap'), 380); draw(); return; }
+      if (ds) { deck.theme = ds.dataset.design; st.save(); big.classList.add('pz-swap'); setTimeout(() => big.classList.remove('pz-swap'), 380); st.relayout(); return; }
       const out = ev.target.closest('[data-out]'); if (!out || fig.classList.contains('busy')) return;
       fig.classList.add('busy'); out.classList.add('working');
       say('Wird erstellt …');
       try {
-        await loading;
-        await readyImages(items);
-        if (out.dataset.out === 'pdf') download(pdf(items, deck.title), fileName(deck, 'pdf'));
-        else if (out.dataset.out === 'pptx') download(pptx(items, deck), fileName(deck, 'pptx'));
-        else await share(pptx(items, deck), fileName(deck, 'pptx'));
+        await st.loading;
+        await readyImages(st.items);
+        if (out.dataset.out === 'pdf') download(pdf(st.items, deck.title), fileName(deck, 'pdf'));
+        else if (out.dataset.out === 'pptx') download(pptx(st.items, deck), fileName(deck, 'pptx'));
+        else await share(pptx(st.items, deck), fileName(deck, 'pptx'));
         out.classList.add('ok'); setTimeout(() => out.classList.remove('ok'), 1600);
         say(out.dataset.out === 'key' ? 'Im Teilen-Menü „Keynote“ wählen' : '', 5000);
       } catch (err) { say(`Hat nicht geklappt (${err.message || 'Fehler'})`, 6000); }
       finally { fig.classList.remove('busy'); out.classList.remove('working'); }
     });
     fig.addEventListener('keydown', (ev) => { if (ev.key === 'ArrowRight') show(cur + 1, 1); if (ev.key === 'ArrowLeft') show(cur - 1, -1); });
-    // Wischen auf dem iPad
     let sx = null;
     big.addEventListener('touchstart', (ev) => { sx = ev.touches[0].clientX; }, { passive: true });
     big.addEventListener('touchend', (ev) => { if (sx == null) return; const dx = ev.changedTouches[0].clientX - sx; if (Math.abs(dx) > 50) show(cur + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1); sx = null; }, { passive: true });
+    big.addEventListener('dblclick', () => editor(st, cur, (i) => { cur = i; draw(); }));
     return fig;
+  }
+
+  /* ---------- Bearbeiten: großes Fenster – links die Folie groß mit den Feldern darunter, rechts alle Folien (abgerundet, scrollbar).
+     Text, Folienart, Bilder (echte Fotos auswählen oder eigenes Bild), Design und Akzentfarbe; Folien hinzufügen, verschieben, löschen ---------- */
+  function editor(st, start, onClose) {
+    const deck = st.deck;
+    let cur = start;
+    const wrap = document.createElement('div');
+    wrap.className = 'pz-ed-wrap';
+    wrap.innerHTML = `<div class="pz-ed" role="dialog" aria-label="Präsentation bearbeiten">
+      <header class="pz-ed-head">
+        <b>Präsentation bearbeiten</b>
+        <div class="pz-designs">${Object.entries(THEMES).map(([id, t]) => `<button type="button" class="pz-design" data-design="${id}"><i style="background:${t.bg};--a:${t.accent}"></i><span>${t.name}</span></button>`).join('')}</div>
+        <div class="pz-accents" aria-label="Akzentfarbe">${ACCENTS.map((c) => `<button type="button" class="pz-acc" data-acc="${c}" style="--c:${c}" aria-label="Farbe ${c}"></button>`).join('')}<label class="pz-acc custom" aria-label="Eigene Farbe"><input type="color" data-acc-in /></label></div>
+        <span class="grow"></span>
+        <button type="button" class="pz-ed-done" data-close>Fertig</button>
+      </header>
+      <div class="pz-ed-body">
+        <main class="pz-ed-main"><div class="pz-ed-stage"><div class="pz-slide pz-ed-big"></div></div><div class="pz-ed-form"></div></main>
+        <aside class="pz-ed-side"><div class="pz-ed-list"></div>
+          <div class="pz-ed-acts">
+            <button type="button" data-slide="add">${fi('plus', 12)}Folie</button>
+            <button type="button" data-slide="dup" aria-label="Duplizieren" title="Duplizieren">${fi('copy', 12)}</button>
+            <button type="button" data-slide="up" aria-label="Nach oben" title="Nach oben">${fi('arrow-up', 12)}</button>
+            <button type="button" data-slide="down" aria-label="Nach unten" title="Nach unten"><span style="display:inline-grid;transform:rotate(180deg)">${fi('arrow-up', 12)}</span></button>
+            <button type="button" data-slide="del" class="danger" aria-label="Löschen" title="Löschen">${fi('trash', 12)}</button>
+          </div></aside>
+      </div></div>`;
+    document.body.append(wrap);
+    const big = wrap.querySelector('.pz-ed-big'), list = wrap.querySelector('.pz-ed-list'), form = wrap.querySelector('.pz-ed-form');
+    const T = () => themeOf(deck);
+    const drawList = () => {
+      list.innerHTML = deck.slides.map((x, i) => `<button type="button" class="pz-ed-th${i === cur ? ' on' : ''}" data-i="${i}"><span class="pz-ed-n">${i + 1}</span><span class="pz-slide">${slideHtml(st.items[i] || [])}</span></button>`).join('');
+      list.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
+    };
+    const drawBig = (anim) => { big.innerHTML = slideHtml(st.items[cur] || [], anim); };
+    const drawHead = () => {
+      wrap.querySelectorAll('[data-design]').forEach((b) => b.classList.toggle('on', b.dataset.design === deck.theme));
+      wrap.querySelectorAll('[data-acc]').forEach((b) => b.classList.toggle('on', b.dataset.acc.toUpperCase() === (T().accent || '').toUpperCase()));
+    };
+    const lines = (a) => (a || []).join('\n');
+    const field = (label, html) => `<label class="pz-f"><span>${label}</span>${html}</label>`;
+    const drawForm = () => {
+      const x = deck.slides[cur];
+      const im = st.images.get(x);
+      const ptsLabel = { gliederung: 'Punkte der Gliederung (je Zeile einer)', zahlen: 'Zahlen (je Zeile „Wert | Erklärung“)', quellen: 'Quellen (je Zeile eine)', fazit: 'Kernaussagen (je Zeile eine)' }[x.type] || 'Stichpunkte (je Zeile einer, **fett** möglich)';
+      form.innerHTML = `<div class="pz-f-row">${field('Folienart', `<select data-f="type">${TYPES.map((t) => `<option value="${t}"${t === x.type ? ' selected' : ''}>${TYPE_NAMES[t]}</option>`).join('')}</select>`)}</div>
+        ${field('Titel', `<input data-f="title" value="${esc(x.title)}" maxlength="110" />`)}
+        ${['titel', 'abschnitt', 'punkte', 'bild', 'zitat', 'ende'].includes(x.type) ? field(x.type === 'zitat' ? 'Merksatz / Zitat' : x.type === 'titel' ? 'Untertitel' : 'Text', `<textarea data-f="text" rows="2" maxlength="460">${esc(x.text)}</textarea>`) : ''}
+        ${x.type === 'zwei' ? `<div class="pz-f-two">${['left', 'right'].map((k) => `<div>${field(k === 'left' ? 'Links: Überschrift' : 'Rechts: Überschrift', `<input data-f="${k}.title" value="${esc(x[k]?.title || '')}" maxlength="60" />`)}${field('Stichpunkte', `<textarea data-f="${k}.points" rows="4">${esc(lines(x[k]?.points))}</textarea>`)}</div>`).join('')}</div>`
+          : !['titel', 'abschnitt', 'zitat', 'ende'].includes(x.type) ? field(ptsLabel, `<textarea data-f="points" rows="5">${esc(lines(x.type === 'quellen' && !x.points.length ? deck.sources : x.points))}</textarea>`) : ''}
+        <div class="pz-f-img"><span class="pz-f-l">Bild</span>
+          <div class="pz-img-row">${im ? `<span class="pz-img-prev"><img alt="" src="${esc(im.img.src)}"></span>` : `<span class="pz-img-prev none">${fi('image', 16)}</span>`}
+            <button type="button" class="pz-mini" data-img="pick">${fi('search', 12)}${x.image ? 'Anderes Foto' : 'Foto hinzufügen'}</button>
+            <label class="pz-mini">${fi('upload', 12)}Eigenes Bild<input type="file" accept="image/*" data-img="file" hidden /></label>
+            ${x.image ? `<button type="button" class="pz-mini danger" data-img="none">${fi('x', 11)}Entfernen</button>` : ''}</div>
+          <div class="pz-pick" hidden><div class="pz-pick-q"><input placeholder="Suchbegriff, z. B. Regenwald" value="${esc(x.image?.query || x.title)}" /><button type="button" class="pz-mini primary" data-img="search">Suchen</button></div><div class="pz-pick-grid"></div></div>
+          ${im?.credit ? `<small class="pz-credit">Bild: ${esc(im.credit)}</small>` : ''}</div>`;
+    };
+    const redraw = (all = true, anim = false) => { st.relayout(); drawBig(anim); if (all) { drawList(); drawHead(); } else { const th = list.querySelectorAll('.pz-ed-th .pz-slide')[cur]; if (th) th.innerHTML = slideHtml(st.items[cur]); } };
+    const go = (i) => { cur = Math.max(0, Math.min(deck.slides.length - 1, i)); drawBig(true); drawList(); drawForm(); };
+    st.relayout(); drawBig(true); drawList(); drawHead(); drawForm();
+    const onImages = () => { drawBig(); drawList(); if (!form.contains(document.activeElement)) drawForm(); };
+    st.listeners.add(onImages);
+    // Text ändern → Folie sofort neu setzen
+    form.addEventListener('input', (e) => {
+      const f = e.target.dataset.f; if (!f) return;
+      const x = deck.slides[cur], v = e.target.value;
+      if (f === 'points') { if (x.type === 'quellen') { x.points = v.split('\n').map((l) => l.trim()).filter(Boolean); } else x.points = v.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8); }
+      else if (f.includes('.')) { const [side, k] = f.split('.'); x[side] ||= { title: '', points: [] }; x[side][k] = k === 'points' ? v.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 6) : v; }
+      else if (f === 'type') { x.type = v; drawForm(); }
+      else x[f] = f === 'title' ? plain(v) : v;
+      st.save(); redraw(f === 'type');
+    });
+    form.addEventListener('change', (e) => { if (e.target.dataset.f === 'type') { deck.slides[cur].type = e.target.value; st.save(); redraw(true); drawForm(); } });
+    // Bilder: echte Fotos suchen und auswählen, eigenes Bild hochladen, entfernen
+    const search = async () => {
+      const box = form.querySelector('.pz-pick'), grid = form.querySelector('.pz-pick-grid'), q = form.querySelector('.pz-pick-q input').value.trim();
+      if (!q) return;
+      box.hidden = false; grid.innerHTML = '<span class="pz-pick-wait shimmer">Fotos werden gesucht …</span>';
+      const r = await fetch(`/api/photos?q=${encodeURIComponent(q)}`).then((x) => x.json()).catch(() => ({ items: [] }));
+      const items = (r.items || []).filter((x) => /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(x.url));
+      grid.innerHTML = items.length ? items.map((x, i) => `<button type="button" class="pz-pick-it" data-pick="${i}"><img alt="" loading="lazy" src="${esc(x.url)}"></button>`).join('') : '<span class="pz-pick-wait">Keine Fotos gefunden – anderer Suchbegriff?</span>';
+      grid._items = items; grid._q = q;
+    };
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-img]'); const x = deck.slides[cur];
+      if (b?.dataset.img === 'pick') { const box = form.querySelector('.pz-pick'); box.hidden = !box.hidden; if (!box.hidden) search(); return; }
+      if (b?.dataset.img === 'search') { search(); return; }
+      if (b?.dataset.img === 'none') { x.image = null; st.images.delete(x); st.save(); redraw(); drawForm(); return; }
+      const pk = e.target.closest('[data-pick]');
+      if (pk) {
+        const grid = pk.parentElement, it = grid._items[+pk.dataset.pick];
+        x.image = { query: grid._q, prompt: x.image?.prompt || grid._q, src: it.url, credit: [it.author, it.license].filter(Boolean).join(' · ') };
+        if (x.type === 'gliederung' || x.type === 'quellen') x.type = 'punkte';
+        st.save(); st.syncImages().then(() => drawForm());
+        form.querySelectorAll('.pz-pick-it').forEach((n) => n.classList.toggle('on', n === pk));
+      }
+    });
+    form.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.closest('.pz-pick-q')) { e.preventDefault(); search(); } e.stopPropagation(); });
+    form.addEventListener('change', (e) => {
+      if (e.target.dataset.img !== 'file' || !e.target.files?.[0]) return;
+      const file = e.target.files[0], x = deck.slides[cur];
+      const rd = new FileReader();
+      rd.onload = () => { const img = new Image(); img.onload = () => {
+        const sc = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement('canvas');
+        c.width = Math.round(img.naturalWidth * sc); c.height = Math.round(img.naturalHeight * sc); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        x.image = { query: '', prompt: '', src: c.toDataURL('image/jpeg', 0.85), credit: '' };
+        st.save(); st.syncImages().then(() => drawForm());
+      }; img.src = rd.result; };
+      rd.readAsDataURL(file);
+    });
+    wrap.addEventListener('click', (e) => {
+      if (e.target === wrap || e.target.closest('[data-close]')) { close(); return; }
+      const th = e.target.closest('.pz-ed-th'); if (th) { go(+th.dataset.i); return; }
+      const ds = e.target.closest('[data-design]'); if (ds) { deck.theme = ds.dataset.design; deck.accent = null; st.save(); redraw(true, true); return; }
+      const ac = e.target.closest('[data-acc]'); if (ac) { deck.accent = ac.dataset.acc; deck.aiTheme = deck.theme; st.save(); redraw(true); return; }
+      const sl = e.target.closest('[data-slide]'); if (!sl) return;
+      const k = sl.dataset.slide, x = deck.slides[cur];
+      if (k === 'add') { deck.slides.splice(cur + 1, 0, { type: 'punkte', title: 'Neue Folie', text: '', points: ['Erster Punkt', 'Zweiter Punkt'], left: null, right: null, image: null, notes: '' }); cur++; }
+      if (k === 'dup') { deck.slides.splice(cur + 1, 0, JSON.parse(JSON.stringify(x))); cur++; }
+      if (k === 'up' && cur > 0) { deck.slides.splice(cur, 1); deck.slides.splice(--cur, 0, x); }
+      if (k === 'down' && cur < deck.slides.length - 1) { deck.slides.splice(cur, 1); deck.slides.splice(++cur, 0, x); }
+      if (k === 'del' && deck.slides.length > 1) { deck.slides.splice(cur, 1); cur = Math.min(cur, deck.slides.length - 1); }
+      st.save(); st.syncImages(); redraw(true, true); drawForm();
+    });
+    wrap.querySelector('[data-acc-in]').addEventListener('input', (e) => { deck.accent = e.target.value.toUpperCase(); deck.aiTheme = deck.theme; st.save(); redraw(true); });
+    const esc2 = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('keydown', esc2);
+    function close() {
+      document.removeEventListener('keydown', esc2);
+      st.listeners.delete(onImages);
+      wrap.classList.add('closing');
+      setTimeout(() => wrap.remove(), 220);
+      onClose?.(cur);
+    }
   }
   return { parse, figure, layout, pptx, pdf, THEMES };
 })();
