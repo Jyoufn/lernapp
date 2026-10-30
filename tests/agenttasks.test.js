@@ -92,3 +92,10 @@ test('Automatisierung mit Limit: läuft genau so oft, danach aus dem Zeitplan', 
   const a = (await T.listAuto(store, 'u1')).tlim01;
   assert.ok(a.finished && a.runs === 2);
 });
+
+test('Dokument aus Aufgabe: Bild- und Diagramm-Blöcke werden Dokument-Grafiken statt Text', () => {
+  const { mdToHtml } = require('../lib/agenttasks');
+  const html = mdToHtml('Text\n\n```illustration\n{"prompt":"Pflanzenzelle"}\n```\n\n```python\nprint(1)\n```');
+  assert.match(html, /<div data-viz="illustration" data-spec="\{&quot;prompt&quot;:&quot;Pflanzenzelle&quot;\}"><\/div>/);
+  assert.match(html, /<pre><code>print\(1\)<\/code><\/pre>/);
+});

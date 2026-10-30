@@ -209,10 +209,12 @@ const Tasks = (() => {
     return `<span class="tk-state wait"><span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}</span>`;
   }
   // Wiederholung als Text: „Täglich um 07:00“, „Werktags um 07:00“, „Jeden Montag um 08:30“
+  // Aufwand für Agenten-Aufgaben (wie im Chat); Standard: Hoch
+  const EFFORTS_T = [['auto', 'Auto', 'Agent entscheidet'], ['low', 'Niedrig', 'schnell, kurz'], ['medium', 'Mittel', ''], ['high', 'Hoch', 'gründlich'], ['max', 'Max', 'am gründlichsten, dauert länger']];
   const repText = (r) => (r.every === 'daily' ? `Täglich um ${r.time}` : r.every === 'weekdays' ? `Werktags um ${r.time}` : `Jeden ${WD_LONG[r.day ?? 1]} um ${r.time}`);
   const repShort = (r) => (r.every === 'daily' ? `Täglich ${r.time}` : r.every === 'weekdays' ? `Mo–Fr ${r.time}` : `${WD_LONG[r.day ?? 1].slice(0, 2)} ${r.time}`);
   function syncAuto(t, removeIt = false) {
-    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent || 'general', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
+    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent || 'general', effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
     fetch('/api/agent-tasks/automation', { method: removeIt ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
   }
   const openRows = new Set(); // aufgeklappte Zeilen bleiben beim Neuzeichnen offen
@@ -397,6 +399,7 @@ const Tasks = (() => {
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
+        ${listMode && agents && !locked ? pill('effort', EFFORTS_T.map(([id, n, d]) => `<button type="button" class="tk-mi" data-teffort="${id}"><span class="tk-mi-ic">${fi('sliders', 12)}</span><span>${n}<i class="tk-mi-sub">${d}</i></span>${fi('check', 12)}</button>`).join('')) : ''}
         ${listMode && agents && !locked ? `<div class="tk-pop tk-swpop" data-k="auto"><button type="button" class="tk-pill" data-autosw></button><button type="button" class="ce-switch tk-rowsw" data-autosw role="switch" aria-label="Automatisierung"><i></i></button></div>` : ''}
         ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
       </div>
@@ -476,6 +479,10 @@ const Tasks = (() => {
         set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
         set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
+        const ef = EFFORTS_T.find(([id]) => id === (t.effort || 'high'));
+        set('effort', [fi('sliders', 14), `Aufwand: ${ef[1]}`], false);
+        form.querySelectorAll('[data-teffort]').forEach((b) => b.classList.toggle('on', b.dataset.teffort === ef[0]));
+        const efp = form.querySelector('.tk-pop[data-k="effort"]'); if (efp) efp.hidden = !t.agent;
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
         // Datum: Uhrzeit-Schalter + Rad
         const tsw = form.querySelector('[data-ttime]');
@@ -665,6 +672,8 @@ const Tasks = (() => {
       if (cdel) { t.comments.splice(+cdel.dataset.cmDel, 1); drawComments(); draw(); return; }
       const st = e.target.closest('[data-status]');
       if (st) { t.status = st.dataset.status; if (t.status === 'done' && !t.progress) setProg(100); draw(); st.closest('.tk-pop').classList.remove('open'); return; }
+      const tef = e.target.closest('[data-teffort]');
+      if (tef) { t.effort = tef.dataset.teffort; draw(); tef.closest('.tk-pop').classList.remove('open'); return; }
       const ag = e.target.closest('[data-tagent]');
       if (ag) { t.agent = ag.dataset.tagent; if (!t.output) t.output = 'chat'; draw(); ag.closest('.tk-pop').classList.remove('open'); return; }
       const ou = e.target.closest('[data-toutput]');
@@ -864,7 +873,7 @@ const Tasks = (() => {
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
     if (!agents) return;
-    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent, output: t.output, ws: window.Workspaces?.active() || 'main' } });
+    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, agent: t.agent, output: t.output, effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main' } });
     // keepalive: die Anfrage geht auch raus, wenn die App gleich geschlossen wird – der Server arbeitet dann allein weiter
     fetch('/api/agent-tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true })
       .then(() => pull()).catch(() => {});
