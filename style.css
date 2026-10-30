@@ -8881,3 +8881,6 @@ div.tl4-h { cursor: default; }
 @media (max-width: 520px) { .bst-stat { padding: 0 10px; } .bst-stat b { font-size: 16px; } }
 .bst-stat .up { color: #4fcf8a; } .bst-stat .down { color: #f07a6e; }
 .bst-stats { padding: 12px 16px 14px; margin: 0; }
+.bst-stat-v { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.bst-stat-v small { margin-left: auto; flex: none; font-size: 12.5px; }
+.bst-stat:last-child { padding-right: 0; }

@@ -83,7 +83,7 @@ const BoerseBestand = (() => {
       const dp = d.depot;
       sub.innerHTML = d.error ? 'Gerade nicht erreichbar' : '';
       // Kennzahlen als Abschnitte nebeneinander (wie Einstieg/Stopp/Ziel bei den Chancen): Etikett klein, darunter die Zahl groß in Weiß
-      const cell = (label, value, extra = '') => `<span class="bst-stat"><i>${label}</i><b>${value}</b>${extra ? `<small>${extra}</small>` : ''}</span>`;
+      const cell = (label, value, extra = '') => `<span class="bst-stat"><i>${label}</i><span class="bst-stat-v"><b>${value}</b>${extra ? `<small>${extra}</small>` : ''}</span></span>`; // Prozent rechts neben der Zahl
       const cells = d.error ? [] : dp ? [cell('Depotwert', eur(dp.value)), cell('Bargeld', eur(dp.cash)), cell('Seit Start', `<span class="${tone(dp.perf)}">${signed(dp.perf)}</span>`, `<span class="${tone(dp.perf)}">${signed(dp.perfPct, ' %')}</span>`)]
         : (d.items || []).length ? [cell('Investiert', eur(d.invested)), cell('Wert', eur(d.value)), cell('Plus/Minus', `<span class="${tone(d.plus)}">${signed(d.plus)}</span>`, pct != null ? `<span class="${tone(d.plus)}">${signed(pct, ' %')}</span>` : '')] : [];
       stats.innerHTML = cells.join('');
