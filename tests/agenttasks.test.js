@@ -70,3 +70,10 @@ test('Automatisierung: fällige Läufe starten genau einmal und werden weiterges
   assert.deepEqual(await A.listAuto(store, 'u1'), {});
   assert.deepEqual(await store.hgetall(A.AINDEX), {});
 });
+
+test('Aufgabe im Hintergrund: Titel geht immer mit, keine Rückfragen (noClarify)', async () => {
+  const store = memoryStore(), seen = [];
+  await T.run({ store, uid: 'u1', task: { id: 'tnurtitel1', title: 'Referat über Vulkane', agent: 'learn', output: 'doc' }, env: {}, runChat: fakeChat('# Vulkane\n\nText', seen) });
+  assert.strictEqual(seen[0].noClarify, true);
+  assert.match(seen[0].messages[0].text, /AUFGABE: Referat über Vulkane/);
+});
