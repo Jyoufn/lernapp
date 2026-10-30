@@ -556,7 +556,7 @@ const Docs = (() => {
     side.hidden = !loose.length; // ohne Dokumente keine leere Überschrift
     side.innerHTML = (window.sbSectionHead?.('Dokumente', 'docs') || '<div class="section-label">Dokumente</div>')
       // Projekt-Ordner stehen nicht in der Seitenleiste (nur in der Bibliothek); Dokumente ohne Projekt mit eigenem Icon oder Linien-Icon
-      + `<div class="sb-sec-body"><div class="sb-sec-in">${loose.map((d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? `<svg width="15" height="15" style="color:${esc(d.icon.c)}"><use href="#d-${d.icon.name}"/></svg>` : '<svg width="15" height="15"><use href="#o-doc"/></svg>'}<span>${esc(d.title || 'Unbenannt')}</span></a>`).join('')}</div></div>`;
+      + `<div class="sb-sec-body"><div class="sb-sec-in">${loose.map((d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : '<svg width="15" height="15"><use href="#o-doc"/></svg>'}<span>${esc(d.title || 'Unbenannt')}</span></a>`).join('')}</div></div>`;
     if (side.querySelector('.dc-newp')) side.querySelector('.dc-newp input').focus();
     window.dispatchEvent(new Event('docs-changed'));
   }
@@ -599,7 +599,7 @@ const Docs = (() => {
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const row = (d, i) => `<div class="cl-row" data-open-doc="${d.id}" data-key="${d.id}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
-        <span class="cl-av">${docIcon(d) ? `<svg width="16" height="16" style="color:${esc(d.icon.c)}"><use href="#d-${d.icon.name}"/></svg>` : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span><span class="cl-title">${esc(d.title || 'Ohne Titel')}</span><span class="cl-time">${relTime(d.updated)}</span>
+        <span class="cl-av">${docIcon(d) ? DocIcons.of(d.icon, 16) : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span><span class="cl-title">${esc(d.title || 'Ohne Titel')}</span><span class="cl-time">${relTime(d.updated)}</span>
         <span class="cl-acts"><button type="button" class="lb-act cl-pin${d.pinned ? ' on' : ''}" data-row="pin" aria-label="${d.pinned ? 'Lösen' : 'Anheften'}" title="${d.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Dokument löschen" title="Löschen">${fi('trash', 14)}</button></span></div>`;
     const api = {
       open: false,
@@ -1601,21 +1601,29 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         + (!found.length && !q ? '<span class="tk-ml">Noch keine Tags</span>' : '');
     }
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen mit nächster Farbe
+    // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen – wie bei den Tags: erst der Name, dann Icon und Farbe
+    let projNew = '', projIcon = 'folder', projLine = false;
     function drawMetaProj() {
       const list = view.querySelector('.dc-proj-list'), inp = view.querySelector('.dc-proj-in'); if (!list) return;
+      if (projNew) {
+        list.innerHTML = `<span class="dc-pj-head"><span class="tk-tag-new-l">Icon für „${esc(projNew)}“</span><span class="dc-iseg small"><button type="button" data-pjline="0"${projLine ? '' : ' class="on"'}>Gefüllt</button><button type="button" data-pjline="1"${projLine ? ' class="on"' : ''}>Linie</button></span></span>
+          <span class="dc-pj-icons">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic${n === projIcon ? ' on' : ''}" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16, '', projLine)}</button>`).join('')}</span>
+          <span class="tk-tag-new-l">Farbe – antippen legt das Projekt an</span>${UIKit.colorRow('', 'data-pjcolor')}`;
+        return;
+      }
       const q = inp.value.trim(), ql = q.toLowerCase();
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
-      list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span>„${esc(q)}“ anlegen</span></span>` : '')
-        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><i style="background:${p.c}"></i><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
-        + (!found.length && !q ? '<span class="tk-ml">Noch keine Projekte</span>' : '');
+      list.innerHTML = (q && !exact ? `<span class="tk-mi dc-pj-add" data-mproj-new role="button" tabindex="0"><span>„${esc(q)}“ anlegen</span></span>` : '')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15, '', !!p.line)}</span><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
+        + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
       const b = view.querySelector('.dc-pchip'); if (!b || !doc) return;
       const pr = projOf(doc.projectId);
       b.classList.toggle('set', !!pr);
-      const cube = '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
-      b.innerHTML = `${cube}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
+      const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14, '', !!pr.line)}</span>` : '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
+      b.innerHTML = `${ic}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
       view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
     }
     const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawProj(); view.querySelector('.dc-ppop')?.classList.remove('open'); };
@@ -1624,11 +1632,19 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       drawProj();
       const pop = box.querySelector('.dc-ppop'), inp = box.querySelector('.dc-proj-in');
       box.addEventListener('click', (e) => {
-        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
+        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
         const pj = e.target.closest('[data-mproj]'); if (pj) { setProj(pj.dataset.mproj); return; }
-        if (e.target.closest('[data-mproj-new]')) newProj(inp.value.trim());
+        if (e.target.closest('[data-mproj-new]')) { newProj(inp.value.trim()); return; }
+        const pl = e.target.closest('[data-pjline]');
+        if (pl) { projLine = pl.dataset.pjline === '1'; const sc = box.querySelector('.dc-pj-icons')?.scrollTop || 0; drawMetaProj(); const g = box.querySelector('.dc-pj-icons'); if (g) g.scrollTop = sc; return; }
+        const pi = e.target.closest('[data-pjicon]');
+        if (pi) { projIcon = pi.dataset.pjicon; box.querySelectorAll('.dc-pj-ic').forEach((x) => x.classList.toggle('on', x === pi)); return; }
+        const pc = e.target.closest('[data-pjcolor]'); if (pc) { makeProj(pc.dataset.pjcolor); return; }
+        if (e.target.closest('.tk-picker')) return;
+        const cu = e.target.closest('[data-custom]');
+        if (cu && projNew) { const host = cu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker('#5b8cff', (hex, done) => { cu.style.setProperty('--c', hex); cu.classList.add('on'); if (done) makeProj(hex); }, 'Anlegen')); }
       });
-      inp.addEventListener('input', drawMetaProj);
+      inp.addEventListener('input', () => { projNew = ''; drawMetaProj(); });
       inp.addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Escape') { pop.classList.remove('open'); return; }
@@ -1640,7 +1656,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
       document.addEventListener('pointerdown', (e) => { if (box.isConnected && !box.contains(e.target)) pop.classList.remove('open'); });
     }
-    const newProj = (name) => { const pr = { id: newId('p'), name: name.slice(0, 40), c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); save(); setProj(pr.id); };
+    const newProj = (name) => { if (!name) return; projNew = name.slice(0, 40); projIcon = 'folder'; drawMetaProj(); };
+    const makeProj = (c) => { const pr = { id: newId('p'), name: projNew, c, icon: projIcon, ...(projLine ? { line: true } : {}) }; projects.push(pr); projNew = ''; save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
     const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in)');
     // Infos: Tags unter dem Titel, darunter die feste Tabelle (abschaltbar in den Dokument-Einstellungen)
@@ -1850,7 +1867,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const btn = view.querySelector('.dc-icon'); if (!btn) return;
       const ic = iconOf(doc), cover = !!coverCss(doc.cover);
       btn.hidden = !ic;
-      if (ic) { btn.style.setProperty('--c', ic.c); btn.querySelector('.dc-icon-g').innerHTML = DocIcons.svg(ic.name, 42); }
+      if (ic) { btn.style.setProperty('--c', ic.c); btn.querySelector('.dc-icon-g').innerHTML = DocIcons.svg(ic.name, 42, '', !!ic.line); }
       view.querySelector('.dc-page')?.classList.toggle('with-icon', !!ic);
       view.querySelectorAll('.dc-add').forEach((b) => { b.hidden = b.dataset.add === 'icon' ? !!ic : cover; });
       view.querySelector('.dc-adds').hidden = !!ic && cover;
@@ -1874,16 +1891,18 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       document.body.append(modal);
       const body = pop.querySelector('.dc-cpop-body'), title = pop.querySelector('.dc-cpop-title');
       let step = null; // null = Übersicht, sonst der Name des gewählten Icons
-      const pick = { c: iconOf(doc)?.c || '#a3a3a3' }; // Standard: grau
+      const pick = { c: iconOf(doc)?.c || '#a3a3a3', line: !!iconOf(doc)?.line }; // Standard: grau, gefüllt
       const onCover = !!coverCss(doc.cover);
       const ttl = esc(doc.title.trim() || 'Unbenannt');
       const preview = (name, c) => (onCover
-        ? `<div class="dc-ipreview cover"><div class="dc-ipv-cover" style="background:${esc(coverCss(doc.cover))}"></div><div class="dc-ipv-row"><span class="dc-icon dc-ipv on-cover" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 42)}</span></span></div><div class="dc-ipv-title">${ttl}</div></div>`
-        : `<div class="dc-ipreview"><div class="dc-ipv-line"><span class="dc-icon dc-ipv small" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 26)}</span></span><span class="dc-ipv-title">${ttl}</span></div></div>`);
+        ? `<div class="dc-ipreview cover"><div class="dc-ipv-cover" style="background:${esc(coverCss(doc.cover))}"></div><div class="dc-ipv-row"><span class="dc-icon dc-ipv on-cover" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 42, '', pick.line)}</span></span></div><div class="dc-ipv-title">${ttl}</div></div>`
+        : `<div class="dc-ipreview"><div class="dc-ipv-line"><span class="dc-icon dc-ipv small" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 26, '', pick.line)}</span></span><span class="dc-ipv-title">${ttl}</span></div></div>`);
       function render(dir = 0) {
         if (!step) {
           title.textContent = 'Icon';
-          body.innerHTML = `<div class="dc-igrid" style="--c:${esc(pick.c)}">${DocIcons.names.map((n) => `<button type="button" class="dc-itile${iconOf(doc)?.name === n ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 22)}</button>`).join('')}</div>`;
+          // Übersicht immer grau (nicht in der Farbe des aktuellen Icons); oben: gefüllt oder nur Linie (wie die Sidebar)
+          body.innerHTML = `<div class="dc-iseg" role="tablist"><button type="button" data-istyle="fill"${pick.line ? '' : ' class="on"'}>Gefüllt</button><button type="button" data-istyle="line"${pick.line ? ' class="on"' : ''}>Linie</button></div>`
+            + `<div class="dc-igrid">${DocIcons.names.map((n) => `<button type="button" class="dc-itile${iconOf(doc)?.name === n && !!iconOf(doc)?.line === pick.line ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 22, '', pick.line)}</button>`).join('')}</div>`;
         } else {
           title.innerHTML = `<button type="button" class="dc-cback" data-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>Farbe`;
           body.innerHTML = `${preview(step, pick.c)}<div class="dc-clabel">Farbe</div>${UIKit.colorRow(pick.c, 'data-c')}`;
@@ -1903,7 +1922,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         return colorH;
       }
       const showPreview = (hex) => body.querySelector('.dc-ipv')?.style.setProperty('--c', hex);
-      const apply = (hex) => { pick.c = hex; setIcon({ name: step, c: hex }); };
+      const apply = (hex) => { pick.c = hex; setIcon({ name: step, c: hex, ...(pick.line ? { line: true } : {}) }); };
       modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
       // Darüberfahren zeigt die Farbe schon in der Vorschau, Verlassen zeigt wieder die gewählte
       body.addEventListener('pointerover', (e) => { const sw = e.target.closest('[data-c]'); if (sw && step) showPreview(sw.dataset.c); });
@@ -1912,6 +1931,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (e.target.closest('.dc-cpop-x')) { close(); return; }
         if (e.target.closest('[data-del]')) { setIcon(null); close(); return; }
         if (e.target.closest('[data-back]')) { step = null; render(-1); return; }
+        const is = e.target.closest('[data-istyle]');
+        if (is) { const line = is.dataset.istyle === 'line'; if (line !== pick.line) { const top = body.querySelector('.dc-igrid')?.scrollTop || body.scrollTop; pick.line = line; render(); body.scrollTop = top; } return; }
         const it = e.target.closest('[data-icon]');
         if (it) { step = it.dataset.icon; render(1); return; }
         if (e.target.closest('.tk-picker')) return;
@@ -2551,7 +2572,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const draw = () => {
         const s = q.value.trim().toLowerCase();
         const hits = docs.filter((x) => !s || (x.title || '').toLowerCase().includes(s)).sort((x, y) => (y.updated || 0) - (x.updated || 0)).slice(0, 6);
-        listEl.innerHTML = hits.map((x) => `<button type="button" class="dc-into-i" data-id="${esc(x.id)}">${x.icon && window.DocIcons?.has(x.icon.name) ? `<span style="color:${esc(x.icon.c)}">${DocIcons.svg(x.icon.name, 15)}</span>` : fi('file', 14)}<span>${esc(x.title || 'Unbenannt')}</span></button>`).join('') || '<div class="dc-into-none">Kein Dokument gefunden</div>';
+        listEl.innerHTML = hits.map((x) => `<button type="button" class="dc-into-i" data-id="${esc(x.id)}">${x.icon && window.DocIcons?.has(x.icon.name) ? `<span style="color:${esc(x.icon.c)}">${DocIcons.svg(x.icon.name, 15, '', !!x.icon.line)}</span>` : fi('file', 14)}<span>${esc(x.title || 'Unbenannt')}</span></button>`).join('') || '<div class="dc-into-none">Kein Dokument gefunden</div>';
       };
       q.addEventListener('input', draw);
       q.addEventListener('keydown', (e) => e.stopPropagation());

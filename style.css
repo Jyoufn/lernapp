@@ -8964,3 +8964,45 @@ div.tl4-h { cursor: default; }
 .dc-ptable .dc-mlabel { width: 100%; box-sizing: border-box; justify-self: stretch; }
 .dc-page .dc-title-in { margin-bottom: 0; }
 .dc-tagline { margin-top: -4px; }
+
+/* =====================================================================
+   Dokument-Kopf v4 (31.10.): Icon/Cover leiser, Projekt-Rand transparenter; Projekt-Menü wie Tags (Icon + Farbe);
+   Icon-Auswahl grau mit Umrandung, Gefüllt/Linie; Cover-Kacheln wachsen nicht, Fenster scrollt überall
+   ===================================================================== */
+.dc-page .dc-adds .dc-add { color: color-mix(in srgb, var(--text-4) 75%, transparent); }
+.dc-page .dc-adds .dc-add:hover { color: var(--text-3); }
+.dc-pchip, .dc-pchip:not(.set) { border-color: color-mix(in srgb, var(--accent) 22%, transparent); }
+.dc-pj-pic { display: inline-grid; place-items: center; }
+/* Menü */
+.dc-ppop .tk-ml.dc-pj-none { display: block; padding: 10px 10px 12px; color: var(--text-3); font-size: 13px; }
+.dc-ppop .dc-pj-add { justify-content: flex-start; color: var(--text-2) !important; background: none; }
+.dc-ppop .dc-pj-add:hover { background: var(--menu-hover); }
+.dc-ppop .dc-pj-add svg { color: var(--text-3); }
+.dc-pj-mi { display: inline-grid; place-items: center; width: 16px; }
+.dc-ppop .dc-mmenu { width: 300px; }
+.dc-pj-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-right: 6px; }
+.dc-pj-icons { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; max-height: 150px; margin: 2px 4px 6px; overflow-y: auto; }
+.dc-pj-ic { display: grid; place-items: center; height: 30px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; }
+.dc-pj-ic:hover { color: var(--text); }
+.dc-pj-ic.on { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+/* Gefüllt | Linie */
+.dc-iseg { display: inline-flex; gap: 2px; margin: 0 0 10px; padding: 2px; border: 1px solid var(--menu-border); border-radius: 9px; }
+.dc-iseg button { height: 26px; padding: 0 12px; border: 1px solid transparent; border-radius: 7px; background: none; color: var(--text-4); font: 500 12.5px Inter, sans-serif; cursor: pointer; }
+.dc-iseg button.on { border-color: #3a3a3a; color: var(--text); }
+.dc-iseg.small { margin: 0; }
+.dc-iseg.small button { height: 22px; padding: 0 8px; font-size: 11.5px; }
+/* Icon-Übersicht: immer grau, gewählt = Umrandung statt Fläche */
+.dc-igrid { --c: var(--text-3); }
+.dc-igrid .dc-itile { color: var(--text-3); }
+.dc-igrid .dc-itile:hover { background: none; color: var(--text); }
+.dc-igrid .dc-itile.on { background: none; color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+/* Cover: Kacheln wachsen beim Darüberfahren nicht (iPad: blieb hängen und blockierte das Scrollen); Tippen wählt */
+.dc-ctile, .dc-ctile:hover { transform: none !important; }
+.dc-cmodal .dc-cpop-body { touch-action: pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+.dc-ctile { touch-action: manipulation; }
+.dc-ppop .dc-pj-add { display: flex; padding: 0 10px !important; margin: 0; text-align: left; }
+.dc-ppop .dc-pj-add span { margin: 0; padding: 0; }
+.dc-ppop .dc-proj-list .tk-mi { display: flex !important; align-items: center; justify-content: flex-start; gap: 9px; height: 32px; padding: 0 10px !important; text-align: left; }
+.dc-ppop .dc-proj-list .tk-mi > span:not(.dc-pj-mi) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-ppop .dc-proj-list .tk-mi > svg:last-child { margin-left: auto; }
+.dc-ppop .dc-proj-list .tk-mi > .dc-pj-mi { flex: none !important; width: 16px; }

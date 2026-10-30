@@ -8,7 +8,6 @@
 const FadeIcons = (() => {
   const I = {
     home: { b: '<path d="M7.2 1.85a1.25 1.25 0 0 1 1.6 0l5.25 4.4c.3.25.45.6.45.98v5.77A1.5 1.5 0 0 1 13 14.5h-2.5v-3.75a1 1 0 0 0-1-1h-3a1 1 0 0 0-1 1v3.75H3A1.5 1.5 0 0 1 1.5 13V7.23c0-.38.17-.73.45-.98z"/>' },
-    inbox: { b: '<rect x="1.5" y="2.5" width="13" height="11" rx="3"/>', c: '<path d="M3.5 8.5h2.75a1.75 1.75 0 0 0 3.5 0h2.75v-3a1 1 0 0 0-1-1h-7a1 1 0 0 0-1 1z"/>' },
     tasks: { b: '<rect x="1.5" y="1.5" width="13" height="13" rx="4"/>', cl: '<path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/>' }, // kleines Board: drei Spalten
     calendar: { b: '<rect x="1.5" y="2.5" width="13" height="12" rx="3"/>', c: '<rect x="3" y="6.5" width="10" height="6.5" rx="1.25"/>', s: '<rect x="9" y="9.25" width="2.5" height="2.5" rx=".7"/>' },
     analytics: { b: '<rect x="2" y="8" width="3" height="6" rx="1"/><rect x="6.5" y="4.5" width="3" height="9.5" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/>' },
@@ -114,7 +113,6 @@ const FadeIcons = (() => {
     table: { b: '<rect x="1.5" y="2.5" width="13" height="11" rx="2.5"/>', cl: '<path d="M2 6.5h12M6.5 6.5v6.5"/>' },
     divider: { b: '<rect x="1" y="7.2" width="14" height="1.6" rx=".8"/><rect x="5.5" y="2.5" width="5" height="1.6" rx=".8"/><rect x="5.5" y="11.9" width="5" height="1.6" rx=".8"/>' },
     'list-num': { b: '<rect x="6.5" y="2.9" width="8" height="2.2" rx="1.1"/><rect x="6.5" y="6.9" width="8" height="2.2" rx="1.1"/><rect x="6.5" y="10.9" width="6" height="2.2" rx="1.1"/><path d="M2.4 2.2h1.3v3.7H2.6V3.3h-.2z"/><path d="M1.8 10.2c.1-.8.7-1.2 1.4-1.2.8 0 1.3.5 1.3 1.1 0 .5-.3.8-.8 1.2l-.5.4h1.3v.9H1.8v-.8l1.2-1c.3-.3.4-.4.4-.6s-.1-.3-.3-.3-.3.1-.3.4z"/>' },
-    quote: { b: '<path d="M2 4.5A2 2 0 0 1 4 2.5h1.5a1.5 1.5 0 0 1 1.5 1.5v3a3.5 3.5 0 0 1-3.5 3.5H3V9h.4A1.6 1.6 0 0 0 5 7.4H4a2 2 0 0 1-2-2zM9 4.5a2 2 0 0 1 2-2h1.5A1.5 1.5 0 0 1 14 4v3a3.5 3.5 0 0 1-3.5 3.5H10V9h.4A1.6 1.6 0 0 0 12 7.4h-1a2 2 0 0 1-2-2z"/><rect x="2" y="12" width="12" height="1.6" rx=".8"/>' },
     video: { b: '<rect x="1.5" y="3" width="13" height="10" rx="3"/>', c: '<path d="M6.5 5.9c0-.5.5-.8.9-.5l3 1.9c.4.3.4.8 0 1.1l-3 1.9c-.4.3-.9 0-.9-.5z"/>' },
     callout: { b: '<rect x="1.5" y="2.5" width="13" height="11" rx="3"/>', c: '<rect x="4" y="5.5" width="1.8" height="5" rx=".9"/><rect x="7.5" y="5.5" width="5" height="1.8" rx=".9"/><rect x="7.5" y="8.7" width="3.5" height="1.8" rx=".9"/>' },
     gallery: { b: '<rect x="1.5" y="2" width="8" height="12" rx="2"/><rect x="10.5" y="2" width="4" height="5.5" rx="1.5"/><rect x="10.5" y="8.5" width="4" height="5.5" rx="1.5"/>', c: '<path d="M2.6 12.2l2.4-3 1.6 1.8 1-1.2 1.4 2.4z"/>' },
@@ -315,15 +313,6 @@ const DocIcons = (() => {
     ticket: { b: '<path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2.5a2.5 2.5 0 0 0 0 5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2.5a2.5 2.5 0 0 0 0-5z"/>', cl: '<path d="M15 7.6v1.2M15 11.4v1.2M15 15.2v1.2"/>' },
     tag: { b: '<path d="M2.5 4.5a2 2 0 0 1 2-2h7.2c.5 0 1 .2 1.4.6l8.4 8.4a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L3.1 13.1c-.4-.4-.6-.9-.6-1.4z"/>', c: '<circle cx="7.5" cy="7.5" r="1.8"/>' },
     // ergänzt 30.10.
-    note: { b: '<path d="M5 3h14a2 2 0 0 1 2 2v9.6L14.6 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/>', c: '<path d="M21.5 14h-5a2 2 0 0 0-2 2v5.5z"/><rect x="6.5" y="7" width="11" height="2" rx="1"/><rect x="6.5" y="11" width="7" height="2" rx="1"/>' },
-    checklist: { b: '<rect x="3" y="3" width="18" height="18" rx="4"/>', cl: '<path d="M6.8 8.8l1.6 1.6 2.6-2.8M6.8 14.8l1.6 1.6 2.6-2.8M13.8 9.2h3.6M13.8 15.2h3.6"/>' },
-    inbox: { b: '<rect x="2.5" y="4" width="19" height="16" rx="4"/>', cl: '<path d="M2.5 13.2h4.6l1.4 2.4h7l1.4-2.4h4.6"/>' },
-    quote: { b: '<path d="M3.5 12C3.5 8 5.8 5.3 9.3 4.7v2.8c-1.7.5-2.7 1.7-2.9 3.3h2.1A1.5 1.5 0 0 1 10 12.3v5.2A1.5 1.5 0 0 1 8.5 19H5a1.5 1.5 0 0 1-1.5-1.5z"/><path d="M13.5 12c0-4 2.3-6.7 5.8-7.3v2.8c-1.7.5-2.7 1.7-2.9 3.3h2.1a1.5 1.5 0 0 1 1.5 1.5v5.2a1.5 1.5 0 0 1-1.5 1.5H15a1.5 1.5 0 0 1-1.5-1.5z"/>' },
-    feather: { b: '<path d="M20.5 3.5c-6.4-.4-12 3.3-13.4 10L5.3 20.2l1.6.6 2-4.6c6.6-.9 10.6-5.8 11.6-12.7z"/>', cl: '<path d="M8.6 16.2 15.4 9.4"/>' },
-    anchor: { s: '<circle cx="12" cy="4.8" r="2.7"/>', k: line('M12 7.5v13.5M4.8 13.2a7.2 7.2 0 0 0 14.4 0M8.4 10.6h7.2', 2.2) },
-    infinity: { k: line('M12 12c-2-2.8-3.6-4-5.5-4a4 4 0 0 0 0 8c1.9 0 3.5-1.2 5.5-4zm0 0c2 2.8 3.6 4 5.5 4a4 4 0 0 0 0-8c-1.9 0-3.5 1.2-5.5 4z', 2.4) },
-    hashtag: { k: line('M9.6 3.5 7.6 20.5M16.4 3.5l-2 17M4.2 9h16.3M3.5 15h16.3', 2.3) },
-    flag2: { b: '<rect x="4" y="2.5" width="2.4" height="19" rx="1.2"/><path d="M7.5 4h11.3c.8 0 1.2.9.7 1.5L17 8.8l2.5 3.3c.5.6 0 1.5-.7 1.5H7.5z"/>' },
     rainbow: { k: line('M3 18a9 9 0 0 1 18 0M6.5 18a5.5 5.5 0 0 1 11 0', 2.4) + '<circle cx="12" cy="18" r="1.6" fill="currentColor"/>' },
   };
   // Reihenfolge im Auswahlfenster: nach Themen gruppiert
@@ -344,8 +333,15 @@ const DocIcons = (() => {
       + (x.k || '')
       + '</symbol>';
   }).join('')}</svg>`;
-  document.body.insertAdjacentHTML('afterbegin', sprite);
-  const svg = (name, size = 24, cls = '') => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#d-${name}"/></svg>`;
-  return { names: NAMES, svg, has: (n) => NAMES.includes(n) };
+  // Linien-Fassung (wie die Sidebar-Icons): dieselben Formen nur umrandet, #dl-<name>
+  const spriteLine = `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${NAMES.map((n) => {
+    const x = I[n];
+    return `<symbol id="dl-${n}" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${x.u || ''}${x.b || ''}${x.c || ''}${x.cl || ''}${x.s || ''}</g>${x.k || ''}</symbol>`;
+  }).join('')}</svg>`;
+  document.body.insertAdjacentHTML('afterbegin', sprite + spriteLine);
+  const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#${line ? 'dl' : 'd'}-${name}"/></svg>`;
+  // Icon eines Dokuments/Projekts ({ name, c, line }) als <svg> in seiner Farbe
+  const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#${ic.line ? 'dl' : 'd'}-${ic.name}"/></svg>` : '');
+  return { names: NAMES, svg, of, has: (n) => NAMES.includes(n) };
 })();
 window.DocIcons = DocIcons;

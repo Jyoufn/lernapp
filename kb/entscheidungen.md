@@ -16,3 +16,4 @@ Damit nichts Abgelehntes wiederkommt. Kurz halten; nur Dinge, die man sonst wied
 - **Ergebnis von Hintergrund-Aufgaben**: immer Dokument, nie automatisch abschicken beim Erstellen.
 - **Quellen**: nur benutzte; ohne Suche nichts anzeigen.
 - **Karten-Design**: nicht „Icon links + Titel + Untertitel“ als Standardlösung für neue Aktions-Karten.
+- **Dokument-Icons** 30.10.: neue Icons note/checklist/inbox/quote/feather/anchor/infinity/hashtag/flag2 abgelehnt („schrecklich“), nur `rainbow` bleibt. Neue Icons vorher zeigen.

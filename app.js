@@ -98,7 +98,7 @@ function openDocTab(id, title) {
 }
 window.openViewTab = openViewTab;
 window.openDocTab = openDocTab;
-const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#d-${ic.name}"/></svg>`;
+const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#${ic.line ? 'dl' : 'd'}-${ic.name}"/></svg>`;
 // Icon eines Dokument-Tabs tauschen (ohne Icon wieder das normale Dokument-Symbol)
 window.setTabIcon = (tab, ic) => {
   const old = tab?.querySelector(':scope > svg'); if (!old) return;

@@ -79,7 +79,7 @@ const AppSearch = (() => {
       const cs = chats().filter((c) => norm(c.title).includes(q) || norm(c.text).includes(q)).slice(0, 8)
         .map((c) => ({ group: 'Chats', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, html: mark(c.title, q), meta: when(c.updated), run: () => openChat(c.tab) }));
       const ds = docs().filter((d) => norm(d.title).includes(q) || norm(d.text).includes(q)).slice(0, 8)
-        .map((d) => ({ group: 'Dokumente', icon: d.icon && window.DocIcons?.has(d.icon.name) ? `<svg width="15" height="15" style="color:${d.icon.c}"><use href="#d-${d.icon.name}"/></svg>` : fi('file'), label: d.title, html: mark(d.title, q), meta: when(d.updated), run: () => window.Docs?.open(d.id) }));
+        .map((d) => ({ group: 'Dokumente', icon: d.icon && window.DocIcons?.has(d.icon.name) ? `<svg width="15" height="15" style="color:${d.icon.c}"><use href="#${d.icon.line ? 'dl' : 'd'}-${d.icon.name}"/></svg>` : fi('file'), label: d.title, html: mark(d.title, q), meta: when(d.updated), run: () => window.Docs?.open(d.id) }));
       out.push(...cs, ...ds, ...acts);
     }
     rows = out;
