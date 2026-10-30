@@ -8864,3 +8864,20 @@ div.tl4-h { cursor: default; }
 .stack-src .stack-ico { display: inline-grid; place-items: center; flex: none; overflow: hidden; border-radius: 50% !important; line-height: 1; font-size: 9px; font-weight: 700; color: var(--text-2); }
 .stack-src .stack-ico.has-fav { background: #262626; }
 .stack-src .stack-ico img { width: 12px; height: 12px; border-radius: 3px; object-fit: contain; }
+/* Erstellen: das gewählte Wort ist umrandet (feiner Ring in der Pille) */
+.cs-pill button { border: 1px solid transparent; transition: color 180ms ease, border-color 220ms ease; }
+.cs-pill button.on { border-color: #3a3a3a; }
+
+/* Mein Depot – Kennzahlen (30.10., 23:30): Abschnitte nebeneinander bis ganz rechts, je Etikett klein grau, Zahl groß weiß; keine Orders */
+.bst-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 2px 0 6px; padding: 12px 0 14px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.bst-stats[hidden] { display: none; }
+.bst-stat { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 0 14px; border-left: 1px solid rgba(255, 255, 255, 0.07); }
+.bst-stat:first-child { padding-left: 0; border-left: 0; }
+.bst-stat i { color: var(--text-4); font-size: 11.5px; font-style: normal; }
+.bst-stat b { overflow: hidden; color: var(--text); font-size: 19px; font-weight: 500; letter-spacing: -0.2px; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.bst-stat small { color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.bst-stat .pos { color: #4fcf8a; } .bst-stat .neg { color: #f07a6e; }
+.bst-top .bst-sub:empty { display: none; }
+@media (max-width: 520px) { .bst-stat { padding: 0 10px; } .bst-stat b { font-size: 16px; } }
+.bst-stat .up { color: #4fcf8a; } .bst-stat .down { color: #f07a6e; }
+.bst-stats { padding: 12px 16px 14px; margin: 0; }

@@ -3,7 +3,7 @@
 ## Navigation
 - Sidebar: **Erstellen** (`data-nav="new"`), Chatverlauf, Bibliothek, Aufgaben, Kalender; darunter „Chats ⌄“ (8 neueste, Anheften/⋯) und „Dokumente ⌄“. Kopf: Workspace-Name, Lupe (⌘K), Einstellungen (Regler).
 - Tabs arbeiten unsichtbar im Hintergrund (Tab-Leiste ausgeblendet), je Chat/Dokument/Ansicht ein Tab; leere Chats/Dokumente sind „Entwürfe“ und werden beim Verlassen verworfen. Ein-/Ausklapp-Knopf der Sidebar immer oben links im Hauptteil.
-- **Erstellen**: oben mittig Umschalter **Agenten | Dokumente** (statt der alten Hunde-Leiste `.dog-modes`, die ist aus). Agenten = leerer Chat mit Hund in der Mitte („Woran arbeiten wir heute?“, Klick auf den Hund → Agenten-Feld). Dokumente = neues leeres Dokument (Tab mit `data-create="1"`). Leiste verschwindet nach dem Senden bzw. sobald im Dokument etwas steht.
+- **Erstellen**: oben mittig Umschalter **Agenten | Dokumente** (statt der alten Hunde-Leiste `.dog-modes`, die ist aus). Agenten = leerer Chat mit Hund in der Mitte („Woran arbeiten wir heute?“, Klick auf den Hund → Agenten-Feld). Dokumente = neues leeres Dokument (Tab mit `data-create="1"`). Gewähltes Wort ist umrandet. Leiste verschwindet nach dem Senden bzw. sobald im Dokument etwas steht (dann ist man im Dokument, Sidebar markiert nicht mehr „Erstellen“).
 - Chatverlauf und Bibliothek: „Angeheftet“, dann nach Zeit **Zuletzt · Gestern · Letzte Woche · Letzter Monat · Letztes Jahr · Älter** (`UIKit.timeGroups`); Zeile: Icon/Hund, Titel, Zeit, Anheften, Löschen (2. Klick löscht, endgültig).
 
 ## Chat und Agenten
@@ -33,7 +33,9 @@
 
 ## Börse (Bär)
 - Echtzeitkurse (Tradegate/ING), Verlauf (Yahoo, Ersatz Stooq), Nachrichten (Google/Bing News), Kennzahlen; Strategie des Nutzers: **nur „Starker Rückgang · Erholung“** (in 2 Tagen ≥ 5 % / 5 Tagen ≥ 8 % gefallen, Grund zur Erholung) – kein riskantes Momentum.
-- Karten: Aktienchart (Prognose-Fächer Gut/Basis/Schwach), Chancen-Karten (ganze Karte klappt auf, „Stand heute, HH:MM Uhr · n Werte geprüft“), „Meine Käufe“/Depot aus dem Orderbuch (Handelstagebuch/Screenshot auslesen, löschen/aktualisieren per Chat). Kein Login ins Planspiel.
+- Karten: Aktienchart (Prognose-Fächer Gut/Basis/Schwach), Chancen-Karten (ganze Karte klappt auf, „Stand heute, HH:MM Uhr · n Werte geprüft“), „Mein Depot“ aus dem Orderbuch (Handelstagebuch/Screenshot auslesen, löschen/aktualisieren per Chat). Kein Login ins Planspiel.
+- „Mein Depot“: oben Kennzahlen als Abschnitte über die ganze Breite (Depotwert · Bargeld · Seit Start; Etikett klein grau, Zahl 19 px weiß), keine Orders-Anzahl. Zeile antippen klappt den Aktienchart mit Kauflinie auf.
+- Kursverlauf: Yahoo → Stooq → ING (`ingSeries`, per ISIN – ING ist vom Server aus erreichbar, auch wenn Yahoo/Stooq sperren). Live-Kurs: Tradegate/ING.
 
 ## Workspaces und Konto
 - Bis 3 Workspaces, teilbar per E-Mail (Einladung beim Öffnen). Alles (Chats, Dokumente, Aufgaben, Einstellungen, API-Keys) gehört zum Konto.

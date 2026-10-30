@@ -516,3 +516,18 @@ test('Chart: liefert Yahoo nichts, kommt der Verlauf von Stooq (wie bei den Depo
   assert.ok(d.bars.length > 100 && d.price > 0, `${d.bars.length} Kerzen`);
   assert.equal(d.source, 'Stooq');
 });
+
+test('Chart: sperren Yahoo und Stooq, kommt der Verlauf von ING (z. B. Vonovia im Depot)', async () => {
+  B.cache.clear();
+  const now = Date.now();
+  const pts = Array.from({ length: 120 }, (_, i) => [now - (120 - i) * 86400000, 25 + Math.sin(i / 8)]);
+  fx = M.installFetch([
+    { match: (c) => c.url.includes('yahoo') || c.url.includes('stooq'), respond: () => new Response('gesperrt', { status: 403 }) },
+    { match: (c) => c.url.includes('wertpapiere.ing.de/api/v1/charts'), respond: () => new Response(JSON.stringify({ instruments: [{ currencyIso: 'EUR', data: pts }] }), { status: 200, headers: { 'Content-Type': 'application/json' } }) },
+    { match: () => true, respond: () => new Response('nein', { status: 404 }) },
+  ]);
+  const d = await B.chartData('VNA.DE', '6M');
+  assert.ok(d.bars.length >= 100, `${d.bars.length} Punkte`);
+  assert.equal(d.source, 'ING');
+  fx.restore(); B.cache.clear();
+});

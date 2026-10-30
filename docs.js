@@ -571,7 +571,7 @@ const Docs = (() => {
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         api.render();
       },
-      hide() { if (!api.open) return; setFocus(false); api.open = false; view.hidden = true; if (!editor.open) panel()?.classList.remove('view-docs'); },
+      hide() { if (!api.open) return; api.open = false; view.hidden = true; if (!editor.open) panel()?.classList.remove('view-docs'); },
     };
     search.addEventListener('input', () => api.render());
     search.addEventListener('keydown', (e) => e.stopPropagation());
@@ -2400,7 +2400,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         if (ready || doc) draw();
       },
-      hide() { if (!api.open) return; api.open = false; view.hidden = true; hideFmt(); if (!list.open) panel()?.classList.remove('view-docs'); drawPane(); },
+      hide() { if (!api.open) return; setFocus(false); api.open = false; view.hidden = true; hideFmt(); if (!list.open) panel()?.classList.remove('view-docs'); drawPane(); },
       redraw() { if (tab) { doc = docOf(tab.dataset.doc); draw(); } },
       isShowing: (id) => api.open && doc?.id === id,
       typeIn, insertBlocks, setWriting, remember: (prev, next) => remember(prev, next),

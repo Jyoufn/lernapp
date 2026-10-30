@@ -74,16 +74,20 @@ const BoerseBestand = (() => {
     fig.innerHTML = `<div class="bst-top"><span class="bst-title"><b>Mein Depot</b><span class="bst-sub"></span></span>
         <button type="button" class="bst-icon" data-reload title="Aktualisieren" aria-label="Aktualisieren"><svg width="16" height="16" aria-hidden="true"><use href="#i-refresh"/></svg></button>
         <button type="button" class="st-btn dark bst-addbtn" data-add>Hinzufügen</button></div>
-      <div class="bst-form" hidden></div><div class="bst-rows"></div>`;
+      <div class="bst-stats" hidden></div><div class="bst-form" hidden></div><div class="bst-rows"></div>`;
     const st = { open: null, d: null, pick: null };
-    const sub = fig.querySelector('.bst-sub'), list = fig.querySelector('.bst-rows'), fbox = fig.querySelector('.bst-form');
+    const sub = fig.querySelector('.bst-sub'), list = fig.querySelector('.bst-rows'), fbox = fig.querySelector('.bst-form'), stats = fig.querySelector('.bst-stats');
     const paint = () => {
       const d = st.d; if (!d) return;
       const pct = d.invested ? (d.plus / d.invested) * 100 : null;
       const dp = d.depot;
-      sub.innerHTML = d.error ? 'Gerade nicht erreichbar'
-        : dp ? `Depotwert ${eur(dp.value)} · Bargeld ${eur(dp.cash)} · <span class="${tone(dp.perf)}">${signed(dp.perf)} (${signed(dp.perfPct, ' %')})</span> · ${dp.trades} Orders`
-        : (d.items || []).length ? `Investiert ${eur(d.invested)} · Wert ${eur(d.value)} · <span class="${tone(d.plus)}">${signed(d.plus)}${pct != null ? ` (${signed(pct, ' %')})` : ''}</span>` : '';
+      sub.innerHTML = d.error ? 'Gerade nicht erreichbar' : '';
+      // Kennzahlen als Abschnitte nebeneinander (wie Einstieg/Stopp/Ziel bei den Chancen): Etikett klein, darunter die Zahl groß in Weiß
+      const cell = (label, value, extra = '') => `<span class="bst-stat"><i>${label}</i><b>${value}</b>${extra ? `<small>${extra}</small>` : ''}</span>`;
+      const cells = d.error ? [] : dp ? [cell('Depotwert', eur(dp.value)), cell('Bargeld', eur(dp.cash)), cell('Seit Start', `<span class="${tone(dp.perf)}">${signed(dp.perf)}</span>`, `<span class="${tone(dp.perf)}">${signed(dp.perfPct, ' %')}</span>`)]
+        : (d.items || []).length ? [cell('Investiert', eur(d.invested)), cell('Wert', eur(d.value)), cell('Plus/Minus', `<span class="${tone(d.plus)}">${signed(d.plus)}</span>`, pct != null ? `<span class="${tone(d.plus)}">${signed(pct, ' %')}</span>` : '')] : [];
+      stats.innerHTML = cells.join('');
+      stats.hidden = !cells.length;
       list.innerHTML = rows(d, st.open);
       list.querySelectorAll('.bst-row').forEach((r, i) => window.enterOnce?.(r, { y: 6, delay: Math.min(i, 6) * 40, dur: 420 }));
       mountCharts();
