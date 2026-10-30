@@ -1756,6 +1756,8 @@ async function regenerate(msgEl) {
   const c = chatOf(activeTab());
   if (c && DEFAULT_TITLES.has(c.title)) { c.auto = true; autoTitle(history.find((h) => h.role === 'user')?.text || ''); }
   msgEl.replaceChildren();
+  msgEl.classList.remove('pic-in-timeline'); // Zustand der vorigen Fassung nicht übernehmen (sonst bliebe „Generating picture“ unsichtbar)
+  msgEl._partial = null;
   const controller = new AbortController();
   const tab = activeTab();
   startRun(tab, controller);

@@ -692,10 +692,10 @@ const Docs = (() => {
       const srcTab = viewSrc && document.querySelector(`#tabs .tab[data-cid="${viewSrc}"]`);
       if (srcTab) {
         // Haupt-Chat rechts anzeigen: gleiche Darstellung, unten statt Eingabefeld „Im Chat weiterschreiben“
-        historyOf(srcTab).filter((m) => m.text && !m.doc).forEach((m) => list.append(dccMsg(m.role, m.role === 'user' ? m.text : stripAskBlock(m.text))));
+        historyOf(srcTab).filter((m) => (m.text || m.images?.length) && !m.doc).forEach((m) => list.append(dccMsg(m.role, m.role === 'user' ? m.text : stripAskBlock(m.text), m.role === 'user' ? (m.images || []).filter((x) => /^image\//.test(x.mime)).map(dataUrl) : [])));
         p.querySelector('.dcc').classList.add('viewing');
         p.querySelector('.dcc-form textarea').placeholder = 'Frag etwas oder lass dir etwas erklären …';
-      } else (curChat(doc)?.messages || []).forEach((m) => list.append(dccMsg(m.role, m.text, [], m)));
+      } else (curChat(doc)?.messages || []).forEach((m) => { const n = dccMsg(m.role, m.text, [], m); list.append(n); if (m.role === 'user' && m.imgId) showThumbs(n, m); });
       wireChatList(p);
       list.scrollTop = list.scrollHeight;
       const ta = p.querySelector('textarea'), form = p.querySelector('form');
@@ -854,6 +854,29 @@ const Docs = (() => {
     }
     // hochgeladene Bilder („upload:1“ …) für Änderungen – nur im Speicher, damit der Chat klein bleibt
     const editUploads = new Map();
+    /* Angehängte Bilder/PDFs der eigenen Nachrichten im Dokument-Chat: bleiben im Gerät (IndexedDB, nicht im Dokument) –
+       so sieht die KI sie auch beim „Neu erzeugen“, bei Nachfragen und nach dem Neuladen, und die Vorschau bleibt sichtbar */
+    const msgImages = new Map(); // Nachrichten-ID → [{ mime, data, name }]
+    const imgDb = (() => {
+      let dbp = null;
+      const open = () => (dbp ||= new Promise((res, rej) => {
+        try { const r = indexedDB.open('dcc-anhaenge', 1); r.onupgradeneeded = () => r.result.createObjectStore('img'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
+      }));
+      const tx = (mode, fn) => open().then((db) => new Promise((res, rej) => { const t = db.transaction('img', mode); const q = fn(t.objectStore('img')); t.oncomplete = () => res(q?.result); t.onerror = () => rej(t.error); }));
+      return { get: (id) => tx('readonly', (st) => st.get(id)).catch(() => null), put: (id, v) => tx('readwrite', (st) => st.put(v, id)).catch(() => {}) };
+    })();
+    const imagesOf = async (m) => {
+      if (!m?.imgId) return [];
+      if (!msgImages.has(m.imgId)) msgImages.set(m.imgId, (await imgDb.get(m.imgId)) || []);
+      return msgImages.get(m.imgId);
+    };
+    const dataUrl = (x) => `data:${x.mime};base64,${x.data}`;
+    // Vorschaubilder einer gespeicherten Nachricht nachträglich einsetzen (aus dem Gerätespeicher)
+    const showThumbs = (node, m) => imagesOf(m).then((imgs) => {
+      const pics = imgs.filter((x) => /^image\//.test(x.mime));
+      if (!pics.length || node.querySelector('.dcc-imgs')) return;
+      node.prepend(el('div', 'dcc-imgs', pics.map((x) => `<span style="background-image:url('${dataUrl(x)}')"></span>`).join('')));
+    });
     function fillUploads(html, ups) {
       if (!ups?.length) return html;
       const t = document.createElement('template'); t.innerHTML = html;
@@ -958,11 +981,13 @@ const Docs = (() => {
       let chat = curChat(d);
       if (!chat) { chat = { id: `k${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, title: q.slice(0, 48), updated: Date.now(), messages: [] }; dChats(d).push(chat); d.chatId = chat.id; }
       const um = { role: 'user', text: q };
+      if (files.length) um.imgId = newId('i'); // Anhänge bleiben im Gerät (siehe msgImages)
       chat.messages = [...chat.messages, um].slice(-40);
       chat.updated = Date.now();
       list.append(dccMsg('user', q, files.map((f) => f.url)));
       const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).filter(Boolean);
-      if (images.length) editUploads.set(um, images); // falls die KI erst nachfragt und das Bild später einfügt
+      if (images.length) { editUploads.set(um, images); msgImages.set(um.imgId, images); imgDb.put(um.imgId, images); } // falls die KI erst nachfragt und das Bild später einfügt
+      else delete um.imgId;
       return runDoc(d, chat, images);
     }
     /* „Thinking“ wie im Haupt-Chat: Zeile mit schimmerndem Text und Sekunden; sobald die Antwort kommt,
@@ -1125,7 +1150,15 @@ Soll etwas ins Dokument und passt ein Block klar besser als Text (Zahlen → Dia
 Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B. welcher Ort, welche Werte, welches Datum), stell genau eine kurze Rückfrage und setz noch KEINE [[ÄNDERN]]-Zeile. Kannst du es sinnvoll selbst festlegen oder wurde nicht danach gefragt, mach es direkt.\n\nTitel: ${d.title || 'Unbenannt'}\nBeschreibung: ${d.subtitle || '–'}\n\nINHALT DES DOKUMENTS:\n${plain(d.content).replace(/\n{3,}/g, '\n\n').slice(0, 30000)}`;
       // nur Rolle und Text schicken (Checkpoints und Vorschläge bleiben hier)
       const recent = chat.messages.slice(-12).map((m) => ({ role: m.role, text: m.text + (m.edit ? `\n\n(Vorgeschlagene Änderung: ${EDIT_HEAD[m.edit.state] || ''})` : '') }));
-      if (images.length) recent[recent.length - 1] = { ...recent[recent.length - 1], images }; // Bilder nur mit der aktuellen Frage schicken (nicht im Dokument speichern)
+      // Anhänge der letzten eigenen Nachrichten mitschicken (wie im Haupt-Chat) – auch beim Neu erzeugen und bei Nachfragen
+      const lastMsgs = chat.messages.slice(-12);
+      if (!images.length) images = await imagesOf([...lastMsgs].reverse().find((m) => m.role === 'user'));
+      let budget = 6;
+      for (let k = lastMsgs.length - 1; k >= 0 && budget > 0; k--) {
+        const m = lastMsgs[k]; if (m.role !== 'user') continue;
+        const imgs = (k === lastMsgs.length - 1 && images.length ? images : await imagesOf(m)).slice(0, budget);
+        if (imgs.length) { recent[k] = { ...recent[k], images: imgs }; budget -= imgs.length; }
+      }
       const messages = [{ role: 'user', text: context }, { role: 'assistant', text: 'Verstanden – ich beziehe mich nur auf dieses Dokument und schlage Änderungen mit [[ÄNDERN: …]] vor.' }, ...recent];
       const ctrl = new AbortController(); dccRun = ctrl;
       p.querySelector('.dcc-send')?.classList.add('stop');
