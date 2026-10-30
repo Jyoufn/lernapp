@@ -42,24 +42,34 @@ const ChatVisuals = (() => {
     const edit = String(data?.edit || '').trim().slice(0, 600); // "edit" = "prompt" eines früheren Bildes: dieses Bild anpassen statt neu erfinden
     return prompt.length >= 20 && alt ? { prompt, alt, query, ...(source ? { source } : {}), ...(edit ? { edit } : {}) } : null;
   }
+  // Zeitstrahl: alle Ereignisse und alle Stichpunkte, die die KI liefert (Obergrenze nur gegen Ausreißer)
   function timeline(raw) {
     let data;
     try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
-    // Text und Stichpunkte erscheinen beim Aufklappen – daher großzügig, aber begrenzt
     const events = (Array.isArray(data?.events) ? data.events : []).map((e) => ({
-      date: String(e?.date ?? '').trim().slice(0, 24), title: String(e?.title ?? '').trim().slice(0, 90), text: String(e?.text ?? '').trim().slice(0, 700),
-      points: (Array.isArray(e?.points) ? e.points : []).map((x) => String(x ?? '').trim().slice(0, 160)).filter(Boolean).slice(0, 6),
-    })).filter((e) => e.date && e.title).slice(0, 12);
-    return events.length >= 2 ? { title: String(data.title || '').slice(0, 100), events, source: String(data.source || '').trim().slice(0, 160) } : null;
+      date: String(e?.date ?? '').trim().slice(0, 32), title: String(e?.title ?? '').trim().slice(0, 120), text: String(e?.text ?? '').trim().slice(0, 1500),
+      points: (Array.isArray(e?.points) ? e.points : []).map((x) => String(x ?? '').trim().slice(0, 240)).filter(Boolean).slice(0, 20),
+    })).filter((e) => e.date && e.title).slice(0, 60);
+    return events.length >= 2 ? { title: String(data.title || '').slice(0, 120), events } : null;
   }
+  /* Mindmap als Baum: Thema → Äste → Unteräste (bis 4 Ebenen). Jeder Knoten: "label", optional "text" (kurze Erklärung im Kästchen)
+     und "children". Ältere Blöcke mit "items" (Stichworte) werden zu Kindern. */
   function mindmap(raw) {
     let data;
     try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
-    const center = String(data?.center ?? '').trim().slice(0, 40);
-    const branches = (Array.isArray(data?.branches) ? data.branches : []).map((b) => ({
-      label: String(b?.label ?? '').trim().slice(0, 32),
-      items: (Array.isArray(b?.items) ? b.items : []).map((x) => String(x ?? '').trim().slice(0, 40)).filter(Boolean).slice(0, 5),
-    })).filter((b) => b.label).slice(0, 8);
+    let count = 0;
+    const node = (n, depth) => {
+      if (count >= 120) return null;
+      const label = String((typeof n === 'string' ? n : n?.label ?? n?.title) ?? '').trim().slice(0, 80);
+      if (!label) return null;
+      count++;
+      const text = typeof n === 'object' ? String(n?.text ?? '').trim().slice(0, 320) : '';
+      const kids = depth >= 4 || typeof n !== 'object' ? [] : [...(Array.isArray(n?.children) ? n.children : []), ...(Array.isArray(n?.items) ? n.items : [])]
+        .slice(0, 12).map((c) => node(c, depth + 1)).filter(Boolean);
+      return { label, ...(text ? { text } : {}), children: kids };
+    };
+    const center = String(data?.center ?? '').trim().slice(0, 80);
+    const branches = (Array.isArray(data?.branches) ? data.branches : []).slice(0, 12).map((b) => node(b, 1)).filter(Boolean);
     return center && branches.length >= 2 ? { center, branches } : null;
   }
   /* Markdown-Tabellen reparieren, die beim Weiterschreiben (Längenlimit/Abbruch) zerbrochen sind:

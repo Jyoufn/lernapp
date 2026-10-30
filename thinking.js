@@ -94,9 +94,92 @@ const Thinking = (() => {
     },
   };
   FLOWS.code = { ...FLOWS.general, work: F('Working', 'Writing the code', 'write', 'type'), done: F('Completed', 'Project ready', 'check', 'done') };
-  const of = (agent, key) => (FLOWS[agent] || FLOWS.general)[key] || FLOWS.general[key] || F('Working', key, 'work');
+
+  /* ---------- Formate: was am Ende entsteht (Präsentation, Mindmap, Zeitstrahl …) ----------
+     Jedes Format hat eigene Schritte für Verstehen, Planen/Denken, Bauen und Fertig – der Hund und seine Arbeit (anim) bleiben die des Agenten.
+     Erkannt wird das Format an der Frage (formatOf); schreibt die KI unerwartet einen solchen Block, schaltet app.js beim Schreiben um (blockFormat).
+     wrote = Zeile, wenn das Bauen fertig ist (mit Zahlen aus dem Block, siehe statsOf). */
+  const X = (main, sub, kind) => ({ main, sub, kind });
+  const FORMATS = {
+    praesentation: { label: 'presentation', wrote: 'Created presentation',
+      start: X('Understanding your goal', 'Defining what the presentation should achieve', 'read'),
+      plan: X('Planning', 'Outlining the slides', 'think'), thoughts: X('Planning', 'Outlining the slides', 'think'),
+      search: X('Researching', 'Searching sources for the slides', 'search'), gather: X('Researching', 'Collecting facts for the slides', 'read'),
+      analyze: X('Researching', 'Selecting what goes on the slides', 'check'),
+      work: X('Creating presentation', 'Designing the slides', 'write'), review: X('Reviewing', 'Checking the slides', 'check'),
+      done: X('Completed', 'Presentation ready', 'check') },
+    mindmap: { label: 'mind map', wrote: 'Built mind map',
+      start: X('Understanding the topic', 'Identifying the core topic', 'read'),
+      plan: X('Structuring', 'Finding the main branches', 'think'), thoughts: X('Structuring', 'Grouping ideas into branches', 'think'),
+      search: X('Researching', 'Searching facts for the branches', 'search'), gather: X('Researching', 'Collecting key facts', 'read'),
+      analyze: X('Structuring', 'Sorting facts into branches', 'check'),
+      work: X('Building mind map', 'Arranging branches and details', 'write'), done: X('Completed', 'Mind map ready', 'check') },
+    timeline: { label: 'timeline', wrote: 'Built timeline',
+      start: X('Understanding the topic', 'Identifying the time span', 'read'),
+      plan: X('Structuring', 'Choosing the key events', 'think'), thoughts: X('Structuring', 'Ordering events in time', 'think'),
+      search: X('Researching', 'Searching dates and events', 'search'), gather: X('Researching', 'Collecting dates and facts', 'read'),
+      analyze: X('Structuring', 'Checking dates and order', 'check'),
+      work: X('Building timeline', 'Placing events in order', 'write'), done: X('Completed', 'Timeline ready', 'check') },
+    chart: { label: 'chart', wrote: 'Drew chart',
+      start: X('Understanding your goal', 'Identifying the data to show', 'read'),
+      plan: X('Preparing data', 'Selecting the values', 'think'), thoughts: X('Preparing data', 'Checking the numbers', 'think'),
+      search: X('Researching', 'Searching for current numbers', 'search'), gather: X('Researching', 'Collecting the numbers', 'read'),
+      analyze: X('Preparing data', 'Comparing the numbers', 'check'),
+      work: X('Drawing chart', 'Plotting the data', 'write'), done: X('Completed', 'Chart ready', 'check') },
+    quiz: { label: 'quiz', wrote: 'Created quiz',
+      start: X('Understanding your goal', 'Defining what to practise', 'read'),
+      plan: X('Planning', 'Choosing the key concepts', 'think'), thoughts: X('Planning', 'Choosing the key concepts', 'think'),
+      work: X('Creating quiz', 'Writing questions and answers', 'write'), done: X('Completed', 'Quiz ready', 'check') },
+    table: { label: 'comparison', wrote: 'Built comparison',
+      start: X('Understanding your goal', 'Identifying what to compare', 'read'),
+      plan: X('Comparing', 'Choosing comparison criteria', 'think'), thoughts: X('Comparing', 'Weighing the differences', 'think'),
+      work: X('Building comparison', 'Filling in the table', 'write'), done: X('Completed', 'Comparison ready', 'check') },
+    heft: { label: 'notebook entry', wrote: 'Wrote notebook entry',
+      work: X('Writing', 'Solving step by step', 'write'), done: X('Completed', 'Notebook entry ready', 'check') },
+  };
+  // Format aus der Frage (Börse: „Chart“ ist dort der Aktienchart, kein eigenes Format)
+  const ASK = [
+    ['praesentation', /pr(ä|ae)sentation|powerpoint|keynote|\bfolien\b|vortragsfolien/i],
+    ['mindmap', /mind\s?-?map|gedankenkarte/i],
+    ['timeline', /zeitstrahl|zeitleiste|timeline|chronolog/i],
+    ['quiz', /\bquiz|teste? mich|frag mich ab|abfrag|karteikarten|(ü|ue)bungsfragen|testfragen/i],
+    ['chart', /diagramm|statistik|infografik|schaubild|\bgrafik\b|visualisier/i],
+    ['table', /tabelle|gegen(ü|ue)berstell|vergleichs?tabelle/i],
+    ['heft', /hefteintrag|ins heft|f(ü|ue)rs heft/i],
+  ];
+  const formatOf = (text, agent) => {
+    if (agent === 'boerse' || agent === 'code') return null;
+    const hit = ASK.find(([k, re]) => re.test(String(text || '')));
+    return hit ? hit[0] : null;
+  };
+  // Block in der Antwort → Format (z. B. ```mindmap)
+  const blockFormat = (text) => {
+    const m = /```(praesentation|mindmap|timeline|chart|heft)\b/.exec(String(text || ''));
+    return m ? m[1] : null;
+  };
+  // Zahlen fürs „fertig“: Folien, Äste/Punkte, Ereignisse, Diagramme
+  const statsOf = (format, text) => {
+    const blocks = [...String(text || '').matchAll(new RegExp('```' + format + '\\s*([\\s\\S]*?)```', 'g'))].map((m) => { try { return JSON.parse(m[1]); } catch { return null; } }).filter(Boolean);
+    if (!blocks.length) return '';
+    const b = blocks[0], pl = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+    if (format === 'praesentation') { const n = (b.slides || b.folien || []).length; return n ? pl(n, 'slide', 'slides') : ''; }
+    if (format === 'mindmap') {
+      const kids = (x) => [...(x.children || []), ...(x.items || []).map((t) => ({ label: t }))];
+      const count = (x) => kids(x).reduce((n, c) => n + 1 + count(c), 0);
+      const br = (b.branches || []).length, all = (b.branches || []).reduce((n, x) => n + count(x), 0);
+      return br ? `${pl(br, 'branch', 'branches')}${all ? ` · ${pl(all, 'point', 'points')}` : ''}` : '';
+    }
+    if (format === 'timeline') { const n = (b.events || []).length; return n ? pl(n, 'event', 'events') : ''; }
+    if (format === 'chart') return pl(blocks.length, 'chart', 'charts');
+    return '';
+  };
+  const of = (agent, key, format) => {
+    const base = (FLOWS[agent] || FLOWS.general)[key] || FLOWS.general[key] || F('Working', key, 'work');
+    const o = format && FORMATS[format]?.[key];
+    return o ? { ...base, ...o } : base;
+  };
   // Research zeigt seinen Ablauf immer ganz, die anderen nur, was wirklich läuft
   const full = (agent) => agent === 'research';
-  return { of, full, FLOWS };
+  return { of, full, FLOWS, FORMATS, formatOf, blockFormat, statsOf };
 })();
 window.Thinking = Thinking;

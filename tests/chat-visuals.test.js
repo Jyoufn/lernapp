@@ -84,3 +84,39 @@ test('Gedanken werden zu Arbeitsschritten – Gemini (Überschriften) und Nemotr
   assert.equal(many.length, 8);
   assert.match(many[7].body, /Absatz Nummer 12/);
 });
+
+test('Mindmap ist ein Baum: Äste mit eigenen Unterpunkten (mehrere Ebenen), „text“ für Erklärungen, alte „items“ werden Kinder', () => {
+  const m = visuals.mindmap({ center: 'Demografischer Wandel', branches: [
+    { label: 'Definition', text: 'Veränderung von Größe und Altersaufbau.' },
+    { label: 'Hauptursachen', children: [{ label: 'Niedrige Geburtenrate' }, { label: 'Höhere Lebenserwartung' }] },
+    { label: 'Deutschland', children: [{ label: 'Hauptursachen', children: [{ label: '1,4 Kinder pro Frau' }] }] },
+    { label: 'Alt', items: ['eins', 'zwei'] },
+  ] });
+  assert.equal(m.branches[0].text, 'Veränderung von Größe und Altersaufbau.');
+  assert.deepEqual(m.branches[1].children.map((c) => c.label), ['Niedrige Geburtenrate', 'Höhere Lebenserwartung']);
+  assert.equal(m.branches[2].children[0].children[0].label, '1,4 Kinder pro Frau');
+  assert.deepEqual(m.branches[3].children.map((c) => c.label), ['eins', 'zwei']);
+});
+
+test('Zeitstrahl: keine feste Obergrenze mehr (alle Ereignisse und Stichpunkte), keine Quellenzeile', () => {
+  const t = visuals.timeline({ title: 'T', source: 'irgendwas', events: Array.from({ length: 25 }, (_, i) => ({ date: String(1900 + i), title: `E${i}`, points: Array.from({ length: 9 }, (_, k) => `p${k}`) })) });
+  assert.equal(t.events.length, 25);
+  assert.equal(t.events[0].points.length, 9);
+  assert.equal(t.source, undefined);
+});
+
+test('Denk-Ablauf je Format: Präsentation, Mindmap, Zeitstrahl haben eigene Schritte; Börse kennt kein Diagramm-Format', () => {
+  global.window = global.window || {};
+  require('../thinking.js');
+  const T = global.window.Thinking;
+  assert.equal(T.formatOf('Mach mir eine Präsentation über Vulkane', 'learn'), 'praesentation');
+  assert.equal(T.formatOf('Erstelle eine Mindmap zum demografischen Wandel', 'general'), 'mindmap');
+  assert.equal(T.formatOf('Zeitstrahl zur Deutschen Einheit', 'general'), 'timeline');
+  assert.equal(T.formatOf('Zeig mir das Diagramm von SAP', 'boerse'), null);
+  assert.equal(T.of('learn', 'start', 'praesentation').main, 'Understanding your goal');
+  assert.equal(T.of('learn', 'work', 'praesentation').main, 'Creating presentation');
+  assert.equal(T.of('learn', 'work', 'praesentation').anim, 'book', 'der Hund bleibt der des Agenten');
+  assert.equal(T.of('general', 'work', null).sub, 'Preparing response');
+  assert.equal(T.blockFormat('Text\n```mindmap\n{}'), 'mindmap');
+  assert.equal(T.statsOf('timeline', '```timeline\n{"events":[{},{},{}]}\n```'), '3 events');
+});

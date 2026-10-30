@@ -860,84 +860,51 @@ function chartFigure(data) {
     wrap.append(svg, tip);
     figure.append(chartScroller(wrap));
   }
-  if (data.source) figure.append(el('div', 'chart-source', `Quelle: ${escapeHtml(data.source)}`));
+  // keine „Quelle: …“-Zeile – die genutzten Quellen stehen als Kästchen unter der Antwort
   return figure;
 }
 
-/* Zeitstrahl im festgelegten Stil (README.md): Linie links mit hohlen Punkten, Karten mit Titel + Datum.
-   Klick färbt die Karte blau und klappt den Text weich auf – die KI muss ihn nicht noch einmal aufzählen. */
+/* Zeitstrahl (README.md): links das Datum, daneben die Linie mit Punkt, rechts der Titel im Kästchen (ohne Fläche, feiner Rand).
+   Klick klappt Text und Stichpunkte IM selben Kästchen weich auf (nur die Höhe läuft); mehrere können offen sein. Keine Obergrenze. */
 function timelineFigure(data) {
-  const figure = el('figure', 'chat-timeline tl3');
-  figure.tabIndex = 0;
-  const head = el('figcaption', 'tl3-head');
-  const title = el('b');
-  title.textContent = data.title || '';
-  const count = el('span', 'tl3-count');
-  head.append(title, count);
-  const list = el('div', 'tl3-list');
-  const line = el('div', 'tl3-line');
-  const fill = el('i', 'tl3-fill');
-  line.append(fill);
-  list.append(line);
-  const rows = data.events.map((e, i) => {
-    if (i) list.append(el('div', 'tl3-gap')); // ruhiger Abstand zwischen den Karten
-    const row = el('div', 'tl3-row');
-    row.style.animationDelay = `${i * 60}ms`;
-    const btn = el('button', 'tl3-rh');
-    btn.type = 'button';
-    btn.innerHTML = `<i class="tl3-dot"></i><span class="tl3-t"></span><span class="tl3-y"></span>${e.text || e.points.length ? icon('f-chevron-down', 12).replace('<svg', '<svg class="tl3-chev"') : ''}`;
-    btn.querySelector('.tl3-t').textContent = e.title;
-    btn.querySelector('.tl3-y').textContent = e.date;
-    row.append(btn);
-    if (e.text || e.points.length) {
-      const more = el('div', 'tl3-more');
-      const inner = el('div', 'tl3-mi');
+  const figure = el('figure', 'chat-timeline tl4');
+  if (data.title) { const h = el('figcaption', 'tl4-head'); h.textContent = data.title; figure.append(h); }
+  const longest = Math.max(...data.events.map((e) => e.date.length));
+  figure.style.setProperty('--tl-dw', `${Math.round(Math.min(150, Math.max(44, longest * 7.4 + 6)))}px`);
+  const list = el('div', 'tl4-list');
+  data.events.forEach((e, i) => {
+    const row = el('div', 'tl4-row');
+    row.style.animationDelay = `${Math.min(i, 14) * 45}ms`;
+    const date = el('div', 'tl4-date'); date.textContent = e.date;
+    const rail = el('div', 'tl4-rail', '<i class="tl4-dot"></i>');
+    const box = el('div', 'tl4-box');
+    const has = !!(e.text || e.points.length);
+    const head = el(has ? 'button' : 'div', 'tl4-h');
+    if (has) { head.type = 'button'; head.setAttribute('aria-expanded', 'false'); }
+    head.innerHTML = `<span class="tl4-t"></span>${has ? icon('f-chevron-down', 12).replace('<svg', '<svg class="tl4-chev"') : ''}`;
+    head.querySelector('.tl4-t').textContent = e.title;
+    box.append(head);
+    if (has) {
+      const more = el('div', 'tl4-more'), inner = el('div', 'tl4-mi');
       if (e.text) { const p = el('p'); p.textContent = e.text; inner.append(p); }
-      if (e.points.length) {
-        const ul = el('ul');
-        e.points.forEach((x) => { const li = el('li'); li.textContent = x; ul.append(li); });
-        inner.append(ul);
-      }
-      more.append(inner);
-      row.append(more);
-    } else btn.classList.add('plain');
+      if (e.points.length) { const ul = el('ul'); e.points.forEach((x) => { const li = el('li'); li.textContent = x; ul.append(li); }); inner.append(ul); }
+      more.append(inner); box.append(more);
+    }
+    row.append(date, rail, box);
     list.append(row);
-    return row;
   });
-  figure.append(head, list);
-  if (data.source) figure.append(el('div', 'chart-source', `Quelle: ${escapeHtml(data.source)}`));
-
-  let cur = -1;
-  const center = (r) => r.offsetTop + r.querySelector('.tl3-dot').offsetTop + 6;
-  const layout = () => {
-    if (!rows.length || !rows[0].offsetHeight) return;
-    line.style.height = `${Math.max(0, center(rows[rows.length - 1]) - center(rows[0]))}px`;
-    line.style.top = `${center(rows[0])}px`;
-    fill.style.height = cur < 0 ? '0px' : `${center(rows[cur]) - center(rows[0])}px`;
+  figure.append(list);
+  const toggle = (row) => {
+    const more = row.querySelector('.tl4-more'); if (!more) return;
+    const open = !row.classList.contains('open'), from = more.offsetHeight;
+    more.getAnimations().forEach((a) => a.cancel());
+    row.classList.toggle('open', open);
+    row.querySelector('.tl4-h').setAttribute('aria-expanded', String(open));
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    more.animate([{ height: `${from}px` }, { height: `${more.offsetHeight}px` }], { duration: open ? 400 : 300, easing: open ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)' });
   };
-  const select = (i, toggle) => {
-    i = Math.max(0, Math.min(rows.length - 1, i));
-    const close = toggle && i === cur && rows[i].classList.contains('open');
-    cur = close ? -1 : i;
-    rows.forEach((r, k) => {
-      r.classList.toggle('open', k === cur);
-      r.classList.toggle('on', k === cur);
-      r.classList.toggle('past', cur >= 0 && k < cur);
-    });
-    count.textContent = cur < 0 ? '' : `${cur + 1} / ${rows.length}`;
-    layout();
-  };
-  rows.forEach((r, i) => {
-    const b = r.querySelector('.tl3-rh');
-    b.addEventListener('mousedown', (e) => { if (e.detail > 1) e.preventDefault(); }); // Doppelklick markiert keinen Text
-    b.addEventListener('click', () => { select(i, true); if (!r.classList.contains('open')) b.blur(); });
-  });
-  figure.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') { e.preventDefault(); select(cur + 1); }
-    if (e.key === 'ArrowUp') { e.preventDefault(); select(cur - 1); }
-  });
-  // Maße erst, wenn der Zeitstrahl im Chat steht; beim Auf-/Zuklappen läuft die Linie mit
-  new ResizeObserver(() => requestAnimationFrame(layout)).observe(list);
+  list.addEventListener('mousedown', (ev) => { if (ev.detail > 1 && ev.target.closest('.tl4-h')) ev.preventDefault(); }); // Doppelklick markiert keinen Text
+  list.addEventListener('click', (ev) => { const h = ev.target.closest('button.tl4-h'); if (h) toggle(h.closest('.tl4-row')); });
   return figure;
 }
 /* Mindmap im festgelegten Stil (README.md): Thema in der Mitte, Äste links/rechts ohne Kästen,
@@ -962,72 +929,161 @@ function heftFigure(code) {
   fig.append(page);
   return fig;
 }
-/* Mindmap: Thema in der Mitte, Äste rundherum (rechts, links, unten, oben …) als Kästchen ohne Hintergrund –
-   oben der Oberpunkt, darunter die Stichpunkte. Schmal (iPhone/Seitenfenster): Thema oben, Äste darunter. */
+/* Mindmap als Baum (README.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
+   immer von Kästchen-Rand zu Kästchen-Rand durch die freie Spalte dazwischen (nie durch ein Kästchen). Kästchen ohne Fläche, feiner Rand.
+   Zoomen (−/+, Strg/⌘ + Mausrad, zwei Finger), Verschieben (ziehen), Prozent-Knopf = alles einpassen, Vollbild für große Mindmaps.
+   Schmal (iPhone): alle Äste rechts. */
 function mindmapFigure(data) {
-  const figure = el('figure', 'chat-mindmap');
-  figure.setAttribute('role', 'img');
+  const figure = el('figure', 'chat-mindmap mm4');
   figure.setAttribute('aria-label', `Mindmap ${data.center}: ${data.branches.map((b) => b.label).join(', ')}`);
-  const map = el('div', 'mm3');
-  const svg = svgNode('svg', { 'aria-hidden': 'true' });
-  const zones = { top: el('div', 'mm3-z top'), l: el('div', 'mm3-z l'), r: el('div', 'mm3-z r'), bot: el('div', 'mm3-z bot') };
-  const center = el('div', 'mm3-c');
-  center.textContent = data.center;
-  const ORDER = ['r', 'l', 'bot', 'top', 'r', 'l', 'bot', 'top'];
-  const cards = data.branches.map((b, i) => {
-    const node = el('div', 'mm3-b');
-    node.style.animationDelay = `${140 + i * 70}ms`;
-    const h = el('div', 'mm3-h'); h.textContent = b.label;
-    node.append(h);
-    if (b.items.length) {
-      const ul = el('div', 'mm3-i');
-      b.items.forEach((it) => { const li = el('span', ''); li.textContent = it; ul.append(li); });
-      node.append(ul);
-    }
-    node._zone = ORDER[i];
+  const tools = el('div', 'mm4-tools', `<button type="button" data-z="out" aria-label="Verkleinern" title="Verkleinern">${FadeIcons.svg('minus', 13)}</button>`
+    + '<button type="button" class="mm4-pct" data-z="fit" title="Alles einpassen">100 %</button>'
+    + `<button type="button" data-z="in" aria-label="Vergrößern" title="Vergrößern">${FadeIcons.svg('plus', 13)}</button>`
+    + `<button type="button" data-z="full" aria-label="Vollbild" title="Vollbild">${FadeIcons.svg('expand', 13)}</button>`);
+  const view = el('div', 'mm4-view');
+  const stage = el('div', 'mm4-stage');
+  const svg = svgNode('svg', { class: 'mm4-lines', 'aria-hidden': 'true' });
+  stage.append(svg);
+  view.append(stage);
+  figure.append(tools, view);
+  // Knoten anlegen (Maße erst, wenn die Mindmap im Chat steht)
+  const all = [];
+  const make = (n, depth, i) => {
+    const box = el('div', `mm4-n d${Math.min(depth, 3)}${n.text ? ' has-text' : ''}`);
+    const b = el('b'); b.textContent = n.label; box.append(b);
+    if (n.text) { const p = el('p'); p.textContent = n.text; box.append(p); }
+    box.style.animationDelay = `${depth * 110 + Math.min(i, 8) * 25}ms`;
+    stage.append(box);
+    const node = { el: box, depth, children: [] };
+    all.push(node);
+    node.children = (n.children || []).map((c, k) => make(c, depth + 1, k));
     return node;
+  };
+  const root = make({ label: data.center, children: data.branches }, 0, 0);
+  const GX1 = 58, GX = 40, GY1 = 18, GY = 10, PAD = 18;
+  let W = 0, H = 0, laid = null;
+  const layout = (narrow) => {
+    all.forEach((n) => { n.w = n.el.offsetWidth; n.h = n.el.offsetHeight; n.sh = null; });
+    const gapY = (n) => (n.depth === 0 ? GY1 : GY);
+    const sh = (n) => (n.sh ??= Math.max(n.h, n.children.reduce((t, c) => t + sh(c), 0) + gapY(n) * Math.max(0, n.children.length - 1)));
+    const place = (n, x, top, dir) => {
+      n.dir = dir; n.x = dir > 0 ? x : x - n.w;
+      const kids = n.children.reduce((t, c) => t + sh(c), 0) + GY * Math.max(0, n.children.length - 1), span = Math.max(n.h, kids);
+      n.y = top + (span - n.h) / 2;
+      let y = top + (span - kids) / 2;
+      const cx = dir > 0 ? n.x + n.w + GX : n.x - GX;
+      n.children.forEach((c) => { place(c, cx, y, dir); y += sh(c) + GY; });
+    };
+    // Äste auf die Seiten verteilen: immer auf die gerade kürzere (Reihenfolge bleibt), schmal alle rechts
+    const R = [], L = []; let hr = 0, hl = 0;
+    root.children.forEach((b) => { if (narrow || hr <= hl) { R.push(b); hr += sh(b) + GY1; } else { L.push(b); hl += sh(b) + GY1; } });
+    const side = (list) => list.reduce((t, c) => t + sh(c), 0) + GY1 * Math.max(0, list.length - 1);
+    const total = Math.max(side(R), side(L), root.h);
+    root.x = 0; root.y = (total - root.h) / 2; root.dir = 0;
+    let y = (total - side(R)) / 2; R.forEach((b) => { place(b, root.w + GX1, y, 1); y += sh(b) + GY1; });
+    y = (total - side(L)) / 2; L.forEach((b) => { place(b, -GX1, y, -1); y += sh(b) + GY1; });
+    const minX = Math.min(...all.map((n) => n.x)), maxX = Math.max(...all.map((n) => n.x + n.w));
+    W = maxX - minX + PAD * 2; H = total + PAD * 2;
+    all.forEach((n) => { n.x += PAD - minX; n.y += PAD; n.el.style.left = `${n.x}px`; n.el.style.top = `${n.y}px`; });
+    stage.style.width = `${W}px`; stage.style.height = `${H}px`;
+    svg.setAttribute('width', W); svg.setAttribute('height', H); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    // Linien: vom Rand des Elternteils (Mitte) zum Rand des Kindes (Mitte), weiche Kurve in der freien Spalte
+    const paths = [];
+    const link = (p, c) => {
+      const dir = c.dir, x1 = dir > 0 ? p.x + p.w : p.x, x2 = dir > 0 ? c.x : c.x + c.w;
+      const y1 = p.y + p.h / 2, y2 = c.y + c.h / 2, m = (x1 + x2) / 2;
+      const path = svgNode('path', { d: `M${x1},${y1} C${m},${y1} ${m},${y2} ${x2},${y2}`, class: `mm4-l d${Math.min(c.depth, 3)}`, pathLength: 1 });
+      path.style.animationDelay = `${c.depth * 110 - 40}ms`;
+      paths.push(path);
+      c.children.forEach((k) => link(c, k));
+    };
+    root.children.forEach((b) => link(root, b));
+    svg.replaceChildren(...paths);
+    laid = narrow;
+  };
+  // Zoom & Verschieben
+  const st = { s: 1, tx: 0, ty: 0, fitS: 1 };
+  const pct = tools.querySelector('.mm4-pct');
+  const apply = () => { stage.style.transform = `translate(${st.tx}px, ${st.ty}px) scale(${st.s})`; pct.textContent = `${Math.round(st.s * 100)} %`; };
+  const overlay = el('div', 'mm4-overlay');
+  const full = () => overlay.isConnected;
+  // all = alles einpassen (Prozent-Knopf, Vollbild); sonst lesbar starten (mind. 80 %) und auf das Thema mitteln – den Rest zieht man heran
+  const fit = (all = false) => {
+    const vw = view.clientWidth || 600;
+    const maxH = full() ? view.clientHeight : 620;
+    const whole = Math.min(1, (vw - 8) / W);
+    let s = all || full() ? whole : Math.min(1, Math.max(0.8, whole));
+    if (!full() && !all) view.style.height = `${Math.round(Math.max(180, Math.min(H * s + 8, maxH)))}px`;
+    const vh = view.clientHeight;
+    st.fitS = Math.min(whole, (vh - 4) / H, 1);
+    if (all || full()) s = st.fitS;
+    st.s = s;
+    const cx = root.x + root.w / 2, cy = root.y + root.h / 2;
+    st.tx = W * s <= vw ? (vw - W * s) / 2 : laid ? 4 : vw / 2 - cx * s; // schmal (alle Äste rechts): am linken Rand beginnen
+    st.ty = H * s <= vh ? (vh - H * s) / 2 : vh / 2 - cy * s;
+    apply();
+  };
+  const clampS = (s) => Math.max(Math.min(0.25, st.fitS), Math.min(2.5, s));
+  const zoomAt = (f, cx, cy) => {
+    const s = clampS(st.s * f), k = s / st.s;
+    st.tx = cx - (cx - st.tx) * k; st.ty = cy - (cy - st.ty) * k; st.s = s;
+    stage.classList.add('smooth'); apply(); clearTimeout(st.sm); st.sm = setTimeout(() => stage.classList.remove('smooth'), 260);
+  };
+  const center = () => [view.clientWidth / 2, view.clientHeight / 2];
+  tools.addEventListener('click', (e) => {
+    const z = e.target.closest('[data-z]')?.dataset.z; if (!z) return;
+    if (z === 'in') zoomAt(1.25, ...center());
+    if (z === 'out') zoomAt(0.8, ...center());
+    if (z === 'fit') { stage.classList.add('smooth'); fit(true); setTimeout(() => stage.classList.remove('smooth'), 260); }
+    if (z === 'full') toggleFull();
   });
-  map.append(svg, zones.top, zones.l, center, zones.r, zones.bot);
-  figure.append(map);
-  let narrow = null;
-  const place = () => {
-    const n = map.clientWidth < 560;
-    if (n === narrow) return;
-    narrow = n;
-    map.classList.toggle('narrow', n);
-    cards.forEach((c) => (n ? zones.bot : zones[c._zone]).append(c));
+  const onKey = (e) => { if (e.key === 'Escape' && full()) toggleFull(); };
+  // Vollbild: Ansicht in eine eigene Ebene direkt unter <body> (fixed klappt in einer animierten Nachricht nicht verlässlich)
+  let keep = '';
+  const toggleFull = () => {
+    const on = !full();
+    if (on) { keep = view.style.height; figure.style.height = `${figure.offsetHeight}px`; view.style.height = ''; overlay.append(tools, view); document.body.append(overlay); }
+    else { figure.append(tools, view); overlay.remove(); figure.style.height = ''; view.style.height = keep; }
+    figure.classList.toggle('full', on); overlay.classList.toggle('full', on);
+    document.documentElement.classList.toggle('mm4-lock', on);
+    tools.querySelector('[data-z="full"]').innerHTML = FadeIcons.svg(on ? 'shrink' : 'expand', 13);
+    if (on) document.addEventListener('keydown', onKey); else document.removeEventListener('keydown', onKey);
+    requestAnimationFrame(() => fit(on));
   };
-  const draw = () => {
-    place();
-    const R = map.getBoundingClientRect();
-    if (!R.width) return;
-    const C = center.getBoundingClientRect();
-    const cx = C.left + C.width / 2 - R.left, cy = C.top + C.height / 2 - R.top;
-    svg.setAttribute('viewBox', `0 0 ${R.width} ${R.height}`);
-    svg.replaceChildren(...cards.map((c, k) => {
-      const B = c.getBoundingClientRect(), z = c.parentElement.classList;
-      let d;
-      if (narrow) { // schmal: Stamm links unter dem Thema, je Ast ein Bogen zum Kästchen
-        const tx = C.left - R.left + 18, y2 = B.top + B.height / 2 - R.top, x2 = B.left - R.left;
-        d = `M${tx},${C.bottom - R.top} L${tx},${y2 - 10} Q${tx},${y2} ${tx + 10},${y2} L${x2},${y2}`;
-      } else if (z.contains('l') || z.contains('r')) {
-        const left = z.contains('l');
-        const x1 = left ? C.left - R.left : C.right - R.left, x2 = left ? B.right - R.left : B.left - R.left;
-        const y2 = B.top + B.height / 2 - R.top, m = (x1 + x2) / 2;
-        d = `M${x1},${cy} C${m},${cy} ${m},${y2} ${x2},${y2}`;
-      } else {
-        const up = z.contains('top');
-        const y1 = up ? C.top - R.top : C.bottom - R.top, y2 = up ? B.bottom - R.top : B.top - R.top;
-        const x2 = B.left + B.width / 2 - R.left, m = (y1 + y2) / 2;
-        d = `M${cx},${y1} C${cx},${m} ${x2},${m} ${x2},${y2}`;
-      }
-      const p = svgNode('path', { d, fill: 'none', stroke: '#4a4a4a', 'stroke-width': 1.25, 'stroke-linecap': 'round', pathLength: 1 });
-      p.style.animationDelay = `${k * 70}ms`;
-      return p;
-    }));
-  };
-  // erst zeichnen, wenn die Mindmap im Chat steht und Maße hat; bei Größenänderung neu
-  new ResizeObserver(() => requestAnimationFrame(draw)).observe(map);
+  view.addEventListener('wheel', (e) => {
+    if (e.ctrlKey || e.metaKey) { e.preventDefault(); const r = view.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0022), e.clientX - r.left, e.clientY - r.top); }
+    else if (full()) { e.preventDefault(); st.tx -= e.deltaX; st.ty -= e.deltaY; apply(); }
+  }, { passive: false });
+  view.addEventListener('dblclick', (e) => { const r = view.getBoundingClientRect(); zoomAt(1.5, e.clientX - r.left, e.clientY - r.top); });
+  // ziehen = verschieben; zwei Finger = zoomen
+  const pts = new Map(); let last = null;
+  const mid = () => { const a = [...pts.values()]; return { x: (a[0].x + a[1].x) / 2, y: (a[0].y + a[1].y) / 2, d: Math.hypot(a[0].x - a[1].x, a[0].y - a[1].y) }; };
+  view.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); view.setPointerCapture(e.pointerId);
+    last = pts.size === 2 ? mid() : { x: e.clientX, y: e.clientY };
+    view.classList.add('grab');
+  });
+  view.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pts.size === 2) {
+      const m = mid(), r = view.getBoundingClientRect();
+      if (last?.d) { const s = clampS(st.s * (m.d / last.d)), k = s / st.s; st.tx = m.x - r.left - (m.x - r.left - st.tx) * k + (m.x - last.x); st.ty = m.y - r.top - (m.y - r.top - st.ty) * k + (m.y - last.y); st.s = s; apply(); }
+      last = m;
+    } else if (last) { st.tx += e.clientX - last.x; st.ty += e.clientY - last.y; last = { x: e.clientX, y: e.clientY }; apply(); }
+  });
+  const up = (e) => { pts.delete(e.pointerId); last = pts.size === 1 ? { ...[...pts.values()][0] } : null; if (!pts.size) view.classList.remove('grab'); };
+  view.addEventListener('pointerup', up); view.addEventListener('pointercancel', up);
+  // erst messen, wenn sichtbar; bei anderer Breite neu einpassen (Seitenwechsel schmal ↔ breit baut neu auf)
+  let lastW = 0;
+  new ResizeObserver(() => requestAnimationFrame(() => {
+    const vw = view.clientWidth; if (!vw || (Math.abs(vw - lastW) < 2 && laid != null)) return;
+    lastW = vw;
+    const narrow = vw < 560;
+    if (laid !== narrow) layout(narrow);
+    fit();
+  })).observe(view);
   return figure;
 }
 
@@ -1192,6 +1248,17 @@ function renderMarkdown(target, text, opts = {}) {
   // Belege [1], [2], [1, 3] … werden im Text nicht angezeigt – die Hauptquellen stehen in der Leiste unter der Antwort
   if (opts.sources?.length) html = html.replace(/\s*(?:\[\d{1,2}(?:\s*[,;]\s*\d{1,2})*\](?!\())+/g, '');
   target.innerHTML = html;
+  // „Quelle: …“ / „Quellen: …“ / „Literatur:“ als Text am Ende (Absatz, Überschrift + Liste) gehört nicht in die Antwort –
+  // die wirklich genutzten Quellen zeigt die App als Kästchen (unten rechts bzw. am letzten Satz)
+  const SRC_LINE = /^\s*(quellen?|literatur|referenzen|sources?)\s*(\([^)]*\))?\s*:/i;            // „Quelle: Destatis 2023“
+  const SRC_HEAD = /^\s*(quellen?|literatur|literaturverzeichnis|referenzen|sources?)\s*:?\s*$/i;     // Überschrift „Quellen“
+  for (let last = target.lastElementChild, n = 0; last && n < 3; last = target.lastElementChild, n++) {
+    const t = last.textContent || '', prev = last.previousElementSibling;
+    if (last.matches('p') && SRC_LINE.test(t) && t.length < 400) { last.remove(); continue; }
+    if (last.matches('ul, ol') && prev?.matches('h1, h2, h3, h4, p') && (SRC_HEAD.test(prev.textContent) || SRC_LINE.test(prev.textContent) && prev.textContent.length < 40)) { prev.remove(); last.remove(); continue; }
+    if (last.matches('h1, h2, h3, h4') && SRC_HEAD.test(t)) { last.remove(); continue; }
+    break;
+  }
   target.querySelectorAll('a').forEach((a) => { a.target = '_blank'; a.rel = 'noopener noreferrer'; });
   // Tabellen: Rahmen + seitliches Scrollen bei vielen Spalten
   target.querySelectorAll('table').forEach((table) => {
@@ -1201,13 +1268,18 @@ function renderMarkdown(target, text, opts = {}) {
   });
   // jede Grafik merkt sich ihren Quelltext (data-viz/data-raw) → „Ins Dokument“ kann sie mitnehmen
   const tagViz = (node, kind, raw) => { node.dataset.viz = kind; node.dataset.raw = raw; return node; };
+  // Zeitstrahl und Mindmap: beim Weiterschreiben dieselbe Darstellung wiederverwenden (aufgeklappter Punkt, Zoom bleiben erhalten)
+  const vizCache = (target._vizCache ||= new Map());
+  const reuse = (kind, raw, make) => { const k = `${kind}|${raw}`; if (!vizCache.has(k)) { const f = make(); if (f) vizCache.set(k, f); } return vizCache.get(k); };
   target.querySelectorAll('pre:has(code.language-timeline)').forEach((pre) => {
-    const raw = pre.querySelector('code').textContent, data = ChatVisuals.timeline(raw);
-    if (data) pre.replaceWith(tagViz(timelineFigure(data), 'timeline', raw)); else pre.remove();
+    const raw = pre.querySelector('code').textContent;
+    const fig = reuse('timeline', raw, () => { const data = ChatVisuals.timeline(raw); return data ? tagViz(timelineFigure(data), 'timeline', raw) : null; });
+    if (fig) pre.replaceWith(fig); else pre.remove();
   });
   target.querySelectorAll('pre:has(code.language-mindmap)').forEach((pre) => {
-    const raw = pre.querySelector('code').textContent, data = ChatVisuals.mindmap(raw);
-    if (data) pre.replaceWith(tagViz(mindmapFigure(data), 'mindmap', raw)); else pre.remove();
+    const raw = pre.querySelector('code').textContent;
+    const fig = reuse('mindmap', raw, () => { const data = ChatVisuals.mindmap(raw); return data ? tagViz(mindmapFigure(data), 'mindmap', raw) : null; });
+    if (fig) pre.replaceWith(fig); else pre.remove();
   });
   // Hefteintrag (```heft): nur das, was ins Heft kommt – auf Karopapier, Zeile für Zeile, Formeln schon gesetzt
   target.querySelectorAll('pre:has(code.language-heft)').forEach((pre) => pre.replaceWith(heftFigure(pre.querySelector('code'))));
@@ -1849,7 +1921,14 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Rückfrage statt Antwort → „Asked a question“ (bzw. „Asked 2 questions“) statt „Wrote the answer“
   const wroteLabel = () => {
     const n = /```ask/.test(answerR?.text || '') ? parseAskBlock(answerR.text)?.length || 1 : 0;
-    return n ? `Asked ${n === 1 ? 'a question' : `${n} questions`}` : P(workKey).sub;
+    if (n) return `Asked ${n === 1 ? 'a question' : `${n} questions`}`;
+    // Format gebaut: „Built mind map · 5 branches · 19 points“ (Zahlen aus dem Block)
+    const F = fmt && window.Thinking?.FORMATS?.[fmt];
+    if (F && workKey === 'work' && window.Thinking.blockFormat(answerR?.text || '') === fmt) {
+      const st = Thinking.statsOf(fmt, answerR.text);
+      return `${F.wrote}${st ? ` <span class="ph-x">· ${st}</span>` : ''}`;
+    }
+    return P(workKey).sub;
   };
   let work = null;
   let workKey = 'work';
@@ -1866,7 +1945,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const coding = msgEl.dataset.dog === 'code'; // Coding-Agent: baut Projekte – erzeugt nie Bilder
   // Denk-Ablauf dieses Agenten (thinking.js): Kopf = Hauptstatus, Schritte = Unterpunkte
   const agentId = msgEl.dataset.dog || window.PixelDogs?.mode || 'general';
-  const P = (k) => window.Thinking ? Thinking.of(agentId, k) : { main: 'Working', sub: k, kind: 'work' };
+  // Format (Präsentation, Mindmap, Zeitstrahl …): eigene Schritte – aus der Frage, sonst sobald die KI einen solchen Block schreibt
+  let fmt = window.Thinking?.formatOf?.(lastAsk, agentId) || null;
+  const P = (k) => window.Thinking ? Thinking.of(agentId, k, fmt) : { main: 'Working', sub: k, kind: 'work' };
   // Hund neben dem Hauptstatus (PixelDogs.actor): tut je Zustand etwas anderes; Wechsel weich und nie zu hektisch
   let actor = null;
   const ensureActor = () => {
@@ -2433,6 +2514,16 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
           if (prefix) { answerR.append(prefix); answerR.flush(); } // Weiterschreiben: bisheriger Text steht sofort da
         }
         answerR.append(data.text);
+        // die KI baut gerade eine Mindmap/einen Zeitstrahl/eine Präsentation, ohne dass die Frage es sagte → Schritt passend umbenennen
+        if (!fmt && data.text.includes('`') && window.Thinking?.blockFormat) {
+          const bf = Thinking.blockFormat(answerR.text);
+          if (bf) {
+            fmt = bf;
+            const sh = stages.answering?.step.querySelector('.shimmer');
+            if (sh && workKey === 'work') sh.textContent = P('work').sub;
+            if (workKey === 'work') phase('work');
+          }
+        }
         updatePlan(); // Planpunkte abhaken, sobald sie in der Antwort stehen
         // Bild-Block fertig geschrieben → Bild schon jetzt erzeugen lassen, der Text läuft weiter
         if (!coding && /[`}]/.test(data.text)) {

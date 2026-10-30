@@ -8581,3 +8581,68 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .tk-more-btn:hover { border-color: rgba(255, 255, 255, 0.16); color: var(--text); }
 .tk-rows-in .tk-row.open { background: rgba(255, 255, 255, 0.018); }
 .tk-sheet-main .tk-f-notes { flex: none; max-height: 200px; } /* flex: 1 in der Spalte hat die Höhe ignoriert – Feld blieb eine Zeile hoch */
+
+/* =====================================================================
+   Mindmap v4 (app.js → mindmapFigure): Baum mit Ästen links/rechts, jeder Unterpunkt ein eigenes Kästchen ohne Fläche,
+   feine Ränder (nicht zu hell), Linien von Rand zu Rand; Zoom-Leiste oben rechts, Vollbild als eigene Ebene
+   ===================================================================== */
+.md .chat-mindmap.mm4 { position: relative; width: 100%; max-width: none; margin: 14px 0 18px; padding: 0; }
+.mm4-view { position: relative; height: 360px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.mm4-view.grab { cursor: grabbing; }
+.mm4-stage { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.mm4-stage.smooth { transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1); }
+.mm4-lines { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+.mm4-l { fill: none; stroke: rgba(255, 255, 255, 0.2); stroke-width: 1.4; stroke-linecap: round; stroke-dasharray: 1; animation: cv-draw 620ms cubic-bezier(0.65, 0, 0.35, 1) backwards; }
+.mm4-l.d2, .mm4-l.d3 { stroke: rgba(255, 255, 255, 0.14); stroke-width: 1.15; }
+.mm4-n { position: absolute; box-sizing: border-box; width: max-content; max-width: 210px; padding: 7px 11px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 9px; color: var(--text-2); font-size: 12.5px; line-height: 1.35; animation: mm4-in 420ms var(--spring) backwards; }
+.mm4-n b { display: block; color: var(--text-2); font-weight: 500; overflow-wrap: anywhere; }
+.mm4-n p { margin: 4px 0 0; color: var(--text-3); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.mm4-n.has-text { max-width: 250px; }
+.mm4-n.d0 { max-width: 200px; padding: 10px 16px; border-color: rgba(255, 255, 255, 0.18); border-radius: 12px; font-size: 14.5px; text-align: center; }
+.mm4-n.d0 b { color: var(--text); font-weight: 600; }
+.mm4-n.d1 { border-color: rgba(255, 255, 255, 0.13); font-size: 13px; }
+.mm4-n.d1 b { color: var(--text); font-weight: 600; }
+@keyframes mm4-in { from { opacity: 0; transform: scale(0.96); } }
+.mm4-tools { position: absolute; top: 8px; right: 8px; z-index: 2; display: flex; gap: 2px; padding: 2px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; background: color-mix(in srgb, var(--main-bg) 92%, #ffffff); }
+.mm4-tools button { display: grid; place-items: center; min-width: 26px; height: 24px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--text-3); font: 500 11.5px Inter, sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; }
+.mm4-tools button:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+.mm4-overlay { position: fixed; inset: 0; z-index: 900; background: var(--main-bg); animation: cal-fade 200ms ease both; }
+.mm4-overlay .mm4-view { height: 100%; border: 0; border-radius: 0; touch-action: none; }
+.mm4-overlay .mm4-tools { top: max(14px, env(safe-area-inset-top)); right: 14px; }
+html.mm4-lock, html.mm4-lock body { overflow: hidden; }
+@media (prefers-reduced-motion: reduce) { .mm4-n, .mm4-l { animation: none; } }
+/* Zoom-Leiste über der Mindmap (nicht darauf); im Vollbild schwebend oben rechts */
+.md .chat-mindmap.mm4 { display: flex; flex-direction: column; align-items: stretch; }
+.chat-mindmap.mm4 > .mm4-tools { position: static; align-self: flex-end; margin: 0 0 6px; }
+
+/* =====================================================================
+   Zeitstrahl v4 (app.js → timelineFigure): Datum links (gleich breit, rechtsbündig), Linie mit Punkt, Kästchen ohne Fläche;
+   Text und Stichpunkte klappen im selben Kästchen auf; offener Punkt blau gefüllt
+   ===================================================================== */
+.md .chat-timeline.tl4 { max-width: 760px; margin: 14px 0 18px; padding: 0; border: 0; background: none; }
+.tl4-head { margin: 0 0 12px; color: var(--text); font-size: 14px; font-weight: 600; }
+.tl4-list { display: flex; flex-direction: column; gap: 8px; }
+.tl4-row { display: grid; grid-template-columns: var(--tl-dw, 64px) 16px minmax(0, 1fr); column-gap: 12px; align-items: start; animation: mm4-in 380ms var(--spring) backwards; }
+.tl4-date { padding-top: 11px; color: var(--text-3); font-size: 12.5px; font-weight: 500; line-height: 18px; text-align: right; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.tl4-row.open .tl4-date { color: var(--text); }
+.tl4-rail { position: relative; align-self: stretch; }
+.tl4-rail::before { content: ''; position: absolute; top: -4px; bottom: -4px; left: 50%; width: 1.5px; margin-left: -0.75px; background: rgba(255, 255, 255, 0.1); }
+.tl4-row:first-child .tl4-rail::before { top: 19px; }
+.tl4-row:last-child .tl4-rail::before { bottom: auto; height: 23px; }
+.tl4-dot { position: absolute; top: 15px; left: 50%; width: 10px; height: 10px; margin-left: -5px; box-sizing: border-box; border: 1.5px solid rgba(255, 255, 255, 0.32); border-radius: 50%; background: var(--main-bg); transition: border-color 200ms ease, background-color 200ms ease; }
+.tl4-row.open .tl4-dot { border-color: var(--accent); background: var(--accent); }
+.tl4-box { min-width: 0; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; background: none; transition: border-color 160ms ease; }
+.tl4-box:hover, .tl4-row.open .tl4-box { border-color: rgba(255, 255, 255, 0.14); }
+.tl4-h { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 40px; padding: 9px 12px; border: 0; background: none; color: var(--text); font: 500 13.5px Inter, sans-serif; text-align: left; cursor: pointer; }
+div.tl4-h { cursor: default; }
+.tl4-t { flex: 1; min-width: 0; line-height: 20px; overflow-wrap: anywhere; }
+.tl4-chev { flex: none; color: var(--text-4); transition: transform 260ms var(--spring); }
+.tl4-row.open .tl4-chev { transform: rotate(180deg); }
+.tl4-more { height: 0; overflow: hidden; }
+.tl4-row.open .tl4-more { height: auto; }
+.tl4-mi { padding: 0 12px 12px; color: var(--text-2); font-size: 13px; line-height: 1.6; }
+.md .tl4-mi p { margin: 0 0 6px; }
+.md .tl4-mi ul { display: flex; flex-direction: column; gap: 3px; margin: 4px 0 0; padding: 0; list-style: none; }
+.md .tl4-mi li { position: relative; margin: 0; padding-left: 14px; }
+.md .tl4-mi li::before { content: ''; position: absolute; top: 8.5px; left: 1px; width: 5px; height: 5px; border-radius: 50%; background: var(--text-4); }
+@media (prefers-reduced-motion: reduce) { .tl4-row { animation: none; } }
