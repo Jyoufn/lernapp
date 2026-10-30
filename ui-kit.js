@@ -128,7 +128,6 @@ const UIKit = (() => {
      Beobachtet die Klasse „open“ an jeder .tk-pop im Fenster – egal, wer sie setzt oder entfernt (Klick, Auswahl, Esc) –
      und lässt die Höhe von .tk-menu weich auf- bzw. zulaufen. Beim Zuklappen hält „folding“ den Inhalt sichtbar, bis er zu ist. */
   function foldRows(root) {
-    const EASE = 'cubic-bezier(0.16, 1, 0.3, 1)';
     const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const isOpen = (cls) => /(^|\s)open(\s|$)/.test(cls || '');
     // eigene Änderungen an „folding“ lösen den Beobachter auch aus – sie ändern „open“ nicht und fallen unten heraus
@@ -148,13 +147,12 @@ const UIKit = (() => {
       if (reduced()) return;
       if (is) {
         const h = menu.offsetHeight;
-        menu.animate([{ height: `${wasFolding ? from : 0}px` }, { height: `${h}px` }], { duration: 360, easing: EASE });
-        box?.animate([{ opacity: 0, transform: 'translateY(-6px) scale(0.985)' }, { opacity: 1, transform: 'none' }], { duration: 300, easing: EASE });
+        // nur die Höhe läuft auf – der Inhalt steht still (kein Hineingleiten, kein Wachsen)
+        menu.animate([{ height: `${wasFolding ? from : 0}px` }, { height: `${h}px` }], { duration: 340, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
       } else {
         pop.classList.add('folding');
         // gleiche Kurve und Dauer wie beim Aufklappen → beim Wechsel zwischen zwei Zeilen bleibt die Fensterhöhe ruhig
-        const a = menu.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 360, easing: EASE, fill: 'forwards' });
-        box?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease', fill: 'forwards' });
+        const a = menu.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 340, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' });
         a.onfinish = () => { if (!pop.classList.contains('open')) { pop.classList.remove('folding'); menu.getAnimations().forEach((x) => x.cancel()); box?.getAnimations().forEach((x) => x.cancel()); } };
       }
     }));
@@ -162,6 +160,26 @@ const UIKit = (() => {
     return mo;
   }
 
-  return { pad2, isoOf, COLORS, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows };
+  /* ---------- Beschreibung, die beim Schreiben mitwächst ----------
+     Leer und ohne Fokus eine Zeile; beim Schreiben (Fokus oder Text da) mindestens `focusLines` Zeilen, darüber mit dem Text bis `maxLines`,
+     danach scrollen. Gemessen wird an einer unsichtbaren Kopie – so läuft die Höhe weich (CSS-Übergang), ohne erst auf 0 zu springen. */
+  function autoGrow(ta, { line = 20, minLines = 1, focusLines = 5, maxLines = 10 } = {}) {
+    const meas = ta.cloneNode(false);
+    meas.removeAttribute('name'); meas.removeAttribute('id'); meas.tabIndex = -1; meas.setAttribute('aria-hidden', 'true');
+    Object.assign(meas.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', height: '0px', minHeight: '0', left: '0', top: '0', overflow: 'hidden', transition: 'none' });
+    const fit = () => {
+      if (!meas.isConnected) ta.parentNode?.append(meas);
+      meas.style.width = `${ta.clientWidth}px`; meas.value = ta.value;
+      const big = document.activeElement === ta || ta.value.trim();
+      const h = Math.max((big ? focusLines : minLines) * line, Math.min(meas.scrollHeight, maxLines * line));
+      ta.style.height = `${h}px`;
+      ta.style.overflowY = meas.scrollHeight > maxLines * line ? 'auto' : 'hidden';
+    };
+    ['input', 'focus', 'blur'].forEach((ev) => ta.addEventListener(ev, fit));
+    requestAnimationFrame(fit);
+    return fit;
+  }
+
+  return { pad2, isoOf, COLORS, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

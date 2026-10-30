@@ -44,7 +44,8 @@ const ChancenCard = (() => {
   function row(p, stand = '') {
     const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
     const meta = [p.sector, p.type].filter(Boolean).map(esc).join(' · ');
-    const facts = [crv ? `<span>Chance : Risiko&nbsp; <b>${nf(crv, 1)} : 1</b></span>` : '', p.hit ? `<span>Trefferquote&nbsp; <b>${esc(p.hit)}</b></span>` : ''].filter(Boolean).join('<i class="chn-dot"></i>');
+    const facts = [p.drop != null ? `<span>Gefallen&nbsp; <b class="neg">−${nf(p.drop, 1)} % in ${esc(p.dropDays || 5)} Tagen</b></span>` : '',
+      crv ? `<span>Chance : Risiko&nbsp; <b>${nf(crv, 1)} : 1</b></span>` : '', p.hit ? `<span>Trefferquote&nbsp; <b>${esc(p.hit)}</b></span>` : ''].filter(Boolean).join('<i class="chn-dot"></i>');
     return `<div class="chn-pick ${v}" data-sym="${esc(p.symbol)}" data-name="${esc(p.name)}" role="button" tabindex="0" aria-expanded="false">
         <div class="chn-top">
           <span class="chn-name"><b>${esc(p.name)}</b>${p.index ? `<span class="chn-idx">${esc(p.index)}</span>` : ''}</span>

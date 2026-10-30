@@ -41,7 +41,7 @@ test('Rücksetzer-Regel: starker Wert, kräftig gefallen, fängt sich → ja; im
   assert.equal(R.dipAt(ind2, down, down.length - 1), false);
 });
 
-test('Radar: findet den Rücksetzer in der starken Branche, merkt ihn sich und schreibt die Bilanz', async () => {
+test('Radar: findet den kräftig gefallenen Wert mit Grund für die Erholung (Großauftrag), merkt ihn sich und schreibt die Bilanz', async () => {
   const strong = bars(320, 0.0015, 0.004);
   const dip = dipBars();
   fx = M.installFetch([
@@ -55,18 +55,20 @@ test('Radar: findet den Rücksetzer in der starken Branche, merkt ihn sich und s
   const r = await R.refresh(store);
   const sap = r.picks.find((p) => p.symbol === 'SAP.DE');
   assert.ok(sap, JSON.stringify(r.picks.map((p) => p.symbol)));
-  assert.equal(sap.type, 'ruecksetzer');
+  assert.equal(sap.type, 'erholung');
+  assert.ok(sap.drop >= 8 && sap.turning && sap.catalyst, JSON.stringify(sap));
   assert.ok(sap.stop < sap.price && sap.target > sap.price);
+  assert.ok(!r.picks.some((p) => p.type !== 'erholung'), 'nur die Strategie des Nutzers – kein Momentum, kein Ausbruch');
   assert.ok(sap.newsScore > 0);
   assert.ok(r.sectors.find((s) => s.name === 'Software & Internet'));
   const hist = JSON.parse(await store.get(R.HIST));
-  assert.ok(hist.some((h) => h.symbol === 'SAP.DE' && h.type === 'ruecksetzer'));
+  assert.ok(hist.some((h) => h.symbol === 'SAP.DE' && h.type === 'erholung'));
   // gespeichert → zweiter Abruf kommt aus dem Speicher (keine neuen Kursabrufe)
   const before = fx.calls.length;
   const again = await R.latest(store);
   assert.equal(again.asOf, r.asOf);
   assert.equal(fx.calls.length, before);
-  assert.match(R.radarText(r), /RÜCKSETZER IN STARKER BRANCHE: SAP/);
+  assert.match(R.radarText(r), /STARKER RÜCKGANG MIT ERHOLUNGSCHANCE: SAP/);
 });
 
 test('Bilanz: nach 5/10 Handelstagen ausgewertet', () => {
@@ -87,24 +89,37 @@ test('Planspiel-Universum: alle Aktien-Indizes des Planspiels, ohne doppelte Wer
   assert.ok(U.LIST.every((u) => u.symbol && u.name && u.sector));
 });
 
-test('Chancen-Übersicht: Kaufen nur wenn alles passt, Ausbruch = Beobachten, schwache Charts = Nicht kaufen', () => {
+test('Chancen-Übersicht: nur „Starker Rückgang · Erholung“; Kaufen erst, wenn er dreht und es einen Grund gibt; Momentum aus dem Scan kommt nicht dazu', () => {
   const R2 = require('../lib/radar');
+  const base = { type: 'erholung', price: 100, entry: 100, stop: 95, target: 110, drop: 9.5, dropDays: 2 };
   const o = R2.overview({ asOf: '2026-10-29T10:00:00Z', checked: 427, mood: { score: 3 }, picks: [
-    { symbol: 'A.DE', name: 'A', type: 'ruecksetzer', price: 100, entry: 100, stop: 95, target: 110, score: 82 },
-    { symbol: 'B.DE', name: 'B', type: 'ausbruch', price: 100, entry: 101, stop: 95, target: 115, score: 90 },
-    { symbol: 'C.DE', name: 'C', type: 'nachrichten', price: 100, entry: 100, stop: 95, target: 104, score: 80 },
+    { ...base, symbol: 'A.DE', name: 'A', score: 82, turning: true, catalyst: true, newsScore: 4 },
+    { ...base, symbol: 'B.DE', name: 'B', score: 85, turning: false, catalyst: true, newsScore: 4 },
+    { ...base, symbol: 'C.DE', name: 'C', score: 80, turning: true, catalyst: false, history: { cases: 4, winRate: 40 }, newsScore: 0 },
+    { ...base, symbol: 'E.DE', name: 'E', score: 78, turning: true, catalyst: false, history: { cases: 5, winRate: 70 }, newsScore: 0 },
+    { symbol: 'X.DE', name: 'X', type: 'ausbruch', price: 100, entry: 101, stop: 95, target: 115, score: 90 },
   ], scan: { weak: [{ symbol: 'D.DE', name: 'D', price: 10, score: 12, change1m: -9.5 }] } });
   const v = Object.fromEntries(o.picks.map((p) => [p.symbol, p.verdict]));
-  assert.deepEqual(v, { 'A.DE': 'kaufen', 'B.DE': 'beobachten', 'C.DE': 'beobachten' }, '„Nicht kaufen“ kommt nicht in die Karte');
+  assert.deepEqual(v, { 'A.DE': 'kaufen', 'E.DE': 'kaufen', 'B.DE': 'beobachten', 'C.DE': 'beobachten' }, 'fällt noch / kein Grund → Beobachten; Ausbruch gar nicht');
   assert.equal(o.picks[0].symbol, 'A.DE');
+  assert.equal(o.picks[0].drop, 9.5);
   assert.deepEqual(o.avoid, ['D']);
-  const many = R2.overview({ picks: Array.from({ length: 15 }, (_, i) => ({ symbol: `W${i}`, name: `W${i}`, type: 'ausbruch', price: 10, entry: 10.5, stop: 9, target: 13, score: 60 + i })), scan: {} });
-  assert.equal(many.picks.length, 10, 'höchstens 10 zum Beobachten');
   assert.equal(o.mood, 'positiv');
-  const o2 = R2.overview({ picks: [], scan: { checked: 427, now: [{ symbol: 'FTNT', name: 'Fortinet', price: 80, entry: 80, stop: 76, target: 88, score: 78, signal: 'kaufen', reasons: ['Trend'], history: { cases: 8, winRate: 62 } }],
-    soon: [{ symbol: 'SAP.DE', name: 'SAP', price: 240, trigger: 244, stop: 233, target: 262, score: 70, signal: 'bald', setup: 'ausbruch', reasons: ['Ausbruch'] }], weak: [] } });
-  assert.deepEqual(o2.picks.map((p) => `${p.symbol}:${p.verdict}`), ['FTNT:kaufen', 'SAP.DE:beobachten'], 'Kaufsignale aus dem Scan über alle Werte kommen dazu');
+  const o2 = R2.overview({ picks: [], scan: { checked: 427, now: [{ symbol: 'FTNT', name: 'Fortinet', price: 80, entry: 80, stop: 76, target: 88, score: 78, signal: 'kaufen', reasons: ['Trend'], history: { cases: 8, winRate: 62 } }], soon: [], weak: [] } });
+  assert.deepEqual(o2.picks, [], 'Kaufsignale aus dem Trend-Scan sind nicht die Strategie des Nutzers');
   assert.equal(o2.checked, 427);
+});
+
+test('Regel „Starker Rückgang“: kleiner Dip zählt nicht, Dauer-Abwärtstrend auch nicht', () => {
+  const d = dipBars(), ind = B.indicators(d);
+  const R2 = require('../lib/radar');
+  assert.equal(R2.reboundAt(ind, d, d.length - 1), true);
+  const small = bars(300, 0.0025, 0.006); const last = small[small.length - 1]; small.push({ t: last.t + 86400000, o: last.c, h: last.c * 1.001, l: last.c * 0.985, c: last.c * 0.99, v: 1000 });
+  small.push({ t: last.t + 2 * 86400000, o: last.c * 0.99, h: last.c, l: last.c * 0.985, c: last.c * 0.995, v: 1000 });
+  assert.equal(R2.reboundAt(B.indicators(small), small, small.length - 1), false, '−1 % ist kein Rutsch');
+  const down = bars(320, -0.004, 0.006); const l2 = down[down.length - 1];
+  for (let k = 1; k <= 3; k++) down.push({ t: l2.t + k * 86400000, o: l2.c * (1 - 0.04 * (k - 1)), h: l2.c * (1 - 0.04 * (k - 1)), l: l2.c * (1 - 0.04 * k), c: l2.c * (1 - 0.04 * k) * (k === 3 ? 1.03 : 1), v: 1000 });
+  assert.equal(R2.reboundAt(B.indicators(down), down, down.length - 1), false, 'Dauer-Abwärtstrend = fallendes Messer');
 });
 
 test('Kein Zugriff aufs Planspiel: es gibt keine Planspiel-Schnittstelle mehr, die App liest kein Depot', () => {

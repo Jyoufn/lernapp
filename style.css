@@ -8531,3 +8531,53 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 /* Prognose als Szenario-Fächer (stock-chart.js): Namen der Szenarien am Ende, „Prognose“ rechts oben */
 .stk-svg .stk-ax.end { text-anchor: end; }
 .stk-svg .stk-fc-l { font: 600 10.5px Inter, sans-serif; text-anchor: end; letter-spacing: 0.01em; paint-order: stroke; stroke: var(--main-bg, #171717); stroke-width: 3px; stroke-linejoin: round; }
+
+/* =====================================================================
+   Aufgaben/Termine v7 (30.10., abends)
+   - Fenster: Radius 14 statt 22, klarer Rand, Fläche wie die Chancen-Karten (minimal heller als der Hauptteil); Kasten innen passend
+   - Aufklappen nur über die Höhe (UIKit.foldRows) – nichts gleitet oder wächst hinein
+   - Beschreibung wächst beim Schreiben auf 5 Zeilen (UIKit.autoGrow), Tags: Linie unter der Suche, „… hinzufügen“ normal und links
+   - Datum: „Kein Datum“ immer wählbar
+   - Liste: Kreis zum Abhaken · Titel groß · rechts Datum, ganz rechts Priorität; Klick klappt Beschreibung, Tags, Agent, „Bearbeiten“ auf
+   ===================================================================== */
+.tk-form.tk-sheet, .cal-emodal .tk-form.tk-sheet { border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 14px; background: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.4); }
+.cal-emodal.anchored .tk-form.tk-sheet { border-radius: 14px; }
+.cal-emodal.anchored .tk-form.tk-sheet[data-arrow]::after { border-color: rgba(255, 255, 255, 0.1); }
+.tk-sheet-x { border-radius: 7px; background: rgba(255, 255, 255, 0.05); }
+.tk-sheet-x:hover { background: rgba(255, 255, 255, 0.09); }
+.tk-box { border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 10px; background: rgba(255, 255, 255, 0.025); }
+.tk-sheet-rows .tk-box .tk-mi:hover { background: rgba(255, 255, 255, 0.04); }
+.tk-sheet .tk-create { border-radius: 8px; }
+.tk-sheet .tk-f-notes { transition: height 220ms var(--spring); }
+/* Tags: Linie zwischen Suche und Liste; „„X“ hinzufügen“ wie eine normale Zeile, links */
+.tk-sheet-rows .tk-box .tk-tag-row { margin: 0 -5px 4px; padding: 0 13px 5px; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.tk-sheet-rows .tk-box .tk-mi.tk-tag-add { justify-content: flex-start; color: var(--text-2); }
+.tk-sheet-rows .tk-box .tk-mi.tk-tag-add svg { color: var(--text-3); }
+/* Datum: „Kein Datum“ unter dem Kalender, mit Haken, wenn keins gesetzt ist */
+.tk-sheet-rows .tk-box .tk-date-none { margin-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.07); border-radius: 0 0 7px 7px; padding-top: 1px; height: 34px; }
+/* Liste */
+.tk-rows-in .tk-row { display: block; min-height: 0; padding: 0; }
+.tk-row-line { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 0 16px; }
+.tk-rows-in .tk-row .tk-ck { width: 20px; height: 20px; pointer-events: auto; cursor: pointer; }
+.tk-rows-in .tk-row .tk-ck:disabled { cursor: default; }
+.tk-rows-in .tk-row-title { flex: 1; min-width: 0; overflow: hidden; color: var(--text); font-size: 15px; font-weight: 500; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.tk-rows-in .tk-row.done .tk-row-title { color: var(--text-3); }
+.tk-row-dog { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
+.tk-row-dog svg { image-rendering: pixelated; }
+.tk-row-due { flex: none; color: var(--text-3); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.tk-row-due.today { color: #6aa8ff; } .tk-row-due.late { color: #f07a6e; }
+.tk-row-prio { flex: none; display: grid; place-items: center; width: 18px; }
+.tk-row-more { height: 0; overflow: hidden; }
+.tk-row.open .tk-row-more { height: auto; }
+.tk-row-more-in { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 0 16px 14px 48px; cursor: default; }
+.tk-row-notes { display: block; -webkit-line-clamp: unset; overflow: visible; margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tk-row-notes.empty { color: var(--text-4); }
+.tk-row-tags { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--text-3); font-size: 12px; }
+.tk-row-tags .tk-sub-tag { display: inline-flex; align-items: center; gap: 5px; }
+.tk-more-agent { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 12.5px; }
+.tk-more-agent .tk-dog svg { image-rendering: pixelated; }
+.tk-row-acts { display: flex; gap: 6px; }
+.tk-more-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 8px; background: none; color: var(--text-2); font: 500 12.5px Inter, sans-serif; cursor: pointer; transition: border-color 120ms ease, color 120ms ease; }
+.tk-more-btn:hover { border-color: rgba(255, 255, 255, 0.16); color: var(--text); }
+.tk-rows-in .tk-row.open { background: rgba(255, 255, 255, 0.018); }
+.tk-sheet-main .tk-f-notes { flex: none; max-height: 200px; } /* flex: 1 in der Spalte hat die Höhe ignoriert – Feld blieb eine Zeile hoch */

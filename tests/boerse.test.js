@@ -307,7 +307,7 @@ test('Börsen-Agent: „In was kann ich aktuell am besten investieren?“ → Sc
   const m = text.match(/```chancen\n([\s\S]*?)\n```/);
   assert.ok(m, 'Chancen-Block hängt an');
   const data = JSON.parse(m[1]);
-  assert.deepEqual(data.picks.map((p) => `${p.symbol}:${p.verdict}`), ['RHM.DE:kaufen', 'FTNT:kaufen']);
+  assert.deepEqual(data.picks.map((p) => `${p.symbol}:${p.verdict}`), ['RHM.DE:kaufen'], 'Trend-Kaufsignale (FTNT) sind nicht die Strategie des Nutzers');
 });
 
 

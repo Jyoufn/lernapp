@@ -358,8 +358,7 @@ const Calendar = (() => {
     const form = emodal.querySelector('form');
     UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
-    const grow = () => { notes.style.height = '0px'; notes.style.height = `${Math.max(20, Math.min(notes.scrollHeight, 160))}px`; };
-    notes.addEventListener('input', grow);
+    const grow = UIKit.autoGrow(notes); // wächst beim Schreiben auf mind. 5 Zeilen
 
     const draw = () => {
       const d = new Date(`${e.date}T12:00:00`);

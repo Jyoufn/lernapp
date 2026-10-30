@@ -208,21 +208,48 @@ const Tasks = (() => {
     if (r.state === 'queued' || r.state === 'running') return '<span class="tk-state run"><i class="tk-spin"></i>arbeitet …</span>';
     return `<span class="tk-state wait"><span class="tk-dog">${dog(t.agent, 20)}</span>${AGENT_NAMES[t.agent]}</span>`;
   }
+  const openRows = new Set(); // aufgeklappte Zeilen bleiben beim Neuzeichnen offen
+  // Zeile: links der Kreis zum Abhaken, daneben groß der Titel; rechts das Datum und ganz rechts das Prioritäts-Icon.
+  // Klick auf die Zeile klappt darunter die Beschreibung (und Tags, Agent, „Bearbeiten“) weich auf
   function row(t) {
     const done = t.status === 'done', prio = byId(PRIOS, t.prio), du = dueInfo(t.date, done);
     const ts = t.tags.map(tagOf).filter(Boolean);
     const el = document.createElement('div');
-    el.className = `tk-row${done ? ' done' : ''}`;
+    el.className = `tk-row${done ? ' done' : ''}${openRows.has(t.id) ? ' open' : ''}`;
     el.dataset.id = t.id;
     el.tabIndex = 0;
-    const sub = [
-      du ? `<span class="tk-sub-due${du.cls}">${du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text}</span>` : '',
-      FLAG[prio.id] ? `<span class="tk-sub-prio" style="--c:${FLAG[prio.id]}">${fi('flag', 10)}${prio.name}</span>` : '',
-      ...ts.slice(0, 2).map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`),
-      t.notes ? `<span class="tk-sub-note">${esc(t.notes)}</span>` : '',
-    ].filter(Boolean).join('<i class="tk-sep">·</i>');
-    el.innerHTML = `<div class="tk-row-main"><b class="tk-row-title">${esc(t.title)}</b>${sub ? `<small class="tk-row-sub">${sub}</small>` : ''}</div>${stateHtml(t)}`;
+    el.setAttribute('aria-expanded', String(openRows.has(t.id)));
+    const st = ckState(t), busy = st === 'run';
+    const dueText = du ? (du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text) : '';
+    const agentBit = agents && t.agent && AGENT_NAMES[t.agent] && !done ? `<span class="tk-row-dog" title="${esc(AGENT_NAMES[t.agent])}${busy ? ' arbeitet …' : ''}">${dog(t.agent, 18)}</span>` : '';
+    const r = t.run || {};
+    const agentLine = agents && t.agent && AGENT_NAMES[t.agent] ? `<div class="tk-more-agent"><span class="tk-dog">${dog(t.agent, 18)}</span><span>${esc(AGENT_NAMES[t.agent])}${r.state === 'done' ? ' · fertig' : r.state === 'failed' ? ' · hat nicht geklappt' : busy ? ' · arbeitet …' : ''}</span>`
+      + (r.state === 'done' ? `<button type="button" class="tk-more-btn" data-result="${t.id}">${fi(t.output === 'doc' ? 'file' : 'chat', 12)}${t.output === 'doc' ? 'Dokument' : 'Chat'} öffnen</button>` : r.state === 'failed' ? `<button type="button" class="tk-more-btn" data-retry="${t.id}">${fi('refresh', 11)}Nochmal</button>` : '') + '</div>' : '';
+    el.innerHTML = `<div class="tk-row-line">
+        <button type="button" class="tk-ck s-${st}" data-check aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}" ${busy ? 'disabled' : ''}>${CHECK}</button>
+        <b class="tk-row-title">${esc(t.title)}</b>
+        ${agentBit}
+        ${dueText ? `<span class="tk-row-due${du.cls}">${dueText}</span>` : ''}
+        <span class="tk-row-prio" title="${prio.id === 'none' ? 'Keine Priorität' : `Priorität: ${prio.name}`}">${prio.id === 'none' ? '' : prioIcon(prio.id, 15)}</span>
+      </div>
+      <div class="tk-row-more"><div class="tk-row-more-in">
+        <p class="tk-row-notes${t.notes ? '' : ' empty'}">${t.notes ? esc(t.notes) : 'Keine Beschreibung'}</p>
+        ${ts.length ? `<div class="tk-row-tags">${ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}</div>` : ''}
+        ${agentLine}
+        <div class="tk-row-acts"><button type="button" class="tk-more-btn" data-edit>${fi('pencil', 11)}Bearbeiten</button></div>
+      </div></div>`;
     return el;
+  }
+  // Auf-/Zuklappen läuft über die Höhe (wie die Chancen-Karten)
+  function toggleRow(el) {
+    const id = el.dataset.id, open = !el.classList.contains('open');
+    const box = el.querySelector('.tk-row-more'), from = box.offsetHeight;
+    box.getAnimations().forEach((a) => a.cancel());
+    el.classList.toggle('open', open); el.setAttribute('aria-expanded', String(open));
+    if (open) openRows.add(id); else openRows.delete(id);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const to = box.offsetHeight;
+    box.animate([{ height: `${from}px` }, { height: `${to}px` }], { duration: open ? 420 : 320, easing: open ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)' });
   }
   function renderList() {
     const open = tasks.filter((t) => t.status !== 'done' && matches(t));
@@ -264,9 +291,8 @@ const Tasks = (() => {
     if (!el) { render(); return; }
     // erst der Haken, dann gleitet die Zeile weich weg und taucht im anderen Block auf
     el.classList.toggle('done', nowDone);
-    el.querySelector('.tk-state')?.remove();
-    if (nowDone) el.insertAdjacentHTML('beforeend', stateHtml(t));
-    el.querySelector('.tk-state')?.classList.add('pop');
+    const ck = el.querySelector('.tk-ck');
+    if (ck) ck.className = `tk-ck s-${nowDone ? 'done' : 'open'} pop`;
     el.classList.add('leaving');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     setTimeout(() => { render(); board.querySelector(`.tk-row[data-id="${id}"]`)?.classList.add('fresh'); }, reduce ? 0 : 420);
@@ -334,7 +360,7 @@ const Tasks = (() => {
         <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
       </div>
       <div class="tk-sheet-rows">
-        ${pill('date', `<div class="tk-cal"></div><button type="button" class="tk-date-clear" data-qdate="">Datum entfernen</button>`, 'date')}
+        ${pill('date', `<div class="tk-cal"></div><button type="button" class="tk-mi tk-date-none" data-qdate=""><span class="tk-mi-ic">${fi('x', 11)}</span><span>Kein Datum</span>${fi('check', 12)}</button>`, 'date')}
         ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}"><span class="tk-mi-ic">${prioIcon(p.id, 15)}</span><span>${p.id === 'none' ? 'Keine Priorität' : p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
@@ -373,8 +399,9 @@ const Tasks = (() => {
     const form = modal.querySelector('form');
     if (listMode) UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
-    const grow = () => { notes.style.height = listMode ? '0px' : 'auto'; notes.style.height = `${Math.max(listMode ? 20 : 0, Math.min(notes.scrollHeight, 200))}px`; };
-    notes.addEventListener('input', grow);
+    // Liste: Beschreibung wächst beim Schreiben auf mind. 5 Zeilen (UIKit.autoGrow); Board: wie bisher
+    const grow = listMode ? UIKit.autoGrow(notes) : () => { notes.style.height = 'auto'; notes.style.height = `${Math.min(notes.scrollHeight, 200)}px`; };
+    if (!listMode) notes.addEventListener('input', grow);
 
     /* Pillen beschriften */
     const draw = () => {
@@ -413,7 +440,7 @@ const Tasks = (() => {
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
         const go = form.querySelector('[data-act="go"]');
         if (go) { go.hidden = !t.agent; go.innerHTML = `${fi('sparkle', 12)}An ${AGENT_NAMES[t.agent] || 'Agent'} geben`; }
-        const clr = form.querySelector('.tk-date-clear'); if (clr) clr.hidden = !t.date; // „Kein Datum“: einfach nichts wählen oder entfernen
+        form.querySelector('.tk-date-none')?.classList.toggle('on', !t.date); // „Kein Datum“ immer wählbar, Haken, wenn keins gesetzt ist
         form.querySelector('.tk-make')?.classList.toggle('ghost', !!(go && !go.hidden)); // Agent gewählt: „An … geben“ ist der Hauptknopf
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
         set('output', [fi(t.output === 'doc' ? 'file' : 'chat', 14), `Ergebnis als ${t.output === 'doc' ? 'Dokument' : 'Chat'}`], false);
@@ -684,10 +711,22 @@ const Tasks = (() => {
       return;
     }
     if (e.target.closest('.tk-quick')) return;
+    if (listMode) {
+      const rowEl = e.target.closest('.tk-row');
+      if (!rowEl) return;
+      if (e.target.closest('[data-check]')) { if (!e.target.closest('[data-check]').disabled) toggleDone(rowEl.dataset.id); return; }
+      if (e.target.closest('[data-edit]')) { edit(rowEl.dataset.id); return; }
+      if (e.target.closest('.tk-row-more') && rowEl.classList.contains('open')) return; // im aufgeklappten Teil: Text markieren u. Ä.
+      toggleRow(rowEl);
+      return;
+    }
     const c = e.target.closest('.tk-card, .tk-row');
     if (c) edit(c.dataset.id);
   });
-  board.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('.tk-card, .tk-row')) edit(e.target.dataset.id); });
+  board.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !e.target.matches('.tk-card, .tk-row')) return;
+    if (listMode) toggleRow(e.target); else edit(e.target.dataset.id);
+  });
 
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
@@ -737,7 +776,7 @@ const Tasks = (() => {
         const fresh = [...justDone].map((id) => board.querySelector(`.tk-row[data-id="${id}"]`)).filter(Boolean);
         justDone.clear();
         if (fresh.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          fresh.forEach((r) => { const t = tasks.find((x) => x.id === r.dataset.id); r.querySelector('.tk-state')?.remove(); r.insertAdjacentHTML('beforeend', stateHtml(t)); r.querySelector('.tk-state').classList.add('pop'); r.classList.add('done'); });
+          fresh.forEach((r) => { const ck = r.querySelector('.tk-ck'); if (ck) ck.className = 'tk-ck s-done pop'; r.classList.add('done'); });
           setTimeout(() => { fresh.forEach((r) => r.classList.add('leaving')); }, 900);
           setTimeout(render, 1300);
         } else render();
