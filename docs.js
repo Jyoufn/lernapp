@@ -1274,6 +1274,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           <div class="dc-cover"><div class="dc-cover-img"></div><div class="dc-cover-acts">
             <button type="button" data-act="cover">${fi('image', 12)}Cover ändern</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
           <button type="button" class="dc-icon" data-act="icon" aria-label="Icon ändern" title="Icon ändern" hidden><span class="dc-icon-g"></span></button>
+          <div class="dc-projrow"><span class="tk-pop dc-mpop dc-ppop"><button type="button" class="dc-pchip" data-popen></button>
+            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Projekt suchen oder neu" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span></div>
           <textarea class="dc-title-in" rows="1" placeholder="Titel" maxlength="160" aria-label="Titel">${esc(doc.title)}</textarea>
           <textarea class="dc-sub-in" rows="1" placeholder="Beschreibung hinzufügen …" maxlength="400" aria-label="Beschreibung">${esc(doc.subtitle || '')}</textarea>
           <div class="dc-meta"><button type="button" class="dc-meta-toggle" aria-expanded="false"><span class="dc-sep"></span><span class="dc-meta-hint">Infos${fi('chevron-down', 10)}</span></button><div class="dc-meta-body"><div class="dc-meta-in"></div></div></div>
@@ -1284,7 +1286,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         <nav class="prompt-nav dc-nav" aria-label="Überschriften in diesem Dokument"></nav>
         <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>
         <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><i></i></button></div>`;
-      wireMeta(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
+      wireMeta(); wireProj(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
       grow(view.querySelector('.dc-title-in')); grow(view.querySelector('.dc-sub-in'));
       if (writing.has(doc.id)) busy('KI schreibt …');
       if (api.focusTitle && !focusOn) { api.focusTitle = false; setTimeout(() => view.querySelector('.dc-title-in')?.focus(), 60); }
@@ -1521,8 +1523,6 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const row = (ic, label, value) => `<div class="dc-mrow"><span class="dc-mlabel">${fi(ic, 15)}${label}</span><span class="dc-mval">${value}</span></div>`;
       box.innerHTML = row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
         + row('clock', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
-        + row('folder', 'Projekt', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${projOf(doc.projectId) ? '' : ' empty'}" data-mopen="proj">${projOf(doc.projectId) ? `<i class="tag-dot" style="background:${projOf(doc.projectId).c}"></i>${esc(projOf(doc.projectId).name)}` : 'Kein Projekt'}</button>
-            <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Projekt suchen oder neu" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span>`)
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
         + row('hash', 'Tags', `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
@@ -1532,7 +1532,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         + row('list', 'Abschnitte', String(heads));
     }
     function drawMetaTags() {
-      const list = view.querySelector('.dc-meta .tk-tag-list:not(.dc-proj-list)'), inp = view.querySelector('.dc-meta .tk-tag-in:not(.dc-proj-in)'); if (!list) return;
+      const list = view.querySelector('.dc-meta .tk-tag-list'), inp = view.querySelector('.dc-meta .tk-tag-in'); if (!list) return;
       const q = inp.value.trim().toLowerCase(), have = doc.tags || [];
       const found = tags.filter((g) => g.name.toLowerCase().includes(q));
       // Tag bearbeiten: Name, Farbe, Löschen
@@ -1562,10 +1562,39 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><i style="background:${p.c}"></i><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml">Noch keine Projekte – Namen eintippen</span>' : '');
     }
-    const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawMeta(); };
+    function drawProj() {
+      const b = view.querySelector('.dc-pchip'); if (!b || !doc) return;
+      const pr = projOf(doc.projectId);
+      b.classList.toggle('set', !!pr);
+      if (pr) b.style.setProperty('--c', pr.c); else b.style.removeProperty('--c');
+      b.innerHTML = pr ? `${fi('folder', 12)}<span>${esc(pr.name)}</span>${fi('chevron-down', 9)}` : `${fi('folder', 13)}<span>Projekt hinzufügen</span>`;
+      view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
+    }
+    const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawProj(); view.querySelector('.dc-ppop')?.classList.remove('open'); };
+    function wireProj() {
+      const box = view.querySelector('.dc-projrow'); if (!box) return;
+      drawProj();
+      const pop = box.querySelector('.dc-ppop'), inp = box.querySelector('.dc-proj-in');
+      box.addEventListener('click', (e) => {
+        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
+        const pj = e.target.closest('[data-mproj]'); if (pj) { setProj(pj.dataset.mproj); return; }
+        if (e.target.closest('[data-mproj-new]')) newProj(inp.value.trim());
+      });
+      inp.addEventListener('input', drawMetaProj);
+      inp.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Escape') { pop.classList.remove('open'); return; }
+        if (e.key !== 'Enter') return;
+        e.preventDefault();
+        const name = inp.value.trim(); if (!name) return;
+        const hit = projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
+        if (hit) setProj(hit.id); else newProj(name);
+      });
+      document.addEventListener('pointerdown', (e) => { if (box.isConnected && !box.contains(e.target)) pop.classList.remove('open'); });
+    }
     const newProj = (name) => { const pr = { id: newId('p'), name: name.slice(0, 40), c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
-    const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in:not(.dc-proj-in))');
+    const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in)');
     // Klick auf den Strich klappt die Infos auf/zu (Zustand wird gemerkt)
     function wireMeta() {
       const meta = view.querySelector('.dc-meta'); if (!meta) return;
@@ -1587,17 +1616,13 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (op) {
           const pop = op.closest('.dc-mpop'), open = !pop.classList.contains('open');
           closeMenus(); pop.classList.toggle('open', open);
-          if (open && op.dataset.mopen === 'proj') { const inp = pop.querySelector('.dc-proj-in'); inp.value = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); }
           if (open && op.dataset.mopen === 'tags') { const inp = pop.querySelector('.tk-tag-in'); inp.value = ''; drawMetaTags(); setTimeout(() => inp.focus(), 30); }
           return;
         }
-        const pj = e.target.closest('[data-mproj]');
-        if (pj) { setProj(pj.dataset.mproj); return; }
-        if (e.target.closest('[data-mproj-new]')) { newProj(view.querySelector('.dc-proj-in').value.trim()); return; }
         const pr = e.target.closest('[data-prio]');
         if (pr) { if (pr.dataset.prio === 'none') delete doc.priority; else doc.priority = pr.dataset.prio; touch(doc); changed(); drawMeta(); return; }
         // Tags anlegen (Farbe wählen) und bearbeiten
-        if (e.target.closest('[data-madd]')) { metaNew = view.querySelector('.dc-meta .tk-tag-in:not(.dc-proj-in)').value.trim(); drawMetaTags(); return; }
+        if (e.target.closest('[data-madd]')) { metaNew = view.querySelector('.dc-meta .tk-tag-in').value.trim(); drawMetaTags(); return; }
         const nc = e.target.closest('[data-mnew-color]');
         if (nc && metaNew) {
           const g = { id: newId('g'), name: metaNew, c: nc.dataset.mnewColor };
@@ -1640,21 +1665,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (!e.target.closest('.dc-mpop')) closeMenus();
       });
       meta.addEventListener('input', (e) => {
-        if (e.target.matches('.dc-proj-in')) { drawMetaProj(); return; }
         if (e.target.matches('.tk-tag-in')) { metaNew = ''; metaEdit = null; drawMetaTags(); }
         if (e.target.matches('[data-mname]')) { const g = tagOf(metaEdit); if (g) { g.name = e.target.value.trim() || g.name; saveTags(); } }
       });
       meta.addEventListener('keydown', (e) => {
-        if (e.target.matches('.dc-proj-in')) {
-          e.stopPropagation();
-          if (e.key === 'Escape') { closeMenus(); return; }
-          if (e.key !== 'Enter') return;
-          e.preventDefault();
-          const name = e.target.value.trim(); if (!name) return;
-          const hit = projects.find((p) => p.name.toLowerCase() === name.toLowerCase());
-          if (hit) setProj(hit.id); else newProj(name);
-          return;
-        }
         if (!e.target.matches('.tk-tag-in')) return;
         e.stopPropagation();
         if (e.key === 'Escape') { closeMenus(); return; }

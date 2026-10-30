@@ -18,7 +18,8 @@
 - Editor: Cover, Icon, Titel, Beschreibung, „Infos ⌄“, Inhalt (contenteditable), Überschriften h2–h4 einklappbar mit Griff links, Slash-Menü, Format-Menü bei Markierung (Ask AI), Rechtsklick-/„•••“-Menü für Blöcke.
 - Oben rechts: Fokusmodus (`#f-focus`, Kreis aus vier Bögen, ohne Rand/Fläche), Einstellungen (Regler), Seitenfenster (Dokument-Chat).
 - **Fokusmodus**: nur Titel + Inhalt, Sidebar/Leisten/Griffe/Seitenfenster weg, **kein Browser-Vollbild** (nur in der App), nicht bearbeitbar; oben mittig ein kleiner Kasten mit rundem Kreis → Klick (oder Esc) beendet.
-- Infos: Erstellt, Bearbeitet, **Projekt** (suchen/wählen/neu anlegen, `doc.projectId`, `projects` mit Farbe), Priorität, Tags, Umfang, Abschnitte. Sidebar „Dokumente“ zeigt alle (auch mit Projekt).
+- **Projekt** als Pille über dem Titel (wie Capacities-Vorlage „Project ⌄“): gesetzt = getönt in der Projektfarbe mit Ordner + Name + ⌄, leer = leises „Projekt hinzufügen“ (nur beim Darüberfahren); Menü: suchen, wählen (nochmal = entfernen), neu anlegen (`doc.projectId`, `projects` mit Farbe). Keine Collections, kein „Wide layout“.
+- Infos: Erstellt, Bearbeitet, Priorität, Tags, Umfang, Abschnitte. Sidebar „Dokumente“ zeigt alle (auch mit Projekt).
 - „Icon/Cover hinzufügen“: nur Text, keine Fläche/kein Rand (auch nicht nach dem Klick). Dokument-Icons `#d-…` (155, neu u. a. note, checklist, inbox, quote, feather, anchor, infinity, hashtag, flag2, rainbow).
 - Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat.
 

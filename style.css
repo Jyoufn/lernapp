@@ -8899,3 +8899,17 @@ div.tl4-h { cursor: default; }
 /* „Icon hinzufügen“ / „Cover hinzufügen“: keine Fläche, kein Rand – auch nicht, solange darauf geklickt wurde */
 .dc-add, .dc-add:hover, .dc-add:focus, .dc-add:active, .dc-add:focus-visible { background: none; border: 0; box-shadow: none; outline: none; -webkit-tap-highlight-color: transparent; }
 .dc-add:hover { color: var(--text-2); }
+
+/* Projekt über dem Titel (30.10., nach Vorlage): gesetzt = getönte Pille in der Projektfarbe mit Ordner + Name + ⌄;
+   leer = leiser Text wie „Icon hinzufügen“, nur beim Darüberfahren sichtbar */
+.dc-projrow { position: relative; z-index: 6; display: flex; align-items: center; min-height: 26px; margin: 2px 0 6px; }
+.dc-pchip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 0; border-radius: 8px; background: none; color: var(--text-4); font: 500 12.5px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, opacity 160ms ease; }
+.dc-pchip:not(.set) { margin-left: -9px; opacity: 0; }
+.dc-page:hover .dc-pchip:not(.set), .dc-ppop.open .dc-pchip:not(.set), .dc-pchip:focus-visible { opacity: 1; }
+.dc-pchip:not(.set):hover { color: var(--text-2); }
+.dc-pchip.set { background: color-mix(in srgb, var(--c) 14%, transparent); color: color-mix(in srgb, var(--c) 75%, #fff); }
+.dc-pchip.set svg:last-child { opacity: 0.7; }
+.dc-ppop .dc-mmenu { min-width: 230px; }
+.dc-editor.focus .dc-pchip:not(.set) { display: none; }
+.dc-editor.focus .dc-projrow { pointer-events: none; }
+@media (hover: none) { .dc-pchip:not(.set) { opacity: 1; } }
