@@ -9066,3 +9066,7 @@ div.tl4-h { cursor: default; }
 .st-wsm-foot > .st-btn { margin-left: auto; }
 /* Hell: Schrift auf blauen Knöpfen bleibt weiß (vor der Umkehrung schwarz) */
 [data-theme="light"] :is(.tk-new, .cl-new, .cal-new, .tk-make, .as-go, .send-btn, .dcc-send, .st-btn.primary) { color: #000; }
+/* Fokusmodus v3: Icon, Titel, Infos-Tabelle und Inhalt bleiben; weg sind Leisten, Projekt/Icon/Cover hinzufügen, Tags und das Cover-Bild */
+.dc-editor.focus .dc-meta { display: block !important; }
+.dc-editor.focus .dc-tagline, .dc-editor.focus .dc-cover { display: none !important; }
+.dc-editor.focus .dc-page.with-cover .dc-icon { margin-top: 0; }
