@@ -33,7 +33,15 @@ const ChancenCard = (() => {
     const nums = [p.type ? `Muster: ${p.type}` : '', crv ? `Chance : Risiko ${nf(crv, 1)} : 1` : '', p.hit ? `Trefferquote ${p.hit}` : '', p.stop ? `Stopp ${eur(p.stop)}` : ''].filter(Boolean);
     return `<b class="chn-why-h">${v === 'kaufen' ? 'Warum kaufen?' : 'Warum beobachten?'}</b><ul>${[...keys, ...nums].map((k) => `<li>${esc(k)}</li>`).join('')}</ul>`;
   }
-  function row(p) {
+  // „Stand“ unten links in der aufgeklappten Karte: wann der Radar gerechnet hat (und wie viele Werte)
+  function standText(d) {
+    const t = d?.asOf ? new Date(d.asOf) : null;
+    if (!t || Number.isNaN(+t)) return '';
+    const today = new Date().toDateString() === t.toDateString();
+    const when = `${today ? 'heute' : t.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}, ${t.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
+    return `Stand ${when}${d.checked ? ` · ${Number(d.checked).toLocaleString('de-DE')} Werte geprüft` : ''}`;
+  }
+  function row(p, stand = '') {
     const crv = crvOf(p), v = p.verdict === 'kaufen' ? 'kaufen' : 'beobachten';
     const meta = [p.sector, p.type].filter(Boolean).map(esc).join(' · ');
     const facts = [crv ? `<span>Chance : Risiko&nbsp; <b>${nf(crv, 1)} : 1</b></span>` : '', p.hit ? `<span>Trefferquote&nbsp; <b>${esc(p.hit)}</b></span>` : ''].filter(Boolean).join('<i class="chn-dot"></i>');
@@ -54,6 +62,7 @@ const ChancenCard = (() => {
         ${facts ? `<div class="chn-facts">${facts}</div>` : ''}
         <div class="chn-chart"><div class="chn-chart-in"><div class="chn-chart-host"></div>
           <div class="chn-bear-row"><div class="chn-why-box" hidden>${whyBox(p, v)}</div>
+            <span class="chn-asof">${esc(stand)}</span>
             <button type="button" class="chn-bear" data-why aria-label="Warum ${LABEL[v]}?" aria-expanded="false">${window.PixelDogs?.svg ? PixelDogs.svg('boerse', 20) : ''}</button></div>
         </div></div>
       </div>`;
@@ -63,22 +72,44 @@ const ChancenCard = (() => {
     const picks = (d.picks || []).filter((p) => p.verdict !== 'meiden');
     if (!picks.length) return '<div class="chn-empty">Gerade erfüllt kein Wert alle Bedingungen – heute lieber abwarten.</div>';
     const buy = picks.filter((p) => p.verdict === 'kaufen'), watch = picks.filter((p) => p.verdict !== 'kaufen').slice(0, 10);
-    return [...buy, ...watch].map(row).join('');
+    const stand = standText(d);
+    return [...buy, ...watch].map((p) => row(p, stand)).join('');
   }
 
   function figure(raw) {
     const spec = parse(raw);
     const fig = document.createElement('div');
     fig.className = 'chn';
-    const enter = () => fig.querySelectorAll('.chn-pick').forEach((c, i) => window.enterOnce?.(c, { delay: Math.min(i, 5) * 60 }));
+    // Erscheinen: erst, wenn die Karten wirklich im Chat hängen (sonst läuft die Animation schon, bevor man sie sieht) –
+    // nacheinander, weich von unten, leicht wachsend
+    const enter = () => {
+      const go = () => fig.querySelectorAll('.chn-pick').forEach((c, i) => window.enterOnce?.(c, { y: 12, scale: 0.985, delay: Math.min(i, 6) * 70, dur: 620 }));
+      let n = 0; const wait = () => (fig.isConnected || ++n > 30 ? go() : requestAnimationFrame(wait));
+      wait();
+    };
     if (Array.isArray(spec.picks)) { fig.innerHTML = body(spec); enter(); } else load().then((d) => { fig.innerHTML = body(d); enter(); });
     // Klick auf eine Karte: darunter klappt der Aktienchart auf (Kursdaten per Rechnung, keine KI); nochmal Klick klappt zu
+    // Auf-/Zuklappen per Skript: Höhe läuft ruhig von 0 auf die volle Höhe (keine Feder, die sofort hochschießt), der Inhalt
+    // blendet leicht verzögert ein; der Chart-Kopf hat seine Höhe schon beim Laden (style.css), damit danach nichts nachrutscht
+    const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
     const toggle = (card) => {
       const open = !card.classList.contains('open');
-      card.classList.toggle('open', open);
-      card.setAttribute('aria-expanded', String(open));
+      const box = card.querySelector('.chn-chart'), inner = box.querySelector('.chn-chart-in');
+      const from = box.offsetHeight;
+      box.getAnimations().forEach((a) => a.cancel()); inner.getAnimations().forEach((a) => a.cancel());
       const host = card.querySelector('.chn-chart-host');
       if (open && !host.firstChild && window.StockChart) host.append(StockChart.figure({ symbol: card.dataset.sym, name: card.dataset.name, range: '6M' }));
+      card.classList.toggle('open', open);
+      card.setAttribute('aria-expanded', String(open));
+      if (reduced()) return;
+      if (open) {
+        const h = box.offsetHeight;
+        box.animate([{ height: `${from}px` }, { height: `${h}px` }], { duration: 560, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+        inner.animate([{ opacity: 0, transform: 'translateY(-8px)' }, { opacity: 1, transform: 'none' }], { duration: 440, delay: 70, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'backwards' });
+      } else {
+        box.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 420, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+        inner.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: 'ease' });
+      }
     };
     fig.addEventListener('click', (e) => {
       const why = e.target.closest('[data-why]');

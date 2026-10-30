@@ -8513,3 +8513,21 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .chats-btn.on { opacity: 0; visibility: hidden; pointer-events: none; }
 /* Agenten-Empfehlung im Chat („Dafür ist … da“) und über dem Eingabefeld: Fläche und Rand wie das Eingabefeld */
 .agent-suggest, .agent-hint { background: var(--field-bg, #1c1c1c); border-color: var(--field-border, #272727); }
+
+/* Chancen-Karten v3: Aufklappen per Skript (chancen-card.js) – Höhe statt Grid-Feder, Inhalt ohne eigene Übergänge;
+   Chart-Kopf hat beim Laden schon seine volle Höhe; Bär nur umrandet (keine Fläche); unten links „Stand … · n Werte geprüft“ */
+.chn-pick .chn-chart, .chn-pick.open .chn-chart { display: block; height: 0; margin-top: 0; overflow: hidden; opacity: 1; transition: none; }
+.chn-pick.open .chn-chart { height: auto; }
+.chn-chart-in { min-height: 0; overflow: visible; padding-top: 8px; }
+:is(.chn-chart, .bst-chart) .stk-head { min-height: 70px; align-items: flex-start; }
+.chn-bear { background: none; border: 1px solid rgba(255, 255, 255, 0.12); transition: border-color 140ms ease, transform 160ms var(--spring); }
+.chn-bear:hover { background: none; border-color: rgba(255, 255, 255, 0.22); }
+.chn-bear.on { background: none; border-color: var(--accent); }
+.chn-bear-row { align-items: center; }
+.chn-asof { flex: 1; min-width: 0; overflow: hidden; color: var(--text-4); font-size: 11.5px; white-space: nowrap; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.chn-why-box:not([hidden]) ~ .chn-asof { display: none; }
+.chn-bear-row:has(.chn-why-box:not([hidden])) { align-items: flex-end; }
+
+/* Prognose als Szenario-Fächer (stock-chart.js): Namen der Szenarien am Ende, „Prognose“ rechts oben */
+.stk-svg .stk-ax.end { text-anchor: end; }
+.stk-svg .stk-fc-l { font: 600 10.5px Inter, sans-serif; text-anchor: end; letter-spacing: 0.01em; paint-order: stroke; stroke: var(--main-bg, #171717); stroke-width: 3px; stroke-linejoin: round; }

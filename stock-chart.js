@@ -57,8 +57,40 @@ const StockChart = (() => {
     const z = 1.2816;
     const upW = f.high ? Math.max(0.0001, Math.log(f.high / (p0 * Math.exp(mu * steps)))) / Math.sqrt(steps) : z * sd;
     const dnW = f.low ? Math.max(0.0001, Math.log((p0 * Math.exp(mu * steps)) / f.low)) / Math.sqrt(steps) : z * sd;
-    return Array.from({ length: steps + 1 }, (_, k) => ({ k, mid: p0 * Math.exp(mu * k), hi: p0 * Math.exp(mu * k + upW * Math.sqrt(k)), lo: p0 * Math.exp(mu * k - dnW * Math.sqrt(k)) }));
+    const q50 = 0.6745 / z; // 50-%-Band im Verhältnis zum 80-%-Band
+    return Array.from({ length: steps + 1 }, (_, k) => ({ k, mid: p0 * Math.exp(mu * k), hi: p0 * Math.exp(mu * k + upW * Math.sqrt(k)), lo: p0 * Math.exp(mu * k - dnW * Math.sqrt(k)),
+      hi50: p0 * Math.exp(mu * k + upW * q50 * Math.sqrt(k)), lo50: p0 * Math.exp(mu * k - dnW * q50 * Math.sqrt(k)), sd: (upW + dnW) / 2 / z }));
   }
+  // Mögliche Verläufe für den Fächer: je Pfad ein Endpunkt, gleichmäßig über die Spanne verteilt (zwischen „Schwach“ und „Gut“),
+  // dorthin ein ruhiger Zufallsweg (Brücke: Rauschen, das am Ende wieder bei null ist) – bleibt im Fächer und sieht aus wie echte Kurse.
+  // Fester Startwert je Aktie → bei jedem Neuzeichnen (Live-Kurs alle 3 s) dieselben Linien
+  function samplePaths(fc, seedText) {
+    let seed = [...String(seedText)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 2147483647, 12345) || 1;
+    const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const gauss = () => { const u = Math.max(1e-9, rnd()), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); };
+    const N = fc.length - 1, last = fc[N], sd = (last.sd || 0.01) * 0.5;
+    const up = Math.log(last.hi / last.mid), dn = Math.log(last.mid / last.lo);
+    return [-0.85, -0.4, 0.05, 0.45, 0.9].map((q) => {
+      const endLog = q >= 0 ? up * q : dn * q;
+      let w = 0;
+      const walk = fc.map((_, k) => (k ? (w += sd * gauss()) : 0));
+      return fc.map((p, k) => p.mid * Math.exp((k / N) * endLog + walk[k] - (k / N) * walk[N]));
+    });
+  }
+  // Beschriftungen auseinanderschieben: ys = gewünschte Höhen, gap = Mindestabstand; die letzten „fixed“ Einträge bleiben stehen
+  // (z. B. die Marke des aktuellen Kurses) – zurück kommen die Höhen der übrigen in derselben Reihenfolge
+  function spread(ys, gap, movable = ys.length) {
+    const items = ys.map((y, i) => ({ y, i, fixed: i >= movable })).sort((a, b) => a.y - b.y);
+    for (let pass = 0; pass < 6; pass++) {
+      for (let j = 1; j < items.length; j++) {
+        const a = items[j - 1], b = items[j], need = gap - (b.y - a.y);
+        if (need <= 0) continue;
+        if (a.fixed && !b.fixed) b.y += need; else if (b.fixed && !a.fixed) a.y -= need; else if (!a.fixed && !b.fixed) { a.y -= need / 2; b.y += need / 2; }
+      }
+    }
+    return items.filter((x) => !x.fixed).sort((a, b) => a.i - b.i).map((x) => x.y);
+  }
+  let uidN = 0;
   // nächste Handelstage (ohne Wochenende) für die Beschriftung der Zukunft
   const futureTime = (t, k, weekly) => {
     const d = new Date(t);
@@ -98,7 +130,7 @@ const StockChart = (() => {
       </div>
       <div class="stk-plot"><div class="stk-tip" hidden></div><div class="stk-over" hidden></div></div>
       <div class="stk-foot"></div>`;
-    const st = { spec, range: spec.range, type: typePref(), data: null, hover: null, timer: 0, seq: 0 };
+    const st = { uid: ++uidN, spec, range: spec.range, type: typePref(), data: null, hover: null, timer: 0, seq: 0 };
     fig._stock = st;
     const plot = fig.querySelector('.stk-plot');
 
@@ -133,7 +165,7 @@ const StockChart = (() => {
       fig.querySelector('.stk-time').innerHTML = d.realtime ? `<i class="stk-live"></i>Echtzeit · ${clock(d.time)}` : `Stand ${clock(d.time)}`;
       fig.querySelector('.stk-title strong').textContent = st.spec.name || d.name || d.symbol;
       // keine Quellenangabe (Wunsch des Nutzers) – nur Geld/Brief und bei Prognosen der Hinweis
-      const foot = [d.bid && d.ask ? `Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : '', st.spec.forecast ? 'Prognose: Trend und Schwankung fortgeschrieben, Band = 80 % Wahrscheinlichkeit – keine Garantie' : ''].filter(Boolean).join(' · ');
+      const foot = [d.bid && d.ask ? `Geld ${eur(d.bid)} / Brief ${eur(d.ask)}` : '', st.spec.forecast ? 'Prognose: Gut · Basis · Schwach · Bänder 50 % / 80 % · grau = mögliche Verläufe · keine Garantie' : ''].filter(Boolean).join(' · ');
       fig.querySelector('.stk-foot').textContent = foot;
       fig.querySelector('.stk-foot').hidden = !foot;
       // Depot: Ergebnis der Position direkt im Chart (statt als Text darunter)
@@ -160,7 +192,11 @@ const StockChart = (() => {
       const weekly = st.range === '5J';
       const fSteps = st.spec.forecast && !['1T', '1W'].includes(st.range) ? Math.max(1, Math.round(HORIZON[st.spec.forecast.horizon] / (weekly ? 5 : 1))) : 0;
       const fc = fSteps ? forecastPath(bars, fSteps, st.spec.forecast) : null;
-      st.fc = fc ? fc.map((p) => ({ ...p, mid: p.mid * (d.price / fc[0].mid), lo: p.lo * (d.price / fc[0].mid), hi: p.hi * (d.price / fc[0].mid) })) : null;
+      const fk = fc ? d.price / fc[0].mid : 1;
+      st.fc = fc ? fc.map((p) => ({ ...p, mid: p.mid * fk, lo: p.lo * fk, hi: p.hi * fk, lo50: p.lo50 * fk, hi50: p.hi50 * fk })) : null;
+      // Szenario-Enden (Schwach / Basis / Gut) als Marken rechts an der Preis-Achse – Zahlen der Achse weichen ihnen aus
+      const fEnd = st.fc ? st.fc[st.fc.length - 1] : null;
+      const fcTags = fEnd ? [{ v: fEnd.hi, col: UP, label: 'Gut' }, { v: fEnd.mid, col: S20, label: 'Basis' }, { v: fEnd.lo, col: DOWN, label: 'Schwach' }] : [];
       const slots = n + (st.fc ? fSteps : 0);
       const iw = W - AXIS_R - PAD_L, step = iw / Math.max(slots, 1);
       const xOf = (i) => PAD_L + step * (i + 0.5);
@@ -183,12 +219,13 @@ const StockChart = (() => {
       const yNow = yOf(d.price);
       ticks.forEach((v) => {
         const y = yOf(v);
-        if (Math.abs(y - yNow) < 15) { svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' })); return; } // Marke des aktuellen Kurses verdeckt sonst die Zahl
+        if (Math.abs(y - yNow) < 15 || fcTags.some((t) => Math.abs(y - yOf(t.v)) < 15)) { svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' })); return; } // Marken (Kurs, Szenarien) verdecken sonst die Zahl
         svg.append(svgEl('line', { x1: PAD_L, x2: W - AXIS_R, y1: y, y2: y, class: 'stk-grid' }));
         const t = svgEl('text', { x: W - AXIS_R + 8, y: y + 4, class: 'stk-ax' }); t.textContent = nf(v, v >= 1000 ? 0 : dec(v)); svg.append(t);
       });
       // Zeit-Achse
-      const fTicks = st.fc ? [{ i: n - 1 + fSteps, label: new Date(futureTime(bars[n - 1].t, fSteps, weekly)).toLocaleDateString('de-DE', fSteps > 60 ? { month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' }) }] : [];
+      const fLabel = (k) => new Date(futureTime(bars[n - 1].t, k, weekly)).toLocaleDateString('de-DE', fSteps > 60 ? { month: 'short', year: 'numeric' } : { day: 'numeric', month: 'short' });
+      const fTicks = st.fc ? [...(fSteps >= 10 ? [{ i: n - 1 + Math.round(fSteps / 2), label: fLabel(Math.round(fSteps / 2)) }] : []), { i: n - 1 + fSteps, label: fLabel(fSteps) }] : [];
       [...xTicks(bars, st.range).filter((t) => !st.fc || t.i < n - 2), ...fTicks].forEach(({ i, label }) => {
         const x = xOf(i);
         svg.append(svgEl('line', { x1: x, x2: x, y1: 0, y2: H_PRICE, class: 'stk-grid v' }));
@@ -251,25 +288,55 @@ const StockChart = (() => {
           svg.append(svgEl('circle', { cx, cy, r: 2, fill: '#e6e6e6' }));
         }
       }
-      // Prognose: „Heute“-Strich, Band (80 %) und gestrichelter Mittelweg nach rechts
+      // Prognose als Szenario-Fächer: Zukunft leicht abgesetzt, „Heute“-Strich; helles Band = 80 %, dunkles = 50 % Wahrscheinlichkeit;
+      // blasse mögliche Verläufe; Gut (grün) / Basis (blau) / Schwach (rot) mit Endpunkt und Beschriftung. Beim ersten Zeichnen
+      // breitet sich alles weich von „Heute“ nach rechts aus (Maske), Live-Neuzeichnen setzt die Bewegung nur fort.
       if (st.fc) {
-        const x0 = xOf(n - 1);
+        const x0 = xOf(n - 1), xs = st.fc.map((p) => xOf(n - 1 + p.k)), xE = xs[xs.length - 1], end = st.fc[st.fc.length - 1];
+        const line = (arr) => `M${arr.map((v, j) => `${xs[j].toFixed(1)},${yOf(v).toFixed(1)}`).join(' L')}`;
+        const band = (up, dn) => `${line(up)} L${dn.map((v, j) => j).reverse().map((j) => `${xs[j].toFixed(1)},${yOf(dn[j]).toFixed(1)}`).join(' L')} Z`;
+        svg.append(svgEl('rect', { x: x0, y: 0, width: Math.max(0, W - AXIS_R - x0), height: H_PRICE, fill: '#ffffff', opacity: 0.022 }));
         svg.append(svgEl('line', { x1: x0, x2: x0, y1: 0, y2: H_PRICE, class: 'stk-today' }));
-        const tt = svgEl('text', { x: x0 + 5, y: 12, class: 'stk-ax' }); tt.textContent = 'Heute'; svg.append(tt);
-        const xs = st.fc.map((p) => xOf(n - 1 + p.k));
-        const band = `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(' L')} L${st.fc.slice().reverse().map((p, j) => `${xs[st.fc.length - 1 - j].toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(' L')} Z`;
-        svg.append(svgEl('path', { d: band, fill: S20, opacity: 0.13, class: 'stk-fc-band' }));
-        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.hi).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1, opacity: 0.35 }));
-        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.lo).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1, opacity: 0.35 }));
-        svg.append(svgEl('path', { d: `M${st.fc.map((p, j) => `${xs[j].toFixed(1)},${yOf(p.mid).toFixed(1)}`).join(' L')}`, fill: 'none', stroke: S20, 'stroke-width': 1.8, 'stroke-dasharray': '5 4', 'stroke-linecap': 'round', class: 'stk-fc-line' }));
-        const end = st.fc[st.fc.length - 1];
-        svg.append(svgEl('circle', { cx: xs[xs.length - 1], cy: yOf(end.mid), r: 3.5, fill: S20 }));
+        const tt = svgEl('text', { x: x0 + 6, y: 13, class: 'stk-ax' }); tt.textContent = `Heute · Prognose ${HORIZON_TEXT[st.spec.forecast.horizon] || ''}`.trim(); svg.append(tt);
+        const g = svgEl('g', { class: 'stk-fc' });
+        // Maske für das Ausbreiten (nur in den ersten 1,2 s nach dem ersten Zeichnen)
+        st.fcT0 ??= performance.now();
+        const since = performance.now() - st.fcT0, dur = 1200;
+        if (since < dur && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          const id = `stkfc${st.uid}`, cw = Math.max(1, W - x0);
+          const defs = svgEl('defs', {});
+          defs.innerHTML = `<clipPath id="${id}"><rect x="${x0 - 1}" y="-4" width="0" height="${H_PRICE + 8}"><animate attributeName="width" from="0" to="${cw}" dur="${dur}ms" begin="-${Math.round(since)}ms" fill="freeze" calcMode="spline" keyTimes="0;1" keySplines="0.22 1 0.36 1"/></rect></clipPath>`;
+          svg.append(defs);
+          g.setAttribute('clip-path', `url(#${id})`);
+        }
+        g.append(svgEl('path', { d: band(st.fc.map((p) => p.hi), st.fc.map((p) => p.lo)), fill: S20, opacity: 0.1 }));
+        g.append(svgEl('path', { d: band(st.fc.map((p) => p.hi50), st.fc.map((p) => p.lo50)), fill: S20, opacity: 0.14 }));
+        samplePaths(st.fc, `${st.spec.symbol}|${fSteps}`).forEach((path) => g.append(svgEl('path', { d: line(path), fill: 'none', stroke: '#d6deea', 'stroke-width': 1, opacity: 0.17, 'stroke-linejoin': 'round' })));
+        g.append(svgEl('path', { d: line(st.fc.map((p) => p.hi)), fill: 'none', stroke: UP, 'stroke-width': 1.3, 'stroke-dasharray': '4 4', opacity: 0.85 }));
+        g.append(svgEl('path', { d: line(st.fc.map((p) => p.lo)), fill: 'none', stroke: DOWN, 'stroke-width': 1.3, 'stroke-dasharray': '4 4', opacity: 0.85 }));
+        g.append(svgEl('path', { d: line(st.fc.map((p) => p.mid)), fill: 'none', stroke: S20, 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+        // Endpunkte und Namen der Szenarien (Namen links vom Punkt, dicht übereinander → auseinanderschieben)
+        const ends = fcTags.map((t) => ({ ...t, y: yOf(t.v) }));
+        ends.forEach((t) => g.append(svgEl('circle', { cx: xE, cy: t.y, r: t.label === 'Basis' ? 4 : 3, fill: t.label === 'Basis' ? '#171717' : t.col, stroke: t.col, 'stroke-width': t.label === 'Basis' ? 2 : 0 })));
+        const ly = spread(ends.map((t) => t.y), 14);
+        ends.forEach((t, i) => { const tx = svgEl('text', { x: xE - 9, y: ly[i] + 4, class: 'stk-fc-l', fill: t.col }); tx.textContent = t.label; g.append(tx); });
+        svg.append(g);
+        // Start: Ring am heutigen Kurs
+        svg.append(svgEl('circle', { cx: x0, cy: yOf(d.price), r: 3.5, fill: '#171717', stroke: S20, 'stroke-width': 1.8 }));
       }
       // aktueller Kurs: Linie + Marke rechts
       const yl = yOf(d.price), lc = upAll ? UP : DOWN;
       svg.append(svgEl('line', { x1: PAD_L, x2: st.fc ? xOf(n - 1) : W - AXIS_R, y1: yl, y2: yl, stroke: lc, 'stroke-dasharray': '2 3', 'stroke-width': 1, opacity: 0.7 }));
       svg.append(svgEl('rect', { x: W - AXIS_R + 2, y: yl - 9, width: AXIS_R - 4, height: 18, rx: 4, fill: lc }));
       const tl = svgEl('text', { x: W - AXIS_R + 8, y: yl + 4, class: 'stk-ax tag' }); tl.textContent = nf(d.price, dec(d.price)); svg.append(tl);
+      if (fcTags.length) {
+        // Szenario-Preise rechts, ausgewichen um die Kurs-Marke und untereinander (mind. 20 px)
+        const ys = spread([...fcTags.map((t) => yOf(t.v)), yl], 20, fcTags.length);
+        fcTags.forEach((t, i) => {
+          svg.append(svgEl('rect', { x: W - AXIS_R + 2, y: ys[i] - 9, width: AXIS_R - 4, height: 18, rx: 4, fill: t.col, opacity: 0.2 }));
+          const tx = svgEl('text', { x: W - AXIS_R + 8, y: ys[i] + 4, class: 'stk-ax', fill: t.col }); tx.textContent = nf(t.v, t.v >= 1000 ? 0 : dec(t.v)); svg.append(tx);
+        });
+      }
       // Fadenkreuz
       if (st.hover != null && bars[st.hover]) {
         const b = bars[st.hover], x = xOf(st.hover), y = yOf(b.c);
@@ -429,11 +496,11 @@ const StockChart = (() => {
 window.StockChart = StockChart;
 // Börsen-Karten blenden EINMAL ein – per Skript statt CSS: beim Weiterschreiben wird die Antwort bei jedem Schritt neu aufgebaut und die Karte
 // aus- und wieder eingehängt; eine CSS-Animation startet dabei jedes Mal neu (Flackern/Ruckeln), eine Skript-Animation läuft einfach weiter
-window.enterOnce = (node, { y = 8, delay = 0, dur = 520 } = {}) => {
+window.enterOnce = (node, { y = 8, delay = 0, dur = 520, scale = 1 } = {}) => {
   if (!node || node._entered) return node;
   node._entered = true;
   node.classList.add('shown');
-  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) node.animate([{ opacity: 0, transform: `translateY(${y}px)` }, { opacity: 1, transform: 'none' }], { duration: dur, delay, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' });
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) node.animate([{ opacity: 0, transform: `translateY(${y}px)${scale !== 1 ? ` scale(${scale})` : ''}` }, { opacity: 1, transform: 'none' }], { duration: dur, delay, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' });
   return node;
 };
 // Börsen-Karten blenden nur EINMAL ein: beim Neuzeichnen der Antwort (Text läuft noch) würden sie sonst jedes Mal neu hereingleiten

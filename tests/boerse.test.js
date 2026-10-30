@@ -492,8 +492,15 @@ test('Depot bearbeiten: „lösche alles und übernimm das Bild“ leert erst, L
   await H.apply(store, 'u9', { add: [{ symbol: 'SAP.DE', name: 'SAP', qty: 40, price: 231, date: '2026-10-02' }, { symbol: 'RHM.DE', name: 'Rheinmetall', qty: 5, price: 1600, date: '2026-10-03' }] });
   const r = await H.apply(store, 'u9', { remove: [{ name: 'Rheinmetall' }] });
   assert.deepEqual(r.removed.map((x) => x.symbol), ['RHM.DE']);
+  await H.apply(store, 'u9', { sell: [{ symbol: 'SAP.DE', qty: 10, price: 250, date: '2026-10-10' }] });
   const c = await H.apply(store, 'u9', { clear: true, add: [{ symbol: 'BMW.DE', name: 'BMW', qty: 20, price: 80, date: '2026-10-20' }] });
+  assert.ok(!(await H.book(store, 'u9')).some((x) => x.kind === 'sell'), 'auch Verkauftes ist weg');
+  await H.apply(store, 'u9', { clear: true });
+  const empty = await H.overview(store, 'u9', { maxAgeMs: 0 });
+  assert.equal(empty.sold.length, 0); assert.equal(empty.depot.cash, 50000);
+  await H.apply(store, 'u9', { add: [{ symbol: 'BMW.DE', name: 'BMW', qty: 20, price: 80, date: '2026-10-20' }] });
   assert.equal(c.cleared.positions, 1);
+  assert.equal(c.cleared.bookings, 2); // Kauf + Verkauf SAP (Rheinmetall war schon entfernt)
   assert.deepEqual(H.merged(await H.list(store, 'u9')).map((p) => p.symbol), ['BMW.DE']);
   for (const q of ['lösche alle Einträge aus meinem Depot und füge die aus dem Bild bitte hinein', 'aktualisiere das', 'Lösche Rheinmetall aus meinem Depot', 'ersetze mein Depot durch das Bild']) assert.ok(B.intentOf(q, []).adding, q);
   for (const q of ['Wie steht mein Depot?', 'Welche Aktien soll ich kaufen?', 'Wie weit ist mein Stopp entfernt?']) assert.ok(!B.intentOf(q, []).adding, q);
