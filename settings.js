@@ -130,12 +130,19 @@
     const icons = [...(dogs?.MODES || []).map((m) => [m.id, m.name]).filter(([d]) => !dogs.UNAVAILABLE?.has(d)), ...Object.entries(dogs?.ANIMALS || {})];
     const rows = W.list().map((w) => {
       const id = w.id, on = wst.open === id, own = !w.guest;
+      const pick = !wst.ic || w.guest ? '' : `<div class="st-ws-menu" role="listbox">
+          ${icons.map(([d, name]) => `<button type="button" class="st-ws-ic${!w.img && (w.dog || 'general') === d ? ' on' : ''}" data-ws-dog="${d}" aria-label="${esc(name)}">${dogs.svg(d, 32)}<span>${esc(name)}</span></button>`).join('')}
+          <button type="button" class="st-ws-ic up${w.img ? ' on' : ''}" data-ws-up aria-label="Eigenes Bild">${w.img ? `<img src="${w.img}" alt="" width="32" height="32" />` : `<span class="st-ws-upi">${fi('upload', 14)}</span>`}<span>Bild</span></button>
+          ${w.img ? `<button type="button" class="st-ws-ic" data-ws-noimg aria-label="Eigenes Bild entfernen"><span class="st-ws-upi">${fi('trash', 13)}</span><span>Bild weg</span></button>` : ''}
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden data-ws-file />
+        </div>`;
       const head = `<div class="st-row st-ws${on ? ' open' : ''}" data-ws-row="${id}" role="button" tabindex="0" aria-expanded="${on}">
-        <span class="st-ws-dog">${W.avatar(id, 24)}</span>
-        <span class="st-name">${esc(W.nameOf(id))}</span>
+        ${on && own ? `<button type="button" class="st-ws-dog st-ws-avbtn${wst.ic ? ' on' : ''}" data-ws-ic aria-label="Symbol ändern" aria-expanded="${wst.ic}">${W.avatar(id, 24)}</button>` : `<span class="st-ws-dog">${W.avatar(id, 24)}</span>`}
+        ${on && own ? `<input class="st-ws-name" data-ws-name maxlength="32" value="${esc(W.nameOf(id))}" aria-label="Name des Workspace" spellcheck="false" />` : `<span class="st-name">${esc(W.nameOf(id))}</span>`}
         <span class="grow"></span>
         ${w.shared ? `<span class="st-ws-badge">${fi('people', 12)}${esc(W.sub(id).replace(/^Geteilt · /, ''))}</span>` : ''}
         <span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span>
+        ${on && own && wst.ic ? pick : ''}
       </div>`;
       if (!on) return head;
       const ppl = (w.members || []).map((m) => {
@@ -148,22 +155,10 @@
         : `<form class="st-ws-share" data-ws-share><input class="st-field" type="email" name="email" placeholder="E-Mail-Adresse" autocomplete="off" aria-label="E-Mail-Adresse" /><button type="submit" class="st-btn light">Einladen</button></form>
            ${wst.msg ? `<p class="st-ws-msg${wst.msg.err ? ' err' : ''}">${esc(wst.msg.text)}</p>` : ''}
            ${ppl.length ? `<div class="st-ws-people">${ppl.join('')}</div>` : ''}`;
-      const pick = !wst.ic || w.guest ? '' : `<div class="st-ws-icons">
-          ${icons.map(([d, name]) => `<button type="button" class="st-ws-ic${!w.img && (w.dog || 'general') === d ? ' on' : ''}" data-ws-dog="${d}" aria-label="${esc(name)}">${dogs.svg(d, 32)}</button>`).join('')}
-          <button type="button" class="st-ws-ic up${w.img ? ' on' : ''}" data-ws-up aria-label="Eigenes Bild">${w.img ? `<img src="${w.img}" alt="" width="32" height="32" />` : fi('upload', 15)}</button>
-          ${w.img ? `<button type="button" class="st-ws-ic" data-ws-noimg aria-label="Eigenes Bild entfernen">${fi('trash', 14)}</button>` : ''}
-          <input type="file" accept="image/png,image/jpeg,image/webp" hidden data-ws-file />
-        </div>`;
       return head + `<div class="st-ws-panel${wst.anim ? ' in' : ''}"><div class="st-ws-pin">
-        <div class="st-ws-line"><span class="st-ws-lab">Symbol</span><span class="grow"></span>
-          <button type="button" class="st-ws-avbtn${wst.ic ? ' on' : ''}" data-ws-ic aria-label="Symbol ändern"${w.guest ? ' disabled' : ''}>${W.avatar(id, 32)}</button></div>
-        ${pick}
-        <div class="st-ws-line"><span class="st-ws-lab">Name</span><span class="grow"></span>
-          <input class="st-field st-ws-name" data-ws-name maxlength="32" value="${esc(W.nameOf(id))}" aria-label="Name des Workspace" spellcheck="false"${w.guest ? ' readonly' : ''} /></div>
         <div class="st-ws-h">Personen</div>
         ${people}
-        <div class="st-ws-foot">${id === 'main' ? '<span></span>' : `<button type="button" class="st-ws-del${wst.del ? ' sure' : ''}" data-ws-del>${fi(w.guest ? 'back' : 'trash', 13)}${wst.del ? (w.guest ? 'Wirklich verlassen?' : 'Wirklich löschen?') : (w.guest ? 'Workspace verlassen' : 'Workspace löschen')}</button>`}
-          ${W.active() === id ? '<span class="st-ws-cur">Geöffnet</span>' : '<button type="button" class="st-btn dark" data-ws-open>Öffnen</button>'}</div>
+        ${id === 'main' ? '' : `<div class="st-ws-foot"><button type="button" class="st-ws-del${wst.del ? ' sure' : ''}" data-ws-del>${fi(w.guest ? 'back' : 'trash', 13)}${wst.del ? 'Wirklich?' : (w.guest ? 'Verlassen' : 'Löschen')}</button></div>`}
       </div></div>`;
     }).join('');
     wst.anim = false;
@@ -184,17 +179,18 @@
   }
   function wsClick(e) {
     const W = window.Workspaces, t = e.target, id = wst.open;
-    const row = t.closest('[data-ws-row]');
+    if (id && t.closest('.st-ws.open') && (t.closest('[data-ws-name]') || t.closest('.st-ws-menu'))) {
+      if (t.closest('[data-ws-name]')) return true;
+    } else if (id && t.closest('[data-ws-ic]')) { wst.ic = !wst.ic; drawView(); return true; }
+    const row = !t.closest('.st-ws-menu') && t.closest('[data-ws-row]');
     if (row) {
       const n = row.dataset.wsRow;
       Object.assign(wst, { open: wst.open === n ? null : n, anim: wst.open !== n, ic: false, del: false, msg: null });
       drawView(); if (wst.open) W.load().then(() => { if (wst.open && !view.querySelector('.st-ws-pin input:focus')) drawView(); });
       return true;
     }
-    if (!id || !t.closest('.st-ws-pin')) return false;
-    if (t.closest('[data-ws-ic]')) { wst.ic = !wst.ic; drawView(); return true; }
-    if (t.closest('[data-ws-open]')) { W.set(id); drawView(); return true; }
-    const dg = t.closest('[data-ws-dog]'); if (dg) { W.setDog(id, dg.dataset.wsDog); drawView(); return true; }
+    if (!id || !(t.closest('.st-ws-pin') || t.closest('.st-ws-menu'))) { if (wst.ic) { wst.ic = false; drawView(); } return false; }
+        const dg = t.closest('[data-ws-dog]'); if (dg) { W.setDog(id, dg.dataset.wsDog); wst.ic = false; drawView(); return true; }
     if (t.closest('[data-ws-up]')) { view.querySelector('[data-ws-file]')?.click(); return true; }
     if (t.closest('[data-ws-noimg]')) { W.setImg(id, null); drawView(); return true; }
     const un = t.closest('[data-ws-unshare]'); if (un) { W.unshare(id, un.dataset.wsUnshare).then(drawView, drawView); return true; }
@@ -304,7 +300,7 @@
   view.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; drawView(); }
     if (e.key === 'Enter' && e.target.matches('[data-ws-name]')) { e.preventDefault(); e.target.blur(); }
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ws-row]')) { e.preventDefault(); e.target.click(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ws-row]') && e.target === e.target.closest('[data-ws-row]')) { e.preventDefault(); e.target.click(); }
   });
   view.addEventListener('change', (e) => {
     if (e.target.matches('[data-ws-file]')) wsUpload(wst.open, e.target.files?.[0]);
@@ -325,6 +321,8 @@
   document.addEventListener('dogmodechange', () => { if (app.classList.contains('settings-open') && page === 'agents') drawView(); });
   window.addEventListener('chat-tab-switched', () => close()); // anderer Chat/Bereich geöffnet → Einstellungen zu
 
+  // Symbol-Menü schließt bei Klick daneben
+  document.addEventListener('pointerdown', (e) => { if (wst.ic && !e.target.closest('.st-ws-menu, [data-ws-ic]')) { wst.ic = false; drawView(); } }, true);
   loadStatus();
   window.Settings = { open, close };
 })();

@@ -9074,3 +9074,25 @@ div.tl4-h { cursor: default; }
 .st-ws-name:focus { text-align: left; }
 .st-ws-icons { margin: 8px 0 8px; }
 .st-ws-foot { display: flex; align-items: center; justify-content: space-between; }
+/* v3: Symbol links in der Zeile öffnet ein Auswahlmenü nach unten; Name direkt in der Zeile; unten rechts nur „Löschen“ in Rot */
+.st-ws-card { overflow: visible; }
+.st-ws.open { position: relative; z-index: 3; }
+.st-row.st-ws .st-ws-avbtn { width: 32px; height: 32px; margin-left: -4px; border-radius: 9px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.st-row.st-ws .st-ws-avbtn:hover, .st-row.st-ws .st-ws-avbtn.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24); }
+.st-ws-name { flex: 0 1 240px; min-width: 0; height: 32px; margin-left: -8px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--text); font: 500 14px Inter, sans-serif; outline: none; text-align: left; }
+.st-ws-name:hover, .st-ws-name:focus { border-color: rgba(255, 255, 255, 0.1); }
+.st-ws-menu { position: absolute; top: calc(100% - 6px); left: 10px; z-index: 20; display: grid; grid-template-columns: repeat(5, 64px); gap: 2px; padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 13px; background: color-mix(in srgb, var(--main-bg) 92%, #fff); box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45);
+  cursor: default; animation: tk-card-in 220ms var(--spring) both; transform-origin: top left; }
+.st-ws-menu .st-ws-ic { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 64px; height: 68px; font: 500 10.5px Inter, sans-serif; color: var(--text-4); }
+.st-ws-menu .st-ws-ic span { max-width: 60px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-ws-menu .st-ws-ic.on { color: var(--text-2); }
+.st-ws-menu .st-ws-ic.up:not(.on) { box-shadow: none; }
+.st-ws-upi { display: grid; place-items: center; width: 32px; height: 32px; border: 1px dashed rgba(255, 255, 255, 0.18); border-radius: 50%; }
+.st-ws-pin { padding-top: 2px; }
+.st-ws-pin .st-ws-h { margin-top: 10px; }
+.st-ws-foot { justify-content: flex-end; border-top: 0; padding-top: 4px; margin-top: 12px; }
+.st-ws-del { margin: 0 -9px 0 0; color: #e5705f; background: rgba(239, 107, 95, 0.07); }
+.st-ws-del:hover, .st-ws-del.sure { background: rgba(239, 107, 95, 0.14); color: #f07a6e; }
+.st-row.st-ws .st-ws-avbtn svg.pd, .st-row.st-ws .st-ws-avbtn img { width: 24px; height: 24px; }
+.st-ws-del { margin: 0; }
