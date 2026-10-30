@@ -9013,12 +9013,12 @@ div.tl4-h { cursor: default; }
    ===================================================================== */
 .sb-ws-av svg, .sb-ws-av img { width: 17px; height: 17px; }
 .ws-img { display: block; border-radius: 50%; object-fit: cover; }
-.st-ws-dog img, .st-wsm-av img, .ws-av img { border-radius: 50%; }
+.st-ws-dog img, .ws-av img { border-radius: 50%; }
 /* Auswahl: Umrandung statt grau */
 .st-seg button.on, .st-seg button[aria-checked="true"] { background: none !important; box-shadow: inset 0 0 0 1px #3a3a3a; color: var(--text); }
 /* Felder (Name usw.) in der Farbe der Karte, nur feiner Rand */
-.st-card .st-field, .st-wsm .st-field { background: transparent; border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: none; }
-.st-card .st-field:focus, .st-wsm .st-field:focus { border-color: rgba(255, 255, 255, 0.16); outline: none; }
+.st-card .st-field { background: transparent; border: 1px solid rgba(255, 255, 255, 0.09); box-shadow: none; }
+.st-card .st-field:focus { border-color: rgba(255, 255, 255, 0.16); outline: none; }
 /* Modus: drei Vorschaubilder */
 .st-modes-row { flex-direction: column; align-items: stretch !important; gap: 12px; padding-top: 12px !important; padding-bottom: 14px !important; height: auto !important; }
 .st-ap-modes { grid-template-columns: repeat(3, minmax(0, 150px)); gap: 14px; }
@@ -9027,46 +9027,50 @@ div.tl4-h { cursor: default; }
 .st-row.st-ws { cursor: pointer; }
 .st-row.st-ws .st-ws-dog { display: grid; place-items: center; width: 28px; }
 
-/* großes Workspace-Fenster: fast der ganze Bildschirm, im Stil des Aufgaben-Fensters (Fläche/Rand wie die Karten) */
-.st-wsm-ov { position: fixed; inset: 0; z-index: 260; display: grid; place-items: center; padding: 3vh 3vw; background: rgba(0, 0, 0, 0.42); animation: cal-fade 200ms ease both; }
-.st-wsm-ov.closing { animation: cal-fade 200ms ease reverse both; }
-.st-wsm { display: flex; flex-direction: column; width: min(1040px, 100%); height: min(860px, 100%); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; background: color-mix(in srgb, var(--main-bg) 96%, #fff); overflow: hidden; animation: tk-card-in 320ms var(--spring) both; }
-.st-wsm-head { display: flex; align-items: center; gap: 14px; padding: 22px 28px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
-.st-wsm-av { display: grid; place-items: center; width: 44px; height: 44px; }
-.st-wsm-av img { width: 40px; height: 40px; }
-.st-wsm-name { flex: 0 1 420px; min-width: 0; height: 40px; padding: 0 10px; margin-left: -10px; border: 1px solid transparent; border-radius: 9px; background: none; color: var(--text); font: 600 20px Inter, sans-serif; letter-spacing: -0.2px; outline: none; }
-.st-wsm-name:hover, .st-wsm-name:focus { border-color: rgba(255, 255, 255, 0.09); }
-.st-wsm-body { flex: 1; min-height: 0; overflow-y: auto; padding: 6px 28px 24px; -webkit-overflow-scrolling: touch; }
-.st-wsm-body h2 { margin: 20px 0 8px; color: var(--text-3); font-size: 12.5px; font-weight: 600; }
-.st-wsm-body .st-card { border-color: rgba(255, 255, 255, 0.07); }
-.st-wsm-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; padding: 12px; }
-.st-wsm-ic { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 10px; border: 0; border-radius: 12px; background: none; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 160ms ease, color 120ms ease; -webkit-tap-highlight-color: transparent; }
-.st-wsm-ic:hover { color: var(--text-2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
-.st-wsm-ic.on { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
-.st-wsm-ic svg.pd { width: 32px; height: 32px; }
-.st-wsm-ic img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
-.st-wsm-upi { display: grid; place-items: center; width: 32px; height: 32px; border: 1px dashed rgba(255, 255, 255, 0.2); border-radius: 50%; color: var(--text-3); }
-.st-wsm-ic:disabled { opacity: 0.5; cursor: default; }
-.st-wsm-under { margin: 6px 2px 0; }
-.st-link { padding: 0; border: 0; background: none; color: var(--text-3); font: 500 12.5px Inter, sans-serif; cursor: pointer; }
-.st-link:hover { color: var(--text); }
-.st-wsm-share { gap: 8px; }
-.st-wsm-share .st-field { flex: 1; }
-.st-wsm-msg { color: var(--text-3); font-size: 12.5px; } .st-wsm-msg.err { color: #f07a6e; }
-.st-wsm-pav { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: rgba(255, 255, 255, 0.06); color: var(--text-3); }
-.st-wsm .st-row .st-muted { margin-left: 8px; }
-.st-btn.danger { background: rgba(239, 107, 95, 0.12); color: #f07a6e; box-shadow: none; }
-.st-btn.danger.sure { background: rgba(239, 107, 95, 0.22); }
-.st-wsm-foot { display: flex; align-items: center; padding: 14px 28px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
-@media (max-width: 700px) { .st-wsm-head, .st-wsm-body, .st-wsm-foot { padding-left: 18px; padding-right: 18px; } }
 
 /* Heller Modus (Werte VOR der Umkehrung): Schrift grau statt schwarz, Menüs weiß mit feinem Rand – ruhig und sauber */
 [data-theme="light"] { --text: #d6d6d6; --text-2: #c4c4c4; --text-3: #888888; --text-4: #5e5e5e; --menu-bg: #000000; --menu-border: #1b1b1d; --menu-hover: #0d0d0f; --hover: #0d0d0f; }
-.st-wsm-head > .st-muted, .st-wsm-head > [data-wsm-open] { margin-left: auto; }
-.st-wsm-foot > .st-btn { margin-left: auto; }
 /* Hell: Schrift auf blauen Knöpfen bleibt weiß (vor der Umkehrung schwarz) */
 [data-theme="light"] :is(.tk-new, .cl-new, .cal-new, .tk-make, .as-go, .send-btn, .dcc-send, .st-btn.primary) { color: #000; }
 /* Fokusmodus v3: Icon, Titel, Infos-Tabelle und Inhalt bleiben; weg sind Leisten, Projekt/Icon/Cover hinzufügen, Tags und das Cover-Bild */
 .dc-editor.focus .dc-meta { display: block !important; }
 .dc-editor.focus .dc-tagline, .dc-editor.focus .dc-cover { display: none !important; }
 .dc-editor.focus .dc-page.with-cover .dc-icon { margin-top: 0; }
+
+/* =====================================================================
+   Workspaces in den Einstellungen (31.10., v2): aufklappbare Zeile statt großem Fenster
+   Symbol antippen → Raster mit Tieren/eigenem Bild; Auswahl = feiner heller Rahmen (kein blauer Kreis)
+   ===================================================================== */
+.st-ws-card .st-ws.open { background: none; }
+.st-ws-pin { padding: 6px 16px 14px 16px; }
+.st-ws-top { display: flex; align-items: center; gap: 10px; padding: 6px 0 2px; }
+.st-ws-avbtn { display: grid; place-items: center; flex: none; width: 42px; height: 42px; padding: 0; border: 0; border-radius: 11px; background: none; cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); transition: box-shadow 140ms ease; -webkit-tap-highlight-color: transparent; }
+.st-ws-avbtn:hover, .st-ws-avbtn.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
+.st-ws-avbtn:disabled { cursor: default; box-shadow: none; }
+.st-ws-avbtn svg.pd, .st-ws-avbtn img { width: 32px; height: 32px; }
+.st-ws-avbtn img { border-radius: 50%; object-fit: cover; }
+.st-ws-top .st-ws-in { flex: 0 1 260px; margin-left: 0; font-size: 14px; font-weight: 500; }
+.st-ws-cur { color: var(--text-4); font-size: 12px; }
+.st-ws-icons { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 2px; padding: 6px; border-radius: 12px; background: rgba(255, 255, 255, 0.02); animation: cal-fade 180ms ease both; }
+.st-ws-ic { display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: none; color: var(--text-3); cursor: pointer;
+  box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 140ms ease, color 120ms ease; -webkit-tap-highlight-color: transparent; }
+.st-ws-ic:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-2); }
+.st-ws-ic.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); }
+.st-ws-ic svg.pd { width: 32px; height: 32px; image-rendering: pixelated; }
+.st-ws-ic img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
+.st-ws-ic.up:not(.on) { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.st-ws-pin .st-ws-h { margin: 16px 0 8px; }
+.st-ws-pin .st-ws-people { margin-top: 8px; max-width: none; }
+.st-ws-pin .st-ws-share .st-field { max-width: none; }
+.st-ws-foot { margin-top: 16px; padding-top: 10px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.st-ws-del { margin-left: -9px; }
+.st-ws.open .st-ws-chev { transform: rotate(180deg); }
+.st-ws-line { display: flex; align-items: center; gap: 10px; min-height: 52px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.st-ws-line .grow { flex: 1; }
+.st-ws-lab { color: var(--text-2); font-size: 13.5px; }
+.st-ws-avbtn { width: 40px; height: 40px; }
+.st-ws-name { width: min(260px, 52vw); height: 34px; text-align: right; }
+.st-ws-name:focus { text-align: left; }
+.st-ws-icons { margin: 8px 0 8px; }
+.st-ws-foot { display: flex; align-items: center; justify-content: space-between; }

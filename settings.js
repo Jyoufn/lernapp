@@ -122,121 +122,87 @@
         <div class="st-row"><span class="st-name">Hintergrund</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`;
   }
 
+  /* ---------- Workspaces: Zeile antippen klappt sie auf (Symbol, Name, Öffnen, Personen einladen, Löschen) ---------- */
+  const wst = { open: null, anim: false, ic: false, del: false, msg: null };
   function wsSection() {
     const W = window.Workspaces; if (!W) return '';
-    const rows = W.list().map((w) => `<div class="st-row st-ws" data-ws-row="${w.id}" role="button" tabindex="0">
-        <span class="st-ws-dog">${W.avatar(w.id, 24)}</span>
-        <span class="st-name">${esc(W.nameOf(w.id))}</span>
-        <span class="grow"></span>
-        ${w.shared ? `<span class="st-ws-badge">${fi('people', 12)}${esc(W.sub(w.id).replace(/^Geteilt · /, ''))}</span>` : ''}
-        <span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span>
-      </div>`).join('');
-    return `<h2>Workspaces</h2><div class="st-card st-ws-card">${rows}</div>`;
-  }
-
-  /* ---------- Workspace bearbeiten: großes Fenster (fast ganzer Bildschirm), aufgebaut wie die Einstellungen ----------
-     Symbol (Pixel-Tiere oder eigenes Bild), Name, Teilen, Personen, Inhalte, Löschen/Verlassen */
-  let wsm = null;
-  function wsModal(id) {
-    const W = window.Workspaces; if (!W?.get(id)) return;
-    wsm?.close(true);
-    const ov = document.createElement('div'); ov.className = 'st-wsm-ov';
-    const st = { id, msg: null, del: false };
     const dogs = window.PixelDogs;
     const icons = [...(dogs?.MODES || []).map((m) => [m.id, m.name]).filter(([d]) => !dogs.UNAVAILABLE?.has(d)), ...Object.entries(dogs?.ANIMALS || {})];
-    const count = () => {
-      let chats = 0;
-      document.querySelectorAll('#tabs .tab:not(.uil-tab):not([data-view])').forEach((t) => { try { const c = window.chatOf?.(t); if (c && (c.history || []).length && (c.ws || 'main') === id) chats++; } catch {} });
-      const docs = (window.Docs?.docs || []).filter((d) => (d.ws || 'main') === id && (d.title || d.content)).length;
-      return { chats, docs };
-    };
-    const draw = () => {
-      const w = W.get(id); if (!w) { close(); return; }
-      const own = !w.guest, n = count();
+    const rows = W.list().map((w) => {
+      const id = w.id, on = wst.open === id, own = !w.guest;
+      const head = `<div class="st-row st-ws${on ? ' open' : ''}" data-ws-row="${id}" role="button" tabindex="0" aria-expanded="${on}">
+        <span class="st-ws-dog">${W.avatar(id, 24)}</span>
+        <span class="st-name">${esc(W.nameOf(id))}</span>
+        <span class="grow"></span>
+        ${w.shared ? `<span class="st-ws-badge">${fi('people', 12)}${esc(W.sub(id).replace(/^Geteilt · /, ''))}</span>` : ''}
+        <span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span>
+      </div>`;
+      if (!on) return head;
       const ppl = (w.members || []).map((m) => {
         const who = m.state === 'self' ? 'Du' : m.name || m.email || 'Mitglied';
         const tag = { owner: 'Besitzer', pending: 'Eingeladen', member: 'Mitglied', self: 'Mitglied' }[m.state] || '';
-        const rm = own && m.email ? `<button type="button" class="st-btn dark st-wsm-rm" data-wsm-unshare="${esc(m.email)}">Entfernen</button>` : '';
-        return `<div class="st-row"><span class="st-wsm-pav">${fi('user', 13)}</span><span class="st-name">${esc(who)}</span>${m.email && m.name ? `<span class="st-muted">${esc(m.email)}</span>` : ''}<span class="grow"></span><span class="st-ws-tag${m.state === 'pending' ? ' wait' : ''}">${tag}</span>${rm}</div>`;
+        return `<div class="st-ws-person"><span class="st-ws-pav">${fi('user', 11)}</span><span class="st-ws-pn">${esc(who)}</span><span class="st-ws-tag${m.state === 'pending' ? ' wait' : ''}">${tag}</span>${own && m.email ? `<button type="button" class="st-ws-x" data-ws-unshare="${esc(m.email)}" aria-label="Entfernen">${fi('x', 11)}</button>` : ''}</div>`;
       });
-      if (own && ppl.length) ppl.unshift('<div class="st-row"><span class="st-wsm-pav">' + fi('user', 13) + '</span><span class="st-name">Du</span><span class="grow"></span><span class="st-ws-tag">Besitzer</span></div>');
-      const shareBody = w.guest ? `<div class="st-row"><span class="st-muted">Geteilt von ${esc(w.from || 'jemandem')} – Chats und Dokumente sind für alle gleich.</span></div>`
-        : id === 'main' ? '<div class="st-row"><span class="st-muted">Dein erster Workspace bleibt privat. Zum Teilen legst du oben links einen weiteren an.</span></div>'
-        : `<form class="st-row st-wsm-share" data-wsm-share><input class="st-field" type="email" name="email" placeholder="E-Mail-Adresse" autocomplete="off" aria-label="E-Mail-Adresse" /><button type="submit" class="st-btn light">Einladen</button></form>
-           ${st.msg ? `<div class="st-row"><span class="st-wsm-msg${st.msg.err ? ' err' : ''}">${esc(st.msg.text)}</span></div>` : ''}`;
-      ov.innerHTML = `<div class="st-wsm" role="dialog" aria-label="Workspace bearbeiten">
-        <div class="st-wsm-head"><span class="st-wsm-av">${W.avatar(id, 32)}</span>
-          <input class="st-wsm-name" data-wsm-name maxlength="32" value="${esc(W.nameOf(id))}" aria-label="Name des Workspace" spellcheck="false" ${w.guest ? 'readonly' : ''} />
-          <span class="grow"></span>${W.active() === id ? '<span class="st-muted">Geöffnet</span>' : '<button type="button" class="st-btn dark" data-wsm-open>Öffnen</button>'}</div>
-        <div class="st-wsm-body">
-          <h2>Symbol</h2><div class="st-card st-wsm-icons">
-            ${icons.map(([d, name]) => `<button type="button" class="st-wsm-ic${!w.img && (w.dog || 'general') === d ? ' on' : ''}" data-wsm-dog="${d}" aria-label="${esc(name)}"${w.guest ? ' disabled' : ''}>${dogs.svg(d, 32)}<span>${esc(name)}</span></button>`).join('')}
-            <button type="button" class="st-wsm-ic up${w.img ? ' on' : ''}" data-wsm-up>${w.img ? `<img src="${w.img}" alt="" width="32" height="32" />` : `<span class="st-wsm-upi">${fi('upload', 16)}</span>`}<span>${w.img ? 'Eigenes Bild' : 'Bild hochladen'}</span></button>
-            <input type="file" accept="image/png,image/jpeg,image/webp" hidden data-wsm-file />
-          </div>
-          ${w.img ? '<div class="st-wsm-under"><button type="button" class="st-link" data-wsm-noimg>Eigenes Bild entfernen</button></div>' : ''}
-          <h2>Teilen</h2><div class="st-card">${shareBody}</div>
-          ${ppl.length ? `<h2>Personen</h2><div class="st-card">${ppl.join('')}</div>` : ''}
-          <h2>Inhalte</h2><div class="st-card">
-            <div class="st-row"><span class="st-name">Chats</span><span class="grow"></span><span class="st-muted">${n.chats}</span></div>
-            <div class="st-row"><span class="st-name">Dokumente</span><span class="grow"></span><span class="st-muted">${n.docs}</span></div>
-            ${id !== 'main' && own ? '<div class="st-row"><span class="st-muted">Beim Löschen wandern Chats und Dokumente in deinen ersten Workspace – nichts geht verloren.</span></div>' : ''}</div>
-          ${id === 'main' ? '' : `<h2>${w.guest ? 'Verlassen' : 'Löschen'}</h2><div class="st-card"><div class="st-row"><span class="st-name">${w.guest ? 'Workspace verlassen' : 'Workspace löschen'}</span><span class="grow"></span>
-            <button type="button" class="st-btn danger${st.del ? ' sure' : ''}" data-wsm-del>${st.del ? (w.guest ? 'Wirklich verlassen?' : 'Wirklich löschen?') : (w.guest ? 'Verlassen' : 'Löschen')}</button></div></div>`}
-        </div>
-        <div class="st-wsm-foot"><span class="grow"></span><button type="button" class="st-btn light" data-wsm-done>Fertig</button></div></div>`;
+      const people = w.guest ? `<p class="st-ws-note">Geteilt von ${esc(w.from || 'jemandem')}.</p>`
+        : id === 'main' ? '<p class="st-ws-note">Dein erster Workspace bleibt privat. Zum Teilen legst du einen weiteren an.</p>'
+        : `<form class="st-ws-share" data-ws-share><input class="st-field" type="email" name="email" placeholder="E-Mail-Adresse" autocomplete="off" aria-label="E-Mail-Adresse" /><button type="submit" class="st-btn light">Einladen</button></form>
+           ${wst.msg ? `<p class="st-ws-msg${wst.msg.err ? ' err' : ''}">${esc(wst.msg.text)}</p>` : ''}
+           ${ppl.length ? `<div class="st-ws-people">${ppl.join('')}</div>` : ''}`;
+      const pick = !wst.ic || w.guest ? '' : `<div class="st-ws-icons">
+          ${icons.map(([d, name]) => `<button type="button" class="st-ws-ic${!w.img && (w.dog || 'general') === d ? ' on' : ''}" data-ws-dog="${d}" aria-label="${esc(name)}">${dogs.svg(d, 32)}</button>`).join('')}
+          <button type="button" class="st-ws-ic up${w.img ? ' on' : ''}" data-ws-up aria-label="Eigenes Bild">${w.img ? `<img src="${w.img}" alt="" width="32" height="32" />` : fi('upload', 15)}</button>
+          ${w.img ? `<button type="button" class="st-ws-ic" data-ws-noimg aria-label="Eigenes Bild entfernen">${fi('trash', 14)}</button>` : ''}
+          <input type="file" accept="image/png,image/jpeg,image/webp" hidden data-ws-file />
+        </div>`;
+      return head + `<div class="st-ws-panel${wst.anim ? ' in' : ''}"><div class="st-ws-pin">
+        <div class="st-ws-line"><span class="st-ws-lab">Symbol</span><span class="grow"></span>
+          <button type="button" class="st-ws-avbtn${wst.ic ? ' on' : ''}" data-ws-ic aria-label="Symbol ändern"${w.guest ? ' disabled' : ''}>${W.avatar(id, 32)}</button></div>
+        ${pick}
+        <div class="st-ws-line"><span class="st-ws-lab">Name</span><span class="grow"></span>
+          <input class="st-field st-ws-name" data-ws-name maxlength="32" value="${esc(W.nameOf(id))}" aria-label="Name des Workspace" spellcheck="false"${w.guest ? ' readonly' : ''} /></div>
+        <div class="st-ws-h">Personen</div>
+        ${people}
+        <div class="st-ws-foot">${id === 'main' ? '<span></span>' : `<button type="button" class="st-ws-del${wst.del ? ' sure' : ''}" data-ws-del>${fi(w.guest ? 'back' : 'trash', 13)}${wst.del ? (w.guest ? 'Wirklich verlassen?' : 'Wirklich löschen?') : (w.guest ? 'Workspace verlassen' : 'Workspace löschen')}</button>`}
+          ${W.active() === id ? '<span class="st-ws-cur">Geöffnet</span>' : '<button type="button" class="st-btn dark" data-ws-open>Öffnen</button>'}</div>
+      </div></div>`;
+    }).join('');
+    wst.anim = false;
+    return `<h2>Workspaces</h2><div class="st-card st-ws-card">${rows}</div>`;
+  }
+  // eigenes Bild: quadratisch zuschneiden, 128 px, JPEG (klein genug fürs Konto)
+  function wsUpload(id, file) {
+    if (!file || !/^image\//.test(file.type)) return;
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const c = document.createElement('canvas'), S = 128, m = Math.min(img.width, img.height);
+      c.width = c.height = S;
+      c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S);
+      URL.revokeObjectURL(url);
+      window.Workspaces.setImg(id, c.toDataURL('image/jpeg', 0.86)); drawView();
     };
-    // eigenes Bild: quadratisch zuschneiden, 128 px, JPEG (klein genug fürs Konto)
-    const upload = (file) => {
-      if (!file || !/^image\//.test(file.type)) return;
-      const img = new Image(), url = URL.createObjectURL(file);
-      img.onload = () => {
-        const c = document.createElement('canvas'), S = 128, m = Math.min(img.width, img.height);
-        c.width = c.height = S;
-        c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S);
-        URL.revokeObjectURL(url);
-        W.setImg(id, c.toDataURL('image/jpeg', 0.86)); draw(); drawView();
-      };
-      img.src = url;
-    };
-    const rename = () => { const i = ov.querySelector('[data-wsm-name]'); if (i && !i.readOnly) { W.rename(id, i.value); drawView(); } };
-    ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
-    ov.addEventListener('click', (e) => {
-      const t = e.target;
-      if (t.closest('[data-wsm-done]')) { close(); return; }
-      if (t.closest('[data-wsm-open]')) { W.set(id); draw(); return; }
-      const dg = t.closest('[data-wsm-dog]'); if (dg && !dg.disabled) { W.setDog(id, dg.dataset.wsmDog); draw(); drawView(); return; }
-      if (t.closest('[data-wsm-up]')) { ov.querySelector('[data-wsm-file]').click(); return; }
-      if (t.closest('[data-wsm-noimg]')) { W.setImg(id, null); draw(); drawView(); return; }
-      const un = t.closest('[data-wsm-unshare]'); if (un) { W.unshare(id, un.dataset.wsmUnshare).then(() => { draw(); drawView(); }, draw); return; }
-      if (t.closest('[data-wsm-del]')) {
-        if (!st.del) { st.del = true; draw(); return; }
-        Promise.resolve(W.remove(id)).then(() => { close(); drawView(); }); return;
-      }
-    });
-    ov.addEventListener('change', (e) => { if (e.target.matches('[data-wsm-file]')) upload(e.target.files?.[0]); if (e.target.matches('[data-wsm-name]')) rename(); });
-    ov.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('[data-wsm-name]')) { e.preventDefault(); e.target.blur(); } });
-    ov.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const f = e.target.closest('[data-wsm-share]'); if (!f) return;
-      const inp = f.querySelector('input'), btn = f.querySelector('button');
-      if (!inp.value.trim()) { inp.focus(); return; }
-      btn.disabled = true; btn.textContent = 'Senden …';
-      try { await W.share(id, inp.value.trim()); st.msg = { text: `Einladung an ${inp.value.trim()} gesendet.` }; } catch (err) { st.msg = { text: err.message, err: true }; }
-      draw(); drawView();
-    });
-    const key = (e) => { if (e.key === 'Escape' && !e.target.matches?.('input')) { e.stopPropagation(); close(); } };
-    function close(now) {
-      document.removeEventListener('keydown', key, true);
-      rename();
-      if (now) { ov.remove(); return; }
-      ov.classList.add('closing'); setTimeout(() => ov.remove(), 220);
-      wsm = null;
+    img.src = url;
+  }
+  function wsClick(e) {
+    const W = window.Workspaces, t = e.target, id = wst.open;
+    const row = t.closest('[data-ws-row]');
+    if (row) {
+      const n = row.dataset.wsRow;
+      Object.assign(wst, { open: wst.open === n ? null : n, anim: wst.open !== n, ic: false, del: false, msg: null });
+      drawView(); if (wst.open) W.load().then(() => { if (wst.open && !view.querySelector('.st-ws-pin input:focus')) drawView(); });
+      return true;
     }
-    document.addEventListener('keydown', key, true);
-    draw(); document.body.append(ov);
-    W.load().then(() => { if (ov.isConnected && !ov.querySelector('input:focus')) draw(); });
-    wsm = { close };
+    if (!id || !t.closest('.st-ws-pin')) return false;
+    if (t.closest('[data-ws-ic]')) { wst.ic = !wst.ic; drawView(); return true; }
+    if (t.closest('[data-ws-open]')) { W.set(id); drawView(); return true; }
+    const dg = t.closest('[data-ws-dog]'); if (dg) { W.setDog(id, dg.dataset.wsDog); drawView(); return true; }
+    if (t.closest('[data-ws-up]')) { view.querySelector('[data-ws-file]')?.click(); return true; }
+    if (t.closest('[data-ws-noimg]')) { W.setImg(id, null); drawView(); return true; }
+    const un = t.closest('[data-ws-unshare]'); if (un) { W.unshare(id, un.dataset.wsUnshare).then(drawView, drawView); return true; }
+    if (t.closest('[data-ws-del]')) {
+      if (!wst.del) { wst.del = true; drawView(); return true; }
+      Promise.resolve(W.remove(id)).then(() => { wst.open = null; wst.del = false; drawView(); }); return true;
+    }
+    return true;
   }
   function drawView() {
     const title = PAGES[page];
@@ -312,13 +278,20 @@
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
-    const wrow = e.target.closest('[data-ws-row]');
-    if (wrow) { wsModal(wrow.dataset.wsRow); return; }
+    if (wsClick(e)) return;
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
   view.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const sf = e.target.closest('[data-ws-share]');
+    if (sf) {
+      const inp = sf.querySelector('input'), btn = sf.querySelector('button'), mail = inp.value.trim();
+      if (!mail) { inp.focus(); return; }
+      btn.disabled = true; btn.textContent = 'Senden …';
+      try { await window.Workspaces.share(wst.open, mail); wst.msg = { text: `Einladung an ${mail} gesendet.` }; } catch (err) { wst.msg = { text: err.message, err: true }; }
+      drawView(); return;
+    }
     const form = e.target.closest('form[data-key]');
     const v = form?.querySelector('.st-key-in').value.trim();
     if (!form || !v) { form?.querySelector('.st-key-in').focus(); return; }
@@ -330,6 +303,12 @@
   // Workspace-Name: übernommen beim Verlassen des Felds oder mit Enter
   view.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && editing) { e.stopPropagation(); editing = null; drawView(); }
+    if (e.key === 'Enter' && e.target.matches('[data-ws-name]')) { e.preventDefault(); e.target.blur(); }
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ws-row]')) { e.preventDefault(); e.target.click(); }
+  });
+  view.addEventListener('change', (e) => {
+    if (e.target.matches('[data-ws-file]')) wsUpload(wst.open, e.target.files?.[0]);
+    if (e.target.matches('[data-ws-name]') && !e.target.readOnly) { window.Workspaces.rename(wst.open, e.target.value); drawView(); }
   });
   view.addEventListener('input', (e) => {
     if (e.target.matches('.st-sw-own input')) { // eigene Akzentfarbe live, ohne neu zu zeichnen (der Farbwähler bliebe sonst nicht offen)
