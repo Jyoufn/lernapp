@@ -1286,18 +1286,18 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       // Anhänge der letzten eigenen Nachrichten mitschicken (wie im Haupt-Chat) – auch beim Neu erzeugen und bei Nachfragen
       const lastMsgs = chat.messages.slice(-12);
       if (!images.length) images = await imagesOf([...lastMsgs].reverse().find((m) => m.role === 'user'));
-      let budget = 6;
-      for (let k = lastMsgs.length - 1; k >= 0 && budget > 0; k--) {
+      // alle Anhänge der letzten Nachrichten – die Größe begrenzt fitMaterial (app.js), nicht eine feste Anzahl
+      for (let k = lastMsgs.length - 1; k >= 0; k--) {
         const m = lastMsgs[k]; if (m.role !== 'user') continue;
-        const imgs = (k === lastMsgs.length - 1 && images.length ? images : await imagesOf(m)).slice(0, budget);
-        if (imgs.length) { recent[k] = { ...recent[k], images: imgs }; budget -= imgs.length; }
+        const imgs = k === lastMsgs.length - 1 && images.length ? images : await imagesOf(m);
+        if (imgs.length) recent[k] = { ...recent[k], images: imgs };
       }
       const messages = [{ role: 'user', text: context }, { role: 'assistant', text: 'Verstanden – ich beziehe mich nur auf dieses Dokument und schreibe Änderungen direkt hier mit [[EINFÜGEN …]] / [[ERSETZEN …]] / [[LÖSCHEN …]] … [[ENDE]].' }, ...recent];
       const ctrl = new AbortController(); dccRun = ctrl;
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: dccEffort(), fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...(() => { const f = window.fitMaterial ? window.fitMaterial(messages) : { messages, dropped: 0 }; return { messages: f.messages, materialDropped: f.dropped }; })(), model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: dccEffort(), fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
@@ -1362,7 +1362,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: historyForRequest(hist), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: a.dataset.dog }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: historyForRequest(hist), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: a.dataset.dog }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);

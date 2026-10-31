@@ -40,6 +40,12 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Nach einer Websuche heißt der Schritt „Quellen analysieren“ (Google-Suche des Modells: „Quellen analysiert · N“). Chips zeigen nur Seiten, die der Server als passend behalten hat.
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
+## Material des Nutzers (hochgeladene Dateien) – verbindlich
+- ALLE Dateien einbeziehen: jede Datei kommt mit Namensschild „[Datei N: Name]“ an (`fileParts` in `lib/providers.js`); Prompt `MATERIAL_LOOK` verlangt, jede auszuwerten und bei wichtigen Aussagen die Datei zu nennen.
+- Keine feste Dateizahl mehr (früher 8 im Chat, 6 im Dokument-Chat), sondern Größenbudget je Anfrage (`fitMaterial` in `app.js`, Vercel ≤ 4,5 MB): neueste zuerst als echte Datei, passt ein PDF nicht mehr → sein im Gerät gelesener Text (pdf.js 3.11 von cdnjs, `pdfText`, max. 60 000 Zeichen je PDF). Was gar nicht passt → `materialDropped`, die KI sagt es in einem Satz.
+- Ersatzmodelle (Groq/OpenRouter) bekommen den PDF-Text statt „kann PDFs nicht lesen“; Fotos dort nur als Hinweis (keine Bildmodelle).
+- Bezieht sich die Frage auf die Dateien (`SOURCE_REF`: Quelle, PDF, Datei, Material, „laut dem …“ …) → Modus `first`: Antwort AUS dem Material, keine Websuche dazwischen (außer ausdrücklich gewünscht). Frisches Material ohne passende Prüfung: trotzdem zuerst prüfen und nutzen.
+
 ## Quellen
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
 - Google-Grounding: Server meldet nur Chunks, auf die `groundingSupports` zeigen (= wirklich benutzt). Hat die Antwort keine nummerierten Belege, stehen diese unten.

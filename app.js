@@ -540,7 +540,6 @@ new ResizeObserver(() => chatScroll.style.setProperty('--composer-space', compos
 const sendBtn = $('sendBtn');
 const MAX_VISIBLE_IMAGES = 4;   // ab 5 Bildern: 3 zeigen + Kachel „+N“
 // Material (Fotos, PDFs) bleibt im ganzen Chat verfügbar – mitgeschickt werden die neuesten Anhänge, höchstens 8 Dateien / ~12 MB
-const MATERIAL_MAX_FILES = 8, MATERIAL_MAX_BYTES = 12 * 1024 * 1024;
 const PDF_MAX_BYTES = 15 * 1024 * 1024;
 const history = [];             // { role: 'user' | 'assistant', text, images: [{ mime, data }] }
 /* Mehrere Chats können gleichzeitig antworten – unabhängig voneinander. Je Chat-Tab ein eigener Lauf;
@@ -1513,12 +1512,34 @@ function makeRenderer(target, opts = {}) {
 }
 
 /* ---------- Fotos fürs Modell vorbereiten (verkleinern, als Base64) ---------- */
+/* PDF-Text im Gerät auslesen (pdf.js, erst beim ersten PDF geladen): geht mit, wenn das PDF selbst nicht mehr in die Anfrage passt
+   oder ein Ersatzmodell (Groq/OpenRouter) antwortet, das keine PDFs öffnen kann */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+let pdfLib = null;
+async function pdfText(bytes, maxChars = 60000) {
+  try {
+    pdfLib ||= new Promise((ok, fail) => {
+      if (window.pdfjsLib) return ok(window.pdfjsLib);
+      const s = document.createElement('script'); s.src = `${PDFJS}pdf.min.js`;
+      s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`; ok(window.pdfjsLib); };
+      s.onerror = fail; document.head.append(s);
+    });
+    const doc = await (await pdfLib).getDocument({ data: bytes }).promise;
+    let out = '';
+    for (let p = 1; p <= doc.numPages && out.length < maxChars; p++) {
+      const c = await (await doc.getPage(p)).getTextContent();
+      out += `\n[Seite ${p}]\n${c.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('')}`;
+    }
+    return out.replace(/[ \t]+/g, ' ').slice(0, maxChars).trim();
+  } catch { pdfLib = null; return ''; }
+}
 async function fileToInline(file, max = 1600) {
   if (file.type === 'application/pdf') {
     const buf = new Uint8Array(await file.arrayBuffer());
     let bin = '';
     for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    return { mime: 'application/pdf', data: btoa(bin), name: file.name };
+    const text = await pdfText(buf.slice());
+    return { mime: 'application/pdf', data: btoa(bin), name: file.name, ...(text ? { text } : {}) };
   }
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -1529,7 +1550,7 @@ async function fileToInline(file, max = 1600) {
   ctx.fillStyle = '#fff'; // transparente PNGs bekommen weißen Hintergrund
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return { mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.9).split(',')[1] };
+  return { mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.85).split(',')[1], name: file.name };
 }
 
 /* Verlauf für die Anfrage: alle Anhänge des Chats (Material), die neuesten zuerst – bis zur Obergrenze; ältere darüber hinaus bleiben weg */
@@ -1538,17 +1559,30 @@ async function fileToInline(file, max = 1600) {
 const thoughtsOf = (msgEl) => (msgEl._thoughts?.length || msgEl._plan?.length
   ? { ...(msgEl._thoughts?.length ? { thoughts: msgEl._thoughts } : {}), ...(msgEl._plan?.length ? { plan: msgEl._plan } : {}), workTime: msgEl._workTime } : {});
 
-function historyForRequest(list = history) {
-  let files = 0, bytes = 0;
-  return list.slice().reverse().map(({ thoughts, workTime, plan, ...m }) => {
+/* Alle Dateien sollen mit – aber EINE Anfrage darf auf Vercel höchstens ~4,5 MB groß sein. Neueste zuerst als echte Datei (Gemini sieht
+   Bilder, Tabellen, Skizzen); passt ein PDF nicht mehr, geht sein gelesener Text mit. Was gar nicht passt, zählt `dropped` (die KI sagt es). */
+const MATERIAL_BUDGET = 3300000, MATERIAL_TEXT_BUDGET = 700000; // Base64-Zeichen für Dateien / Zeichen für ausgelesenen PDF-Text
+function fitMaterial(list) {
+  let used = 0, textUsed = 0, dropped = 0;
+  const messages = list.slice().reverse().map((m) => {
     if (!m.images?.length) return m;
-    const keep = m.images.filter((img) => {
-      const size = Math.round((img.data || '').length * 0.75);
-      if (files >= MATERIAL_MAX_FILES || bytes + size > MATERIAL_MAX_BYTES) return false;
-      files++; bytes += size; return true;
-    });
+    const keep = [];
+    for (const img of m.images) {
+      const size = (img.data || '').length, tl = (img.text || '').length;
+      if (img.data && used + size <= MATERIAL_BUDGET && textUsed + tl <= MATERIAL_TEXT_BUDGET) { used += size; textUsed += tl; keep.push(img); }
+      else if (tl && textUsed + tl <= MATERIAL_TEXT_BUDGET) { textUsed += tl; keep.push({ mime: 'text/plain', name: img.name || 'PDF', text: img.text }); }
+      else dropped++;
+    }
     return keep.length === m.images.length ? m : { ...m, images: keep };
   }).reverse();
+  return { messages, dropped };
+}
+window.fitMaterial = fitMaterial;
+let materialDropped = 0;
+function historyForRequest(list = history) {
+  const { messages, dropped } = fitMaterial(list.map(({ thoughts, workTime, plan, ...m }) => m));
+  materialDropped = dropped;
+  return messages;
 }
 
 /* ---------- Server-Sent Events lesen ---------- */
@@ -2539,7 +2573,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);

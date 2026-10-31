@@ -671,7 +671,7 @@ test('Material passt nicht → Prüfung sichtbar, dann normale Antwort ohne Rüc
   const gen = fx.calls.find(M.is.geminiStream);
   assert.doesNotMatch(gen.body.systemInstruction.parts[0].text, /MATERIAL:/);
   const check = fx.calls.find((c) => c.url.includes(':generateContent'));
-  assert.equal(check.body.contents[0].parts[0].inline_data.mime_type, 'image/jpeg', 'das Bild geht mit in die Prüfung');
+  assert.equal(check.body.contents[0].parts.find((p) => p.inline_data).inline_data.mime_type, 'image/jpeg', 'das Bild geht mit in die Prüfung');
 });
 
 test('Material passt → Antwort nur mit dem Material', async () => {
