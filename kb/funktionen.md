@@ -8,7 +8,7 @@
 
 ## Chat und Agenten
 - Agenten: `general` Allgemein (Havaneser, kocht), `learn` Lernen (Border Collie mit Doktorhut, Buch), `research` (Golden Retriever, Lupe/Feder, recherchiert immer, Tiefen-Recherche), `code` (gesperrt, `PixelDogs.UNAVAILABLE`), `boerse` (Bär im Anzug mit Sonnenbrille, Zeitung/Laptop).
-- Eingabefeld: Plus (Fotos/PDF), Modell-Chip mit Aufwand (Auto/Low/Medium/High/Max), Diktat, Sprachmodus. Rückfragen der KI erscheinen als Karte im Eingabefeld (Kopf „Rückfrage x von y“, Antwortoptionen ohne Nummer davor); solange sie offen ist, bleibt der Hund mit Denkblase (`actor.ask()`, `msgEl._askActor`) und arbeitet nach der Antwort weiter.
+- Eingabefeld: Plus (Fotos/PDF), Aufwand-Chip (nur Auto/Low/Medium/High/Max – kein Modellname, das Modell wählt die App automatisch: alle Gemini-Modelle × Schlüssel inkl. Flash-Lite, dann Groq/OpenRouter/Nemotron; der Wechsel ist im Denken nicht sichtbar), Diktat, Sprachmodus. Rückfragen der KI erscheinen als Karte im Eingabefeld (Kopf „Rückfrage x von y“, Antwortoptionen ohne Nummer davor); solange sie offen ist, bleibt der Hund mit Denkblase (`actor.ask()`, `msgEl._askActor`) und arbeitet nach der Antwort weiter.
 - Zeitleiste über der Antwort: Kopf = Hauptstatus (mit Hund, der passend arbeitet), darunter **nur echte Schritte** (siehe `ki.md`), am Ende „Fertig“ + blauer Haken, klappt dann zu.
 - Blöcke in Antworten: chart (Linie/Ring), mindmap (Baum mit Zoom/Vollbild), timeline (Datum im Kästchen), heft, praesentation (Lern-Agent), stock/chancen/merken (Börse), illustration (Bilder: FLUX über NVIDIA), ask (Rückfrage), app (Sprach-Agent steuert die App).
 - Unter jeder Antwort: Kopieren, Neu erzeugen, Ins Dokument; Quellen rechts (nur benutzte).

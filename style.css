@@ -9333,3 +9333,6 @@ div.tl4-h { cursor: default; }
 .st-key-add .st-field { flex: 1; min-width: 0; }
 @media (prefers-reduced-motion: reduce) { .st-keys, .st-prov .st-ws-chev { animation: none; transition: none; } }
 .st-key .grow { flex: 1; }
+
+/* Eingabefeld (31.10.): kein Modellname mehr – nur der Aufwand (Auto/Low/Medium/High/Max); das Modell wählt die App selbst */
+#chipModel, #modelList, #modelPopover .mp-sep { display: none !important; }

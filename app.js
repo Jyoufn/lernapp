@@ -213,7 +213,7 @@ const EFFORTS = ['Auto', 'Low', 'Medium', 'High', 'Max'];
 const state = { model: 'gemini', effort: 0, fast: false };
 try { Object.assign(state, JSON.parse(localStorage.getItem('modelState') || '{}')); } catch {}
 state.fast = false; // Fast-Modus (Blitz) gibt es nicht mehr
-if (!MODELS.some((m) => m.id === state.model && !m.hidden)) state.model = 'gemini'; // ausgeblendetes Modell → Gemini
+state.model = 'gemini'; // immer automatisch (frühere Auswahl „Nemotron“ wird nicht mehr übernommen)
 state.effort = Math.min(EFFORTS.length - 1, Math.max(0, state.effort | 0));
 
 const popover = $('modelPopover');
@@ -222,7 +222,8 @@ const modelList = $('modelList');
 const effortList = $('effortList');
 
 // Auswahl: Gemini und Nemotron 3 (mit NVIDIA-Logo); Nemotron springt außerdem automatisch ein, wenn Gemini am Limit ist
-MODELS.filter((m) => !m.hidden).forEach((m) => {
+// Kein Modell mehr zum Auswählen: die App nimmt automatisch das beste freie Modell (Gemini-Leiter über alle Schlüssel → Flash-Lite → Groq/Nemotron)
+MODELS.filter(() => false).forEach((m) => {
   const item = document.createElement('button');
   item.type = 'button';
   item.className = 'mp-item';
@@ -248,7 +249,7 @@ function render() {
   [...modelList.children].forEach((el) => el.classList.toggle('selected', el.dataset.id === state.model));
   [...effortList.children].forEach((el, i) => { el.classList.toggle('selected', i === state.effort); el.setAttribute('aria-selected', String(i === state.effort)); });
   const model = MODELS.find((m) => m.id === state.model);
-  $('chipModel').textContent = model.label;
+  $('chipModel').textContent = ''; void model; // nur der Aufwand steht im Eingabefeld
   $('chipEffort').textContent = EFFORTS[state.effort];
   snapToPixels(chip.querySelectorAll('span'));
   try { localStorage.setItem('modelState', JSON.stringify(state)); } catch {}
