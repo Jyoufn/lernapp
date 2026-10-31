@@ -9309,3 +9309,11 @@ div.tl4-h { cursor: default; }
 .sbp-in { min-height: 0; overflow: hidden; padding-left: 14px; opacity: 0; transition: opacity 200ms ease; }
 .sbp.open .sbp-in { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .sbp-kids, .sbp-in, .sbp-chev { transition: none; } }
+
+/* Präsentation (31.10.): Bearbeiten als Stift oben rechts auf der Folie; Quellen als Links */
+.pz-stage { position: relative; }
+.pz-pen { position: absolute; top: 10px; right: 10px; z-index: 3; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: rgba(20, 20, 20, 0.55); color: #fff; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); cursor: pointer; opacity: 0; transition: opacity 160ms ease; -webkit-tap-highlight-color: transparent; }
+.pz-stage:hover .pz-pen, .pz-pen:focus-visible { opacity: 1; }
+@media (hover: none) { .pz-pen { opacity: 1; } }
+.pz-slide a.pz-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 2px; pointer-events: auto; cursor: pointer; }
+.pz-slide a.pz-link:hover { text-decoration-color: currentColor; }

@@ -43,7 +43,7 @@ const Praesentation = (() => {
       title: plain(str(s?.title, 110)), text: str(s?.text, 460), points: pts(s?.points, s?.type === 'gliederung' ? 8 : 6),
       left: s?.left ? { title: plain(str(s.left.title, 60)), points: pts(s.left.points) } : null,
       right: s?.right ? { title: plain(str(s.right.title, 60)), points: pts(s.right.points) } : null,
-      image: img(s?.image), notes: str(s?.notes, 1200),
+      image: img(s?.image), notes: str(s?.notes, 1200), ...(['links', 'rechts', 'karten', 'liste'].includes(s?.layout) ? { layout: s.layout } : {}),
     })).filter((s) => s.title || s.text || s.points.length);
     if (!slides.length) return null;
     // Gliederung ist Pflicht: fehlt sie, kommt sie hinter die Titelfolie (Abschnitte, sonst die Folientitel)
@@ -135,7 +135,7 @@ const Praesentation = (() => {
       blocks.forEach((lines) => {
         const lhIn = size * 1.28 * PT;
         if (T.title === 'minimal') out.push({ k: 'rect', x: x + 0.02, y: cy + lhIn / 2 - 0.01, w: 0.16, h: 0.022, fill: T.text });
-        else out.push({ k: 'ellipse', x: x + 0.03, y: cy + lhIn / 2 - 0.055, w: 0.11, h: 0.11, fill: T.accent });
+        else out.push({ k: 'rect', x: x + 0.02, y: cy + lhIn / 2 - 0.016, w: 0.2, h: 0.032, fill: T.accent, r: 0.016 }); // ruhiger Strich statt Punkt
         out.push({ k: 'text', x: x + 0.42, y: cy, w: w - 0.42, lines, size, color: T.text, lh: 1.28 });
         cy += lines.length * lhIn + gap;
       });
@@ -165,7 +165,6 @@ const Praesentation = (() => {
       } else { // split (Klar, Papier)
         const tw = im ? 5.6 : 10.4;
         if (im) out.push({ k: 'image', x: 6.85, y: 0, w: W - 6.85, h: H, src: im });
-        else { out.push({ k: 'ellipse', x: 9.3, y: -1.7, w: 6.2, h: 6.2, fill: T.panel }); out.push({ k: 'ellipse', x: 11.0, y: 4.5, w: 2.8, h: 2.8, fill: T.accent, alpha: 0.18 }); }
         out.push({ k: 'rect', x: M + 0.05, y: 2.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
         const f = text(s.title || deck.title, { x: M + 0.05, y: 2.4, w: tw, h: 2.6, max: T.head === 'serif' ? 50 : 46, min: 30, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 3, lh: 1.06 });
         if (sub) text(sub, { x: M + 0.05, y: f.bottom + 0.3, w: tw, h: 1.4, max: 22, min: 16, color: T.text, maxLines: 3, lh: 1.3 });
@@ -255,7 +254,9 @@ const Praesentation = (() => {
         let y = top;
         const avail = H - top - 0.9, each = avail / per;
         col.forEach((x) => {
+          const href = (/https?:\/\/\S+/.exec(String(x)) || [])[0];
           const f = text(x, { x: M + c * (colW + 0.5) + 0.3, y, w: colW - 0.3, h: Math.max(0.35, each - 0.08), max: 15, min: 9, color: T.text, lh: 1.25, maxLines: 3 });
+          if (href) out[out.length - 1].href = href.replace(/[).,;]+$/, ''); // Quelle als Link (Vorschau)
           out.push({ k: 'ellipse', x: M + c * (colW + 0.5) + 0.04, y: y + f.size * 1.25 * PT / 2 - 0.045, w: 0.09, h: 0.09, fill: T.accent });
           y = Math.max(f.bottom + 0.12, y + 0.3);
         });
@@ -265,18 +266,38 @@ const Praesentation = (() => {
       if (T.title === 'full' || T.title === 'block') out[0].fill = T.title === 'full' ? T.bg : T.accent;
       const fg = T.title === 'block' ? T.onAccent : T.text;
       if (im && T.title === 'full') { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#060A14', alpha: 0.6 }); }
-      else if (T.title !== 'block') { out.push({ k: 'ellipse', x: 9.6, y: -2, w: 6.4, h: 6.4, fill: T.accent, alpha: 0.12 }); out.push({ k: 'ellipse', x: -1.4, y: 4.8, w: 3.6, h: 3.6, fill: T.accent, alpha: 0.08 }); }
       const f = text(s.title || 'Vielen Dank!', { x: M, y: 2.6, w: W - 2 * M, h: 1.6, max: 60, min: 36, bold: T.head !== 'serif', font: T.head, color: im && T.title === 'full' ? '#FFFFFF' : fg, align: 'c', maxLines: 1, lh: 1.05 });
       if (s.text) text(s.text, { x: M, y: f.bottom + 0.25, w: W - 2 * M, h: 0.9, max: 24, min: 16, color: im && T.title === 'full' ? 'rgba(255,255,255,0.85)' : T.title === 'block' ? T.onAccent : T.sub, align: 'c', maxLines: 2 });
       out.push({ k: 'rect', x: W / 2 - 0.45, y: 2.25, w: 0.9, h: 0.08, fill: T.title === 'block' ? T.onAccent : T.accent, r: 0.04 });
-    } else { // punkte (auch „bild“ ohne Bild)
+    } else { // punkte (auch „bild“ ohne Bild) – Aufbau je Folie verschieden: Bild links/rechts, Karten oder Liste
       const hasImg = !!im;
-      const bw = hasImg ? 6.35 : W - 2 * M;
-      const top = heading(s.title, bw);
-      let y = top;
-      if (s.text && !s.points.length) { const f = text(s.text, { x: M, y, w: bw, h: H - y - 1, max: 21, min: 14, color: T.text, maxLines: 12, lh: 1.4 }); y = f.bottom + 0.3; }
-      if (s.points.length) bullets(s.points, { x: M, y, w: bw, h: H - y - 0.9 });
-      if (hasImg) out.push({ k: 'image', x: 7.55, y: T.title === 'minimal' ? M : 0.6, w: W - 7.55 - M, h: H - (T.title === 'minimal' ? 2 * M : 1.4), src: im, r: R });
+      const pts = s.points.length ? s.points : [];
+      const cards = !hasImg && (s.layout === 'karten' || (!s.layout && pts.length >= 3 && pts.length <= 4 && pts.every((x) => plain(x).length <= 80) && i % 2 === 1)); // kurze Kernaussagen → Kacheln (jede zweite passende Folie)
+      if (cards) {
+        const top = heading(s.title);
+        const cols = pts.length === 3 ? 3 : 2, rows = Math.ceil(pts.length / cols), gap = 0.3;
+        const avail = H - top - 0.95, cw = (W - 2 * M - (cols - 1) * gap) / cols;
+        const ch = Math.min((avail - (rows - 1) * gap) / rows, rows === 1 ? 2.7 : 2.2); // Kacheln nicht unnötig hoch
+        const y0 = top + Math.max(0, avail - rows * ch - (rows - 1) * gap) * 0.35;
+        pts.forEach((p, k) => {
+          const x = M + (k % cols) * (cw + gap), y = y0 + Math.floor(k / cols) * (ch + gap);
+          out.push({ k: 'rect', x, y, w: cw, h: ch, fill: T.panel, r: R });
+          out.push({ k: 'rect', x: x + 0.35, y: y + 0.38, w: 0.42, h: 0.05, fill: T.accent, r: 0.025 });
+          text(p, { x: x + 0.35, y: y + 0.62, w: cw - 0.7, h: ch - 0.9, max: 22, min: 12, color: T.text, lh: 1.32 });
+        });
+      } else {
+        const imgLeft = hasImg && (s.layout === 'links' || (s.layout !== 'rechts' && i % 2 === 0));
+        const bw = hasImg ? 6.35 : W - 2 * M, tx = imgLeft ? W - M - bw : M;
+        const top0 = heading(s.title, hasImg ? bw : W - 2 * M);
+        // Überschrift steht links; bei Bild links rückt der Inhalt nach rechts
+        let y = top0;
+        if (s.text && !pts.length) { const f = text(s.text, { x: tx, y, w: bw, h: H - y - 1, max: 21, min: 14, color: T.text, maxLines: 12, lh: 1.4 }); y = f.bottom + 0.3; }
+        if (pts.length) bullets(pts, { x: tx, y, w: bw, h: H - y - 0.9 });
+        if (hasImg) {
+          const iw = W - bw - 2 * M - 0.45, ix = imgLeft ? M : W - M - iw, iy = T.title === 'minimal' ? M : 0.6;
+          out.push({ k: 'image', x: ix, y: imgLeft ? top0 - 0.1 : iy, w: iw, h: imgLeft ? H - top0 - 0.8 : H - (T.title === 'minimal' ? 2 * M : 1.4), src: im, r: R });
+        }
+      }
       footer();
     }
     return out;
@@ -285,7 +306,7 @@ const Praesentation = (() => {
   /* ---------- Bilder: freie Bilder über /api/illustration (wie im Chat), passend zugeschnitten ---------- */
   const imgMemo = new Map();
   const toImg = (src, credit) => new Promise((res, rej) => { const img = new Image(); img.crossOrigin = 'anonymous'; img.onload = () => res({ img, credit }); img.onerror = rej; img.src = src; });
-  // NUR echte Fotos (Wikimedia, freie Lizenz) – nie KI-Bilder („webonly“); eigenes/ausgewähltes Bild (src) direkt
+  // Erst ein wirklich passendes freies Foto (Wikimedia, von Gemini geprüft); gibt es keins, ein passendes KI-Bild (Fotostil) – nie ein unpassendes Foto
   function loadImage(want) {
     const key = want.src ? `src:${want.src.slice(0, 120)}${want.src.length}` : `${want.query}|${want.prompt}`;
     if (imgMemo.has(key)) return imgMemo.get(key);
@@ -295,6 +316,7 @@ const Praesentation = (() => {
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error('kein Foto'))))
         .then((r) => {
           if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return toImg(r.url, [r.author, r.license].filter(Boolean).join(' · ').replace(/<[^>]+>/g, ''));
+          if (r.source === 'ai' && /^data:image\//.test(r.url || '')) return toImg(r.url, 'KI-Bild'); // kein passendes Foto → passendes KI-Bild
           throw new Error('kein Foto');
         }));
     p.catch(() => imgMemo.delete(key));
@@ -319,7 +341,7 @@ const Praesentation = (() => {
     return url;
   }
   // je Folie mit Bildwunsch das geladene Bild (höchstens 10 Bilder je Präsentation)
-  async function loadAll(deck, timeoutMs = 25000) {
+  async function loadAll(deck, timeoutMs = 50000) {
     const map = new Map();
     const want = deck.slides.filter((s) => s.image).slice(0, 10);
     await Promise.all(want.map((s) => Promise.race([loadImage(s.image), new Promise((r) => setTimeout(() => r(null), timeoutMs))])
@@ -341,6 +363,7 @@ const Praesentation = (() => {
       if (it.k === 'rect') return `<i class="pz-r${a ? ' pz-a' : ''}" style="${box}background:${it.fill};${op}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}"></i>`;
       if (it.k === 'ellipse') return `<i class="pz-r${a ? ' pz-a' : ''}" style="${box}background:${it.fill};${op}border-radius:50%"></i>`;
       if (it.k === 'image') { const src = crop(it.src, it.w, it.h); return src ? `<img class="pz-i${a ? ' pz-a' : ''}" alt="" src="${src}" style="${box}${it.r ? `border-radius:${cq(it.r * 72)};` : ''}">` : ''; }
+      if (it.href) return `<a class="pz-t pz-link${a ? ' pz-a' : ''}" href="${esc(it.href)}" target="_blank" rel="noopener" style="${box}color:${it.color};${op}font-family:${FONTS[it.font || 'sans'].css.replace(/"/g, "'")};font-size:${cq(it.size)};line-height:${it.lh};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(lineHtml).join('<br>')}</a>`;
       return `<span class="pz-t${a ? ' pz-a' : ''}" style="${box}color:${it.color};${op}font-family:${FONTS[it.font || 'sans'].css.replace(/"/g, "'")};font-size:${cq(it.size)};line-height:${it.lh};text-align:${it.align === 'c' ? 'center' : it.align === 'r' ? 'right' : 'left'}">${it.lines.map(lineHtml).join('<br>')}</span>`;
     }).join('');
   }
@@ -561,7 +584,7 @@ const Praesentation = (() => {
   const hash = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
   const editKey = (raw) => `pz.edit.${hash(String(raw || '').trim())}`;
   const serial = (deck) => JSON.stringify({ title: deck.title, subtitle: deck.subtitle, theme: deck.theme, aiTheme: deck.aiTheme, accent: deck.accent, sources: deck.sources,
-    slides: deck.slides.map((x) => ({ type: x.type, title: x.title, text: x.text, points: x.points, left: x.left, right: x.right, image: x.image, notes: x.notes })) });
+    slides: deck.slides.map((x) => ({ type: x.type, title: x.title, text: x.text, points: x.points, left: x.left, right: x.right, image: x.image, notes: x.notes, ...(x.layout ? { layout: x.layout } : {}) })) });
   const TYPE_NAMES = { titel: 'Titel', gliederung: 'Gliederung', punkte: 'Stichpunkte', bild: 'Großes Bild', zahlen: 'Zahlen', zwei: 'Vergleich', zitat: 'Merksatz / Zitat', abschnitt: 'Abschnitt', fazit: 'Fazit', quellen: 'Quellen', ende: 'Schluss' };
   const ACCENTS = ['#2F6BFF', '#5EA2FF', '#14B8A6', '#22A55B', '#F59E0B', '#FF5A36', '#E11D74', '#8B5CF6', '#B5532A', '#0A0A0A'];
   // gemeinsamer Zustand einer Präsentation (Karte und Bearbeiten-Fenster): Folien, geladene Bilder, Layout
@@ -600,12 +623,11 @@ const Praesentation = (() => {
     const st = makeState(raw);
     if (!st) { fig.innerHTML = '<div class="pz-wait"><span class="shimmer">Präsentation wird erstellt …</span></div>'; return fig; }
     const deck = st.deck;
-    fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div>
+    fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div><button type="button" class="pz-pen" data-edit aria-label="Bearbeiten">${fi('pencil', 14)}</button>
         <button type="button" class="pz-nav prev" data-go="-1" aria-label="Vorherige Folie">${fi('back', 14)}</button><button type="button" class="pz-nav next" data-go="1" aria-label="Nächste Folie">${fi('forward', 14)}</button>
         <span class="pz-count"></span></div>
       <div class="pz-strip"></div>
       <div class="pz-bar">
-        <div class="pz-row1"><button type="button" class="pz-edit" data-edit>${fi('pencil', 13)}Bearbeiten</button></div>
         <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${o.badge}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
       </div>
       <div class="pz-msg" aria-live="polite"></div>`;

@@ -11,7 +11,7 @@ Damit nichts Abgelehntes wiederkommt. Kurz halten; nur Dinge, die man sonst wied
 - **Coding-Agent** gesperrt (keine KI schnell/gut genug), Allgemein-Agent programmiert normal im Chat.
 - **Planspiel-Login** bewusst entfernt (Teilnahmebedingungen).
 - **Tooltips** überall aus. **Glocke/Benachrichtigungen** entfernt. **Skill-System** entfernt.
-- **Präsentation**: nur Design „Klar“, nur echte Fotos, keine grauen Unterzeilen.
+- **Präsentation**: nur Design „Klar“, keine grauen Unterzeilen. Bilder: erst ein geprüft passendes freies Foto (Wikimedia, englische Suchwörter), sonst ein passendes KI-Bild im Fotostil – nie ein unpassender Suchtreffer (31.10., vorher „nur echte Fotos“ → oft unpassend/keine Bilder).
 - **Börsen-Strategie**: nur Rücksetzer mit Erholungsgrund, kein Momentum, kleine Dips ignorieren.
 - **Ergebnis von Hintergrund-Aufgaben**: immer Dokument, nie automatisch abschicken beim Erstellen.
 - **Quellen**: nur benutzte; ohne Suche nichts anzeigen.

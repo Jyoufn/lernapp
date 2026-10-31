@@ -849,11 +849,11 @@ async function handleIllustration(req, res) {
     const web = await fittingWebImage(env, description, query).catch(() => null);
     if (web) { writeImgCache(key, web); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, web); }
   }
-  // Präsentationen: NUR echte Bilder (Wikimedia) – nie ein KI-Bild; ohne passenden Treffer der beste Suchtreffer, sonst keins
+  // Präsentationen: erst ein geprüft passendes Foto (oben); sonst ein passendes KI-Bild im ruhigen Fotostil – nie ein unpassender Suchtreffer
   if (source === 'webonly') {
-    const c = await commonsIllustration(query || description).catch(() => null);
-    if (c) { writeImgCache(key, c); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, c); }
-    return sendJson(res, 404, { error: 'Kein passendes Foto gefunden.' });
+    const img = await paint(env, `${description}. Professional high-quality photograph for a school presentation, realistic, natural light, clean calm composition, subject clearly visible and centered, no text, no letters, no watermark`).catch(() => null);
+    if (img) { const out = { source: 'ai', url: `data:${img.mime};base64,${img.data}`, author: 'KI-Bild' }; writeImgCache(key, out); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, out); }
+    return sendJson(res, 404, { error: 'Kein passendes Bild gefunden.' });
   }
   // echtes KI-Bild (FLUX über NVIDIA) mit Beschriftung darüber – ein Durchgang (Startwerte und Umformulieren stecken schon drin), sonst ein freies Fachbild.
   // Folgewunsch zu einem früheren Bild: dieses Bild anpassen (findet es kein Rohbild dazu, entsteht ein neues)
