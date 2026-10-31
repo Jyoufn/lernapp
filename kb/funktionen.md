@@ -65,3 +65,5 @@
 - Icon-Auswahl nur gefüllt (keine Linien-Fassung mehr, alte `line`-Icons werden gefüllt gezeigt). Dokument-Tab ohne gewähltes Icon zeigt kein Symbol.
 - Neues Projekt: Name → Farbe antippen → Icon (in der Farbe) antippen legt an. Projekt-Chip in Projektfarbe (Icon, 13 %-Fläche, Text).
 - Cover „Mit KI erstellen“: nur kleines Eingabefeld im Chat-Design (Foto als Vorlage bis 3, Mikro, Senden), kein Agent; beim Erzeugen die Kachel-Welle der Bildgenerierung. Bild im normalen Banner-Format (`cover.ai`), Stil wie die übrigen Cover (stilisiert, Farbverläufe, Linien – nie realistisch), `/api/cover-image` mit `photos`.
+- Eigenes Cover-Bild (Hochladen) und KI-Cover: normales Banner-Format (`cover.ai`), senkrecht ziehen verschiebt den Ausschnitt (`cover.y` 0–100) – das Bild selbst wird nicht verändert.
+- YouTube im Dokument (Slash „Video“ oder einfach Link einfügen → Video-Block): eigener Player über die IFrame-API (`ytPlayer` in `docblocks.js`): keine YouTube-Leiste/Vorschläge (Fläche abgedeckt), eigene Leiste mit Play/Pause, Spulen, Zeit, Lautstärke/Stumm, Vollbild, „Nächstes“ nur bei Playlist-Links. Werbung lässt sich bei der offiziellen Einbettung nicht abschalten.

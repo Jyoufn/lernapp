@@ -572,6 +572,7 @@ const DocBlocks = (() => {
     }
     const box = el('div', 'dcb-video');
     const yt = ytId(cfg.src), vm = vimeoId(cfg.src);
+    if (yt) { ytPlayer(box, cfg.src, yt); b.append(box); tools(b, api, [{ icon: 'play', label: 'Video ersetzen', fn: () => { delete cfg.src; api.save(cfg); api.redraw(); } }]); return; }
     if (yt || vm) {
       const f = document.createElement('iframe');
       f.src = yt ? `https://www.youtube-nocookie.com/embed/${yt}` : `https://player.vimeo.com/video/${vm}`;
@@ -583,6 +584,59 @@ const DocBlocks = (() => {
     } else box.append(el('div', 'dcb-none', 'Dieser Link lässt sich nicht abspielen.'));
     b.append(box);
     tools(b, api, [{ icon: 'play', label: 'Video ersetzen', fn: () => { delete cfg.src; api.save(cfg); api.redraw(); } }]);
+  }
+
+  /* ---------- YouTube: eigener Player (IFrame-API, ohne YouTube-Leiste, ohne Vorschläge/Endbildschirm) ----------
+     Steuerung: Abspielen/Pause, Leiste zum Spulen, Zeit, Lautstärke/Stumm, Vollbild; „Nächstes“ nur bei Playlist-Links (list=).
+     Werbung blendet YouTube selbst ein – das lässt sich über die offizielle Einbettung nicht abschalten (nocookie-Domain, keine Vorschläge). */
+  let ytApi = null;
+  const loadYtApi = () => ytApi || (ytApi = new Promise((ok) => {
+    if (window.YT?.Player) { ok(window.YT); return; }
+    const prev = window.onYouTubeIframeAPIReady; window.onYouTubeIframeAPIReady = () => { prev?.(); ok(window.YT); };
+    const sc = document.createElement('script'); sc.src = 'https://www.youtube.com/iframe_api'; document.head.append(sc);
+  }));
+  function ytPlayer(box, src, id) {
+    const list = /[?&]list=([\w-]+)/.exec(src)?.[1] || '';
+    const start = +(/[?&]t=(\d+)/.exec(src)?.[1] || 0);
+    box.classList.add('dcb-yt');
+    box.innerHTML = `<div class="dcb-yt-stage"><div class="dcb-yt-frame"></div><button type="button" class="dcb-yt-cover" aria-label="Abspielen"><img src="https://i.ytimg.com/vi/${id}/hqdefault.jpg" alt="" onerror="this.remove()" /><span class="dcb-yt-big">${fi('play', 20)}</span></button><div class="dcb-yt-shield"></div></div>
+      <div class="dcb-yt-ctl"><button type="button" class="dcb-yt-b" data-y="play" aria-label="Abspielen">${fi('play', 14)}</button>${list ? `<button type="button" class="dcb-yt-b" data-y="next" aria-label="Nächstes Video">${fi('next', 14)}</button>` : ''}
+        <span class="dcb-yt-time">0:00</span><input type="range" class="dcb-yt-seek" min="0" max="1000" value="0" step="1" aria-label="Spulen" /><span class="dcb-yt-dur">0:00</span>
+        <button type="button" class="dcb-yt-b" data-y="mute" aria-label="Stumm">${fi('volume', 14)}</button><input type="range" class="dcb-yt-vol" min="0" max="100" value="80" aria-label="Lautstärke" />
+        <button type="button" class="dcb-yt-b" data-y="full" aria-label="Vollbild">${fi('expand', 14)}</button></div>`;
+    const q = (x) => box.querySelector(x);
+    let player = null, timer = 0, seeking = false;
+    const tick = () => { if (!player?.getDuration) return; const d = player.getDuration() || 0, t = player.getCurrentTime() || 0; q('.dcb-yt-time').textContent = mmss(t); q('.dcb-yt-dur').textContent = mmss(d); if (!seeking && d) q('.dcb-yt-seek').value = String(Math.round((t / d) * 1000)); };
+    const setPlay = (on) => { const b = q('[data-y="play"]'); b.innerHTML = fi(on ? 'pause' : 'play', 14); b.setAttribute('aria-label', on ? 'Pause' : 'Abspielen'); box.classList.toggle('playing', on); };
+    const start$ = () => new Promise((ok) => {
+      if (player) { ok(player); return; }
+      loadYtApi().then((YT) => {
+        player = new YT.Player(q('.dcb-yt-frame'), {
+          host: 'https://www.youtube-nocookie.com', videoId: id,
+          playerVars: { controls: 0, rel: 0, modestbranding: 1, iv_load_policy: 3, playsinline: 1, disablekb: 1, fs: 0, start, ...(list ? { list, listType: 'playlist' } : {}) },
+          events: {
+            onReady: () => { player.setVolume(+q('.dcb-yt-vol').value); ok(player); },
+            onStateChange: (e) => { setPlay(e.data === 1 || e.data === 3); if (e.data === 0) { box.classList.remove('started'); setPlay(false); } },
+          },
+        });
+      });
+    });
+    const toggle = async () => { const p = await start$(); box.classList.add('started'); clearInterval(timer); timer = setInterval(() => { if (!box.isConnected) { clearInterval(timer); return; } tick(); }, 400); if (p.getPlayerState?.() === 1) p.pauseVideo(); else p.playVideo(); };
+    q('.dcb-yt-cover').addEventListener('click', toggle);
+    q('.dcb-yt-shield').addEventListener('click', toggle); // Klick aufs Bild = Pause/Weiter (YouTube-Oberfläche bleibt unerreichbar)
+    box.addEventListener('click', async (e) => {
+      const k = e.target.closest('[data-y]')?.dataset.y; if (!k) return;
+      if (k === 'play') { toggle(); return; }
+      if (k === 'full') { const st = q('.dcb-yt-stage').parentElement; if (document.fullscreenElement) document.exitFullscreen?.(); else (st.requestFullscreen || st.webkitRequestFullscreen)?.call(st); return; }
+      const p = await start$();
+      if (k === 'next') p.nextVideo?.();
+      if (k === 'mute') { if (p.isMuted()) { p.unMute(); q('[data-y="mute"]').innerHTML = fi('volume', 14); } else { p.mute(); q('[data-y="mute"]').innerHTML = fi('x', 14); } }
+    });
+    const seek = q('.dcb-yt-seek');
+    seek.addEventListener('input', () => { seeking = true; if (player?.getDuration) q('.dcb-yt-time').textContent = mmss((+seek.value / 1000) * player.getDuration()); });
+    seek.addEventListener('change', async () => { const p = await start$(); p.seekTo((+seek.value / 1000) * (p.getDuration() || 0), true); seeking = false; });
+    q('.dcb-yt-vol').addEventListener('input', async (e) => { const p = await start$(); p.setVolume(+e.target.value); if (+e.target.value > 0 && p.isMuted()) p.unMute(); });
+    ['pointerdown', 'keydown', 'mousedown'].forEach((ev) => box.addEventListener(ev, (e) => e.stopPropagation()));
   }
 
   /* ---------- Audio: eigener ruhiger Player ---------- */
@@ -1651,6 +1705,6 @@ const DocBlocks = (() => {
     }
   }
 
-  return { ITEMS, TYPES, html, render, strip, attach, chartView, tidy, imageData }; // imageData: Bilder fürs Dokument verkleinern (Ziehen/Einfügen)
+  return { ITEMS, TYPES, html, render, strip, attach, chartView, tidy, imageData, ytId }; // imageData: Bilder fürs Dokument verkleinern (Ziehen/Einfügen)
 })();
 window.DocBlocks = DocBlocks;

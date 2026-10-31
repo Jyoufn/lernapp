@@ -1409,7 +1409,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         e.preventDefault();
         const imgs = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/'));
         if (imgs.length) { const sel = getSelection(); insertImages(imgs, sel?.rangeCount ? topChild(sel.anchorNode) : null); return; }
-        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'));
+        const txt = e.clipboardData.getData('text/plain');
+        // nur ein YouTube-Link eingefügt → gleich als Video-Block (eigener Player)
+        if (/^\s*https?:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\/\S+\s*$/i.test(txt) && window.DocBlocks?.ytId?.(txt.trim())) {
+          const sel = getSelection(); const at = sel?.rangeCount ? topChild(sel.anchorNode) : null;
+          const b = document.createElement('div'); b.dataset.blk = 'video'; b.dataset.cfg = JSON.stringify({ src: txt.trim() });
+          const c2 = content(); if (at && at.parentNode === c2) at.after(b); else c2.append(b);
+          renderBlocks(); commit(); return;
+        }
+        document.execCommand('insertText', false, txt);
       });
       // Bild hineinziehen (Datei oder Bild von einer Website) → Bild-Block an der Stelle, abgerundet und per Rechtsklick bedienbar
       c.addEventListener('dragover', (e) => { if ([...(e.dataTransfer?.types || [])].some((t) => t === 'Files' || t === 'text/uri-list' || t === 'text/html')) e.preventDefault(); });
@@ -1763,7 +1771,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (!cv) return '';
       if (cv.kind === 'preset') return COVER_PRESETS.find((p) => p.id === cv.id)?.bg || '';
       if (cv.kind === 'color') return colorCover(cv.c, cv.style);
-      if (cv.kind === 'image' && /^data:image\/(jpeg|png|webp);base64,/.test(cv.src || '')) return `center / cover no-repeat url("${cv.src}")`;
+      if (cv.kind === 'image' && /^data:image\/(jpeg|png|webp);base64,/.test(cv.src || '')) return `50% ${Number.isFinite(cv.y) ? cv.y : 50}% / cover no-repeat url("${cv.src}")`;
       return '';
     }
     // animate: Cover kommt/geht → Icon, Titel und Text gleiten von der alten an die neue Stelle (Icon wächst/schrumpft dabei)
@@ -1785,6 +1793,18 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         else { const im = new Image(); im.onload = () => { if (doc.cover !== cv) return; cv.ratio = +(im.width / im.height).toFixed(4); apply(cv.ratio); save(); }; im.src = cv.src; }
       }
       view.querySelector('.dc-page')?.classList.toggle('with-cover', !!bg);
+      box.classList.toggle('movable', cv?.kind === 'image' && !!cv.ai);
+      if (!box._moveWired) { // eigenes Bild im Banner: senkrecht ziehen = Ausschnitt anpassen (Bild selbst bleibt unverändert)
+        box._moveWired = true;
+        box.addEventListener('pointerdown', (e) => {
+          const c = doc.cover; if (focusOn || !(c?.kind === 'image' && c.ai) || e.button > 0 || e.target.closest('button')) return;
+          const img = box.querySelector('.dc-cover-img'), y0 = e.clientY, start = Number.isFinite(c.y) ? c.y : 50, h = box.clientHeight || 180;
+          box.setPointerCapture?.(e.pointerId); box.classList.add('moving');
+          const mv = (ev) => { c.y = Math.max(0, Math.min(100, start - ((ev.clientY - y0) / h) * 60)); img.style.backgroundPosition = `50% ${c.y}%`; };
+          const up = () => { box.removeEventListener('pointermove', mv); box.classList.remove('moving'); c.y = Math.round(c.y); touch(doc); };
+          box.addEventListener('pointermove', mv); box.addEventListener('pointerup', up, { once: true }); box.addEventListener('pointercancel', up, { once: true });
+        });
+      }
       drawIcon();
       flip?.();
       applySettings();
@@ -2174,7 +2194,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
       const upload = async (f) => {
         if (!f || !/^image\//.test(f.type)) return;
-        try { const im = await readImage(f); setCover({ kind: 'image', src: im.src, ratio: im.ratio }); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
+        try { const im = await readImage(f); setCover({ kind: 'image', src: im.src, ai: true, y: 50 }); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
       };
       file.addEventListener('change', () => { upload(file.files[0]); file.value = ''; });
       pop.addEventListener('dragover', (e) => { e.preventDefault(); pop.classList.add('drag'); });
