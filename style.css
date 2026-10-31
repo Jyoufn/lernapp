@@ -9410,3 +9410,11 @@ button.tk-row-dots { padding: 4px 6px; margin-left: 4px; border: 0; border-radiu
 @keyframes tk-tagpop-in { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .tk-tagpop { animation: none; } }
 @media (max-width: 600px) { button.tk-row-dots { display: inline-flex; } }
+
+/* ===== 01.11.2026 – Präsentation: Warte-Karte mit Fortschritt, weiches Einblenden der fertigen Folien ===== */
+.pz.pz-waiting { display: grid; gap: 10px; }
+.pz-wait-l { display: flex; align-items: center; font-size: 12.5px; color: var(--text-3); }
+.pz-wait-n { color: var(--text-4); font-variant-numeric: tabular-nums; }
+.pz.pz-reveal { animation: pz-reveal 620ms var(--spring) both; }
+@keyframes pz-reveal { from { opacity: 0; transform: translateY(8px) scale(0.985); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .pz.pz-reveal { animation: none; } }

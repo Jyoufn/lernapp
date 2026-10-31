@@ -1384,7 +1384,18 @@ function renderMarkdown(target, text, opts = {}) {
     let raw = pre.querySelector('code').textContent;
     if (belege) { try { raw = JSON.stringify({ ...JSON.parse(raw), sources: belege }); } catch {} }
     const keep = (target._pz ||= new Map());
-    if (!keep.has(raw)) { const ok = !!Praesentation.parse(raw); const f = Praesentation.figure(raw); if (!ok) { pre.replaceWith(f); return; } keep.set(raw, f); }
+    if (!keep.has(raw)) {
+      // noch nicht fertig geschrieben: DIESELBE Warte-Karte weiterverwenden (sonst startet die Wellen-Animation bei jedem Textstück neu)
+      if (!Praesentation.parse(raw)) {
+        target._pzWait ||= Praesentation.figure(raw);
+        Praesentation.progress?.(target._pzWait, raw);
+        pre.replaceWith(target._pzWait);
+        return;
+      }
+      const f = Praesentation.figure(raw);
+      if (target._pzWait) { f.classList.add('pz-reveal'); target._pzWait = null; } // fertig → weich einblenden statt hart umspringen
+      keep.set(raw, f);
+    }
     pre.replaceWith(keep.get(raw));
   });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen

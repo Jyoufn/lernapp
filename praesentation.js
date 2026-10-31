@@ -16,7 +16,7 @@ const Praesentation = (() => {
   const FONTS = { sans: { pptx: 'Helvetica Neue', css: '"Helvetica Neue", Helvetica, Arial, sans-serif' }, serif: { pptx: 'Georgia', css: 'Georgia, "Times New Roman", serif' } };
   const FONT = FONTS.sans.pptx;
   const THEMES = {
-    klar: { name: 'Klar', bg: '#FFFFFF', text: '#14161A', sub: '#5F6672', panel: '#F2F4F7', line: '#E3E6EB', accent: '#2F6BFF', onAccent: '#FFFFFF', head: 'sans', title: 'split', radius: 0.22 },
+    klar: { name: 'Klar', bg: '#FFFFFF', soft: '#F3F5F8', text: '#14161A', sub: '#5F6672', panel: '#F2F4F7', line: '#E3E6EB', accent: '#2F6BFF', onAccent: '#FFFFFF', head: 'sans', title: 'split', radius: 0.22 },
     nacht: { name: 'Nacht', bg: '#0E1320', text: '#F4F6FB', sub: '#9AA3B5', panel: '#182033', line: '#273049', accent: '#5EA2FF', onAccent: '#0B1020', head: 'sans', title: 'full', radius: 0.22 },
     papier: { name: 'Papier', bg: '#F6F1E7', text: '#2A2118', sub: '#76695A', panel: '#ECE3D3', line: '#DDD1BC', accent: '#B5532A', onAccent: '#FFFFFF', head: 'serif', title: 'split', radius: 0.08 },
     kraeftig: { name: 'Kräftig', bg: '#FFFFFF', text: '#111111', sub: '#555B66', panel: '#F2F2F2', line: '#E6E6E6', accent: '#FF5A36', onAccent: '#FFFFFF', head: 'sans', title: 'block', radius: 0.3 },
@@ -24,7 +24,13 @@ const Praesentation = (() => {
   };
   const ALIAS = { hell: 'klar', dunkel: 'nacht', warm: 'papier' };
   const themeOf = (deck) => { const T = THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.accent ? { accent: deck.accent } : {}) }; };
-  const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'fazit', 'quellen', 'ende'];
+  const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'schritte', 'definition', 'frage', 'fazit', 'quellen', 'ende'];
+  // „Titel | Text“, „**Titel**: Text“ oder „Titel: Text“ → Karte/Schritt mit fetter Überschrift
+  const splitPt = (p) => {
+    const s = String(p || '');
+    const m = /^\s*\*\*([^*]{2,60})\*\*\s*[:–—|-]?\s*(.+)$/.exec(s) || /^([^|]{2,70})\|(.+)$/.exec(s) || /^([^:.!?]{2,40}):\s+(.+)$/.exec(s);
+    return m ? { t: plain(m[1]).trim(), b: m[2].trim() } : { t: '', b: s.trim() };
+  };
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const xmlEsc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
   const str = (x, n) => String(x ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
@@ -112,22 +118,23 @@ const Praesentation = (() => {
       out.push({ k: 'text', x: o.x, y: o.y, w: o.w, lines: f.lines, size: f.size, color: o.color, align: o.align, lh: o.lh || 1.2, alpha: o.alpha, font: o.font || 'sans' });
       return { ...f, bottom: o.y + f.lines.length * f.size * (o.lh || 1.2) * PT };
     };
-    const footer = (dark) => {
+    // side: Seite, auf der ein randloses Bild liegt ('l'/'r') – dort steht kein Fußtext, die Seitenzahl wird dann hell
+    const footer = (dark, side = '') => {
       const c = dark ? 'rgba(255,255,255,0.75)' : T.sub;
       if (T.title === 'minimal' || T.head === 'serif') out.push({ k: 'rect', x: M, y: H - 0.62, w: W - 2 * M, h: 0.012, fill: dark ? 'rgba(255,255,255,0.35)' : T.line, foot: true });
-      out.push({ k: 'text', x: M, y: H - 0.5, w: 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2, foot: true });
-      if (imo?.credit) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8, foot: true });
-      out.push({ k: 'text', x: W - M - 0.6, y: H - 0.5, w: 0.6, lines: [words(String(i + 1))], size: 10, color: c, align: 'r', lh: 1.2, foot: true });
+      if (side !== 'l') out.push({ k: 'text', x: side === 'r' ? M : M, y: H - 0.5, w: side === 'r' ? 5 : 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2, foot: true });
+      if (imo?.credit && !side) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8, foot: true });
+      out.push({ k: 'text', x: W - M - 0.6, y: H - 0.5, w: 0.6, lines: [words(String(i + 1))], size: 10, color: side === 'r' ? 'rgba(255,255,255,0.85)' : c, align: 'r', lh: 1.2, foot: true });
     };
     // Abschnitt, zu dem die Folie gehört (Kicker über der Überschrift)
     let sec = '';
     if (!['quellen', 'ende', 'fazit'].includes(slide.type)) for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
-    const heading = (t, w = W - 2 * M) => {
+    const heading = (t, w = W - 2 * M, x = M) => {
       let y = 0.62;
-      if (sec && T.title !== 'minimal') { out.push({ k: 'text', x: M, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
-      const f = text(t, { x: M, y, w, h: 1.15, max: T.head === 'serif' ? 34 : 32, min: 22, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 2, lh: 1.1 });
-      if (T.title === 'minimal') { out.push({ k: 'rect', x: M, y: f.bottom + 0.22, w: W - 2 * M, h: 0.014, fill: T.line }); return f.bottom + 0.55; }
-      out.push({ k: 'rect', x: M, y: f.bottom + 0.17, w: 0.62, h: 0.07, fill: T.accent, r: 0.035 });
+      if (sec && T.title !== 'minimal') { out.push({ k: 'text', x, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
+      const f = text(t, { x, y, w, h: 1.15, max: T.head === 'serif' ? 34 : 32, min: 22, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 2, lh: 1.1 });
+      if (T.title === 'minimal') { out.push({ k: 'rect', x, y: f.bottom + 0.22, w, h: 0.014, fill: T.line }); return f.bottom + 0.55; }
+      out.push({ k: 'rect', x, y: f.bottom + 0.17, w: 0.62, h: 0.07, fill: T.accent, r: 0.035 });
       return f.bottom + 0.58;
     };
     const bullets = (pts, { x, y, w, h, max = 21, min = 13, gap = 0.3 }) => {
@@ -169,7 +176,14 @@ const Praesentation = (() => {
         const f = text(s.title || deck.title, { x: M, y: 2.4, w: tw, h: 2.6, max: 56, min: 32, bold: true, color: T.text, maxLines: 3, lh: 1.0 });
         out.push({ k: 'rect', x: M, y: f.bottom + 0.3, w: tw, h: 0.014, fill: T.text });
         if (sub) text(sub, { x: M, y: f.bottom + 0.5, w: tw, h: 1.2, max: 18, min: 13, color: T.sub, maxLines: 2, lh: 1.35 });
-      } else { // split (Klar, Papier)
+      } else if (im && T.title === 'split' && T.head !== 'serif') { // Klar mit Foto: bildfüllend, ruhiger Dunkelverlauf unten, Titel weiß
+        out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im });
+        out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#05070C', alpha: 0.22 });
+        out.push({ k: 'rect', x: 0, y: H * 0.4, w: W, h: H * 0.6, fill: '#05070C', alpha: 0.42 });
+        out.push({ k: 'rect', x: M + 0.05, y: 3.6, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
+        const f = text(s.title || deck.title, { x: M + 0.05, y: 3.9, w: 10.8, h: 1.95, max: 50, min: 30, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.05 });
+        if (sub) text(sub, { x: M + 0.05, y: f.bottom + 0.25, w: 9.6, h: 1.0, max: 20, min: 14, color: 'rgba(255,255,255,0.86)', maxLines: 2, lh: 1.3 });
+      } else { // split (Klar ohne Foto, Papier)
         const tw = im ? 5.6 : 10.4;
         if (im) out.push({ k: 'image', x: 6.85, y: 0, w: W - 6.85, h: H, src: im });
         out.push({ k: 'rect', x: M + 0.05, y: 2.05, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
@@ -190,6 +204,12 @@ const Praesentation = (() => {
         if (r < rows - 1) out.push({ k: 'rect', x: x + 0.95, y: y + rh - 0.1, w: colW - 0.95, h: 0.012, fill: T.line });
       });
       footer();
+    } else if (s.type === 'abschnitt' && im && T.title === 'split') { // Abschnitt mit Foto: bildfüllend, Nummer in Akzentfarbe, Titel weiß
+      const num = deck.slides.slice(0, i + 1).filter((x) => x.type === 'abschnitt').length;
+      out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im });
+      out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#05070C', alpha: 0.5 });
+      out.push({ k: 'text', x: M, y: 2.1, w: 4, lines: [words(String(num).padStart(2, '0'), true)], size: 72, bold: true, color: T.accent, lh: 1 });
+      text(s.title, { x: M, y: 3.45, w: W - 2 * M - 1, h: 1.9, max: 46, min: 28, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.06 });
     } else if (s.type === 'abschnitt') {
       const num = deck.slides.slice(0, i + 1).filter((x) => x.type === 'abschnitt').length;
       const dark = T.title !== 'minimal';
@@ -208,12 +228,13 @@ const Praesentation = (() => {
       if (body) text(body, { x: M, y: f.bottom + 0.18, w: W - 2.6, h: 1.25, max: 18, min: 13, color: 'rgba(255,255,255,0.9)', maxLines: 3, lh: 1.35 });
       footer(true);
     } else if (s.type === 'zahlen') {
+      if (T.title === 'split') out[0].fill = T.soft;
       const top = heading(s.title);
       const items = (s.points.length ? s.points : [s.text]).filter(Boolean).slice(0, 4).map((p) => { const [v, ...l] = String(p).split('|'); return { v: plain(v.trim()), l: l.join('|').trim() }; });
       const cw = (W - 2 * M - (items.length - 1) * 0.35) / Math.max(items.length, 1), y = top + 0.2, h = H - y - 1.0;
       items.forEach((it, k) => {
         const x = M + k * (cw + 0.35);
-        out.push({ k: 'rect', x, y, w: cw, h, fill: T.panel, r: R });
+        out.push({ k: 'rect', x, y, w: cw, h, fill: T.title === 'split' ? '#FFFFFF' : T.panel, r: R });
         const fv = text(it.v, { x: x + 0.35, y: y + 0.45, w: cw - 0.7, h: 1.2, max: 54, min: 26, bold: true, color: T.accent, maxLines: 1, lh: 1.05, font: T.head });
         if (it.l) text(it.l, { x: x + 0.35, y: fv.bottom + 0.25, w: cw - 0.7, h: y + h - fv.bottom - 0.6, max: 18, min: 12, color: T.text, lh: 1.3 });
       });
@@ -236,14 +257,49 @@ const Praesentation = (() => {
       const f = text(s.text || s.title, { x: 1.7, y: 2.45, w: W - 3.4, h: 3, max: 32, min: 20, bold: T.head !== 'serif', font: T.head, color: T.text, align: 'c', maxLines: 5, lh: 1.25 });
       if (s.text && s.title) text(s.title, { x: 1.7, y: f.bottom + 0.35, w: W - 3.4, h: 0.6, max: 15, min: 12, color: T.sub, align: 'c', maxLines: 1 });
       footer();
+    } else if (s.type === 'schritte') { // Ablauf/Zeitleiste: nummerierte Stationen auf einer Linie, darunter je eine Karte
+      out[0].fill = T.soft;
+      const top = heading(s.title);
+      const parts = (s.points.length ? s.points : [s.text]).filter(Boolean).slice(0, 6).map(splitPt);
+      const n = Math.max(parts.length, 1), gap = 0.24, cw = (W - 2 * M - (n - 1) * gap) / n, cy = top + 0.42;
+      if (n > 1) out.push({ k: 'rect', x: M + cw / 2, y: cy - 0.012, w: (n - 1) * (cw + gap), h: 0.024, fill: T.accent, alpha: 0.35 });
+      parts.forEach((p, k) => {
+        const x = M + k * (cw + gap), by = cy + 0.58, bh = H - by - 0.95;
+        out.push({ k: 'ellipse', x: x + cw / 2 - 0.29, y: cy - 0.29, w: 0.58, h: 0.58, fill: T.accent });
+        out.push({ k: 'text', x: x + cw / 2 - 0.29, y: cy - 0.125, w: 0.58, lines: [words(String(k + 1), true)], size: 15, bold: true, color: T.onAccent, align: 'c', lh: 1 });
+        out.push({ k: 'rect', x, y: by, w: cw, h: bh, fill: '#FFFFFF', r: R });
+        let ty = by + 0.3;
+        if (p.t) { const f = text(p.t, { x: x + 0.24, y: ty, w: cw - 0.48, h: 0.85, max: 21, min: 12, bold: true, color: T.text, maxLines: 2, lh: 1.15, align: 'c' }); ty = f.bottom + 0.14; }
+        text(p.b, { x: x + 0.24, y: ty, w: cw - 0.48, h: by + bh - ty - 0.25, max: 18, min: 11, color: p.t ? T.sub : T.text, lh: 1.32, align: 'c' });
+      });
+      footer();
+    } else if (s.type === 'definition') { // Begriff groß, Erklärung, Beispiele im ruhigen Kasten (optional Bild rechts)
+      const iw = im ? 4.3 : 0, tw = W - 2 * M - (im ? iw + 0.5 : 0);
+      out.push({ k: 'text', x: M, y: 0.85, w: tw, lines: [words('DEFINITION', true)], size: 11, bold: true, color: T.accent, lh: 1.2 });
+      const ft = text(s.title, { x: M, y: 1.2, w: tw, h: 1.35, max: 44, min: 26, bold: true, color: T.text, maxLines: 2, lh: 1.05 });
+      out.push({ k: 'rect', x: M, y: ft.bottom + 0.2, w: 0.62, h: 0.07, fill: T.accent, r: 0.035 });
+      const fd = s.text ? text(s.text, { x: M, y: ft.bottom + 0.5, w: tw, h: 2.2, max: 23, min: 14, color: T.text, lh: 1.36, maxLines: 6 }) : { bottom: ft.bottom + 0.5 };
+      if (s.points.length) {
+        const y = Math.max(fd.bottom + 0.35, 4.2), h = H - y - 0.9;
+        out.push({ k: 'rect', x: M, y, w: tw, h, fill: T.soft, r: R });
+        bullets(s.points.slice(0, 3), { x: M + 0.35, y: y + 0.28, w: tw - 0.7, h: h - 0.5, max: 17, min: 11, gap: 0.16 });
+      }
+      if (im) out.push({ k: 'image', x: W - M - iw, y: 0.85, w: iw, h: H - 1.75, src: im, r: R });
+      footer();
+    } else if (s.type === 'frage') { // Einstieg: eine Frage groß in der Mitte (mit Foto bildfüllend)
+      if (im) { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#05070C', alpha: 0.58 }); } else out[0].fill = T.soft;
+      out.push({ k: 'rect', x: W / 2 - 0.45, y: 2.45, w: 0.9, h: 0.08, fill: T.accent, r: 0.04 });
+      text(s.title || s.text, { x: 1.3, y: 2.85, w: W - 2.6, h: 2.4, max: 40, min: 24, bold: true, color: im ? '#FFFFFF' : T.text, align: 'c', maxLines: 3, lh: 1.14 });
+      footer(!!im);
     } else if (s.type === 'fazit') {
+      if (T.title === 'split') out[0].fill = T.soft;
       const top = heading(s.title || 'Das Wichtigste');
       const pts = s.points.length ? s.points : [s.text].filter(Boolean);
       if (pts.length <= 4) {
         const cw = (W - 2 * M - (pts.length - 1) * 0.3) / pts.length, y = top + 0.15, h = H - y - 0.95;
         pts.forEach((p, k) => {
           const x = M + k * (cw + 0.3);
-          out.push({ k: 'rect', x, y, w: cw, h, fill: T.panel, r: R });
+          out.push({ k: 'rect', x, y, w: cw, h, fill: T.title === 'split' ? '#FFFFFF' : T.panel, r: R });
           out.push({ k: 'ellipse', x: x + 0.38, y: y + 0.4, w: 0.62, h: 0.62, fill: T.accent });
           out.push({ k: 'text', x: x + 0.38, y: y + 0.53, w: 0.62, lines: [words(String(k + 1), true)], size: 18, bold: true, color: T.onAccent, align: 'c', lh: 1 });
           text(p, { x: x + 0.38, y: y + 1.35, w: cw - 0.76, h: h - 1.7, max: 19, min: 12, color: T.text, lh: 1.32 });
@@ -276,22 +332,43 @@ const Praesentation = (() => {
       const f = text(s.title || 'Vielen Dank!', { x: M, y: 2.6, w: W - 2 * M, h: 1.6, max: 60, min: 36, bold: T.head !== 'serif', font: T.head, color: im && T.title === 'full' ? '#FFFFFF' : fg, align: 'c', maxLines: 1, lh: 1.05 });
       if (s.text) text(s.text, { x: M, y: f.bottom + 0.25, w: W - 2 * M, h: 0.9, max: 24, min: 16, color: im && T.title === 'full' ? 'rgba(255,255,255,0.85)' : T.title === 'block' ? T.onAccent : T.sub, align: 'c', maxLines: 2 });
       out.push({ k: 'rect', x: W / 2 - 0.45, y: 2.25, w: 0.9, h: 0.08, fill: T.title === 'block' ? T.onAccent : T.accent, r: 0.04 });
-    } else { // punkte (auch „bild“ ohne Bild) – Aufbau je Folie verschieden: Bild links/rechts, Karten oder Liste
+    } else { // punkte (auch „bild“ ohne Bild) – Aufbau nach Inhalt: Bild als halbe Folie, Karten (mit Titel), zwei Spalten oder ruhige Liste
       const hasImg = !!im;
       const pts = s.points.length ? s.points : [];
-      const cards = !hasImg && (s.layout === 'karten' || (!s.layout && pts.length >= 3 && pts.length <= 4 && pts.every((x) => plain(x).length <= 80) && i % 2 === 1)); // kurze Kernaussagen → Kacheln (jede zweite passende Folie)
+      const parts = pts.map(splitPt);
+      const titled = parts.length >= 2 && parts.length <= 4 && parts.every((p) => p.t);
+      const cards = !hasImg && s.layout !== 'liste' && (s.layout === 'karten' || titled
+        || (!s.layout && pts.length >= 3 && pts.length <= 4 && pts.every((x) => plain(x).length <= 80) && i % 2 === 1)); // kurze Kernaussagen → Kacheln
+      const cols2 = !hasImg && !cards && s.layout !== 'liste' && pts.length >= 5;
       if (cards) {
+        out[0].fill = T.soft; // Karten auf ruhigem Grau: weiße Kacheln
         const top = heading(s.title);
-        const cols = pts.length === 3 ? 3 : 2, rows = Math.ceil(pts.length / cols), gap = 0.3;
+        const n = pts.length, cols = n === 4 ? 2 : Math.min(n, 3), rows = Math.ceil(n / cols), gap = 0.28;
         const avail = H - top - 0.95, cw = (W - 2 * M - (cols - 1) * gap) / cols;
-        const ch = Math.min((avail - (rows - 1) * gap) / rows, rows === 1 ? 2.7 : 2.2); // Kacheln nicht unnötig hoch
-        const y0 = top + Math.max(0, avail - rows * ch - (rows - 1) * gap) * 0.35;
-        pts.forEach((p, k) => {
+        const ch = Math.min((avail - (rows - 1) * gap) / rows, rows === 1 ? 3.7 : 2.35); // Kacheln füllen die Folie, aber nicht bis zum Rand
+        const y0 = top + Math.max(0, avail - rows * ch - (rows - 1) * gap) * 0.3;
+        parts.forEach((p, k) => {
           const x = M + (k % cols) * (cw + gap), y = y0 + Math.floor(k / cols) * (ch + gap);
-          out.push({ k: 'rect', x, y, w: cw, h: ch, fill: T.panel, r: R });
-          out.push({ k: 'rect', x: x + 0.35, y: y + 0.38, w: 0.42, h: 0.05, fill: T.accent, r: 0.025 });
-          text(p, { x: x + 0.35, y: y + 0.62, w: cw - 0.7, h: ch - 0.9, max: 22, min: 12, color: T.text, lh: 1.32 });
+          out.push({ k: 'rect', x, y, w: cw, h: ch, fill: '#FFFFFF', r: R });
+          out.push({ k: 'rect', x: x + 0.34, y: y + 0.36, w: 0.42, h: 0.05, fill: T.accent, r: 0.025 });
+          let ty = y + 0.58;
+          if (p.t) { const f = text(p.t, { x: x + 0.34, y: ty, w: cw - 0.68, h: 0.85, max: 23, min: 14, bold: true, color: T.text, maxLines: 2, lh: 1.15 }); ty = f.bottom + 0.14; }
+          text(p.b, { x: x + 0.34, y: ty, w: cw - 0.68, h: y + ch - ty - 0.3, max: p.t ? 19 : 22, min: 12, color: p.t ? T.sub : T.text, lh: 1.34 });
         });
+      } else if (cols2) { // viele Punkte: zwei ruhige Spalten statt einer langen Liste
+        const top = heading(s.title);
+        const half = Math.ceil(pts.length / 2), cw = (W - 2 * M - 0.6) / 2;
+        [pts.slice(0, half), pts.slice(half)].forEach((col, c) => bullets(col, { x: M + c * (cw + 0.6), y: top, w: cw, h: H - top - 0.9, max: 19, min: 12, gap: 0.26 }));
+      } else if (hasImg && T.title === 'split') { // Bild als halbe Folie bis an den Rand, Seite wechselt von Folie zu Folie
+        const imgLeft = s.layout === 'links' || (s.layout !== 'rechts' && i % 2 === 0);
+        const iw = 5.55, tx = imgLeft ? iw + 0.7 : M, tw = W - iw - 0.7 - M;
+        out.push({ k: 'image', x: imgLeft ? 0 : W - iw, y: 0, w: iw, h: H, src: im });
+        const top0 = heading(s.title, tw, tx);
+        let y = top0;
+        if (s.text && !pts.length) { const f = text(s.text, { x: tx, y, w: tw, h: H - y - 1, max: 20, min: 13, color: T.text, maxLines: 12, lh: 1.4 }); y = f.bottom + 0.3; }
+        if (pts.length) bullets(pts, { x: tx, y, w: tw, h: H - y - 0.9, max: 19, min: 12 });
+        footer(false, imgLeft ? 'l' : 'r');
+        return out;
       } else {
         const imgLeft = hasImg && (s.layout === 'links' || (s.layout !== 'rechts' && i % 2 === 0));
         const bw = hasImg ? 6.35 : W - 2 * M, tx = imgLeft ? W - M - bw : M;
@@ -592,7 +669,7 @@ const Praesentation = (() => {
   const editKey = (raw) => `pz.edit.${hash(String(raw || '').trim())}`;
   const serial = (deck) => JSON.stringify({ title: deck.title, subtitle: deck.subtitle, theme: deck.theme, aiTheme: deck.aiTheme, accent: deck.accent, sources: deck.sources,
     slides: deck.slides.map((x) => ({ type: x.type, title: x.title, text: x.text, points: x.points, left: x.left, right: x.right, image: x.image, notes: x.notes, ...(x.layout ? { layout: x.layout } : {}) })) });
-  const TYPE_NAMES = { titel: 'Titel', gliederung: 'Gliederung', punkte: 'Stichpunkte', bild: 'Großes Bild', zahlen: 'Zahlen', zwei: 'Vergleich', zitat: 'Merksatz / Zitat', abschnitt: 'Abschnitt', fazit: 'Fazit', quellen: 'Quellen', ende: 'Schluss' };
+  const TYPE_NAMES = { titel: 'Titel', gliederung: 'Gliederung', punkte: 'Stichpunkte', bild: 'Großes Bild', zahlen: 'Zahlen', zwei: 'Vergleich', zitat: 'Merksatz / Zitat', abschnitt: 'Abschnitt', schritte: 'Ablauf / Schritte', definition: 'Definition', frage: 'Einstiegsfrage', fazit: 'Fazit', quellen: 'Quellen', ende: 'Schluss' };
   const ACCENTS = ['#2F6BFF', '#5EA2FF', '#14B8A6', '#22A55B', '#F59E0B', '#FF5A36', '#E11D74', '#8B5CF6', '#B5532A', '#0A0A0A'];
   // gemeinsamer Zustand einer Präsentation (Karte und Bearbeiten-Fenster): Folien, geladene Bilder, Layout
   function makeState(raw) {
@@ -622,6 +699,12 @@ const Praesentation = (() => {
     return st;
   }
 
+  // Fortschritt, solange der Block noch geschrieben wird: wie viele Folien schon stehen (die Wellen-Animation läuft ungestört weiter)
+  function progress(fig, raw) {
+    const n = (String(raw || '').match(/"type"\s*:/g) || []).length;
+    const el = fig.querySelector('.pz-wait-n');
+    if (el) el.textContent = n ? ` · Folie ${n}` : '';
+  }
   /* ---------- Karte im Chat: nur die Präsentation (ohne Kopf), Designs, Bearbeiten, Ausgabe als drei Kacheln ---------- */
   function figure(raw) {
     const fig = document.createElement('figure');
@@ -629,7 +712,12 @@ const Praesentation = (() => {
     window.enterOnce?.(fig);
     const st = makeState(raw);
     // solange der Block noch geschrieben wird: dieselbe Wellen-Animation wie bei der Bilderstellung (16:9 wie eine Folie)
-    if (!st) { fig.innerHTML = `<div class="pz-wait pz-wave">${window.illustrationWave?.() || '<span class="shimmer">Präsentation wird erstellt …</span>'}</div>`; return fig; }
+    if (!st) {
+      fig.classList.add('pz-waiting');
+      fig.innerHTML = `<div class="pz-wait pz-wave">${window.illustrationWave?.() || ''}</div><div class="pz-wait-l"><span class="shimmer">Präsentation wird gestaltet</span><span class="pz-wait-n"></span></div>`;
+      progress(fig, raw);
+      return fig;
+    }
     const deck = st.deck;
     fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div><button type="button" class="pz-pen" data-edit aria-label="Bearbeiten">${fi('pencil', 14)}</button>
         <button type="button" class="pz-nav prev" data-go="-1" aria-label="Vorherige Folie">${fi('back', 14)}</button><button type="button" class="pz-nav next" data-go="1" aria-label="Nächste Folie">${fi('forward', 14)}</button>
@@ -730,9 +818,9 @@ const Praesentation = (() => {
       const ptsLabel = { gliederung: 'Punkte der Gliederung (je Zeile einer)', zahlen: 'Zahlen (je Zeile „Wert | Erklärung“)', quellen: 'Quellen (je Zeile eine)', fazit: 'Kernaussagen (je Zeile eine)' }[x.type] || 'Stichpunkte (je Zeile einer, **fett** möglich)';
       form.innerHTML = `<div class="pz-f-row">${field('Folienart', `<select data-f="type">${TYPES.map((t) => `<option value="${t}"${t === x.type ? ' selected' : ''}>${TYPE_NAMES[t]}</option>`).join('')}</select>`)}</div>
         ${field('Titel', `<input data-f="title" value="${esc(x.title)}" maxlength="110" />`)}
-        ${['titel', 'abschnitt', 'punkte', 'bild', 'zitat', 'ende'].includes(x.type) ? field(x.type === 'zitat' ? 'Merksatz / Zitat' : x.type === 'titel' ? 'Untertitel' : 'Text', `<textarea data-f="text" rows="2" maxlength="460">${esc(x.text)}</textarea>`) : ''}
+        ${['titel', 'abschnitt', 'punkte', 'bild', 'zitat', 'definition', 'ende'].includes(x.type) ? field(x.type === 'zitat' ? 'Merksatz / Zitat' : x.type === 'titel' ? 'Untertitel' : x.type === 'definition' ? 'Erklärung' : 'Text', `<textarea data-f="text" rows="2" maxlength="460">${esc(x.text)}</textarea>`) : ''}
         ${x.type === 'zwei' ? `<div class="pz-f-two">${['left', 'right'].map((k) => `<div>${field(k === 'left' ? 'Links: Überschrift' : 'Rechts: Überschrift', `<input data-f="${k}.title" value="${esc(x[k]?.title || '')}" maxlength="60" />`)}${field('Stichpunkte', `<textarea data-f="${k}.points" rows="4">${esc(lines(x[k]?.points))}</textarea>`)}</div>`).join('')}</div>`
-          : !['titel', 'abschnitt', 'zitat', 'ende'].includes(x.type) ? field(ptsLabel, `<textarea data-f="points" rows="5">${esc(lines(x.type === 'quellen' && !x.points.length ? deck.sources : x.points))}</textarea>`) : ''}
+          : !['titel', 'abschnitt', 'zitat', 'frage', 'ende'].includes(x.type) ? field(ptsLabel, `<textarea data-f="points" rows="5">${esc(lines(x.type === 'quellen' && !x.points.length ? deck.sources : x.points))}</textarea>`) : ''}
         <div class="pz-f-img"><span class="pz-f-l">Bild</span>
           <div class="pz-img-row">${im ? `<span class="pz-img-prev"><img alt="" src="${esc(im.img.src)}"></span>` : `<span class="pz-img-prev none">${fi('image', 16)}</span>`}
             <button type="button" class="pz-mini" data-img="pick">${fi('search', 12)}${x.image ? 'Anderes Foto' : 'Foto hinzufügen'}</button>
@@ -818,7 +906,7 @@ const Praesentation = (() => {
       onClose?.(cur);
     }
   }
-  return { parse, figure, layout, pptx, pdf, THEMES };
+  return { parse, figure, progress, layout, html: slideHtml, pptx, pdf, THEMES };
 })();
 if (typeof window !== 'undefined') window.Praesentation = Praesentation;
 if (typeof module !== 'undefined') module.exports = Praesentation;
