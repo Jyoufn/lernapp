@@ -242,6 +242,9 @@ const Tasks = (() => {
     el.tabIndex = 0;
     el.setAttribute('aria-expanded', String(openRows.has(t.id)));
     const st = ckState(t), busy = st === 'run';
+    // erledigt: wie lange die Aufgabe noch bleibt (nach einem Tag wird sie gelöscht) – kein Live-Zähler, aktualisiert sich beim Neuzeichnen
+    const leftMs = done && t.doneAt && !t.repeat ? DONE_KEEP_MS - (Date.now() - t.doneAt) : 0;
+    const leftText = leftMs > 0 ? (leftMs >= 3600000 ? `${Math.ceil(leftMs / 3600000)} Std.` : `${Math.max(1, Math.ceil(leftMs / 60000))} Min.`) : '';
     const dueText = du ? `${du.diff > 1 && du.diff <= 6 ? WD_LONG[new Date(`${t.date}T12:00:00`).getDay()] : du.text}${t.time ? ` ${t.time}` : ''}` : '';
     const agentBit = agents && t.agent && AGENT_NAMES[t.agent] && !done ? `<span class="tk-row-dog" title="${esc(AGENT_NAMES[t.agent])}${busy ? ' arbeitet …' : ''}">${dog(t.agent, 20)}</span>` : '';
     const r = t.run || {};
@@ -256,8 +259,9 @@ const Tasks = (() => {
     el.innerHTML = `<div class="tk-row-line">
         <button type="button" class="tk-ck s-${st}" data-check aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}" ${busy ? 'disabled' : ''}>${CHECK}</button>
         <b class="tk-row-title">${esc(t.title)}</b>
-        ${ts.length ? `<span class="tk-row-tags">${ts.slice(0, 3).map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}${ts.length > 3 ? `<span class="tk-more-n">+${ts.length - 3}</span>` : ''}</span>` : ''}
+        ${ts.length > 3 ? `<span class="tk-row-tags tk-row-dots" title="${ts.length} Tags" aria-label="${ts.length} Tags">${ts.slice(0, 3).map((g) => `<i style="--c:${g.c}"></i>`).join('')}</span>` : ts.length ? `<span class="tk-row-tags">${ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}</span>` : ''}
         <span class="grow"></span>
+        ${leftText ? `<span class="tk-row-left" aria-label="wird gelöscht in ${leftText}">${fi('clock', 11)}${leftText}</span>` : ''}
         ${result || agentBit}
         ${t.repeat ? `<span class="tk-row-rep" title="${esc(repText(t.repeat))}">${fi('refresh', 11)}${esc(repShort(t.repeat))}</span>` : ''}
         ${dueText && !result ? `<span class="tk-row-due${du.cls}">${dueText}</span>` : ''}

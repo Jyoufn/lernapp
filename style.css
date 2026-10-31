@@ -9361,3 +9361,16 @@ div.tl4-h { cursor: default; }
 .tk-src-docs button:hover { background: var(--menu-hover); }
 .tk-src-docs button span, .tk-src-doc span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-src-doc svg { flex: none; color: var(--text-3); }
+
+/* Aufgaben-Zeile (31.10.): mehr als drei Tags → nur drei farbige Punkte; erledigt → leise Restzeit bis zum Löschen (Uhr + „18 Std.“) */
+.tk-row-dots { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; }
+.tk-row-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.tk-row-left { display: inline-flex; align-items: center; gap: 4px; margin-right: 8px; color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tk-row-left svg { opacity: 0.8; }
+
+/* Präsentation entsteht (31.10.): Wellen-Animation wie bei der Bilderstellung im 16:9-Rahmen */
+.pz-wait.pz-wave { padding: 0; border: 0; background: none; }
+.pz-wave .ill-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid #262626; border-radius: 12px; pointer-events: none; }
+.pz-wave .ill-frame svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.pz-wave .ill-frame rect { opacity: 0; animation: ill-tile 5s ease-in-out infinite backwards; }
+@media (prefers-reduced-motion: reduce) { .pz-wave .ill-frame rect { animation: none; opacity: 1; } }

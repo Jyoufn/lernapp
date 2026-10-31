@@ -34,7 +34,14 @@ const Praesentation = (() => {
   /* ---------- Daten prüfen ---------- */
   function parse(raw) {
     let o = null;
-    try { o = JSON.parse(String(raw || '').trim()); } catch { return null; }
+    // tolerant lesen: Modelle setzen manchmal Kommas zu viel, typografische Anführungszeichen oder Text um das JSON herum
+    const src = String(raw || '').trim();
+    try { o = JSON.parse(src); } catch {
+      try {
+        const body = src.slice(src.indexOf('{'), src.lastIndexOf('}') + 1).replace(/,\s*([}\]])/g, '$1');
+        try { o = JSON.parse(body); } catch { o = JSON.parse(body.replace(/([{,\[]\s*)[“„]([^"“”„]*)”(\s*:)/g, '$1"$2"$3')); } // typografische Anführungszeichen nur an Schlüsseln
+      } catch { return null; }
+    }
     if (!o || typeof o !== 'object' || !Array.isArray(o.slides) || !o.slides.length) return null;
     const pts = (a, n = 6) => (Array.isArray(a) ? a.map((p) => str(p, 180)).filter(Boolean).slice(0, n) : []);
     const img = (i) => (i && typeof i === 'object' && (i.query || i.prompt || i.src) ? { query: str(i.query, 80), prompt: str(i.prompt || i.query, 400), ...(i.src ? { src: String(i.src), credit: str(i.credit, 160) } : {}) } : null);
@@ -341,9 +348,9 @@ const Praesentation = (() => {
     return url;
   }
   // je Folie mit Bildwunsch das geladene Bild (höchstens 10 Bilder je Präsentation)
-  async function loadAll(deck, timeoutMs = 50000) {
+  async function loadAll(deck, timeoutMs = 30000) {
     const map = new Map();
-    const want = deck.slides.filter((s) => s.image).slice(0, 10);
+    const want = deck.slides.filter((s) => s.image).slice(0, 6); // max. 6 Bilder, 30 s – sonst dauert die Präsentation zu lange
     await Promise.all(want.map((s) => Promise.race([loadImage(s.image), new Promise((r) => setTimeout(() => r(null), timeoutMs))])
       .then((x) => { if (x?.img) map.set(s, x); }).catch(() => {})));
     return map;
@@ -621,7 +628,8 @@ const Praesentation = (() => {
     fig.className = 'pz';
     window.enterOnce?.(fig);
     const st = makeState(raw);
-    if (!st) { fig.innerHTML = '<div class="pz-wait"><span class="shimmer">Präsentation wird erstellt …</span></div>'; return fig; }
+    // solange der Block noch geschrieben wird: dieselbe Wellen-Animation wie bei der Bilderstellung (16:9 wie eine Folie)
+    if (!st) { fig.innerHTML = `<div class="pz-wait pz-wave">${window.illustrationWave?.() || '<span class="shimmer">Präsentation wird erstellt …</span>'}</div>`; return fig; }
     const deck = st.deck;
     fig.innerHTML = `<div class="pz-stage"><div class="pz-slide pz-big"></div><button type="button" class="pz-pen" data-edit aria-label="Bearbeiten">${fi('pencil', 14)}</button>
         <button type="button" class="pz-nav prev" data-go="-1" aria-label="Vorherige Folie">${fi('back', 14)}</button><button type="button" class="pz-nav next" data-go="1" aria-label="Nächste Folie">${fi('forward', 14)}</button>

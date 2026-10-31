@@ -4381,6 +4381,9 @@ function deleteChat(tab) {
     keepChatsView = !!chatsView?.open;
     try { tabsEl.insertBefore(createTab('Neuer Chat'), tab); } finally { keepChatsView = false; }
   }
+  // läuft in diesem Chat noch eine Antwort (auch im Hintergrund) → sofort abbrechen, die KI arbeitet nicht weiter
+  try { runs.get(tab)?.abort(); } catch {}
+  runs.delete(tab);
   tabChats.delete(tab);
   if (tab.dataset.cid) deletedChats.add(tab.dataset.cid);
   tab.remove();

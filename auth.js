@@ -172,7 +172,7 @@
         <p class="auth-sub">Mit deiner E-Mail und deinem Passwort.</p>
         <div class="auth-fields">
           <label class="auth-label" for="authEmail">E-Mail</label>
-          <div class="auth-field">${fi('user', 14)}<input id="authEmail" name="email" type="email" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="name@beispiel.de" required /></div>
+          <div class="auth-field">${fi('user', 14)}<input id="authEmail" name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="E-Mail oder Benutzername" required /></div>
           <label class="auth-label" for="authPw">Passwort</label>
           <div class="auth-field">${fi('lock', 14)}<input id="authPw" name="password" type="password" autocomplete="current-password" placeholder="Passwort" required />
             <button type="button" class="auth-eye" aria-label="Passwort anzeigen" aria-pressed="false">${fi('eye', 14)}</button></div>
