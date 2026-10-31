@@ -337,13 +337,49 @@ composer.addEventListener('submit', (e) => {
   const text = input.value.trim();
   if (!text && attachments.length === 0) return;
   if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
-  const images = attachments.map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf })); // URLs bleiben für den Chat erhalten
+  const images = attachments.filter((a) => a.file).map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf })); // URLs bleiben für den Chat erhalten
+  const mentioned = attachments.filter((a) => a.mention).map((a) => a.mention);
   input.value = '';
   attachments = [];
   renderAttachments();
   autoGrow();
   input.focus();
-  sendMessage(text, images);
+  // @Chat/@Dokument: der Inhalt geht als Text-Quelle mit (die KI sieht ihn wie eine angehängte Datei)
+  Promise.all(mentioned.map(async (m) => ({ name: `${m.kind === 'chat' ? 'Chat' : 'Dokument'}: ${m.title}`, text: await mentionText(m).catch(() => '') })))
+    .then((texts) => sendMessage(text, images, { texts: texts.filter((t) => t.text).map((t) => ({ mime: 'text/plain', name: t.name, text: t.text })), chips: mentioned.map((m) => ({ name: m.title, pdf: true })) }));
+});
+
+/* @-Erwähnungen: Chats und Dokumente als Quelle (im Eingabefeld „@“ tippen oder im Lernset-Fenster) */
+function mentionItems() {
+  const chats = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => t !== activeTab() && historyOf(t).length)
+    .map((t) => ({ kind: 'chat', id: chatId(t), title: chatOf(t).title || 'Chat', updated: chatOf(t).updated || 0 })).sort((a, b) => b.updated - a.updated);
+  const docs = (window.Docs?.docs || []).filter((d) => (!window.Docs.inWs || window.Docs.inWs(d)) && String(d.title || '').trim()).map((d) => ({ kind: 'doc', id: d.id, title: d.title, updated: d.updated || 0 }));
+  return [...chats, ...docs];
+}
+async function mentionText(m) {
+  if (m.kind === 'doc') {
+    const box = document.createElement('div');
+    box.innerHTML = window.Docs?.get?.(m.id)?.content || '';
+    box.querySelectorAll('[data-blk], [data-viz], script, style').forEach((n) => n.remove());
+    return (box.innerText || box.textContent || '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 40000);
+  }
+  const tab = [...tabsEl.querySelectorAll('.tab')].find((t) => chatId(t) === m.id);
+  const hist = tab ? historyOf(tab) : [];
+  return hist.map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${String(h.text || '').replace(/```[\s\S]*?```/g, '[Block]')}`).join('\n\n').slice(-40000);
+}
+input.addEventListener('input', () => {
+  if (!window.Lernset) return;
+  const before = input.value.slice(0, input.selectionStart);
+  const at = /(^|\s)@([^\s@]{0,30})$/.exec(before);
+  if (!at) return;
+  Lernset.pickMention(composer, mentionItems(), (m) => {
+    const start = before.length - at[2].length - 1;
+    input.value = input.value.slice(0, start) + input.value.slice(before.length);
+    input.setSelectionRange(start, start);
+    if (!attachments.some((a) => a.mention?.id === m.id)) attachments.push({ mention: m });
+    renderAttachments();
+    input.focus();
+  }, { query: at[2] });
 });
 
 /* iPad: Antippen sicher machen. Ist die Tastatur offen, schließt sie sich beim Tippen auf einen Knopf und das Fenster verschiebt sich –
@@ -373,7 +409,37 @@ composer.addEventListener('submit', (e) => {
 }
 
 /* Fotos hinzufügen (+), oder Einfügen mit Strg/⌘+V */
-$('attachBtn')?.addEventListener('click', () => fileInput.click());
+/* Plus: kleines Menü – Dateien hinzufügen oder ein Lernset (Karteikarten, Quiz, Probeklausur) erstellen */
+let plusMenu = null;
+const closePlusMenu = () => { plusMenu?.remove(); plusMenu = null; document.removeEventListener('pointerdown', onPlusOutside, true); };
+const onPlusOutside = (e) => { if (!plusMenu?.contains(e.target) && !e.target.closest?.('#attachBtn')) closePlusMenu(); };
+$('attachBtn')?.addEventListener('click', () => {
+  if (plusMenu) { closePlusMenu(); return; }
+  if (!window.Lernset) { fileInput.click(); return; }
+  plusMenu = el('div', 'plus-menu', `<button type="button" data-pm="files">${FadeIcons.svg('image', 14)}<span>Fotos und Dateien</span></button>
+    <button type="button" data-pm="lernset">${FadeIcons.svg('stack', 14)}<span>Lernset erstellen</span><small>Karteikarten · Quiz · Probeklausur</small></button>`);
+  document.body.append(plusMenu);
+  const r = $('attachBtn').getBoundingClientRect();
+  plusMenu.style.left = `${Math.max(8, r.left - 4)}px`;
+  plusMenu.style.bottom = `${innerHeight - r.top + 8}px`;
+  plusMenu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-pm]'); if (!b) return;
+    closePlusMenu();
+    if (b.dataset.pm === 'files') fileInput.click(); else openLernsetDialog();
+  });
+  document.addEventListener('pointerdown', onPlusOutside, true);
+});
+// Lernset aus dem Chat: das Fenster sammelt Art, Thema, Quellen und Einstellungen → normale Chat-Nachricht (mit Zeitleiste und Gedanken)
+function openLernsetDialog(kind) {
+  Lernset.dialog({
+    kind, mode: 'chat', mentions: mentionItems, mentionText,
+    onSubmit: (spec) => {
+      const images = spec.files.map((f) => ({ url: /^image\//.test(f.type) ? URL.createObjectURL(f) : null, name: f.name, file: f, pdf: !/^image\//.test(f.type) }));
+      const texts = spec.texts.map((t) => ({ mime: 'text/plain', name: t.name, text: t.text }));
+      sendMessage(Lernset.requestText(spec), images, { texts, chips: spec.texts.map((t) => ({ name: t.name, pdf: true })), lernset: Lernset.settingsOf(spec) });
+    },
+  });
+}
 fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
 input.addEventListener('paste', (e) => {
   const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf' || isGoodnotes(f));
@@ -393,6 +459,17 @@ const pdfChip = (name, cls) => el('div', cls, `<span class="pdf-ico">${FadeIcons
 
 function renderAttachments() {
   attachmentsEl.replaceChildren(...attachments.map((a, i) => {
+    if (a.mention) { // @Chat/@Dokument: Karte wie ein PDF, mit Chat- bzw. Dokument-Symbol
+      const chip = document.createElement('div'); // (nicht el(): im Rest dieser Funktion heißt eine Variable so)
+      chip.className = 'thumb thumb-pdf thumb-at';
+      chip.innerHTML = `<span class="pdf-ico">${FadeIcons.svg(a.mention.kind === 'chat' ? 'chat' : 'file', 14)}</span><span class="pdf-name">${escapeHtml(a.mention.title)}</span>`;
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.setAttribute('aria-label', 'Entfernen');
+      rm.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      rm.addEventListener('click', () => { attachments.splice(i, 1); renderAttachments(); });
+      chip.append(rm);
+      return chip;
+    }
     const el = a.pdf ? pdfChip(a.file.name, 'thumb thumb-pdf') : document.createElement('div');
     if (!a.pdf) el.className = 'thumb';
     const img = document.createElement('img');
@@ -1394,6 +1471,19 @@ function renderMarkdown(target, text, opts = {}) {
       }
       const f = Praesentation.figure(raw);
       if (target._pzWait) { f.classList.add('pz-reveal'); target._pzWait = null; } // fertig → weich einblenden statt hart umspringen
+      keep.set(raw, f);
+    }
+    pre.replaceWith(keep.get(raw));
+  });
+  // Lernset (```lernset): Karteikarten, Quiz, Probeklausur – Vorschau im Chat, Antippen öffnet die Lernansicht im Vollbild (lernset.js)
+  target.querySelectorAll('pre:has(code.language-lernset)').forEach((pre) => {
+    if (!window.Lernset) { pre.remove(); return; }
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._ls ||= new Map());
+    if (!keep.has(raw)) {
+      if (!Lernset.parse(raw)) { target._lsWait ||= Lernset.figure(raw); Lernset.progress(target._lsWait, raw); pre.replaceWith(target._lsWait); return; }
+      const f = Lernset.figure(raw);
+      if (target._lsWait) { f.classList.add('ls-reveal'); target._lsWait = null; }
       keep.set(raw, f);
     }
     pre.replaceWith(keep.get(raw));
@@ -3436,7 +3526,8 @@ chat.addEventListener('click', (e) => {
   if (e.target.closest('[data-doc-retry]')) { entry.doc.state = entry.doc.kind === 'create' ? 'ask' : 'work'; renderDocCard(msgEl, entry); if (entry.doc.kind === 'edit') runDocEdit(msgEl, entry, activeTab()); }
 });
 
-async function sendMessage(text, images) {
+// extra: { texts: Text-Quellen (@Chat/@Dokument, eingefügter Text), chips: Anzeige dazu, lernset: Einstellungen aus dem Lernset-Fenster }
+async function sendMessage(text, images, extra = {}) {
   if (!history.length) autoTitle(text); // erste Anfrage → Titel erzeugen
   if (ask) hideAskPanel(); // offenes Fragefeld schließen, wenn stattdessen normal geschrieben wird
   const pa = pendingOf();
@@ -3447,8 +3538,8 @@ async function sendMessage(text, images) {
     pa.work.head.querySelector('.t').hidden = false;
     activeTab()._pendingAsk = null;
   }
-  addUserMessage(text, images);
-  let docKind = !images.length && docIntent(text);
+  addUserMessage(text, [...images, ...(extra.chips || [])]);
+  let docKind = !images.length && !extra.texts?.length && !extra.lernset && docIntent(text);
   if (docKind === 'maybe') docKind = (await docIntentAsk(text)) ? 'create' : null; // die KI beurteilt unklare Fälle
   if (docKind) { docTurn(docKind, text); return; }
   const controller = new AbortController();
@@ -3459,7 +3550,7 @@ async function sendMessage(text, images) {
   try {
     const inline = (await Promise.all(images.map((i) => fileToInline(i.file).catch(() => null)))).flat(); // gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
-    hist.push({ role: 'user', text, images: inline.filter(Boolean) });
+    hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}) });
     markDrafts();
     msgEl._historyAt = hist.length; // hier landet die Antwort – für „Neu erzeugen“
 
@@ -5768,3 +5859,5 @@ document.addEventListener('click', (e) => {
 window.dictateInto = dictateInto;
 window.stopDictateInto = stopDictateInto;
 window.illustrationWave = illustrationWave;
+
+window.mentionItems = mentionItems; window.mentionText = mentionText; // auch für das Lernset-Fenster im Dokument (docs.js)

@@ -46,6 +46,9 @@ const DocBlocks = (() => {
     { id: 'board', group: 'Ansichten', name: 'Aufgaben-Board', icon: 'kanban', keys: 'aufgaben board kanban todo to-do tasks spalten' },
     { id: 'dashboard', group: 'Ansichten', name: 'Dashboard', icon: 'dashboard', keys: 'dashboard übersicht diagramme kacheln' },
     { id: 'map', group: 'Ansichten', name: 'Karte', icon: 'map-pin', keys: 'karte map ort standort maps' },
+    { id: 'ls-karten', group: 'Lernen', name: 'Karteikarten', icon: 'stack', keys: 'karteikarten lernkarten flashcards lernen abfragen' },
+    { id: 'ls-quiz', group: 'Lernen', name: 'Quiz', icon: 'target', keys: 'quiz test fragen abfragen üben' },
+    { id: 'ls-klausur', group: 'Lernen', name: 'Probeklausur', icon: 'clipboard', keys: 'probeklausur klausur prüfung übungsklausur test' },
     { id: 'bar', group: 'Diagramme', name: 'Säulendiagramm', icon: 'analytics', keys: 'säulen balken vertikal bar diagramm' },
     { id: 'hbar', group: 'Diagramme', name: 'Balkendiagramm', icon: 'bars-h', keys: 'balken horizontal rangliste diagramm' },
     { id: 'line', group: 'Diagramme', name: 'Liniendiagramm', icon: 'trend', keys: 'linie verlauf line diagramm' },
@@ -1139,7 +1142,14 @@ const DocBlocks = (() => {
     const key = nameKey(b.dataset.blk), cfg = b._cfg;
     editInline(b.querySelector(':scope > .dcb-head .dcb-head-t'), cfg?.[key], (v, changed, viaKey) => { if (changed) { cfg[key] = v; b._api.save(cfg); } paintHead(b); if (viaKey) after?.(); });
   }
-  const RENDER = { chart: chartBlk, dashboard: dashboardBlk, board: boardBlk, image: imageBlk, video: videoBlk, audio: audioBlk, web: webBlk, gallery: galleryBlk, calendar: calendarBlk, time: timeBlk, map: mapBlk };
+  // Lernset (Karteikarten, Quiz, Probeklausur): Vorschau aus lernset.js, Antippen öffnet die Lernansicht im Vollbild
+  function lernsetBlk(b, cfg, api) {
+    const raw = String(cfg.raw || '');
+    if (!window.Lernset || !Lernset.parse(raw)) { b.append(el('div', 'dcb-none', 'Lernset konnte nicht gelesen werden.')); tools(b, api); return; }
+    b.append(Lernset.figure(raw));
+    tools(b, api);
+  }
+  const RENDER = { lernset: lernsetBlk, chart: chartBlk, dashboard: dashboardBlk, board: boardBlk, image: imageBlk, video: videoBlk, audio: audioBlk, web: webBlk, gallery: galleryBlk, calendar: calendarBlk, time: timeBlk, map: mapBlk };
   const TYPES = Object.keys(RENDER);
 
   /* ---------- Zeichnen ---------- */
@@ -1654,6 +1664,11 @@ const DocBlocks = (() => {
     }
     function choose(it) {
       if (it.id === 'page') { openPages(); return; }
+      if (it.id.startsWith('ls-')) { // Lernset: Fenster (docs.js) – der Block kommt erst, wenn die KI fertig ist, an genau diese Stelle
+        const top = takeSlash(); close();
+        ctx.lernset?.(it.id.slice(3), (htmlStr) => { insert(top?.isConnected ? top : null, htmlStr); ctx.afterInsert?.(); ctx.onChange(); });
+        return;
+      }
       const top = takeSlash();
       close();
       const nodes = insert(top, html(it.id));

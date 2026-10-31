@@ -1583,6 +1583,42 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (f) v.append(f); else v.innerHTML = '<div class="chart-error">Grafik konnte nicht dargestellt werden.</div>';
       });
     }
+    /* Lernset aus dem Dokument (Slash „Karteikarten/Quiz/Probeklausur“): Abschnitte (Häkchen) + Quellen → /api/chat (Lern-Agent, ohne Rückfragen)
+       → Block ```lernset an der Slash-Stelle. Das Fenster zeigt den Fortschritt; ist inzwischen ein anderes Dokument offen, kommt der Block ans Ende des richtigen. */
+    function lernsetFromDoc(kind, place) {
+      if (!window.Lernset || !doc) return;
+      const d = doc;
+      Lernset.dialog({
+        kind, mode: 'doc', sections: Lernset.sectionsOf(d.content || ''),
+        mentions: () => window.mentionItems?.() || [], mentionText: (m) => window.mentionText?.(m) || Promise.resolve(''),
+        onSubmit: async (spec, ui) => {
+          ui.busy('Wird erstellt …');
+          try {
+            const files = (await Promise.all(spec.files.map((f) => fileToInline(f).catch(() => null)))).flat().filter(Boolean);
+            const texts = [...spec.sections.map((s) => ({ mime: 'text/plain', name: `Dokument „${d.title || 'Unbenannt'}“ – ${s.title}`, text: s.text })),
+              ...spec.texts.map((t) => ({ mime: 'text/plain', name: t.name, text: t.text }))];
+            const msg = { role: 'user', text: Lernset.requestText(spec), images: [...files, ...texts], lernset: Lernset.settingsOf(spec) };
+            const fitted = window.fitMaterial ? window.fitMaterial([msg]) : { messages: [msg], dropped: 0 };
+            const messages = window.withTiles ? await window.withTiles(fitted.messages) : fitted.messages;
+            const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ messages, materialDropped: fitted.dropped, effort: dccEffort() === 'auto' ? 'high' : dccEffort(), agent: 'learn', noClarify: true }) });
+            if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
+            let answer = '';
+            for await (const { event, data } of readSse(res)) {
+              if (event === 'text') { answer += data.text; const n = (answer.match(/"(vorne|frage|text|typ)"\s*:/g) || []).length; if (n) ui.busy(`Wird erstellt · ${n}`); }
+              else if (event === 'status' && data.status === 'active' && data.description) ui.busy(data.description);
+              else if (event === 'error') throw new Error(data.message || 'Hat nicht geklappt.');
+            }
+            const raw = (/```lernset\s*([\s\S]*?)```/.exec(answer) || [])[1];
+            if (!raw || !Lernset.parse(raw)) throw new Error('Das Lernset konnte nicht erstellt werden – bitte noch einmal versuchen.');
+            const html = `<div data-blk="lernset" data-cfg="${esc(JSON.stringify({ raw: raw.trim() }))}"></div>`;
+            if (doc?.id === d.id) place(html); else update(d.id, { content: `${d.content || ''}${html}` });
+            ui.done();
+          } catch (err) { ui.fail(err.message || 'Hat nicht geklappt.'); }
+          return true; // Fenster schließt selbst (done) bzw. bleibt bei einem Fehler offen
+        },
+      });
+    }
     // Blöcke aus dem Slash-Menü (docblocks.js): zeichnen, Seitenlinks öffnen, nach dem Einfügen neu zeichnen
     const blockCtx = () => ({
       onChange: commit,
@@ -1590,6 +1626,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       docs: () => docs.filter((d) => d.id !== doc?.id && !isEmpty(d)).sort((a, b) => b.updated - a.updated).map((d) => ({ id: d.id, title: d.title.trim() || 'Unbenannt', icon: d.icon || null })),
       docInfo: (id) => { const d = docOf(id); return d ? { title: d.title.trim() || 'Unbenannt', icon: d.icon || null } : null; },
       openDoc: (id) => open(id),
+      // Lernset aus dem Slash-Menü: Fenster mit den Abschnitten dieses Dokuments (Häkchen, „Alle“) + Quellen → KI erstellt → Block an der Stelle
+      lernset: (kind, place) => lernsetFromDoc(kind, place),
       // „Frag die KI“: Seitenfenster mit dem Dokument-Chat öffnen, Frage vorbereitet
       askAi: (text) => {
         paneOpen = true; localStorage.setItem('docs.pane', '1'); drawPane();

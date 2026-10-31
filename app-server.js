@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -1041,6 +1041,7 @@ function docOutline(html) {
   });
   return out.length ? out.join('\n').slice(0, 30000) : String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 4000);
 }
+const LSET = require('./lib/lernset'); // Probeklausur: offene Antworten bewerten
 async function handleDocAi(req, res) {
   const body = await readBody(req, 2 * 1024 * 1024);
   const env = readEnv();
@@ -1427,6 +1428,7 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
+    if (req.method === 'POST' && urlPath === '/api/lernset/grade') return sendJson(res, 200, await LSET.grade(readEnv(), await readBody(req, 400000)));
     // Chats, Dokumente, Darstellung, Browser-Speicher: je Konto (lib/accounts.js)
     if (req.method === 'GET' && urlPath === '/api/chats') return sendJson(res, 200, await ACC.loadChats(store, user.id));
     if (req.method === 'PUT' && urlPath === '/api/chats') { await ACC.storeChats(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
