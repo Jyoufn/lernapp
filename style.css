@@ -9378,3 +9378,15 @@ div.tl4-h { cursor: default; }
 /* ===== 01.11.2026 – Dokument-Chat: PDF/GoodNotes als Karte im Eingabefeld ===== */
 .dcc-att.dcc-att-doc { width: auto; max-width: 190px; display: inline-flex; align-items: center; gap: 6px; padding: 0 26px 0 10px; color: var(--text-3); font-size: 12px; background: var(--field-bg, #1d1d1d); }
 .dcc-att.dcc-att-doc > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== 01.11.2026 – Zeitleiste ruhiger: kein Drehkreis, erster Schritt im Hauptstatus ===== */
+/* Läuft nur EIN Schritt, steht er im Kopf (statt Hauptstatus); die Liste erscheint erst ab dem zweiten Schritt (app.js createWork) */
+.work-solo { display: none; }
+.work.solo .work-title { display: none; }
+.work.solo .work-solo { display: inline-block; max-width: min(420px, 62vw); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; animation-duration: var(--pulse, 1.8s); }
+.work.solo .steps { display: none; }
+.work:not(.active) .work-solo { animation: none; background: none; color: var(--text-3); }
+/* Laufender Schritt: ruhig pulsierender Punkt statt Drehkreis */
+.steps .marker .spinner, .dq-ico .spinner { width: 5px; height: 5px; border: 0; border-radius: 50%; background: #d6d6d6; animation: mk-pulse 1.4s ease-in-out infinite; }
+@keyframes mk-pulse { 0%, 100% { opacity: .35; transform: scale(.8); } 50% { opacity: 1; transform: scale(1.15); } }
+@media (prefers-reduced-motion: reduce) { .steps .marker .spinner, .dq-ico .spinner { animation: none; opacity: .8; } }

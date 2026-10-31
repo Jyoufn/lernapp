@@ -1750,18 +1750,36 @@ function toggleWork(work, collapse) {
   head.setAttribute('aria-expanded', String(!collapse));
 }
 
+/* Zeitleiste: Läuft erst EIN Schritt (noch nichts fertig), steht er im Hauptstatus statt als einsame Zeile darunter („solo“).
+   Kommt der zweite dazu bzw. ist der erste fertig, erscheint die Liste: erster Punkt abgehakt, der neue läuft – oben wieder der Hauptstatus. */
+const stepActive = (s) => { const m = s.querySelector(':scope > .marker'); return !!m && !m.classList.contains('dot') && !m.classList.contains('ico'); };
+const stepLabel = (s) => {
+  const head = s.querySelector('.thought-head');
+  if (head) return head.textContent.trim();
+  const line = s.querySelector('.step-line')?.cloneNode(true);
+  line?.querySelectorAll('.t, .chips, .ph-x, button, .dq, svg').forEach((n) => n.remove());
+  return (line?.textContent || '').replace(/\s+/g, ' ').trim();
+};
 function createWork() {
   const work = el('div', 'work');
   const head = el('button', 'work-head');
   head.type = 'button';
   head.setAttribute('aria-expanded', 'true');
-  head.innerHTML = `<span class="act" aria-hidden="true"></span><span class="work-title"></span><span class="t live">1s</span>${icon('i-chevron-down')}`;
+  head.innerHTML = `<span class="act" aria-hidden="true"></span><span class="work-title"></span><span class="work-solo shimmer"></span><span class="t live">1s</span>${icon('i-chevron-down')}`;
   head.querySelector('svg').classList.add('chev');
   const body = el('div', 'work-body');
   const steps = el('div', 'steps');
   body.append(steps);
   work.append(head, body);
   head.addEventListener('click', () => toggleWork(work, !work.classList.contains('collapsed')));
+  const solo = head.querySelector('.work-solo');
+  const sync = () => {
+    const rows = [...steps.children].filter((s) => s.classList.contains('step'));
+    const one = rows.length === 1 && stepActive(rows[0]) ? stepLabel(rows[0]) : '';
+    if (one && solo.textContent !== one) solo.textContent = one;
+    work.classList.toggle('solo', !!one);
+  };
+  new MutationObserver(sync).observe(steps, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
   return { work, steps, head };
 }
 
@@ -1934,8 +1952,8 @@ const ACT_MARKUP = {
   read: '<span class="a-read"><i></i><i></i><i></i></span>',            // Zeilen werden „gelesen“
   write: '<span class="a-write"><i></i><i></i><i></i></span>',          // Balken wie beim Tippen
   check: '<span class="a-check"></span>',                                // Ring, der sich schließt
-  wait: '<span class="a-load"></span>',                                // Lade-Kreis
-  work: '<span class="a-work"></span>',                                  // dezenter Ring
+  wait: '<span class="a-think"><i></i><i></i><i></i></span>',           // ruhige Punkte (kein Drehkreis)
+  work: '<span class="a-think"><i></i><i></i><i></i></span>',           // ruhige Punkte (kein Drehkreis)
 };
 
 /* Hauptquellen einer Antwort: die am häufigsten belegten (wirklich genutzten) Quellen */
@@ -2191,9 +2209,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (pictureAsk && !picWaitsForFiles) { ensureWork(); showPicStep(); return; } // Bildbitte: „Bild erzeugen“ als Schritt in der Zeitleiste, nicht frei
     if (pictureAsk) { ensureWork(); return; } // mit Dateien: erst die Materialprüfung (Server-Stufe), dann der Bild-Schritt
     if (answerR || work) return;
-    pending = el('div', 'pending');
-    pending.append(el('span', 'spinner'), el('span', 'shimmer', 'Arbeiten'));
-    msgEl.append(pending);
+    // gleich die echte Zeitleiste mit arbeitendem Hund (statt eines eigenen „Arbeiten“ mit Drehkreis ohne Hund)
+    ensureWork();
     scrollToBottom();
   }, pictureAsk ? 0 : PENDING_DELAY);
   const removePending = () => { clearTimeout(pendingTimer); pending?.remove(); pending = null; };
