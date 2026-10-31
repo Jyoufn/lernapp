@@ -10,26 +10,18 @@
 | `lib/workflow.js` → `VOICE_PROMPT` | Sprach-Agent mit ```app-Aktionen |
 Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Prompts.
 
-## Ablauf einer Antwort (`runChat`)
-1. Kurznachricht („Moin“) → direkt antworten, keine Zeitleiste (`quiet`).
-2. Material (Fotos/PDF) prüfen (`material`) – Material hat Vorrang.
-3. **Planung** (`thinking`, `analyze`): Die KI entscheidet hier, welche Schritte nötig sind – `research` (Quellen), `web` (Websites), `verify` (Prüfung), `think` (Nachdenken). Prompt-Regel: jeder eingeschaltete Schritt wird angezeigt → nur einschalten, was wirklich nötig ist. Börse: fester Plan statt Analyse (`BOERSE_PLAN`).
-4. Börse: `market` (Kurse/Charts/Nachrichten) – Server meldet die tatsächlich gerechneten Schritte (`steps` aus `lib/boerse.js`), nur Schritte mit Ergebnis.
-5. Websites (`browsing`) bzw. Nachschlagewerke/Fachliteratur (`searching_sources`), Research: Tiefen-Recherche.
-6. Optional Entwurf + Prüfung (`processing`, `verifying`), dann Antwort (`answering`).
-7. Google-Suche im Modell (Grounding) nur bei Aktuellem (`TIME_SENSITIVE`, ganze Wörter) oder Research/Lernen-mit-Bild.
+## Ablauf einer Antwort (`runChat`) – GEMINI-NATIV (verbindlich seit 31.10.)
+- **Allgemein, Lernen, Research und jede Frage mit Bild/PDF** (`native`): KEIN Planungs-Aufruf, KEIN Plan im Prompt, keine von uns entschiedene Denk-Abschaltung. Gemini denkt selbst so lange es braucht, fragt selbst nach (```ask, Regeln in `BASE_PROMPT`) und sucht selbst (Google-Suche im Modell) – der alte Ablauf (Planung → Plan-Punkte → „Vorgehen steht“) hat Gemini verbogen und Aufgaben falsch verstehen lassen.
+  - Auto: Denken dynamisch (`autoThink`: 2.5 Budget −1, 3.x ohne `thinkingLevel` = Standard), Stil `EFFORT_STYLE.auto`. Gewählte Stufe: genau diese (Low ohne Denken).
+  - Quellen nur bei ausdrücklichem Wunsch, Max, Präsentation, Aktuellem oder Research-Agent: Gemini-Suche (`geminiSearch`); **Lernen** holt dann deutsche Fachquellen über die eigene Suche – `analyze` liefert dort NUR Suchbegriffe.
+  - Zeitleiste: Bild/PDF → „Dokumente analysieren“ (während Gemini liest/denkt) → „Antwort schreiben“; sonst `answering` mit `meta.think` („Nachdenken“).
+- Börse, Coden, Sprache und Aufrufe ohne Agent: bisheriger Ablauf (Planung `analyze`, Börse fester Plan `BOERSE_PLAN`, Recherche-Pipeline, Tests).
+- Schulstärke im `BASE_PROMPT`: „SCHULAUFGABEN“ (Aufgabe Wort für Wort lesen, Operatoren-Liste, Material-Belege, Musterlösung je „## Aufgabe N“); nie nach Fach/Klasse/Thema fragen. High/Max bei konkreter Aufgabe: beste Lösung GENAU dieser Aufgabe, kein Referat.
 
-## Denken (verbindlich – nicht zurückbauen, außer der Nutzer will es)
-- Gemini 2.5 Flash: `thinkingBudget` (0 = aus); Gemini 3.x: `thinkingLevel`. Groq gpt-oss: `reasoning_effort`. Alle Modelle der Leiter denken nach denselben Regeln.
-- **Denken nur, wenn es die Antwort besser macht** (`thinkNeeded` in `runChat`): Die Analyse setzt `think`. Aus (Budget 0, keine Gedanken-Anzeige) bei
-  einfachen E-Mails/Nachrichten, Übersetzungen, Definitionen, Fakten, Low/Schnell. An bei `think`, Recherche mit Quellen, Rechnen/Prüfung/
-  Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (immer), Coden, Börse. Ohne Analyse: ab High.
-- **Gedanken-Anzeige** (`lib/thoughts.js`, `createThoughtFilter`): Geminis Zusammenfassungen je **Abschnitt** – reine Form-/Gliederungs-
-  Gedanken („Refining the format“, „Structuring the response“, „Analyzing the approach“) fallen weg; inhaltliche werden sinngetreu und knapp
-  ins Deutsche übertragen – EIN Modellaufruf je Antwort für alle Abschnitte zusammen (nie je Abschnitt: das hat das Gemini-Tageskontingent aufgebraucht). Klappt das nicht → Abschnitt wird nicht gezeigt (nie Englisch, nie Erfundenes).
-  Der erste Antworttext wartet, bis alle Gedanken gemeldet sind.
-- **Antworttext ohne Vorgehen**: Prompt-Regel „NUR DAS ERGEBNIS“ + `createAnswerGuard` (verwirft Vorgehens-Absätze nur am Antwortanfang).
-  Nie wieder Denk-Anweisungen („denke auf Deutsch mit Überschriften“) in den System-Prompt schreiben – Gemini schreibt sie sonst in die Antwort.
+## Denken (verbindlich)
+- Gemini 2.5: `thinkingBudget`; 3.x: `thinkingLevel` (ohne = dynamisch). Keine Denk-Anweisungen in den System-Prompt (Gemini schreibt sie sonst in die Antwort).
+- **Gedanken-Anzeige live** (`lib/thoughts.js`): jeder fertige Gedanken-Abschnitt von Gemini erscheint sofort; Übersetzung ins Deutsche treu (nicht umgedeutet) in wenigen gebündelten Aufrufen (Warteschlange: was während einer Übersetzung ankommt, geht gesammelt in die nächste). Scheitert sie → Original. Weg fallen nur reine Formatierungs-Abschnitte. Der Antworttext wartet, bis alle Gedanken gezeigt sind.
+- **Antworttext ohne Vorgehen**: „NUR DAS ERGEBNIS“ + `createAnswerGuard` (Vorgehens-Absätze und englische Gedanken-Überschriften wie „**Executing Task**“ am Anfang fallen weg).
 
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
 - Hauptstatus (Kopf): `swapText` blendet nur die eigene Text-Animation – NIE `getAnimations().cancel()` auf das Element (sonst bleibt der Schimmer mitten stehen).
@@ -41,15 +33,12 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
 ## Material des Nutzers (hochgeladene Dateien) – verbindlich
-- **Bild/PDF an DIESER Frage (`materialMode`)**: Gemini arbeitet selbst. KEIN Planungs-Aufruf, KEIN Vorab-Check (beide sahen die Bilder nicht und haben geraten → falsche Aufgabe), keine Websuche. Aufwand = gewählte Stufe (Auto → Medium = mittleres Denken; „hohes“ Denken von Gemini 3 dauerte bis 2 Min.), Nachdenken an (außer Low). Zeitleiste: „Dokumente analysieren“ läuft, solange Gemini liest/denkt, mit dem ersten Antworttext „Antwort schreiben“.
+- **Bild/PDF an DIESER Frage (`materialMode`)**: Gemini arbeitet selbst. KEIN Planungs-Aufruf, KEIN Vorab-Check (beide sahen die Bilder nicht und haben geraten → falsche Aufgabe), keine Websuche. Aufwand = gewählte Stufe, Auto = Gemini entscheidet (dynamisches Denken, so lange es braucht). Zeitleiste: „Dokumente analysieren“ läuft, solange Gemini liest/denkt, mit dem ersten Antworttext „Antwort schreiben“.
 - Prompt `MATERIAL_PROMPT({only:'solo'})` + `MATERIAL_LOOK`: genau die genannte Seite/Aufgabe im Material suchen (nie eine andere oder ähnliche aus dem Gedächtnis), Operator lesen, Lösung je „## Aufgabe N“, keine Analyse-/Vorgehens-Abschnitte. Fehlt etwas im Material → ein Satz + gesichertes Schulwissen kenntlich. Rückfrage (```ask) NUR bei wirklich unklarer Aufgabenstellung, nie nach Fach/Klasse/Thema.
 - **Nur Gemini, sobald Material im Verlauf ist** (`geminiOnly`): Groq/OpenRouter sehen keine Bilder und haben sonst eine andere Aufgabe erfunden. Auch abkühlende Gemini-Modelle/Schlüssel kommen als letzte Chance dran.
 - ALLE Dateien einbeziehen: Namensschild „[Datei N: Name]“ (`fileParts`), Größenbudget statt Dateizahl (`fitMaterial` in `app.js`, Vercel ≤ 4,5 MB; PDF passt nicht → im Gerät gelesener Text via pdf.js 3.11, max. 60 000 Zeichen); was gar nicht passt → `materialDropped`, die KI sagt es.
 - Älteres Material (frühere Nachrichten): Bezug auf die Dateien (`SOURCE_REF`) → Modus `first` (aus dem Material, keine Websuche); Rückfragen nach Fach/Thema/Klasse fallen weg.
 - Antwort-Wächter (`lib/thoughts.js`): ein ganzer Absatz „**Executing Task**“/„**Task Analysis Confirmed**“ (englische Gedanken-Überschrift) am Anfang einer deutschen Antwort fällt weg.
-
-## Gedanken
-- Gezeigt werden Geminis eigene Gedanken-Abschnitte (Überschrift + Text), treu ins Deutsche übersetzt (EIN Aufruf je Antwort), nicht umgedeutet. Weg fallen nur reine Formatierungs-Abschnitte (Markdown, Ton, Aufbau der Antwort).
 
 ## Recherche
 - Research-Agent (mit Gemini): Gemini recherchiert selbst (Google-Suche im Modell), keine eigene Tiefen-Recherche. Lernen/Allgemein behalten die eigene Suche (deutsche Fachquellen, Relevanz-Prüfung).
@@ -66,13 +55,12 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
 Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl im Eingabefeld), Aufgaben und Automatisierungen.
-- **Auto**: die Analyse beurteilt selbst, welche Stufe, ob Denken und ob Quellen nötig sind.
+- **Auto**: Gemini entscheidet selbst (dynamisches Denken, Antwortlänge nach Bedarf); bei Börse/Coden die Analyse.
 - **Ausdrücklich gewählt** (Low/Medium/High/Max): GENAU diese Stufe – kein internes Herunterstufen bei „einfachen“ Fragen,
   Antwortstil = gewählte Stufe (`EFFORT_STYLE`), Erinnerung am Ende des System-Prompts (High/Max). Nur Begrüßungen bleiben direkt.
-- **Planung kennt High/Max** (`CHOSEN_HINT` in `analyze`): plant dann tief (Max: 7–12 Punkte, research mit Suchbegriffen).
 - **Max = das Maximum**: volles Denk-Budget (24 576), immer Quellen (außer Coden/Börse/nur Material/Rückfrage; fehlen Suchbegriffe → aus der Frage),
   umfassend auf Klausurniveau, Tabellen, Belege [n], kurzes Fazit, kein Längenlimit. Darf länger dauern.
-- **High**: gründlich, jeder Planpunkt eigener Abschnitt, Denken an, Quellen wenn sie helfen. **Medium**: normale vollständige Antwort. **Low**: kurz, ohne Denken.
+- **High**: gründlich, wichtige Punkte als eigene Abschnitte, Denken an, Quellen wenn sie helfen. **Medium**: normale vollständige Antwort. **Low**: kurz, ohne Denken.
 - Vergleiche (Regel in `BASE_PROMPT`): bei High/Max jedes Objekt für sich (eigene Tabelle), dann Gemeinsamkeiten, Unterschiede (Gegenüberstellung), Fazit.
   Wichtige Infos nie in Klammern verstecken. Lern-Agent: fachliche Genauigkeit auf Klausurniveau.
 - Hintergrund-Aufgaben: Gesamtzeit höchstens 280 s (Vercel-Limit 300 s) – ein Teilergebnis wird trotzdem gespeichert.

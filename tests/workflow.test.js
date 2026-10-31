@@ -781,3 +781,24 @@ test('Quellen: Research/Allgemein suchen offen (alle seriösen Seiten), Foren un
   assert.ok(W.SCHOOL_TOPIC.test('Hilf mir bei der Hausaufgabe zur Photosynthese'));
   assert.ok(!W.SCHOOL_TOPIC.test('Welches E-Auto hat die beste Reichweite?'));
 });
+
+test('Gemini-nativ (Allgemein): kein Planungs-Aufruf, kein Plan im Prompt, Auto = dynamisches Denken mit Gedanken; Max = Google-Suche im Modell', async () => {
+  fx = M.installFetch([
+    { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
+  ]);
+  const r = await run({ ...msg('Warum ist der Himmel blau?'), agent: 'general', effort: 'auto' });
+  assert.equal(r.result.status, 'completed');
+  assert.equal(fx.calls.filter(M.is.analyze).length, 0, 'keine Planung');
+  const gen = fx.calls.filter(M.is.geminiStream).pop();
+  const tc = gen.body.generationConfig.thinkingConfig;
+  assert.equal(tc.includeThoughts, true);
+  assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst');
+  const sys = M.systemOf(gen);
+  assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
+  assert.match(sys, /AUFWAND AUTO/);
+  assert.match(sys, /Operatoren/);
+  fx.calls.length = 0;
+  await run({ ...msg('Wie funktioniert die Photosynthese?'), agent: 'general', effort: 'max' });
+  assert.ok(JSON.stringify(fx.calls.filter(M.is.geminiStream).pop().body.tools || []).includes('google_search'), 'Max: Gemini sucht selbst');
+});
