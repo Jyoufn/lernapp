@@ -9317,3 +9317,19 @@ div.tl4-h { cursor: default; }
 @media (hover: none) { .pz-pen { opacity: 1; } }
 .pz-slide a.pz-link { color: inherit; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: 2px; pointer-events: auto; cursor: pointer; }
 .pz-slide a.pz-link:hover { text-decoration-color: currentColor; }
+
+/* Einstellungen → Verbindung (31.10.): Anbieter-Zeile klappt die Schlüssel darunter auf (schiebt die anderen nach unten);
+   je Schlüssel eine Zeile ••••1234 mit ×, darunter Feld + „Hinzufügen“ */
+.st-prov { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.st-prov .st-ws-chev { display: inline-grid; place-items: center; margin-left: 8px; color: var(--text-4); transform: rotate(-90deg); transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1); }
+.st-prov.open .st-ws-chev { transform: rotate(0deg); }
+.st-keys { animation: st-keys-in 300ms cubic-bezier(0.32, 0.72, 0, 1) both; overflow: hidden; }
+@keyframes st-keys-in { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 600px; } }
+.st-keys-in { display: flex; flex-direction: column; gap: 6px; padding: 2px 16px 14px 48px; }
+.st-key { display: flex; align-items: center; height: 30px; padding: 0 4px 0 12px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.st-key-x { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
+.st-key-x:hover { color: #f07a6e; }
+.st-key-add { display: flex; gap: 6px; }
+.st-key-add .st-field { flex: 1; min-width: 0; }
+@media (prefers-reduced-motion: reduce) { .st-keys, .st-prov .st-ws-chev { animation: none; transition: none; } }
+.st-key .grow { flex: 1; }

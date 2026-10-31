@@ -8,9 +8,10 @@
   const KEYS_KEY = 'settings.keys.v1', NAME_KEY = 'settings.name.v1', PAGE_KEY = 'settings.page.v1';
   // Logos: #b-… in index.html (offizielle Marken)
   const PROVIDERS = [
-    { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com' },
-    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys' },
-    { id: 'NVIDIA_API_KEY', name: 'NVIDIA', logo: 'nvidia', where: 'build.nvidia.com' },
+    { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true },
+    { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true },
+    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true },
+    { id: 'NVIDIA_API_KEY', name: 'NVIDIA (Nemotron)', logo: 'nvidia', where: 'build.nvidia.com', multi: true },
     { id: 'FLUX3_API_KEY', name: 'FLUX', logo: 'flux', where: 'build.nvidia.com' },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
   ];
@@ -78,19 +79,22 @@
 
   // Anbieter: Logo, Name; rechts „✓ Verbunden“ (Klick → ändern) bzw. heller Knopf „Verbinden“.
   // Eingabe direkt in der Zeile: Feld (grau) + Abbrechen + Speichern; ein auf dem Gerät gespeicherter Schlüssel lässt sich trennen.
+  // Anbieter: Logo, Name, rechts „N Schlüssel“ bzw. „Verbinden“ + Pfeil. Antippen klappt darunter die Schlüssel auf (schiebt die anderen nach unten):
+  // jeder Schlüssel als Zeile (••••1234, × entfernt), darunter ein Feld zum Hinzufügen. Mehrere Schlüssel = mehr Gratis-Kontingent, die App wechselt selbst.
+  const keyList = (id) => String(deviceKeys[id] || '').split(/[\s,;]+/).map((k) => k.trim()).filter(Boolean);
   function providerRow(p) {
-    const how = connected(p);
-    if (editing === p.id) {
-      const what = p.label || 'API-Key';
-      return `<form class="st-row editing" data-key="${p.id}" autocomplete="off">${logo(p)}<span class="st-name">${esc(p.name)}</span>
-        <input class="st-field st-key-in" type="password" placeholder="${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" />
-        ${deviceKeys[p.id] ? '<button type="button" class="st-btn dark danger" data-remove>Trennen</button>' : ''}<button type="button" class="st-btn dark" data-cancel>Abbrechen</button><button type="submit" class="st-btn light">Speichern</button></form>`;
-    }
-    const right = how
-      ? `<button type="button" class="st-ok" data-edit="${p.id}" title="${how === 'env' ? 'Schlüssel aus .env – Klick zum Ändern' : 'Schlüssel auf diesem Gerät – Klick zum Ändern'}">${fi('check', 12)}Verbunden</button>`
-      : `<button type="button" class="st-btn light" data-edit="${p.id}">Verbinden</button>`;
-    return `<div class="st-row">${logo(p)}<span class="st-name">${esc(p.name)}</span><span class="grow"></span>${right}</div>`;
+    const keys = keyList(p.id), open = editing === p.id, what = p.label || 'API-Key';
+    const status = keys.length ? `<span class="st-ok">${fi('check', 12)}${p.multi ? `${keys.length} ${keys.length === 1 ? 'Schlüssel' : 'Schlüssel'}` : 'Verbunden'}</span>`
+      : fileKeys[p.id] ? `<span class="st-ok">${fi('check', 12)}Verbunden</span>` : '<span class="st-muted">Verbinden</span>';
+    const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span><span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
+    if (!open) return head;
+    return head + `<div class="st-keys"><div class="st-keys-in">
+        ${keys.map((k, i) => `<div class="st-key"><span class="st-key-dots">••••${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
+        ${fileKeys[p.id] && !keys.length ? '<p class="st-ws-note">Ein Schlüssel ist auf dem Server hinterlegt.</p>' : ''}
+        ${p.multi || !keys.length ? `<form class="st-key-add" data-key="${p.id}" autocomplete="off"><input class="st-field st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="st-btn light">Hinzufügen</button></form>` : ''}
+      </div></div>`;
   }
+
 
 
   function agentRow(m) {
@@ -260,8 +264,11 @@
   });
 
   view.addEventListener('click', (e) => {
+    const rm = e.target.closest('[data-key-rm]');
+    if (rm && editing) { const ks = keyList(editing); ks.splice(+rm.dataset.keyRm, 1); if (ks.length) deviceKeys[editing] = ks.join('\n'); else delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');
-    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); view.querySelector('.st-key-in')?.focus(); return; }
+    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); return; }
     if (e.target.closest('[data-cancel]')) { editing = null; drawView(); return; }
     if (e.target.closest('[data-remove]')) {
       delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;
@@ -291,10 +298,12 @@
     const form = e.target.closest('form[data-key]');
     const v = form?.querySelector('.st-key-in').value.trim();
     if (!form || !v) { form?.querySelector('.st-key-in').focus(); return; }
-    deviceKeys[form.dataset.key] = v.slice(0, 400);
+    const id = form.dataset.key, multi = PROVIDERS.find((x) => x.id === id)?.multi;
+    const add = v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => k.length >= 8).map((k) => k.slice(0, 400));
+    deviceKeys[id] = (multi ? [...new Set([...keyList(id), ...add])].slice(0, 10) : add.slice(0, 1)).join('\n');
     write(KEYS_KEY, deviceKeys);
-    editing = null;
-    drawView();
+    drawView(); // bleibt aufgeklappt – man sieht den neuen Schlüssel in der Liste
+    view.querySelector('.st-key-in')?.focus();
   });
   // Workspace-Name: übernommen beim Verlassen des Felds oder mit Enter
   view.addEventListener('keydown', (e) => {

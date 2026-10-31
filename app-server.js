@@ -45,7 +45,9 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['GEMINI_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+// mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
+const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
 function deviceKeysOf(req) {
   const raw = req.headers['x-app-keys'];
@@ -53,7 +55,7 @@ function deviceKeysOf(req) {
   try {
     const obj = JSON.parse(Buffer.from(String(raw), 'base64').toString('utf8'));
     const out = {};
-    for (const k of DEVICE_KEYS) if (typeof obj[k] === 'string' && /^[!-~]{8,400}$/.test(obj[k].trim())) out[k] = obj[k].trim();
+    for (const k of DEVICE_KEYS) { const v = cleanKeys(obj[k]); if (v) out[k] = v; }
     return out;
   } catch { return {}; }
 }
@@ -107,7 +109,7 @@ async function accountKeys(store, uid) {
   try {
     const ls = await ACC.getStorage(store, uid);
     const obj = JSON.parse(ls?.['settings.keys.v1'] || '{}');
-    return Object.fromEntries(DEVICE_KEYS.filter((k) => typeof obj[k] === 'string' && /^[!-~]{8,400}$/.test(obj[k].trim())).map((k) => [k, obj[k].trim()]));
+    return Object.fromEntries(DEVICE_KEYS.map((k) => [k, cleanKeys(obj[k])]).filter(([, v]) => v));
   } catch { return {}; }
 }
 async function runAutomations(store) {
@@ -264,7 +266,7 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
       try {
         if (wait) await new Promise((ok) => setTimeout(ok, wait));
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.geminiKey(env, model) },
           body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [...images.map((i) => ({ inline_data: { mime_type: i.mime, data: i.data } })), { text }] }],
             generationConfig: { maxOutputTokens: budget + 4000, responseMimeType: 'application/json', thinkingConfig: P.thinkingConfigFor(model, { budget, level: budget > 2000 ? 'medium' : 'low' }) } }),
           signal: AbortSignal.timeout(90000),
@@ -275,7 +277,7 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
         }
         console.warn(`[Bild] ${model}: ${r.ok ? 'keine lesbare Antwort' : `HTTP ${r.status}`}`);
         if (r.status === 429) P.noteLimit(await r.json().catch(() => null));
-        if (r.status === 429 || r.status === 404) P.markLimited(model, { status: r.status, message: '' });
+        if (r.status === 429 || r.status === 404) P.markLimited(model, { status: r.status, message: '' }, P.geminiKey(env, model));
         if (r.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000;
       } catch (e) { console.warn(`[Bild] ${model}: ${e.message}`); }
     }
@@ -711,7 +713,7 @@ async function geminiImageEdit(env, img, instruction) {
   if (!env.GEMINI_API_KEY || !img) return null;
   try {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_EDIT_MODEL}:generateContent`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, signal: AbortSignal.timeout(90000),
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.geminiKey(env, IMAGE_EDIT_MODEL) }, signal: AbortSignal.timeout(90000),
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ inline_data: { mime_type: img.mime, data: img.data } }, { text: `Bearbeite dieses Bild: ${instruction}\nÄndere NUR das Gewünschte. Stil, Motiv, Aufbau, Farben und Bildformat bleiben sonst genau gleich. Keine Schrift hinzufügen.` }] }],
         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
@@ -896,7 +898,7 @@ async function handleTts(req, res) {
       try {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.geminiKey(env, model) },
           body: JSON.stringify({
             contents: [{ parts: [{ text: text }] }],
             generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } },
@@ -1064,7 +1066,7 @@ async function handleDocAi(req, res) {
   if (env.GEMINI_API_KEY) {
     for (const model of (await P.ladder(env, 'text')).slice(0, 3)) { // Modell-Leiter
       try {
-        const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }, json: true, signal: AbortSignal.timeout(120000) }));
+        const o = P.parseJsonLoose(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }, json: true, signal: AbortSignal.timeout(120000) }));
         if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
         errs.push(`${model}: kein HTML`);
       } catch (err) { errs.push(`${model}: ${err.message}`); }
@@ -1093,7 +1095,7 @@ async function handleDocIntent(req, res) {
   const ask = (raw) => /"create"\s*:\s*true/.test(String(raw || ''));
   if (text && env.GEMINI_API_KEY) {
     for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) { // Modell-Leiter
-      try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
+      try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
     }
   }
   const nvKey = nvidiaKeyOf(env);
@@ -1116,7 +1118,7 @@ async function handleTitle(req, res) {
     for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) {
       if (model === P.GEMINI_MODEL && Date.now() < visionMainSkipUntil) continue;
       try {
-        const t = clean(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: TITLE_SYSTEM, user: text, maxTokens: 200, thinking, signal: AbortSignal.timeout(10000) }));
+        const t = clean(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TITLE_SYSTEM, user: text, maxTokens: 200, thinking, signal: AbortSignal.timeout(10000) }));
         if (t) return sendJson(res, 200, { title: t });
       } catch (e) { if (e.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000; }
     }

@@ -87,6 +87,11 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Neue Funktionen dürfen nicht pro Abschnitt/Satz/Quelle einen eigenen Gemini-Aufruf machen – sammeln und EIN Aufruf. Kleine Bewertungen (`smallJsonTask`) laufen standardmäßig zuerst über NVIDIA.
 
 ## Modelle (verbindlich)
+- **Mehrere Schlüssel je Anbieter** (Einstellungen → Agenten → Verbindung: Zeile antippen klappt die Schlüssel auf, ••••1234 mit ×, „Hinzufügen“).
+  Gespeichert zeilenweise in `settings.keys.v1`; Server `cleanKeys` (max. 10), `P.keysOf`. Limit wird je Modell UND Schlüssel gemerkt; `P.geminiKey(env, model)` nimmt einen freien Schlüssel.
+  Nie `env.GEMINI_API_KEY` direkt an Google schicken (kann mehrere Schlüssel enthalten).
+- **Anbieter-Reihenfolge** (`providerAttempts`): Gemini-Leiter (je Modell jeder Schlüssel) → Groq (`GROQ_MODELS`, gpt-oss-120b …) → OpenRouter (nur „:free“-Modelle laut Liste) → NVIDIA Nemotron.
+  Alle über denselben Ablauf (`openaiChat`): Gedanken (reasoning / <think>) durch den Gedanken-Filter (Deutsch, nur Inhalt), Antwort-Wächter, Weiterschreiben. Bilder nur an Modelle, die sie sehen.
 - **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 2.5 Flash → Flash-Lite-Modelle),
   kleine Hilfsaufgaben `LITE_LADDER` (3.1 Flash-Lite → 2.5 Flash-Lite → 3.5 Flash-Lite …). Genommen wird nur, was der Schlüssel laut
   Google-Modellliste wirklich kann (6 h gemerkt, auch „-preview“-Versionen); Abfrage fehlgeschlagen → bewährte Liste (2.5 Flash, 3.5 Flash, 3.5 Flash-Lite).
