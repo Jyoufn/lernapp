@@ -26,7 +26,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
   Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (immer), Coden, Börse. Ohne Analyse: ab High.
 - **Gedanken-Anzeige** (`lib/thoughts.js`, `createThoughtFilter`): Geminis Zusammenfassungen je **Abschnitt** – reine Form-/Gliederungs-
   Gedanken („Refining the format“, „Structuring the response“, „Analyzing the approach“) fallen weg; inhaltliche werden sinngetreu und knapp
-  ins Deutsche übertragen (kleiner Modellaufruf). Klappt das nicht → Abschnitt wird nicht gezeigt (nie Englisch, nie Erfundenes).
+  ins Deutsche übertragen – EIN Modellaufruf je Antwort für alle Abschnitte zusammen (nie je Abschnitt: das hat das Gemini-Tageskontingent aufgebraucht). Klappt das nicht → Abschnitt wird nicht gezeigt (nie Englisch, nie Erfundenes).
   Der erste Antworttext wartet, bis alle Gedanken gemeldet sind.
 - **Antworttext ohne Vorgehen**: Prompt-Regel „NUR DAS ERGEBNIS“ + `createAnswerGuard` (verwirft Vorgehens-Absätze nur am Antwortanfang).
   Nie wieder Denk-Anweisungen („denke auf Deutsch mit Überschriften“) in den System-Prompt schreiben – Gemini schreibt sie sonst in die Antwort.
@@ -46,6 +46,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Ohne Suche: gar nichts (keine Leiste, kein Hinweis).
 - Anzeige unten: rundes Logo (`/api/icon?domain=`) + Domain, max. 2, dann „+N“; Klick → Fenster mit allen.
 - **Nur passende Quellen** (verbindlich): Websites und deutsche Lernseiten laufen nach dem Wortabgleich durch `judgePages` (Modell-Bewertung, < 6 von 10 fällt weg); in `lib/research.js` fällt < 6 weg und Unbewertetes wird nicht übernommen. Lieber keine Quelle als eine fremde.
+- **Lernen: deutsche Lernplattformen zuerst** (ausdrücklicher Wunsch, verbindlich): Studyflix, simpleclub, serlo, sofatutor, Lernhelfer, LEIFIphysik, planet-schule/-wissen u. a. (`LEARN_FAVORITES`, höchster Rang in `rankGerman`, +2 in `JUDGE_SYSTEM`, eigene Suchanfrage „… studyflix simpleclub“ beim Lern-Agenten/Schulthemen).
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
@@ -81,3 +82,6 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 ## Bilder bearbeiten
 - Echte Bearbeitung über **Gemini 2.5 Flash Image** (`geminiImageEdit` in `app-server.js`): Cover „Mit KI bearbeiten“, Bild im Dokument „mit KI bearbeiten“, Folgewünsche zu Chat-Bildern. Ändert nur das Gewünschte.
 - FLUX (NVIDIA) kann keine eigenen Bilder bearbeiten → nur Ersatz, wenn Gemini Flash Image nicht verfügbar ist (Kontingent/Fehler): dann wird anhand einer Beschreibung neu gemalt. Antwort enthält `mode: 'edit'`, wenn wirklich bearbeitet wurde.
+
+## Kontingent schonen (verbindlich)
+- Neue Funktionen dürfen nicht pro Abschnitt/Satz/Quelle einen eigenen Gemini-Aufruf machen – sammeln und EIN Aufruf. Kleine Bewertungen (`smallJsonTask`) laufen standardmäßig zuerst über NVIDIA.
