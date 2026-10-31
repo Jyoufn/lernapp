@@ -32,6 +32,8 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
   Nie wieder Denk-Anweisungen („denke auf Deutsch mit Überschriften“) in den System-Prompt schreiben – Gemini schreibt sie sonst in die Antwort.
 
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
+- Hauptstatus (Kopf): `swapText` blendet nur die eigene Text-Animation – NIE `getAnimations().cancel()` auf das Element (sonst bleibt der Schimmer mitten stehen).
+- Antwort mit Denken: der Server meldet `answering` mit `meta.think` → Kopf zeigt gleich „Nachdenken“, der Schreib-Schritt erscheint erst mit dem ersten Text (kein Springen Schreiben → Nachdenken → Schreiben).
 - **Nur echte Schritte**: Keine Zeile für „Verstehen“ (steht nur im Kopf), kein erfundenes „Analysieren“ nach der Suche, keine „Risiko bewerten“-Zeile ohne Rechnung.
 - Suche ohne Treffer oder fehlgeschlagen → der Schritt verschwindet ganz (kein „keine Quellen gefunden“).
 - Gefundene Quellen hängen als Chips direkt am Such-Schritt.

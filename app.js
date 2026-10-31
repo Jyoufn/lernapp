@@ -1761,12 +1761,15 @@ function swapText(node, text) {
   if (!node || node.textContent === text) return;
   if (!node.textContent) { node.textContent = text; return; } // erster Text: ohne Wechsel-Animation
   clearTimeout(node._swap);
-  if (node.animate) node.animate([{ opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }, { opacity: 0, transform: 'translateY(-5px)', filter: 'blur(2px)' }], { duration: 140, easing: 'ease-in', fill: 'forwards' });
+  // NUR die eigene Ein-/Ausblende-Animation steuern – nie die CSS-Animation (Schimmer) abbrechen, sonst bleibt sie mitten stehen
+  node._fade?.cancel();
+  node._fade = node.animate ? node.animate([{ opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }, { opacity: 0, transform: 'translateY(-5px)', filter: 'blur(2px)' }], { duration: 140, easing: 'ease-in', fill: 'forwards' }) : null;
   // Text per Timer tauschen (nicht über das Animationsende – das fehlt z. B. in Hintergrund-Tabs)
   node._swap = setTimeout(() => {
-    node.getAnimations?.().forEach((an) => an.cancel());
+    node._fade?.cancel();
     node.textContent = text;
-    if (node.animate) node.animate([{ opacity: 0, transform: 'translateY(5px)', filter: 'blur(2px)' }, { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+    if (typeof syncShimmer === 'function' && node.classList.contains('sweep')) syncShimmer(node); // Schimmer läuft im gemeinsamen Takt weiter
+    node._fade = node.animate ? node.animate([{ opacity: 0, transform: 'translateY(5px)', filter: 'blur(2px)' }, { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }) : null;
   }, 140);
 }
 
@@ -2327,7 +2330,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (key === 'work') noteAnalyze(); // nach einer Recherche: erst auswerten, dann schreiben
     const step = stepLine('spin', live(key, from));
     stages[s.stage] = { step, from, serverFrom: Date.parse(s.ts) || null, news, key };
-    queueMicrotask(() => phase(key));
+    // Antwort mit Denkphase: erst „Nachdenken“ (Gedanken kommen vor dem Text), der Schreib-Schritt erscheint mit dem ersten Text
+    const thinkFirst = s.stage === 'answering' && s.meta?.think && !pictureAsk && !quiet;
+    if (thinkFirst) step.hidden = true;
+    queueMicrotask(() => phase(thinkFirst ? 'thoughts' : key));
     if (s.stage === 'browsing') { stages.browsing.pages = []; stages.browsing.chips = el('div', 'chips'); }
     ensureWork().steps.append(step);
     scrollToBottom();
@@ -2566,7 +2572,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
       else if (event === 'text') {
         if (!answerR) {
-          if (thought && !thought.done) { // Denken vorbei, jetzt erscheint der Text
+          if ((thought && !thought.done) || stages.answering?.step.hidden) { // Denken vorbei, jetzt erscheint der Text
             endThought();
             if (stages.answering) stages.answering.step.hidden = false;
             phase('work');
