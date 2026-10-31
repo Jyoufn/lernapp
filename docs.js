@@ -1109,7 +1109,7 @@ const Docs = (() => {
       chat.messages = [...chat.messages, um].slice(-40);
       chat.updated = Date.now();
       list.append(dccMsg('user', q, files.map((f) => f.url)));
-      const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).filter(Boolean);
+      const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).flat().filter(Boolean);
       if (images.length) { editUploads.set(um, images); msgImages.set(um.imgId, images); imgDb.put(um.imgId, images); } // falls die KI erst nachfragt und das Bild später einfügt
       else delete um.imgId;
       return runDoc(d, chat, images);
@@ -1354,7 +1354,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (!tabChats.get(tab) && !tab.classList.contains('active')) tabChats.set(tab, { nodes: document.createDocumentFragment(), history: [] });
       const hist = historyOf(tab);
       list.append(dccMsg('user', q, files.map((f) => f.url)));
-      const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).filter(Boolean);
+      const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).flat().filter(Boolean);
       hist.push({ role: 'user', text: q, ...(images.length ? { images } : {}) });
       const a = el('div', 'dcc-a'); a.dataset.dog = window.PixelDogs?.mode || 'general'; const body = el('div', 'dcc-body md');
       a.append(body); list.append(a);

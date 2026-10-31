@@ -1516,15 +1516,15 @@ function makeRenderer(target, opts = {}) {
    oder ein Ersatzmodell (Groq/OpenRouter) antwortet, das keine PDFs öffnen kann */
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 let pdfLib = null;
+const loadPdfJs = () => (pdfLib ||= new Promise((ok, fail) => {
+  if (window.pdfjsLib) return ok(window.pdfjsLib);
+  const s = document.createElement('script'); s.src = `${PDFJS}pdf.min.js`;
+  s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`; ok(window.pdfjsLib); };
+  s.onerror = fail; document.head.append(s);
+}));
 async function pdfText(bytes, maxChars = 60000) {
   try {
-    pdfLib ||= new Promise((ok, fail) => {
-      if (window.pdfjsLib) return ok(window.pdfjsLib);
-      const s = document.createElement('script'); s.src = `${PDFJS}pdf.min.js`;
-      s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`; ok(window.pdfjsLib); };
-      s.onerror = fail; document.head.append(s);
-    });
-    const doc = await (await pdfLib).getDocument({ data: bytes }).promise;
+    const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
     let out = '';
     for (let p = 1; p <= doc.numPages && out.length < maxChars; p++) {
       const c = await (await doc.getPage(p)).getTextContent();
@@ -1533,12 +1533,38 @@ async function pdfText(bytes, maxChars = 60000) {
     return out.replace(/[ \t]+/g, ' ').slice(0, maxChars).trim();
   } catch { pdfLib = null; return ''; }
 }
+/* Gescanntes PDF (Handschrift, abfotografierte Seiten) hat keinen Text – als PDF sieht Gemini es nur grob, und passt es nicht in die
+   Anfrage, kam bisher gar nichts an. Darum werden seine Seiten im Gerät zu Bildern (je Seite eine Datei; Lupe und Lese-Helfer greifen dann). */
+const PDF_PAGE_MAX = 12;
+async function pdfPagesAsImages(bytes, name, max = 1600) {
+  const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
+  const out = [];
+  for (let p = 1; p <= Math.min(doc.numPages, PDF_PAGE_MAX); p++) {
+    const page = await doc.getPage(p);
+    const base = page.getViewport({ scale: 1 });
+    const vp = page.getViewport({ scale: Math.min(3, max / Math.max(base.width, base.height)) });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    out.push({ mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.82).split(',')[1], name: `${name} · S. ${p}${p === PDF_PAGE_MAX && doc.numPages > p ? ` (von ${doc.numPages})` : ''}` });
+  }
+  return out;
+}
+// Liefert eine Datei – oder bei gescannten PDFs eine Liste von Seitenbildern (Aufrufer glätten mit .flat())
 async function fileToInline(file, max = 1600) {
   if (file.type === 'application/pdf') {
     const buf = new Uint8Array(await file.arrayBuffer());
     let bin = '';
     for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
     const text = await pdfText(buf.slice());
+    const words = text.replace(/\[Seite \d+\]/g, ' ').replace(/\s+/g, ' ').trim().length;
+    const pages = (text.match(/\[Seite \d+\]/g) || []).length || 1;
+    if (words < 60 * pages) { // kaum Text je Seite → Scan
+      const imgs = await pdfPagesAsImages(buf.slice(), file.name.replace(/\.pdf$/i, '')).catch(() => []);
+      if (imgs.length) return imgs;
+    }
     return { mime: 'application/pdf', data: btoa(bin), name: file.name, ...(text ? { text } : {}) };
   }
   const bitmap = await createImageBitmap(file);
@@ -3338,7 +3364,7 @@ async function sendMessage(text, images) {
   const msgEl = el('div', 'msg-ai');
   chat.append(msgEl);
   try {
-    const inline = await Promise.all(images.map((i) => fileToInline(i.file).catch(() => null)));
+    const inline = (await Promise.all(images.map((i) => fileToInline(i.file).catch(() => null)))).flat(); // gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
     hist.push({ role: 'user', text, images: inline.filter(Boolean) });
     markDrafts();

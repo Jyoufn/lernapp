@@ -662,6 +662,8 @@ test('Material: Hinweis im System-Prompt ohne Rückfrage', () => {
 // Material an der Frage, das nicht passt: „Analyzing your sources“ läuft, dann ganz normale Antwort (ohne Material-Hinweis, ohne Rückfrage)
 test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokumente analysieren“, Bild mit Namensschild, nur Gemini', async () => {
   fx = M.installFetch([
+    // ohne Modellliste (Test) ist 2.5 Flash vorn → der Lese-Helfer liest vorher ab (3.x Flash-Lite), die Abschrift geht in den Prompt
+    { match: M.is.read, respond: () => M.json({ candidates: [{ content: { parts: [{ text: '=== Datei 1, Seite 34 ===\nAUFGABEN unter M1:\n1 Beschreiben Sie die Karikatur.' }] } }] }) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Executing Task**\n\n', '## Aufgabe 1\n\nLösung …'])) },
   ]);
   const tiles = [{ mime: 'image/jpeg', data: 'BBBB', pos: 'oben' }, { mime: 'image/jpeg', data: 'CCCC', pos: 'unten' }];
@@ -670,7 +672,8 @@ test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokum
   const st = r.stages();
   assert.ok(st.indexOf('material:active') < st.indexOf('answering:active'), 'erst Dokumente analysieren, dann schreiben');
   assert.ok(!st.some((x) => x.startsWith('thinking:')), 'keine Planung ohne Bild');
-  assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent') && !M.is.route(c)).length, 0, 'kein Vorab-Check (nur die Einschätzung)');
+  assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent') && !M.is.route(c) && !M.is.read(c)).length, 0, 'kein Vorab-Check (nur Einschätzung und Lese-Helfer)');
+  assert.match(M.systemOf(fx.calls.find(M.is.geminiStream)), /ABSCHRIFT DER DATEIEN[\s\S]*Beschreiben Sie die Karikatur/, 'Abschrift des Lese-Helfers im Prompt');
   const gen = fx.calls.find(M.is.geminiStream);
   const sys = gen.body.systemInstruction.parts[0].text;
   assert.match(sys, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);

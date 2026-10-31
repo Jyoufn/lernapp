@@ -58,6 +58,7 @@ const is = {
   geminiStream: (c) => c.url.includes('generativelanguage') && c.url.includes('streamGenerateContent'),
   nvidia: (c) => c.url.includes('integrate.api.nvidia.com'),
   route: (c) => helper(c) && /You triage one message/.test(sysText(c)), // Einschätzung (Aufwand + Quellenart) im Gemini-nativen Ablauf
+  read: (c) => helper(c) && /Du liest Fotos und PDFs von Schulmaterial ab/.test(sysText(c)), // Lese-Helfer (nur wenn 2.5 Flash antwortet)
   analyze: (c) => helper(c) && /plan how a learning assistant/.test(sysText(c)),
   verify: (c) => helper(c) && /strict reviewer/.test(sysText(c)),
   judge: (c) => helper(c) && /rate candidate sources/.test(sysText(c)),
