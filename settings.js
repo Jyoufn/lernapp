@@ -11,7 +11,7 @@
     { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true },
     { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true },
     { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true },
-    { id: 'NVIDIA_API_KEY', name: 'NVIDIA (Nemotron)', logo: 'nvidia', where: 'build.nvidia.com', multi: true },
+    { id: 'NVIDIA_API_KEY', name: 'NVIDIA (Bilder)', logo: 'nvidia', where: 'build.nvidia.com', multi: true },
     { id: 'FLUX3_API_KEY', name: 'FLUX', logo: 'flux', where: 'build.nvidia.com' },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
   ];

@@ -90,7 +90,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - **Mehrere Schlüssel je Anbieter** (Einstellungen → Agenten → Verbindung: Zeile antippen klappt die Schlüssel auf, ••••1234 mit ×, „Hinzufügen“).
   Gespeichert zeilenweise in `settings.keys.v1`; Server `cleanKeys` (max. 10), `P.keysOf`. Limit wird je Modell UND Schlüssel gemerkt; `P.geminiKey(env, model)` nimmt einen freien Schlüssel.
   Nie `env.GEMINI_API_KEY` direkt an Google schicken (kann mehrere Schlüssel enthalten).
-- **Anbieter-Reihenfolge** (`providerAttempts`): Gemini-Leiter (je Modell jeder Schlüssel) → Groq (`GROQ_MODELS`, gpt-oss-120b …) → OpenRouter (nur „:free“-Modelle laut Liste) → NVIDIA Nemotron.
+- **Anbieter-Reihenfolge** (`providerAttempts`): Gemini-Leiter (je Modell jeder Schlüssel, inkl. Flash-Lite) → Groq (`GROQ_MODELS`) → OpenRouter (nur „:free“-Modelle laut Liste). **Kein Nemotron für Antworten** (zu langsam, Wunsch des Nutzers); NVIDIA-Schlüssel nur noch für Bilder (FLUX). Kleine JSON-Hilfsaufgaben: Gemini-Lite → Groq → NVIDIA ohne Denken als stiller Notfall.
   Nemotron läuft in der NVIDIA-Cloud (nicht lokal), ist ein großes Denk-Modell → ohne Denkbedarf `chat_template_kwargs.enable_thinking=false` (bzw. `low_effort`), Groq gpt-oss `reasoning_effort`; Hilfsaufgaben über NVIDIA immer ohne Denken.
   Alle über denselben Ablauf (`openaiChat`): Gedanken (reasoning / <think>) durch den Gedanken-Filter (Deutsch, nur Inhalt), Antwort-Wächter, Weiterschreiben. Bilder nur an Modelle, die sie sehen.
 - **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 2.5 Flash → Flash-Lite-Modelle),

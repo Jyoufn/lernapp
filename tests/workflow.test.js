@@ -320,16 +320,16 @@ test('11 Abbruch während der Recherche: Stufe „cancelled“, keine Antwort-Ge
 });
 
 /* ---------- 12. API-Fehler bei der Generierung ---------- */
-test('12a API-Fehler: Limit bei Gemini → Ersatzmodell übernimmt, solange noch kein Text kam', async () => {
+test('12a API-Fehler: Limit bei Gemini → Groq übernimmt (kein Nemotron mehr für Antworten)', async () => {
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.json({ error: { message: 'quota' } }, 429) },
-    { match: M.is.nvidiaStream, respond: () => M.sseResponse([{ choices: [{ delta: { reasoning_content: 'geheim', content: 'Hallo ' } }] }, { choices: [{ delta: { content: 'Welt' } }] }]) },
+    { match: (c) => c.url.includes('api.groq.com'), respond: () => M.sseResponse([{ choices: [{ delta: { content: 'Hallo ' } }] }, { choices: [{ delta: { content: 'Welt' } }] }]) },
   ]);
-  const r = await run({ ...msg('Wie funktioniert ein Elektromotor?'), effort: 'medium' });
-  assert.equal(r.text(), 'Hallo Welt');
-  assert.ok(!r.text().includes('geheim')); // Gedanken stehen nie im Antworttext – sie kommen getrennt als „thought“
-  assert.deepEqual(r.of('thought').map((t) => t.text), []); // einfache Erklärung ohne Analyse (Medium) → kein Denken, keine Gedanken-Anzeige
-  assert.equal(r.of('status').at(-1).meta.provider, 'Nemotron 3 Ultra (NVIDIA)');
+  const c = M.collect();
+  await W.runChat({ env: { ...M.ENV, GROQ_API_KEY: 'gsk_test_groq_key' }, body: { log: false, ...msg('Wie funktioniert ein Elektromotor?'), effort: 'medium' }, send: c.send, signal: new AbortController().signal });
+  assert.equal(c.text(), 'Hallo Welt');
+  assert.match(c.of('status').at(-1).meta.provider, /^Groq/);
+  assert.ok(!fx.calls.some(M.is.nvidiaStream)); // Nemotron wird für Antworten nicht mehr benutzt
 });
 test('12b API-Fehler: alle Modelle fallen aus → generation_failed mit verständlicher Meldung', async () => {
   fx = M.installFetch([
