@@ -10,17 +10,20 @@
 | `lib/workflow.js` → `VOICE_PROMPT` | Sprach-Agent mit ```app-Aktionen |
 Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Prompts.
 
-## Ablauf einer Antwort (`runChat`) – GEMINI-NATIV (verbindlich seit 31.10.)
-- **Allgemein, Lernen, Research und jede Frage mit Bild/PDF** (`native`): KEIN Planungs-Aufruf, KEIN Plan im Prompt, keine von uns entschiedene Denk-Abschaltung. Gemini denkt selbst so lange es braucht, fragt selbst nach (```ask, Regeln in `BASE_PROMPT`) und sucht selbst (Google-Suche im Modell) – der alte Ablauf (Planung → Plan-Punkte → „Vorgehen steht“) hat Gemini verbogen und Aufgaben falsch verstehen lassen.
-  - Auto: Denken dynamisch (`autoThink`: 2.5 Budget −1, 3.x ohne `thinkingLevel` = Standard), Stil `EFFORT_STYLE.auto`. Gewählte Stufe: genau diese (Low ohne Denken).
-  - Quellen nur bei ausdrücklichem Wunsch, Max, Präsentation, Aktuellem oder Research-Agent: Gemini-Suche (`geminiSearch`); **Lernen** holt dann deutsche Fachquellen über die eigene Suche – `analyze` liefert dort NUR Suchbegriffe.
-  - Zeitleiste: Bild/PDF → „Dokumente analysieren“ (während Gemini liest/denkt) → „Antwort schreiben“; sonst `answering` mit `meta.think` („Nachdenken“).
+## Ablauf einer Antwort (`runChat`) – GEMINI-NATIV (verbindlich seit 31.10., Stand 31.10. abends)
+- **Allgemein, Lernen, Research und jede Frage mit Bild/PDF** (`native`): KEIN Planungs-Aufruf, KEIN Plan im Prompt. Gemini denkt dynamisch, fragt selbst nach (```ask) – der alte Ablauf (Planung → Plan-Punkte) hat Gemini verbogen.
+  - **Einschätzung** (`route`, `ROUTE_SYSTEM`, EIN Lite-Aufruf, ~1 s): Aufwand bei Auto (low/medium/high/max) + Quellenart (`none`/`learn`/`web`) + Suchbegriffe (nur Thema, `cleanQuery` streicht „Lernzettel/Klausur …“). Kein Plan. Fällt sie aus → `routeFallback`.
+  - **Auto übernimmt die eingeschätzte Stufe** (Stil `EFFORT_STYLE[level]`, Denken dynamisch; als Max eingeschätzt → wie Max). Foto/PDF an der Frage: mindestens High. Gewählte Stufe: genau diese (Low ohne Denken).
+  - **Quellenart** (`sourceKind`): Research → `deep` (Tiefen-Recherche, `lib/deepresearch.js`); Lernen → `learn` (nur deutsche Fachquellen); Allgemein → was die Einschätzung sagt (Lernfrage → `learn`, Aktuelles/Produkte/Personen → `web`). Max immer mit Quellen. Material an der Frage: nur auf ausdrücklichen Wunsch (`gap`).
+  - **Erst eigene Suche, dann schreibt das beste Modell mit [n]-Belegen.** Google-Suche im Modell nur als Ersatz, wenn die eigene Suche nichts fand – Grounding ist mit Gratis-Schlüssel NUR bei 2.5 Flash frei (3.x: Limit 0), dort schreibt dann das schwächere 2.5 Flash.
+  - **Max = Selbstkontrolle** (`REFINE_MAX`): unsichtbarer Entwurf → dasselbe Modell prüft ihn gegen Aufgabe, Material, Quellen (Reihenfolgen, Begriffe, Belege) → sichtbare Endfassung. Zeitleiste: Entwurf/„Dokumente analysieren“ → `verifying` „Entwurf wird geprüft und verbessert“ → Antwort. Grund: bei Gemini 3 ist „hohes Denken“ schon Standard, Max hätte sonst keinen Mehrwert.
+  - Zeitleiste: Bild/PDF → „Dokumente analysieren“ (während Gemini liest/denkt) → „Antwort schreiben“; nach einer Suche direkt „Antwort schreiben“ (feste Reihenfolge der Stufen).
 - Börse, Coden, Sprache und Aufrufe ohne Agent: bisheriger Ablauf (Planung `analyze`, Börse fester Plan `BOERSE_PLAN`, Recherche-Pipeline, Tests).
 - Schulstärke im `BASE_PROMPT`: „SCHULAUFGABEN“ (Aufgabe Wort für Wort lesen, Operatoren-Liste, Material-Belege, Musterlösung je „## Aufgabe N“); nie nach Fach/Klasse/Thema fragen. High/Max bei konkreter Aufgabe: beste Lösung GENAU dieser Aufgabe, kein Referat.
 
 ## Denken (verbindlich)
 - Gemini 2.5: `thinkingBudget`; 3.x: `thinkingLevel` (ohne = dynamisch). Keine Denk-Anweisungen in den System-Prompt (Gemini schreibt sie sonst in die Antwort).
-- **Gedanken-Anzeige live** (`lib/thoughts.js`): jeder fertige Gedanken-Abschnitt von Gemini erscheint sofort; Übersetzung ins Deutsche treu (nicht umgedeutet) in wenigen gebündelten Aufrufen (Warteschlange: was während einer Übersetzung ankommt, geht gesammelt in die nächste). Scheitert sie → Original. Weg fallen nur reine Formatierungs-Abschnitte. Der Antworttext wartet, bis alle Gedanken gezeigt sind.
+- **Gedanken-Anzeige live** (`lib/thoughts.js`): jeder fertige Gedanken-Abschnitt von Gemini erscheint sofort; Übersetzung ins Deutsche treu (nicht umgedeutet) in wenigen gebündelten Aufrufen (Warteschlange: was während einer Übersetzung ankommt, geht gesammelt in die nächste). Scheitert sie → ein zweiter Versuch mit dem nächsten Schwung, erst dann Original. Weg fallen reine Formatierungs-Abschnitte und Wiederholungen (gleiche Überschrift). Der Antworttext wartet, bis alle Gedanken gezeigt sind.
 - **Antworttext ohne Vorgehen**: „NUR DAS ERGEBNIS“ + `createAnswerGuard` (Vorgehens-Absätze und englische Gedanken-Überschriften wie „**Executing Task**“ am Anfang fallen weg).
 
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
@@ -33,15 +36,20 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
 ## Material des Nutzers (hochgeladene Dateien) – verbindlich
-- **Bild/PDF an DIESER Frage (`materialMode`)**: Gemini arbeitet selbst. KEIN Planungs-Aufruf, KEIN Vorab-Check (beide sahen die Bilder nicht und haben geraten → falsche Aufgabe), keine Websuche. Aufwand = gewählte Stufe, Auto = Gemini entscheidet (dynamisches Denken, so lange es braucht). Zeitleiste: „Dokumente analysieren“ läuft, solange Gemini liest/denkt, mit dem ersten Antworttext „Antwort schreiben“.
+- **Bild/PDF an DIESER Frage (`materialMode`)**: Gemini arbeitet selbst. KEIN Planungs-Aufruf, KEIN Vorab-Check (beide sahen die Bilder nicht und haben geraten → falsche Aufgabe), keine Websuche. Aufwand = gewählte Stufe, Auto = Einschätzung (mind. High). Zeitleiste: „Dokumente analysieren“ läuft, solange Gemini liest/denkt, mit dem ersten Antworttext „Antwort schreiben“.
+- **Lupe** (`photoTiles`/`withTiles` in `app.js`, `fileParts` in `lib/providers.js`): zu jedem Foto ≥ 1100 px gehen 2–4 vergrößerte Ausschnitte mit („[Lupe zu Datei N …]“, nur in der Anfrage, nicht gespeichert, nur solange `MATERIAL_BUDGET` reicht). Grund (gemessen 31.10.): Gemini 2.5 sieht ein ganzes Foto nur mit 258 Tokens (~768 px) und hat bei einer Buch-Doppelseite ganze Aufgaben erfunden; mit Lupe liest es den Wortlaut exakt. 3.x sieht ~1100 Tokens je Foto.
+- **Schulbuch-Aufbau** (`MATERIAL_LOOK`): Aufgaben gehören zum Material DARÜBER (nicht zur nächsten „M…“-Überschrift); bei „Aufgabe 1 und 2 auf S. 108“ der Block, dessen Nummern ALLE auf der Seite stehen; Material kann auf der Vorseite beginnen. Erste Zeile der Antwort kursiv: welche Aufgaben zu welchem Material (Nutzer sieht sofort, ob es die richtigen sind). Belege mit Zeilenangabe, wenn sichtbar.
 - Prompt `MATERIAL_PROMPT({only:'solo'})` + `MATERIAL_LOOK`: genau die genannte Seite/Aufgabe im Material suchen (nie eine andere oder ähnliche aus dem Gedächtnis), Operator lesen, Lösung je „## Aufgabe N“, keine Analyse-/Vorgehens-Abschnitte. Fehlt etwas im Material → ein Satz + gesichertes Schulwissen kenntlich. Rückfrage (```ask) NUR bei wirklich unklarer Aufgabenstellung, nie nach Fach/Klasse/Thema.
 - **Nur Gemini, sobald Material im Verlauf ist** (`geminiOnly`): Groq/OpenRouter sehen keine Bilder und haben sonst eine andere Aufgabe erfunden. Auch abkühlende Gemini-Modelle/Schlüssel kommen als letzte Chance dran.
 - ALLE Dateien einbeziehen: Namensschild „[Datei N: Name]“ (`fileParts`), Größenbudget statt Dateizahl (`fitMaterial` in `app.js`, Vercel ≤ 4,5 MB; PDF passt nicht → im Gerät gelesener Text via pdf.js 3.11, max. 60 000 Zeichen); was gar nicht passt → `materialDropped`, die KI sagt es.
-- Älteres Material (frühere Nachrichten): Bezug auf die Dateien (`SOURCE_REF`) → Modus `first` (aus dem Material, keine Websuche); Rückfragen nach Fach/Thema/Klasse fallen weg.
+- Älteres Material (frühere Nachrichten): Bezug auf die Dateien (`SOURCE_REF`, auch „Aufgabe 3“, „S. 109“, „M6“) → Modus `first` (aus dem Material, keine Websuche); Rückfragen nach Fach/Thema/Klasse fallen weg.
+- **Verlauf** (`compactHistory`): letzte 10 Nachrichten vollständig, ältere gekürzt (Fragen 1000, Antworten 1500 Zeichen), gesamt ~100 000 Zeichen; Max 40 Nachrichten/600 000. Material früherer Nachrichten geht mit (Budget) → Folgefragen („und jetzt Aufgabe 3“) funktionieren.
 - Antwort-Wächter (`lib/thoughts.js`): ein ganzer Absatz „**Executing Task**“/„**Task Analysis Confirmed**“ (englische Gedanken-Überschrift) am Anfang einer deutschen Antwort fällt weg.
 
 ## Recherche
-- Research-Agent und Allgemein (mit Gemini): Gemini recherchiert selbst (Google-Suche im Modell), keine eigene Tiefen-Recherche. Lernen behält die eigene Suche (nur deutsche Fachquellen, Relevanz-Prüfung).
+- Research-Agent: **Tiefen-Recherche** (Teilfragen → Websuche DDG/Bing/Google → ~20 Seiten lesen → Quellen vergleichen → Lücken schließen), dann schreibt das beste Modell mit Kurzfazit, „Was die Quellen sagen“, „Offene Fragen“. Nur eine kurze Faktenfrage (Einschätzung low) → einfache Websuche.
+- Allgemein: Websuche (`web`) bzw. Fachquellen (`learn`) laut Einschätzung. Lernen: nur deutsche Fachquellen, Relevanz-Prüfung an der ersten Suchanfrage.
+- **Schutz** (verbindlich): `searchWeb` (lib/web.js) verwirft Erwachsenen-/Glücksspielseiten (`UNSAFE`); die Tiefen-Recherche nimmt eine gelesene Seite nur, wenn sie zum Thema passt (`R.relevance` ≥ 0,34) – vorher landeten Duden-Einträge, Hilfeseiten und eine Pornoseite unter den Treffer-Chips.
 
 ## Quellen
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
@@ -98,10 +106,11 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
   Nemotron ist komplett raus (zu langsam) – auch nicht in den Einstellungen; der NVIDIA-Schlüssel dient nur noch FLUX-Bildern („FLUX (Bilder)“).
   Limits werden über alle Server-Instanzen geteilt (`ai:limits` im Speicher): Tageslimit → bis Mitternacht Pazifikzeit, dann ist das bessere Modell sofort wieder dran.
   Alle über denselben Ablauf (`openaiChat`): Gedanken (reasoning / <think>) durch den Gedanken-Filter (Deutsch, nur Inhalt), Antwort-Wächter, Weiterschreiben. Bilder nur an Modelle, die sie sehen.
-- **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 2.5 Flash → Flash-Lite-Modelle),
-  kleine Hilfsaufgaben `LITE_LADDER` (3.1 Flash-Lite → 2.5 Flash-Lite → 3.5 Flash-Lite …). Genommen wird nur, was der Schlüssel laut
+- **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 3 Flash (nur als „-preview“ gelistet) → 2.5 Flash → Flash-Lite-Modelle),
+  kleine Hilfsaufgaben `LITE_LADDER` (3.5 Flash-Lite → 3.1 Flash-Lite → 2.5 Flash-Lite …; 3.5 Lite meist < 1 s, 3.1 Lite oft 4–10 s/503). Genommen wird nur, was der Schlüssel laut
   Google-Modellliste wirklich kann (6 h gemerkt, auch „-preview“-Versionen); Abfrage fehlgeschlagen → bewährte Liste (2.5 Flash, 3.5 Flash, 3.5 Flash-Lite).
-- Limit: Tageslimit (quotaId „PerDay“) → Modell bis Mitternacht Pazifikzeit überspringen, sonst 90 s; 404 → 1 Tag. Dann automatisch das nächstbeste.
+- **Gratis-Kontingent (gemessen 31.10.)**: jedes 3.x-Flash-Modell 20 Anfragen/Tag (eigenes Kontingent je Modell → je mehr Modelle in der Leiter, desto länger antwortet ein starkes); Pro-Modelle 0; 2.5 Flash Lite 404 („nicht mehr für neue Nutzer“).
+- Limit: Tageslimit (quotaId „PerDay“) → Modell bis Mitternacht Pazifikzeit überspringen, sonst 90 s; 503 (überlastet) → 60 s; 404 → 1 Tag. Dann automatisch das nächstbeste.
 - Google-Suche im Modell nur mit 2.5 Flash (kostenloses Grounding) → bei Aktuellem wird ein solches Modell nach vorn geholt.
 - Alle Regeln (Aufwand verbindlich, Denken, Quellen) gelten für jedes Modell der Leiter gleich. „Live“-Modelle sind Sprach-Echtzeit, nicht für Text.
 - Bildbearbeitung (Gemini Flash Image) hat laut Google keinen Gratis-Zugang → mit Gratis-Schlüssel wird neu gemalt (Ersatz).

@@ -1297,7 +1297,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...(() => { const f = window.fitMaterial ? window.fitMaterial(messages) : { messages, dropped: 0 }; return { messages: f.messages, materialDropped: f.dropped }; })(), model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: dccEffort(), fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
+        const fitted = window.fitMaterial ? window.fitMaterial(messages) : { messages, dropped: 0 };
+        if (window.withTiles) fitted.messages = await window.withTiles(fitted.messages); // Lupe für Fotos (app.js)
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: fitted.messages, materialDropped: fitted.dropped, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: dccEffort(), fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
@@ -1362,7 +1364,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: historyForRequest(hist), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: a.dataset.dog }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: await (window.withTiles || ((m) => m))(historyForRequest(hist)), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: a.dataset.dog }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);

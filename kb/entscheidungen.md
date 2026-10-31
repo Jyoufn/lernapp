@@ -19,3 +19,5 @@ Damit nichts Abgelehntes wiederkommt. Kurz halten; nur Dinge, die man sonst wied
 - **Dokument-Icons** 30.10.: neue Icons note/checklist/inbox/quote/feather/anchor/infinity/hashtag/flag2 abgelehnt („schrecklich“), nur `rainbow` bleibt. Neue Icons vorher zeigen.
 
 - Abgelehnt (31.10.): gewählter Aufwand nur als „Obergrenze“ mit neutraler Analyse und Antwortstil „nach Bedarf“ – Max wirkte dadurch wie Medium (kurze, flache Antworten). Jetzt: gewählter Aufwand ist verbindlich (kb/ki.md).
+- Geändert (31.10. abends): „Research/Allgemein suchen nur über die Google-Suche im Modell“ → wieder eigene Suche (Tiefen-Recherche bzw. Websuche) + das beste Modell schreibt. Grund: Grounding ist gratis nur bei 2.5 Flash – dadurch schrieb jede Recherche-Antwort das schwächere Modell. Google im Modell bleibt Ersatz, wenn die eigene Suche nichts findet.
+- Festgelegt (31.10. abends): Auto = kleine Einschätzung (`route`, kein Plan) → eingeschätzte Stufe; Max = Entwurf + Selbstkontrolle. Kein Planungs-Aufruf mit Plan-Punkten zurückbringen.

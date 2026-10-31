@@ -631,7 +631,7 @@ test('Kurznachricht („Moin“): ruhig – Anzeige ohne Working/Thinking, keine
   assert.equal(s.of('status')[0].meta.quiet, undefined);
 });
 
-// Verlauf sparsam: letzte 6 Nachrichten vollständig, ältere gekürzt – Bild-Aufträge bleiben ganz (für „nutze das als Referenzbild“)
+// Verlauf: letzte 10 Nachrichten vollständig (Folgefragen kennen den Zusammenhang), ältere gekürzt – Bild-Aufträge bleiben ganz
 test('Verlauf: ältere Antworten gekürzt, Bild-Aufträge bleiben vollständig', () => {
   const fence = '```';
   const pic = `${fence}illustration\n{"prompt":"Aufbau einer Tierzelle, klare Schulbuch-Illustration","alt":"Tierzelle","query":"animal cell"}\n${fence}`;
@@ -639,15 +639,15 @@ test('Verlauf: ältere Antworten gekürzt, Bild-Aufträge bleiben vollständig',
   const msgs = [
     { role: 'user', text: 'Erstelle ein Bild einer Tierzelle' },
     { role: 'assistant', text: `Hier ist das Bild.\n${pic}\n${long}\n${fence}chart\n{"title":"Größen","labels":["a","b"],"values":[1,2]}\n${fence}` },
-    ...Array.from({ length: 6 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: `Nachricht ${i} ${long}` })),
+    ...Array.from({ length: 10 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: `Nachricht ${i} ${long}` })),
     { role: 'user', text: 'Nutze das als Referenzbild für eine Pflanzenzelle' },
   ];
   const out = W.compactHistory(msgs);
   assert.equal(out.length, msgs.length);
   assert.ok(out[1].text.includes(pic), 'Bild-Auftrag bleibt wortgleich');
   assert.ok(out[1].text.includes('[Diagramm: Größen]'), 'Diagramm nur als Titel');
-  assert.ok(out[1].text.length < 700 + pic.length + 60, 'Antwort gekürzt');
-  assert.deepEqual(out.slice(-6), msgs.slice(-6), 'letzte 6 Nachrichten unverändert');
+  assert.ok(out[1].text.length < 1500 + pic.length + 60, 'Antwort gekürzt');
+  assert.deepEqual(out.slice(-10), msgs.slice(-10), 'letzte 10 Nachrichten unverändert');
   assert.deepEqual(W.compactHistory(msgs.slice(-4)), msgs.slice(-4), 'kurzer Chat bleibt ganz');
 });
 
@@ -664,17 +664,23 @@ test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokum
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Executing Task**\n\n', '## Aufgabe 1\n\nLösung …'])) },
   ]);
-  const r = await run({ messages: [{ role: 'user', text: 'Bearbeite auf Seite 34 Aufgabe 1', images: [{ mime: 'image/jpeg', data: 'AAAA', name: 's34.jpg' }] }], effort: 'auto' });
+  const tiles = [{ mime: 'image/jpeg', data: 'BBBB', pos: 'oben' }, { mime: 'image/jpeg', data: 'CCCC', pos: 'unten' }];
+  const r = await run({ messages: [{ role: 'user', text: 'Bearbeite auf Seite 34 Aufgabe 1', images: [{ mime: 'image/jpeg', data: 'AAAA', name: 's34.jpg', tiles }] }], effort: 'auto' });
   assert.equal(r.text(), '## Aufgabe 1\n\nLösung …', 'durchgerutschte Gedanken-Überschrift fällt weg');
   const st = r.stages();
   assert.ok(st.indexOf('material:active') < st.indexOf('answering:active'), 'erst Dokumente analysieren, dann schreiben');
   assert.ok(!st.some((x) => x.startsWith('thinking:')), 'keine Planung ohne Bild');
-  assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent')).length, 0, 'kein Vorab-Check');
+  assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent') && !M.is.route(c)).length, 0, 'kein Vorab-Check (nur die Einschätzung)');
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.match(gen.body.systemInstruction.parts[0].text, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);
+  const sys = gen.body.systemInstruction.parts[0].text;
+  assert.match(sys, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);
+  assert.match(sys, /SCHULBUCH-AUFBAU[\s\S]*zum Material\s+DARÜBER/, 'Aufgaben gehören zum Material darüber');
+  assert.match(sys, /AUFWAND HIGH/, 'Aufgaben aus Fotos: mindestens gründlich');
   const parts = gen.body.contents.at(-1).parts;
   assert.equal(parts[0].text, '[Datei 1: s34.jpg]');
   assert.equal(parts[1].inline_data.mime_type, 'image/jpeg');
+  assert.match(parts[2].text, /^\[Lupe zu Datei 1: 2 vergrößerte Ausschnitte desselben Fotos \(oben, unten\)/, 'Lupe direkt nach dem Foto');
+  assert.deepEqual(parts.slice(3, 5).map((p) => p.inline_data.data), ['BBBB', 'CCCC']);
   assert.ok(!gen.body.tools, 'keine Websuche dazwischen');
 });
 
@@ -713,21 +719,29 @@ test('Überlastung (503): dasselbe Modell wird kurz danach noch einmal gefragt, 
   } finally { f.restore(); }
 });
 
-test('Research-Agent mit Gemini: Gemini recherchiert selbst (Google-Suche im Modell) statt eigener Tiefen-Recherche', async () => {
+// Research: echte Tiefen-Recherche (eigene Quellen → das beste Modell schreibt mit Belegen); findet sie nichts, sucht Gemini selbst (Google, 2.5 Flash)
+test('Research-Agent: Tiefen-Recherche mit eigenen Quellen; ohne Treffer sucht Gemini selbst', async () => {
   const DEEP = require('../lib/deepresearch');
   const orig = DEEP.run;
-  let deepRan = false;
-  DEEP.run = async () => { deepRan = true; return { status: 'failed', sources: [] }; };
+  let deepRan = 0;
+  const found = [{ id: 's1', n: 1, title: 'Lichtreaktion', url: 'https://www.planet-wissen.de/licht', domain: 'planet-wissen.de', type: 'web', text: 'In der Lichtreaktion entsteht ATP.' }];
   fx = M.installFetch([
-    { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Licht wird zu ATP.'])) },
+    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'high', sources: 'web', queries: ['Lichtreaktion Ablauf'], why: 'Recherche' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Licht wird zu ATP [1].'])) },
   ]);
   try {
+    DEEP.run = async () => { deepRan++; return { status: 'ok', sources: found, subs: [], comparison: null, counts: {}, failures: [] }; };
     const r = await run({ ...msg('Recherchiere gründlich: Wie funktioniert die Lichtreaktion?'), agent: 'research', effort: 'high' });
     assert.equal(r.result.status, 'completed');
-    assert.equal(deepRan, false, 'keine eigene Tiefen-Recherche');
-    const gen = fx.calls.filter(M.is.geminiStream).pop();
-    assert.ok(JSON.stringify(gen.body.tools || []).includes('google_search'), 'Google-Suche im Modell an');
+    assert.equal(deepRan, 1, 'Tiefen-Recherche läuft');
+    let gen = fx.calls.filter(M.is.geminiStream).pop();
+    assert.ok(!gen.body.tools, 'mit eigenen Quellen keine Google-Suche im Modell');
+    assert.match(M.systemOf(gen), /<quelle n="1"/, 'Quellen stehen im Prompt');
+    DEEP.run = async () => { deepRan++; return { status: 'failed', sources: [], subs: [], comparison: null, counts: {}, failures: [] }; };
+    fx.calls.length = 0;
+    await run({ ...msg('Recherchiere gründlich: Wie funktioniert die Lichtreaktion?'), agent: 'research', effort: 'high' });
+    gen = fx.calls.filter(M.is.geminiStream).pop();
+    assert.ok(JSON.stringify(gen.body.tools || []).includes('google_search'), 'nichts gefunden → Google-Suche im Modell');
   } finally { DEEP.run = orig; }
 });
 
@@ -782,23 +796,35 @@ test('Quellen: Research/Allgemein suchen offen (alle seriösen Seiten), Foren un
   assert.ok(!W.SCHOOL_TOPIC.test('Welches E-Auto hat die beste Reichweite?'));
 });
 
-test('Gemini-nativ (Allgemein): kein Planungs-Aufruf, kein Plan im Prompt, Auto = dynamisches Denken mit Gedanken; Max = Google-Suche im Modell', async () => {
+// Gemini-nativ: kein Plan – nur eine kleine Einschätzung (Aufwand + Quellenart); Auto übernimmt die eingeschätzte Stufe, Gemini denkt dynamisch.
+// Max: immer Quellen (findet die eigene Suche nichts → Google im Modell) und Selbstkontrolle (Entwurf → geprüfte Endfassung)
+test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte Stufe mit dynamischem Denken; Max = Quellen + Selbstkontrolle', async () => {
+  let level = 'high';
   fx = M.installFetch([
-    { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
+    { match: M.is.route, respond: () => M.nvidiaJson({ level, sources: 'none', queries: [], why: 'Erklärung' }) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
   ]);
   const r = await run({ ...msg('Warum ist der Himmel blau?'), agent: 'general', effort: 'auto' });
   assert.equal(r.result.status, 'completed');
   assert.equal(fx.calls.filter(M.is.analyze).length, 0, 'keine Planung');
-  const gen = fx.calls.filter(M.is.geminiStream).pop();
+  assert.equal(fx.calls.filter(M.is.route).length, 1, 'eine Einschätzung');
+  assert.equal(r.result.effort.applied, 'high', 'Auto übernimmt die eingeschätzte Stufe');
+  let gen = fx.calls.filter(M.is.geminiStream).pop();
   const tc = gen.body.generationConfig.thinkingConfig;
   assert.equal(tc.includeThoughts, true);
-  assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst');
+  assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst, wie lange es denkt');
   const sys = M.systemOf(gen);
   assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
-  assert.match(sys, /AUFWAND AUTO/);
+  assert.match(sys, /AUFWAND HIGH/);
   assert.match(sys, /Operatoren/);
+  assert.ok(!gen.body.tools, 'keine Suche, wenn die Einschätzung keine Quellen braucht');
   fx.calls.length = 0;
-  await run({ ...msg('Wie funktioniert die Photosynthese?'), agent: 'general', effort: 'max' });
-  assert.ok(JSON.stringify(fx.calls.filter(M.is.geminiStream).pop().body.tools || []).includes('google_search'), 'Max: Gemini sucht selbst');
+  level = 'max';
+  const m = await run({ ...msg('Wie funktioniert die Photosynthese?'), agent: 'general', effort: 'max' });
+  const streams = fx.calls.filter(M.is.geminiStream);
+  assert.equal(streams.length, 2, 'Max: Entwurf + Endfassung');
+  assert.ok(JSON.stringify(streams[0].body.tools || []).includes('google_search'), 'Max: immer Quellen – hier über Google im Modell');
+  assert.match(streams[1].body.contents.at(-1).parts[0].text, /ENTWURF[\s\S]*Endfassung/, 'zweiter Aufruf prüft den Entwurf');
+  assert.ok(m.stages().includes('verifying:active'), 'Zeitleiste zeigt die Prüfung');
+  assert.equal(m.text(), 'Antwort.', 'sichtbar ist nur die Endfassung');
 });

@@ -57,6 +57,7 @@ const sysText = (c) => c.body?.systemInstruction?.parts?.[0]?.text || c.body?.me
 const is = {
   geminiStream: (c) => c.url.includes('generativelanguage') && c.url.includes('streamGenerateContent'),
   nvidia: (c) => c.url.includes('integrate.api.nvidia.com'),
+  route: (c) => helper(c) && /You triage one message/.test(sysText(c)), // Einschätzung (Aufwand + Quellenart) im Gemini-nativen Ablauf
   analyze: (c) => helper(c) && /plan how a learning assistant/.test(sysText(c)),
   verify: (c) => helper(c) && /strict reviewer/.test(sysText(c)),
   judge: (c) => helper(c) && /rate candidate sources/.test(sysText(c)),

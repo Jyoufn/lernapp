@@ -1578,6 +1578,52 @@ function fitMaterial(list) {
   return { messages, dropped };
 }
 window.fitMaterial = fitMaterial;
+
+/* Lupe: Gemini 2.5 sieht ein ganzes Foto nur mit ~768 px – kleine Schrift (Buchseite, Arbeitsblatt) wird dann geraten.
+   Zusätzlich zum Foto gehen 2–4 vergrößerte Ausschnitte mit (nur in der Anfrage, nicht gespeichert; Server: fileParts).
+   Neueste Fotos zuerst, nur solange das Größenbudget (MATERIAL_BUDGET) reicht – ganze Fotos haben immer Vorrang. */
+const tileCache = new Map();
+function photoTiles(img) {
+  if (!/^image\//.test(img?.mime || '') || !img.data) return Promise.resolve(null);
+  const key = `${img.data.length}:${img.data.slice(-48)}`;
+  if (!tileCache.has(key)) {
+    tileCache.set(key, (async () => {
+      const bitmap = await createImageBitmap(await (await fetch(`data:${img.mime};base64,${img.data}`)).blob());
+      const { width: w, height: h } = bitmap;
+      const cols = Math.min(2, Math.ceil(w / 900)), rows = Math.min(2, Math.ceil(h / 900));
+      if (cols * rows < 2) return null; // kleines Bild: ganz lesbar
+      const names = cols === 2 && rows === 2 ? ['oben links', 'oben rechts', 'unten links', 'unten rechts'] : cols === 2 ? ['links', 'rechts'] : ['oben', 'unten'];
+      const tw = w / cols, th = h / rows, ov = 0.06; // etwas Überlappung, damit keine Zeile zerschnitten wird
+      const out = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+        const sx = Math.max(0, c * tw - tw * ov), sy = Math.max(0, r * th - th * ov);
+        const sw = Math.min(w - sx, tw * (1 + 2 * ov)), sh = Math.min(h - sy, th * (1 + 2 * ov));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(sw); canvas.height = Math.round(sh);
+        canvas.getContext('2d').drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        out.push({ mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.8).split(',')[1], pos: names[out.length] });
+      }
+      return out;
+    })().catch(() => null));
+  }
+  return tileCache.get(key);
+}
+async function withTiles(messages) {
+  let used = messages.reduce((n, m) => n + (m.images || []).reduce((k, img) => k + (img.data || '').length, 0), 0);
+  const out = messages.slice();
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (!out[i].images?.length) continue;
+    const images = [];
+    for (const img of out[i].images) {
+      const tiles = await photoTiles(img);
+      const size = (tiles || []).reduce((n, t) => n + t.data.length, 0);
+      if (tiles?.length && used + size <= MATERIAL_BUDGET) { used += size; images.push({ ...img, tiles }); } else images.push(img);
+    }
+    out[i] = { ...out[i], images };
+  }
+  return out;
+}
+window.withTiles = withTiles;
 let materialDropped = 0;
 function historyForRequest(list = history) {
   const { messages, dropped } = fitMaterial(list.map(({ thoughts, workTime, plan, ...m }) => m));
@@ -2573,7 +2619,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: historyForRequest(historyOf(tab)), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);
