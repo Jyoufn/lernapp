@@ -224,8 +224,10 @@ const Tasks = (() => {
   const EFFORTS_T = [['auto', 'Auto', 'Agent entscheidet'], ['low', 'Niedrig', 'schnell, kurz'], ['medium', 'Mittel', ''], ['high', 'Hoch', 'gründlich'], ['max', 'Max', 'am gründlichsten, dauert länger']];
   const repText = (r) => (r.every === 'daily' ? `Täglich um ${r.time}` : r.every === 'weekdays' ? `Werktags um ${r.time}` : `Jeden ${WD_LONG[r.day ?? 1]} um ${r.time}`);
   const repShort = (r) => (r.every === 'daily' ? `Täglich ${r.time}` : r.every === 'weekdays' ? `Mo–Fr ${r.time}` : `${WD_LONG[r.day ?? 1].slice(0, 2)} ${r.time}`);
+  // Dokumente als Quelle: Titel + Text (je höchstens 12 000 Zeichen) gehen mit dem Auftrag an den Agenten
+  const srcDocsOf = (t) => (t.srcDocs || []).map((id) => window.Docs?.get?.(id)).filter(Boolean).map((d) => { const x = document.createElement('div'); x.innerHTML = d.content || ''; return { title: d.title || 'Unbenannt', text: (x.innerText || x.textContent || '').replace(/\n{3,}/g, '\n\n').trim().slice(0, 12000) }; });
   function syncAuto(t, removeIt = false) {
-    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], prio: t.prio || 'none', agent: t.agent || 'general', effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
+    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], docs: srcDocsOf(t), prio: t.prio || 'none', agent: t.agent || 'general', effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
     fetch('/api/agent-tasks/automation', { method: removeIt ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
   }
   const openRows = new Set(); // aufgeklappte Zeilen bleiben beim Neuzeichnen offen
@@ -384,7 +386,7 @@ const Tasks = (() => {
   function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, srcFiles: [...(t0.srcFiles || [])], srcLinks: [...(t0.srcLinks || [])], tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, time: '', progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
+    const t = t0 ? { ...t0, srcFiles: [...(t0.srcFiles || [])], srcLinks: [...(t0.srcLinks || [])], srcDocs: [...(t0.srcDocs || [])], tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, time: '', progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
     const hadRepeat = !!t0?.repeat; // war vorher eine Automatisierung → beim Entfernen auch beim Server löschen
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
@@ -456,12 +458,16 @@ const Tasks = (() => {
     /* Quellen (nur mit Agent): gestrichelter Kasten zum Hochladen von Fotos (Arbeitsblatt, Buchseite …) und darunter Websites (Link + Enter).
        t.srcFiles = verkleinerte Fotos (JPEG, höchstens 4), t.srcLinks = Links; t.sources = Links als Text für den Agenten. */
     const srcBox = form.querySelector('.tk-src');
+    let srcDocPick = false; // Liste der Dokumente aufgeklappt
     const drawSrc = () => {
       if (!srcBox) return;
       const files = t.srcFiles || [], links = t.srcLinks || [];
       srcBox.innerHTML = `<button type="button" class="tk-src-up" data-srcup aria-label="Fotos hochladen">${fi('cloud-up', 20)}<span>Fotos hochladen</span></button>
         ${files.length ? `<div class="tk-src-ph">${files.map((f, i) => `<span><img src="${f}" alt="" /><button type="button" data-srcrm="${i}" aria-label="Foto entfernen">${fi('x', 9)}</button></span>`).join('')}</div>` : ''}
         <div class="tk-src-web">${fi('globe', 13)}<input class="tk-src-url" placeholder="Website hinzufügen" inputmode="url" aria-label="Website hinzufügen" /></div>
+        ${(t.srcDocs || []).map((id, i) => `<div class="tk-src-link tk-src-doc">${fi('file', 12)}<span>${esc(window.Docs?.titleOf?.(id) || 'Dokument')}</span><button type="button" data-docrm="${i}" aria-label="Dokument entfernen">${fi('x', 10)}</button></div>`).join('')}
+        <button type="button" class="tk-src-docadd" data-docpick>${fi('file-plus', 13)}<span>Dokument als Quelle</span></button>
+        ${srcDocPick ? `<div class="tk-src-docs">${(window.Docs?.docs || []).filter((d) => window.Docs.inWs(d) && !window.Docs.isEmpty(d.id) && !(t.srcDocs || []).includes(d.id)).sort((a, b) => b.updated - a.updated).slice(0, 12).map((d) => `<button type="button" data-docadd="${d.id}">${fi('file', 12)}<span>${esc(d.title || 'Unbenannt')}</span></button>`).join('') || '<span class="tk-ml">Keine Dokumente</span>'}</div>` : ''}
         ${links.map((u, i) => `<div class="tk-src-link"><span>${esc(u.replace(/^https?:\/\//, ''))}</span><button type="button" data-linkrm="${i}" aria-label="Link entfernen">${fi('x', 10)}</button></div>`).join('')}
         <input type="file" class="tk-src-file" accept="image/*" multiple hidden />`;
     };
@@ -469,9 +475,13 @@ const Tasks = (() => {
     const srcChanged = () => { t.sources = (t.srcLinks || []).join('\n'); drawSrc(); draw(); };
     const addLink = (v) => { v = String(v || '').trim(); if (!v) return; if (!/^https?:\/\//i.test(v)) v = `https://${v}`; try { new URL(v); } catch { return; } t.srcLinks = [...new Set([...(t.srcLinks || []), v])].slice(0, 8); srcChanged(); setTimeout(() => form.querySelector('.tk-src-url')?.focus(), 0); };
     srcBox?.addEventListener('click', (e) => {
+      e.stopPropagation(); // Klicks im Quellen-Kasten (neu gezeichnet) sollen das Feld nicht zuklappen
       if (e.target.closest('[data-srcup]')) { srcBox.querySelector('.tk-src-file').click(); return; }
       const r = e.target.closest('[data-srcrm]'); if (r) { t.srcFiles.splice(+r.dataset.srcrm, 1); srcChanged(); return; }
-      const l = e.target.closest('[data-linkrm]'); if (l) { t.srcLinks.splice(+l.dataset.linkrm, 1); srcChanged(); }
+      const l = e.target.closest('[data-linkrm]'); if (l) { t.srcLinks.splice(+l.dataset.linkrm, 1); srcChanged(); return; }
+      if (e.target.closest('[data-docpick]')) { srcDocPick = !srcDocPick; drawSrc(); return; }
+      const da = e.target.closest('[data-docadd]'); if (da) { t.srcDocs = [...new Set([...(t.srcDocs || []), da.dataset.docadd])].slice(0, 5); srcDocPick = false; srcChanged(); return; }
+      const dr = e.target.closest('[data-docrm]'); if (dr) { t.srcDocs.splice(+dr.dataset.docrm, 1); srcChanged(); }
     });
     srcBox?.addEventListener('change', async (e) => {
       if (!e.target.classList.contains('tk-src-file')) return;
@@ -525,7 +535,7 @@ const Tasks = (() => {
         form.querySelectorAll('[data-teffort]').forEach((b) => b.classList.toggle('on', b.dataset.teffort === ef[0]));
         const efp = form.querySelector('.tk-pop[data-k="effort"]'); if (efp) efp.hidden = !t.agent;
         // Quellen (nur mit Agent): Links/Quellen, die der Agent lesen und nutzen soll
-        const srcN = (t.srcFiles || []).length + (t.srcLinks || []).length;
+        const srcN = (t.srcFiles || []).length + (t.srcLinks || []).length + (t.srcDocs || []).length;
         set('src', [fi('link', 14), srcN ? `${srcN} ${srcN === 1 ? 'Quelle' : 'Quellen'}` : 'Quellen angeben'], !srcN);
         const srp = form.querySelector('.tk-pop[data-k="src"]'); if (srp) srp.hidden = !t.agent;
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
@@ -918,7 +928,7 @@ const Tasks = (() => {
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
     if (!agents) return;
-    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], prio: t.prio || 'none', agent: t.agent, output: t.output, effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main' } });
+    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], docs: srcDocsOf(t), prio: t.prio || 'none', agent: t.agent, output: t.output, effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main' } });
     // keepalive: die Anfrage geht auch raus, wenn die App gleich geschlossen wird – der Server arbeitet dann allein weiter
     fetch('/api/agent-tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true })
       .then(() => pull()).catch(() => {});

@@ -20,7 +20,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 7. Google-Suche im Modell (Grounding) nur bei Aktuellem (`TIME_SENSITIVE`, ganze Wörter) oder Research/Lernen-mit-Bild.
 
 ## Denken (verbindlich – nicht zurückbauen, außer der Nutzer will es)
-- Modell: **Gemini 2.5 Flash** hat echtes Reasoning; `thinkingBudget` 0 = aus, sonst Obergrenze (Ersatzmodelle 3.x: `thinkingLevel`).
+- Gemini 2.5 Flash: `thinkingBudget` (0 = aus); Gemini 3.x: `thinkingLevel`. Groq gpt-oss: `reasoning_effort`. Alle Modelle der Leiter denken nach denselben Regeln.
 - **Denken nur, wenn es die Antwort besser macht** (`thinkNeeded` in `runChat`): Die Analyse setzt `think`. Aus (Budget 0, keine Gedanken-Anzeige) bei
   einfachen E-Mails/Nachrichten, Übersetzungen, Definitionen, Fakten, Low/Schnell. An bei `think`, Recherche mit Quellen, Rechnen/Prüfung/
   Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (immer), Coden, Börse. Ohne Analyse: ab High.
@@ -44,7 +44,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
 - Google-Grounding: Server meldet nur Chunks, auf die `groundingSupports` zeigen (= wirklich benutzt). Hat die Antwort keine nummerierten Belege, stehen diese unten.
 - Ohne Suche: gar nichts (keine Leiste, kein Hinweis).
-- Anzeige unten: rundes Logo (`/api/icon?domain=`) + Domain, max. 2, dann „+N“; Klick → Fenster mit allen.
+- Anzeige unten: nur Logos als abgerundete Quadrate (`/api/icon?domain=`), ohne Namen, max. 3, dann „+N“; Klick → Fenster mit allen.
 - **Nur passende Quellen** (verbindlich): Websites und deutsche Lernseiten laufen nach dem Wortabgleich durch `judgePages` (Modell-Bewertung, < 6 von 10 fällt weg); in `lib/research.js` fällt < 6 weg und Unbewertetes wird nicht übernommen. Lieber keine Quelle als eine fremde.
 - **Lernen: NUR deutsche Fachwissensquellen** (verbindlich): keine englische Wikipedia, keine (englische) Fachliteratur/OpenAlex (`germanOnly`), Analyse liefert nur deutsche, themengenaue Suchbegriffe; Seiten, die nur ein ganzes Schulfach behandeln („Biologie“) oder Startseiten fallen weg (`GENERIC_SUBJECT`, Pfad „/“), Bewertung gibt ihnen 0–2. Andere Agenten: frei.
 - **Lernen: deutsche Lernplattformen zuerst** (ausdrücklicher Wunsch, verbindlich): Studyflix, simpleclub, serlo, sofatutor, Lernhelfer, LEIFIphysik, planet-schule/-wissen u. a. (`LEARN_FAVORITES`, höchster Rang in `rankGerman`, +2 in `JUDGE_SYSTEM`, eigene Suchanfrage „… studyflix simpleclub“ beim Lern-Agenten/Schulthemen).
@@ -85,7 +85,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - FLUX (NVIDIA) kann keine eigenen Bilder bearbeiten → nur Ersatz, wenn Gemini Flash Image nicht verfügbar ist (Kontingent/Fehler): dann wird anhand einer Beschreibung neu gemalt. Antwort enthält `mode: 'edit'`, wenn wirklich bearbeitet wurde.
 
 ## Kontingent schonen (verbindlich)
-- Neue Funktionen dürfen nicht pro Abschnitt/Satz/Quelle einen eigenen Gemini-Aufruf machen – sammeln und EIN Aufruf. Kleine Bewertungen (`smallJsonTask`) laufen standardmäßig zuerst über NVIDIA.
+- Neue Funktionen dürfen nicht pro Abschnitt/Satz/Quelle einen eigenen Gemini-Aufruf machen – sammeln und EIN Aufruf. Kleine Aufgaben (`smallJsonTask`/`textTask`) laufen beim Anbieter der Anfrage (Gemini → Lite-Leiter).
 
 ## Modelle (verbindlich)
 - **Mehrere Schlüssel je Anbieter** (Einstellungen → Agenten → Verbindung: Zeile antippen klappt die Schlüssel auf, ••••1234 mit ×, „Hinzufügen“).
@@ -93,7 +93,8 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
   Nie `env.GEMINI_API_KEY` direkt an Google schicken (kann mehrere Schlüssel enthalten).
 - **Anbieter-Phasen (verbindlich)**: eine Anfrage läuft KOMPLETT bei einem Anbieter (`env.__family` aus `P.familyFor`): erst nur Gemini, dann nur Groq, dann nur OpenRouter (kostenlos) – Planung, Gedanken, Bewertung, Titel und Antwort beim selben (`P.textTask`). Fällt er mitten in der Antwort aus: nur vorwärts. **Kein Nemotron** (auch nicht als Notfall).
 - **Anbieter-Reihenfolge** (`providerAttempts`): Gemini-Leiter (je Modell jeder Schlüssel, inkl. Flash-Lite) → Groq (`GROQ_MODELS`) → OpenRouter (nur „:free“-Modelle laut Liste). **Kein Nemotron für Antworten** (zu langsam, Wunsch des Nutzers); NVIDIA-Schlüssel nur noch für Bilder (FLUX). Kleine JSON-Hilfsaufgaben: Gemini-Lite → Groq → NVIDIA ohne Denken als stiller Notfall.
-  Nemotron läuft in der NVIDIA-Cloud (nicht lokal), ist ein großes Denk-Modell → ohne Denkbedarf `chat_template_kwargs.enable_thinking=false` (bzw. `low_effort`), Groq gpt-oss `reasoning_effort`; Hilfsaufgaben über NVIDIA immer ohne Denken.
+  Nemotron ist komplett raus (zu langsam) – auch nicht in den Einstellungen; der NVIDIA-Schlüssel dient nur noch FLUX-Bildern („FLUX (Bilder)“).
+  Limits werden über alle Server-Instanzen geteilt (`ai:limits` im Speicher): Tageslimit → bis Mitternacht Pazifikzeit, dann ist das bessere Modell sofort wieder dran.
   Alle über denselben Ablauf (`openaiChat`): Gedanken (reasoning / <think>) durch den Gedanken-Filter (Deutsch, nur Inhalt), Antwort-Wächter, Weiterschreiben. Bilder nur an Modelle, die sie sehen.
 - **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 2.5 Flash → Flash-Lite-Modelle),
   kleine Hilfsaufgaben `LITE_LADDER` (3.1 Flash-Lite → 2.5 Flash-Lite → 3.5 Flash-Lite …). Genommen wird nur, was der Schlüssel laut
@@ -102,3 +103,4 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Google-Suche im Modell nur mit 2.5 Flash (kostenloses Grounding) → bei Aktuellem wird ein solches Modell nach vorn geholt.
 - Alle Regeln (Aufwand verbindlich, Denken, Quellen) gelten für jedes Modell der Leiter gleich. „Live“-Modelle sind Sprach-Echtzeit, nicht für Text.
 - Bildbearbeitung (Gemini Flash Image) hat laut Google keinen Gratis-Zugang → mit Gratis-Schlüssel wird neu gemalt (Ersatz).
+- Aufbau/Struktur in Antworten (v. a. High/Max): als ```illustration-Bild mit genauer Beschreibung, Beschriftung und Beispielbild-Suchwörtern (`query`) – nie als ASCII-/Kasten-Skizze.

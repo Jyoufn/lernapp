@@ -44,9 +44,9 @@ Keine neuen Grautöne erfinden.
 - **Seitenköpfe** Chats/Bibliothek/Aufgaben: Titel 18 px links, blauer Knopf rechts, darunter Suchfeld (40 px, Radius 12, Fläche `--main-bg`, Icon 14).
 - **Kalender-Kopf**: auf Höhe des Sidebar-Knopfs oben links, Trennstrich, „Oktober 2026“ 15 px; rechts „‹ Heute ›“ und „Neu“ gleich hoch.
 - **Menüs/Aufklapp-Kästen** (`.tk-box`): `--menu-bg`, Rand `--menu-border`, Radius 10, Zeilen 30 px, Auswahl nur blauer Haken.
-- **Fenster Aufgabe/Termin**: ohne × und ohne Kopftext; Titel, „Beschreibung hinzufügen“ (wächst bis 5 Zeilen), darunter Pillen-Zeilen (Icon + Text), die bündig einen Kasten aufklappen. Knopf unten rechts „Aufgabe erstellen“.
+- **Fenster Aufgabe/Termin**: ohne × und ohne Kopftext; Titel, „Beschreibung hinzufügen“ (wächst, höchstens ~6 Zeilen, dann scrollt sie; das ganze Fenster höchstens Bildschirmhöhe und scrollbar), darunter Pillen-Zeilen (Icon + Text), die bündig einen Kasten aufklappen. Knopf unten rechts „Aufgabe erstellen“.
 - **Karten im Chat** (Agent-Empfehlung, Fehler, API-Key fehlt, Unterbrochen): Hund links, Titel + Satz, rechts ein Knopf; Fläche/Rand wie Eingabefeld. Nicht noch eine Karte im Muster „Icon links + Titel + Untertitel“ erfinden – der Nutzer will dafür bessere Lösungen.
 - **Tags**: getönte Fläche 12 %, farbiger Text, ohne Punkt (Liste) – im Dokument mit Punkt.
 - **Leisten oben mittig** (`.cs-pill`): runde Pille 36 px, Rand #2a2a2a, Fläche #1a1a1a; gewählt = weißer Text, sonst `--text-4`.
-- **Quellen**: Chips in der Zeitleiste; unter der Antwort `src-stack` = rundes Logo + Domain, höchstens 2, dann „+N“, Klick → Quellenfenster.
+- **Quellen**: Chips in der Zeitleiste; unter der Antwort `src-stack` = nur Logos als abgerundete Quadrate (20 px, Radius 6, leicht überlappend, OHNE Namen), höchstens 3, dann „+N“, Klick → Quellenfenster.
 - **Pixel-Hunde** im groben 32er-Raster; Größen nur 32/24/20 (andere Größen gibt es nicht → Fehler).

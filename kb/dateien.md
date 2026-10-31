@@ -30,7 +30,7 @@
 | `app-server.js` | HTTP-Server/Handler, `PUBLIC_FILES`, alle `/api/…`-Routen, Doc-KI (`DOC_SYSTEM`), Titel (`TITLE_SYSTEM`), Cron für Automatisierungen |
 | `api/index.js`, `vercel-build.js`, `vercel.json` | Vercel-Funktion und Build nach `public/` |
 | `lib/workflow.js` | **Chat-Ablauf** `runChat`: Analyse (`ANALYZE_SYSTEM`, `analyze`), Aufwand, Recherche, Google-Suche (`TIME_SENSITIVE`), Entwurf/Prüfung (`VERIFY_SYSTEM`), Prompts (`BASE_PROMPT`, `AGENT_PROMPT`), `prepareBody`, Statusereignisse |
-| `lib/providers.js` | Gemini-Stream (`geminiStream`, Grounding nur benutzte Quellen), `geminiOnce`, NVIDIA |
+| `lib/providers.js` | Gemini-Stream/-Once, Modell-Leiter (`ladder`), Schlüssel (`keysOf`, `geminiKey`), Limits (`markLimited`, geteilt über `ai:limits`), Anbieter-Phasen (`familyFor`, `textTask`, `smallJsonTask`), Groq/OpenRouter (`openaiChat`) |
 | `lib/research.js`, `lib/web.js`, `lib/deepresearch.js` | Quellen-Suche (Wikipedia, OpenAlex), Websuche/Seiten lesen, Tiefen-Recherche |
 | `lib/boerse.js`, `lib/radar.js`, `lib/holdings.js`, `lib/universe.js` | Börse: Kurse/Charts/Nachrichten (`contextFor` → `steps`), Chancen-Radar, Orderbuch/Depot, Aktienliste |
 | `lib/thoughts.js` | Gedanken-Filter (nur Inhalt, Deutsch) und Antwort-Wächter (kein Vorgehen im Text) |

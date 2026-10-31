@@ -206,7 +206,6 @@ newTabBtn.addEventListener('click', () => createTab());
 /* ---------- Modell-Auswahl ---------- */
 const MODELS = [
   { id: 'gemini', label: 'Gemini 2.5 Flash', icon: 'i-gemini' },  // Hauptmodell (gratis): Thinking, Google-Suche
-  { id: 'nvidia', label: 'Nemotron 3', icon: 'i-nvidia', hidden: true }, // Nemotron 3 Ultra über NVIDIA – nicht in der Auswahl, springt aber weiter ein, wenn Gemini am Limit ist
 ];
 // „Auto“: die App schätzt die Schwierigkeit und wählt die Denktiefe selbst
 const EFFORTS = ['Auto', 'Low', 'Medium', 'High', 'Max'];
@@ -221,8 +220,7 @@ const chip = $('modelChip');
 const modelList = $('modelList');
 const effortList = $('effortList');
 
-// Auswahl: Gemini und Nemotron 3 (mit NVIDIA-Logo); Nemotron springt außerdem automatisch ein, wenn Gemini am Limit ist
-// Kein Modell mehr zum Auswählen: die App nimmt automatisch das beste freie Modell (Gemini-Leiter über alle Schlüssel → Flash-Lite → Groq/Nemotron)
+// Kein Modell mehr zum Auswählen: die App nimmt automatisch das beste freie Modell (Gemini-Leiter über alle Schlüssel → Flash-Lite → Groq → OpenRouter; kein Nemotron)
 MODELS.filter(() => false).forEach((m) => {
   const item = document.createElement('button');
   item.type = 'button';
@@ -1899,10 +1897,11 @@ function placeSourceStack(answerEl, sources) {
   const stack = el('button', 'src-stack');
   stack.type = 'button';
   stack.title = 'Quellen anzeigen';
-  // je Quelle: rundes Logo + Name der Seite (z. B. „wikipedia.org“), höchstens zwei, dahinter „+N“
   const nameOf = (s) => { const d = String(s.domain || '').replace(/^www\./i, ''); return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d) && !/vertexaisearch/i.test(d) ? d : String(s.title || d).slice(0, 28); };
-  sources.slice(0, 2).forEach((src) => { const c = el('span', 'stack-src'); c.append(siteIcon(src.domain, src.title, 'stack-ico'), el('span', 'stack-name', escapeHtml(nameOf(src)))); stack.append(c); });
-  if (sources.length > 2) stack.append(el('span', 'stack-more', `+${sources.length - 2}`));
+  // je Quelle nur das Logo als abgerundetes Quadrat (ohne Namen), leicht überlappend, höchstens drei – dahinter „+N“
+  void nameOf;
+  sources.slice(0, 3).forEach((src) => { const c = el('span', 'stack-src sq'); c.append(siteIcon(src.domain, src.title, 'stack-ico')); stack.append(c); });
+  if (sources.length > 3) stack.append(el('span', 'stack-more', `+${sources.length - 3}`));
   stack.addEventListener('click', () => openSourcesModal(sources, null));
   let last = answerEl.lastElementChild;
   while (last && (last.matches('ul, ol') ? last.lastElementChild : null)) last = last.lastElementChild; // in Listen: letzter Punkt

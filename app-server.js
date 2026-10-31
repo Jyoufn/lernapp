@@ -211,7 +211,7 @@ const IMAGE_MODELS = [
   { name: 'flux1-schnell', url: 'https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/105fe02c-924b-4dfa-9797-92d89c3936ad', params: { width: 1344, height: 768, steps: 4 } },
 ];
 // Keys: FLUX3_API_KEY zuerst, danach die übrigen NVIDIA-Keys – lehnt NVIDIA einen Key ab (401/403), wird automatisch der nächste probiert
-const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY].map((k) => String(k || '').trim()).filter(Boolean))];
+const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
 const badImageKeys = new Set(); // abgelehnte Keys bis zum Neustart überspringen
 let lastImageFiltered = false; // letzter Versuch scheiterte nur am Inhaltsfilter
 const imageModelDownUntil = new Map(); // Bildmodell → übersprungen bis (nach HTTP 5xx/Zeitüberschreitung; spart das Warten auf den Fehler)
@@ -1264,6 +1264,8 @@ function injectReporter(content) {
 // Geheime Einstellungen: .env am PC, Umgebungsvariablen auf Vercel
 const serverEnv = () => ({ ...readFileEnv(), ...process.env });
 let storeCache = { sig: null, store: null };
+// Limits der KI-Modelle über alle Instanzen teilen (lib/providers.js → ai:limits)
+setTimeout(() => { try { P.useLimitStore(accountStore()); } catch {} }, 0);
 function accountStore() {
   if (process.env.APP_TEST_STORE === 'memory') return storeCache.store || (storeCache.store = STORE.memoryStore());
   const env = serverEnv();
