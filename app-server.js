@@ -734,19 +734,30 @@ async function handleImageEdit(req, res) {
 }
 
 /* ---------- /api/cover-image: Cover im Dokument „mit KI erstellen“ ----------
-   Gemini macht aus dem deutschen Wunsch einen englischen Bild-Auftrag im Cover-Stil (gezeichnet, nicht realistisch) → FLUX malt. */
-const COVER_STYLE = 'flat digital illustration, hand-drawn look, soft painterly shading, smooth color gradients, harmonious limited palette, clean simple shapes, subtle grain, calm wide composition with breathing room, subject centered in a wide horizontal banner crop, not photorealistic, no text, no letters, no border';
-const COVER_SYSTEM = `Du bekommst einen Wunsch für ein Cover (breites Titelbild über einem Schul-Dokument) auf Deutsch. Antworte NUR mit JSON: {"prompt":"englischer Bild-Auftrag"}
-"prompt" (Englisch, 40–90 Wörter) beschreibt genau das gewünschte Motiv (bei Schulthemen fachlich richtig, z. B. Biologie: Zelle mit Zellkern) und endet mit diesem Stil: ${COVER_STYLE}.
+   Gemini macht aus dem deutschen Wunsch (und optionalen Vorlage-Fotos) einen englischen Bild-Auftrag im Stil der übrigen Cover
+   (Wellen, Dünen, Aurora, Linien: dunkel, weiche Farbverläufe, leuchtende Linien) – kreativ und stilisiert, nie realistisch → FLUX malt (1344×768).
+   Die App zeigt das Bild im normalen Banner-Format der Cover (füllt die Fläche, kein eigenes Seitenverhältnis). */
+const COVER_STYLE = 'stylized abstract art in the style of a modern wallpaper banner: deep dark background, smooth flowing color gradients, soft glowing light, '
+  + 'elegant flowing contour lines and waves like aurora or topographic lines, the subject reduced to simplified luminous silhouettes and graceful shapes woven into the flowing forms, '
+  + 'dreamy, creative and artistic interpretation, harmonious limited palette, minimal and calm, lots of breathing room, wide panoramic composition with the subject centered, '
+  + 'not photorealistic, no realistic textures, no photo, no 3d render, no text, no letters, no border';
+const COVER_SYSTEM = `Du bekommst einen Wunsch für ein Cover (breites Titelbild über einem Schul-Dokument) auf Deutsch, eventuell mit Fotos als Orientierung. Antworte NUR mit JSON: {"prompt":"englischer Bild-Auftrag"}
+"prompt" (Englisch, 50–100 Wörter): eine KREATIVE, künstlerische Umsetzung des Motivs – nicht abbilden, sondern stilisieren: das Motiv wird zu
+vereinfachten, leuchtenden Formen und Silhouetten, die in fließende Linien, Wellen und Farbverläufe übergehen (z. B. Tierzelle → eine leuchtende,
+weich gezeichnete Zellform mit angedeuteten Organellen als schimmernde Kreise, umflossen von Wellenlinien). Wähle eine passende, ruhige Farbpalette.
+Fotos (falls dabei) nur als Orientierung für Motiv, Farben oder Aufbau – nie nachmalen, immer im Cover-Stil.
+Der Auftrag endet mit diesem Stil: ${COVER_STYLE}.
 Nie fotorealistisch, keine Schrift im Bild.`;
 async function handleCoverImage(req, res) {
   const env = readEnv();
-  const { wish } = await readBody(req, 4000);
+  const { wish, photos } = await readBody(req, 4 * 1024 * 1024);
   const w = String(wish || '').trim().slice(0, 400);
   if (w.length < 3) return sendJson(res, 400, { error: 'Beschreib kurz, was auf dem Cover sein soll.' });
-  const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}`, [], 0).catch(() => null);
+  const imgs = (Array.isArray(photos) ? photos : []).slice(0, 3).map((x) => /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(x || ''))).filter(Boolean).map((m) => ({ mime: m[1], data: m[2] }));
+  const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}${imgs.length ? `\n(${imgs.length} ${imgs.length === 1 ? 'Foto' : 'Fotos'} als Orientierung angehängt)` : ''}`, imgs, imgs.length ? 1024 : 0).catch(() => null);
   let prompt = String(plan?.prompt || '').trim();
   if (prompt.length < 30) prompt = `${w}. ${COVER_STYLE}`;
+  if (!/not photorealistic/i.test(prompt)) prompt = `${prompt}. ${COVER_STYLE}`;
   const out = await nvcfImage(env, prompt.slice(0, 2000), Math.floor(Math.random() * 1e6));
   if (!out) return sendJson(res, 502, { error: 'Das Cover konnte gerade nicht erstellt werden.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}` });

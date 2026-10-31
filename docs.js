@@ -1602,27 +1602,34 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     }
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen mit nächster Farbe
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen – wie bei den Tags: erst der Name, dann Icon und Farbe
-    let projNew = '', projIcon = 'folder', projLine = false;
+    // Neues Projekt: erst der Name, dann die Farbe antippen, danach das Icon (in dieser Farbe) – das Icon legt das Projekt an
+    let projNew = '', projIcon = 'folder', projColor = '';
     function drawMetaProj() {
       const list = view.querySelector('.dc-proj-list'), inp = view.querySelector('.dc-proj-in'); if (!list) return;
+      if (projNew && !projColor) {
+        list.innerHTML = `<span class="tk-tag-new-l">Farbe für „${esc(projNew)}“</span>${UIKit.colorRow('', 'data-pjcolor')}`;
+        return;
+      }
       if (projNew) {
-        list.innerHTML = `<span class="dc-pj-head"><span class="tk-tag-new-l">Icon für „${esc(projNew)}“</span><span class="dc-iseg small"><button type="button" data-pjline="0"${projLine ? '' : ' class="on"'}>Gefüllt</button><button type="button" data-pjline="1"${projLine ? ' class="on"' : ''}>Linie</button></span></span>
-          <span class="dc-pj-icons">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic${n === projIcon ? ' on' : ''}" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16, '', projLine)}</button>`).join('')}</span>
-          <span class="tk-tag-new-l">Farbe – antippen legt das Projekt an</span>${UIKit.colorRow('', 'data-pjcolor')}`;
+        list.innerHTML = `<span class="tk-tag-new-l">Icon für „${esc(projNew)}“ – antippen legt das Projekt an</span>
+          <span class="dc-pj-icons" style="color:${esc(projColor)}">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`;
+        list.querySelector('.dc-pj-icons')?.animate([{ opacity: 0, transform: 'translateX(10px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
         return;
       }
       const q = inp.value.trim(), ql = q.toLowerCase();
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
       list.innerHTML = (q && !exact ? `<span class="tk-mi dc-pj-add" data-mproj-new role="button" tabindex="0"><span>„${esc(q)}“ anlegen</span></span>` : '')
-        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15, '', !!p.line)}</span><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
       const b = view.querySelector('.dc-pchip'); if (!b || !doc) return;
       const pr = projOf(doc.projectId);
       b.classList.toggle('set', !!pr);
-      const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14, '', !!pr.line)}</span>` : '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
+      b.classList.toggle('tinted', !!pr); // Projektfarbe für Icon, transparente Fläche und Text
+      if (pr) b.style.setProperty('--pc', pr.c); else b.style.removeProperty('--pc');
+      const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14)}</span>` : '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
       b.innerHTML = `${ic}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
       view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
     }
@@ -1635,16 +1642,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
         const pj = e.target.closest('[data-mproj]'); if (pj) { setProj(pj.dataset.mproj); return; }
         if (e.target.closest('[data-mproj-new]')) { newProj(inp.value.trim()); return; }
-        const pl = e.target.closest('[data-pjline]');
-        if (pl) { projLine = pl.dataset.pjline === '1'; const sc = box.querySelector('.dc-pj-icons')?.scrollTop || 0; drawMetaProj(); const g = box.querySelector('.dc-pj-icons'); if (g) g.scrollTop = sc; return; }
         const pi = e.target.closest('[data-pjicon]');
-        if (pi) { projIcon = pi.dataset.pjicon; box.querySelectorAll('.dc-pj-ic').forEach((x) => x.classList.toggle('on', x === pi)); return; }
-        const pc = e.target.closest('[data-pjcolor]'); if (pc) { makeProj(pc.dataset.pjcolor); return; }
+        if (pi && projColor) { projIcon = pi.dataset.pjicon; makeProj(projColor); return; }
+        const pc = e.target.closest('[data-pjcolor]'); if (pc) { projColor = pc.dataset.pjcolor; drawMetaProj(); return; }
         if (e.target.closest('.tk-picker')) return;
         const cu = e.target.closest('[data-custom]');
-        if (cu && projNew) { const host = cu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker('#5b8cff', (hex, done) => { cu.style.setProperty('--c', hex); cu.classList.add('on'); if (done) makeProj(hex); }, 'Anlegen')); }
+        if (cu && projNew) { const host = cu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker('#5b8cff', (hex, done) => { cu.style.setProperty('--c', hex); cu.classList.add('on'); if (done) { projColor = hex; drawMetaProj(); } }, 'Weiter')); }
       });
-      inp.addEventListener('input', () => { projNew = ''; drawMetaProj(); });
+      inp.addEventListener('input', () => { projNew = ''; projColor = ''; drawMetaProj(); });
       inp.addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Escape') { pop.classList.remove('open'); return; }
@@ -1656,8 +1661,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
       document.addEventListener('pointerdown', (e) => { if (box.isConnected && !box.contains(e.target)) pop.classList.remove('open'); });
     }
-    const newProj = (name) => { if (!name) return; projNew = name.slice(0, 40); projIcon = 'folder'; drawMetaProj(); };
-    const makeProj = (c) => { const pr = { id: newId('p'), name: projNew, c, icon: projIcon, ...(projLine ? { line: true } : {}) }; projects.push(pr); projNew = ''; save(); setProj(pr.id); };
+    const newProj = (name) => { if (!name) return; projNew = name.slice(0, 40); projIcon = 'folder'; projColor = ''; drawMetaProj(); };
+    const makeProj = (c) => { const pr = { id: newId('p'), name: projNew, c, icon: projIcon }; projects.push(pr); projNew = ''; projColor = ''; save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
     const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in)');
     // Infos: Tags unter dem Titel, darunter die feste Tabelle (abschaltbar in den Dokument-Einstellungen)
@@ -1755,9 +1760,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       box.querySelector('.dc-cover-img').style.background = bg;
       // eigenes Bild: Banner übernimmt das Seitenverhältnis → das ganze Bild ist zu sehen (sehr hohe Bilder: ganz, mit Rand)
       const cv = doc.cover;
-      box.classList.toggle('img', cv?.kind === 'image');
+      box.classList.toggle('img', cv?.kind === 'image' && !cv.ai); // KI-Cover: normales Banner (füllt die Fläche), kein eigenes Seitenverhältnis
       box.style.aspectRatio = '';
-      if (cv?.kind === 'image') {
+      box.classList.remove('tall');
+      if (cv?.kind === 'image' && !cv.ai) {
         const apply = (ratio) => { box.style.aspectRatio = String(Math.max(1.6, Math.min(6, ratio))); box.classList.toggle('tall', ratio < 1.6); };
         if (cv.ratio) apply(cv.ratio);
         else { const im = new Image(); im.onload = () => { if (doc.cover !== cv) return; cv.ratio = +(im.width / im.height).toFixed(4); apply(cv.ratio); save(); }; im.src = cv.src; }
@@ -1891,7 +1897,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       document.body.append(modal);
       const body = pop.querySelector('.dc-cpop-body'), title = pop.querySelector('.dc-cpop-title');
       let step = null; // null = Übersicht, sonst der Name des gewählten Icons
-      const pick = { c: iconOf(doc)?.c || '#a3a3a3', line: !!iconOf(doc)?.line }; // Standard: grau, gefüllt
+      const pick = { c: iconOf(doc)?.c || '#a3a3a3', line: false }; // nur gefüllte Icons (keine Linien-Fassung mehr)
       const onCover = !!coverCss(doc.cover);
       const ttl = esc(doc.title.trim() || 'Unbenannt');
       const preview = (name, c) => (onCover
@@ -1900,9 +1906,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       function render(dir = 0) {
         if (!step) {
           title.textContent = 'Icon';
-          // Übersicht immer grau (nicht in der Farbe des aktuellen Icons); oben: gefüllt oder nur Linie (wie die Sidebar)
-          body.innerHTML = `<div class="dc-iseg" role="tablist"><button type="button" data-istyle="fill"${pick.line ? '' : ' class="on"'}>Gefüllt</button><button type="button" data-istyle="line"${pick.line ? ' class="on"' : ''}>Linie</button></div>`
-            + `<div class="dc-igrid">${DocIcons.names.map((n) => `<button type="button" class="dc-itile${iconOf(doc)?.name === n && !!iconOf(doc)?.line === pick.line ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 22, '', pick.line)}</button>`).join('')}</div>`;
+          // Übersicht immer grau (nicht in der Farbe des aktuellen Icons); nur gefüllte Icons
+          body.innerHTML = `<div class="dc-igrid">${DocIcons.names.map((n) => `<button type="button" class="dc-itile${iconOf(doc)?.name === n ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 22, '', pick.line)}</button>`).join('')}</div>`;
         } else {
           title.innerHTML = `<button type="button" class="dc-cback" data-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>Farbe`;
           body.innerHTML = `${preview(step, pick.c)}<div class="dc-clabel">Farbe</div>${UIKit.colorRow(pick.c, 'data-c')}`;
@@ -1977,6 +1982,16 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       setTimeout(() => ghost.remove(), 700); // falls die Animation nicht zu Ende läuft (z. B. Tab im Hintergrund)
     }
     // Bild verkleinern (max. 2400 px breit), damit Dokumente nicht zu groß werden
+    // Vorlage-Foto für das KI-Cover: klein (höchstens 768 px), JPEG – reicht der KI zur Orientierung
+    function smallPhoto(file) {
+      return new Promise((resolve, reject) => {
+        if (!/^image\//.test(file.type)) { reject(new Error('Kein Bild')); return; }
+        const img = new Image();
+        img.onload = () => { const k = Math.min(1, 768 / Math.max(img.width, img.height)); const cv = document.createElement('canvas'); cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k); cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height); URL.revokeObjectURL(img.src); resolve(cv.toDataURL('image/jpeg', 0.85)); };
+        img.onerror = () => reject(new Error('Bild nicht lesbar'));
+        img.src = URL.createObjectURL(file);
+      });
+    }
     function readImage(file) {
       return new Promise((resolve, reject) => {
         const img = new Image();
@@ -1996,7 +2011,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
     }
     // eigene Bilder: alle, die in irgendeinem Dokument als Cover benutzt werden (ohne Doppelte)
-    const ownImages = () => [...new Set(docs.map((d) => d.cover?.kind === 'image' ? d.cover.src : null).filter(Boolean))].slice(0, 24);
+    // eigene Bilder (KI-Cover behalten ihr Banner-Format: ai-Merker geht mit)
+    const ownImages = () => { const m = new Map(); docs.forEach((d) => { if (d.cover?.kind === 'image' && d.cover.src && !m.has(d.cover.src)) m.set(d.cover.src, !!d.cover.ai); }); return [...m].slice(0, 24); };
 
     let coverPop = null;
     // Stile: erst Stil wählen, dann Farbe (Varianten des Stils oder eigene Farbe)
@@ -2026,26 +2042,43 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const body = pop.querySelector('.dc-cpop-body'), file = pop.querySelector('input[type=file]'), title = pop.querySelector('.dc-cpop-title');
       let step = null; // null = Übersicht, sonst die ID des gewählten Stils
       let pick = { c: doc.cover?.kind === 'color' ? doc.cover.c : UIKit.COLORS[0] };
-      const ai = { open: false, busy: false, text: '', err: '' }; // „Mit KI“: Feld oben im Fenster, das Fenster bleibt offen
+      const ai = { open: false, busy: false, text: '', err: '', photos: [] }; // „Mit KI“: nur noch ein kleines Eingabefeld (wie im Chat) – Fenster bleibt offen
       const isOn = (cv) => JSON.stringify(cv) === JSON.stringify(doc.cover || null);
       const tile = (cv, bg, label, extra = '') => `<button type="button" class="dc-ctile${isOn(cv) ? ' on' : ''}${extra}" data-cv='${esc(JSON.stringify(cv))}' title="${esc(label)}" aria-label="${esc(label)}"><span style="background:${esc(bg)}"></span></button>`;
       const previewOf = (st) => { const x = COVER_STYLES.find((y) => y.id === st); return (x.preview && COVER_PRESETS.find((p) => p.id === x.preview)?.bg) || colorCover(x.color, st); };
       function render(dir = 0) {
-        if (!step) {
+        if (!step && (ai.open || ai.busy)) {
+          // „Mit KI erstellen“: alles andere verschwindet – nur das Eingabefeld (Chat-Design, kleiner) bzw. die Bild-Animation
+          title.innerHTML = `${ai.busy ? '' : `<button type="button" class="dc-cback" data-ai-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>`}Mit KI erstellen`;
+          body.innerHTML = ai.busy
+            ? `<div class="dc-cai-gen"><div class="illustration-pending"><span class="shimmer ill-ico"></span><span class="shimmer">Cover erzeugen</span></div>${(window.illustrationWave?.() || '').replace('xMidYMid meet', 'xMidYMid slice')}</div>`
+            : `<form class="dc-cai2" data-ai-form>
+              ${ai.photos.length ? `<div class="dc-cai2-photos">${ai.photos.map((ph, i) => `<span class="dc-cai2-ph"><img src="${esc(ph)}" alt="" /><button type="button" data-ai-rm="${i}" aria-label="Foto entfernen">${fi('x', 10)}</button></span>`).join('')}</div>` : ''}
+              <textarea class="dc-cai-in" rows="2" maxlength="400" placeholder="Was soll auf dem Cover sein?" aria-label="Cover beschreiben">${esc(ai.text)}</textarea>
+              <div class="dc-cai2-bar"><button type="button" class="dc-cai2-btn" data-ai-photo aria-label="Foto als Vorlage hinzufügen">${fi('plus', 15)}</button><span class="grow"></span>
+                <button type="button" class="dc-cai2-btn dc-cai2-mic" data-ai-mic aria-label="Sprachaufnahme">${fi('mic', 15)}</button>
+                <button type="submit" class="dc-cai-go" aria-label="Erstellen">${fi('arrow-up', 14)}</button></div>
+              <input type="file" class="dc-cai2-file" accept="image/png,image/jpeg,image/webp" multiple hidden />
+            </form>${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}`;
+          if (ai.busy) { const pend = body.querySelector('.illustration-pending'); if (pend) window.sweepRow?.(pend); }
+          else {
+            const f = body.querySelector('.dc-cai2-file');
+            f.addEventListener('change', async () => { for (const x of [...f.files].slice(0, 3 - ai.photos.length)) { try { ai.photos.push(await smallPhoto(x)); } catch {} } ai.text = body.querySelector('.dc-cai-in').value; f.value = ''; render(); body.querySelector('.dc-cai-in')?.focus(); });
+            const ta = body.querySelector('.dc-cai-in');
+            ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.form.requestSubmit(); } });
+          }
+        } else if (!step) {
           title.textContent = 'Cover';
           const cur = styleOfCover(doc.cover);
           const own = ownImages();
-          body.innerHTML = `${ai.open ? `<form class="dc-cai" data-ai-form>
-              <input class="dc-cai-in" maxlength="400" placeholder="Was soll auf dem Cover sein? z. B. Pflanzenzelle mit Zellkern" value="${esc(ai.text)}" ${ai.busy ? 'disabled' : ''} aria-label="Cover beschreiben" />
-              <button type="submit" class="dc-cai-go" aria-label="Erstellen" ${ai.busy ? 'disabled' : ''}>${ai.busy ? '<span class="dc-cai-spin"></span>' : fi('arrow-up', 14)}</button></form>
-              ${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}` : ''}<div class="dc-cgrid">
+          body.innerHTML = `<div class="dc-cgrid">
               <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload" data-upload aria-label="Bild hochladen" title="Bild hochladen">
                 <span class="dc-cup-in">${fi('cloud-up', 22)}</span></button></div>
-              <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload dc-caitile${ai.open ? ' on' : ''}${ai.busy ? ' busy' : ''}" data-ai aria-label="Mit KI erstellen">
+              <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload dc-caitile" data-ai aria-label="Mit KI erstellen">
                 <span class="dc-cup-in">${fi('image', 20)}<i>Mit KI erstellen</i></span></button></div>
               ${COVER_STYLES.map((st) => `<div class="dc-cstyle"><button type="button" class="dc-ctile${cur === st.id ? ' on' : ''}" data-style="${st.id}" aria-label="${esc(st.name)}" title="${esc(st.name)}"><span style="background:${esc(previewOf(st.id))}"></span></button></div>`).join('')}
             </div>
-            ${own.length ? `<div class="dc-clabel">Deine Bilder</div><div class="dc-cgrid">${own.map((src) => tile({ kind: 'image', src }, `center / cover no-repeat url("${src}")`, 'Eigenes Bild')).join('')}</div>` : ''}`;
+            ${own.length ? `<div class="dc-clabel">Deine Bilder</div><div class="dc-cgrid">${own.map(([src, isAi]) => tile({ kind: 'image', src, ...(isAi ? { ai: true } : {}) }, `center / cover no-repeat url("${src}")`, 'Eigenes Bild')).join('')}</div>` : ''}`;
         } else {
           const st = COVER_STYLES.find((x) => x.id === step);
           title.innerHTML = `<button type="button" class="dc-cback" data-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>${esc(st.name)}`;
@@ -2098,7 +2131,11 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         }
         const sw = e.target.closest('[data-c]'); if (sw) { applyColor(sw.dataset.c); showPreview(sw.dataset.c); setTimeout(close, 160); return; } // Farbe gewählt → übernehmen und schließen
         if (e.target.closest('[data-upload]')) { file.click(); return; }
-        if (e.target.closest('[data-ai]')) { if (ai.busy) return; ai.open = !ai.open; ai.err = ''; render(); body.querySelector('.dc-cai-in')?.focus(); return; }
+        if (e.target.closest('[data-ai]')) { if (ai.busy) return; ai.open = true; ai.err = ''; render(1); body.querySelector('.dc-cai-in')?.focus(); return; }
+        if (e.target.closest('[data-ai-back]')) { window.stopDictateInto?.(); ai.open = false; ai.err = ''; render(-1); return; }
+        if (e.target.closest('[data-ai-photo]')) { if (ai.photos.length < 3) body.querySelector('.dc-cai2-file')?.click(); return; }
+        const rm = e.target.closest('[data-ai-rm]'); if (rm) { ai.photos.splice(+rm.dataset.aiRm, 1); ai.text = body.querySelector('.dc-cai-in').value; render(); return; }
+        const mic = e.target.closest('[data-ai-mic]'); if (mic) { window.dictateInto?.(body.querySelector('.dc-cai-in'), mic); return; }
         const tl = e.target.closest('[data-cv]');
         if (tl) { const cv = JSON.parse(tl.dataset.cv); if (cv.kind === 'color') pick.c = cv.c; setCover(cv); render(); }
       });
@@ -2107,14 +2144,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         e.preventDefault();
         ai.text = body.querySelector('.dc-cai-in').value.trim();
         if (ai.text.length < 3 || ai.busy) { body.querySelector('.dc-cai-in')?.focus(); return; }
+        window.stopDictateInto?.();
         ai.busy = true; ai.err = ''; render();
         try {
-          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text }) });
+          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos }) });
           const j = await r.json().catch(() => ({}));
           if (!r.ok || !j.src) throw new Error(j.error || 'Das Cover konnte gerade nicht erstellt werden.');
-          const ratio = await new Promise((ok) => { const im = new Image(); im.onload = () => ok(im.naturalWidth / im.naturalHeight || 1); im.onerror = () => ok(1); im.src = j.src; });
-          setCover({ kind: 'image', src: j.src, ratio });
-          ai.open = false; ai.text = '';
+          setCover({ kind: 'image', src: j.src, ai: true }); // KI-Cover: normales Banner-Format wie die anderen Cover (kein eigenes Seitenverhältnis)
+          ai.open = false; ai.text = ''; ai.photos = [];
         } catch (err) { ai.err = err.message; }
         ai.busy = false;
         if (coverPop) render();
@@ -2130,6 +2167,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const esc_ = (e) => { if (e.key === 'Escape') close(); };
       function close() {
         document.removeEventListener('keydown', esc_);
+        window.stopDictateInto?.();
         modal.classList.add('closing');
         setTimeout(() => modal.remove(), 220);
         coverPop = null;

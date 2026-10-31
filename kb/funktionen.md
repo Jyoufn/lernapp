@@ -8,7 +8,7 @@
 
 ## Chat und Agenten
 - Agenten: `general` Allgemein (Havaneser, kocht), `learn` Lernen (Border Collie mit Doktorhut, Buch), `research` (Golden Retriever, Lupe/Feder, recherchiert immer, Tiefen-Recherche), `code` (gesperrt, `PixelDogs.UNAVAILABLE`), `boerse` (Bär im Anzug mit Sonnenbrille, Zeitung/Laptop).
-- Eingabefeld: Plus (Fotos/PDF), Modell-Chip mit Aufwand (Auto/Low/Medium/High/Max), Diktat, Sprachmodus. Rückfragen der KI erscheinen als Karte im Eingabefeld (Kopf „Rückfrage x von y“); solange sie offen ist, bleibt der Hund mit Denkblase (`actor.ask()`, `msgEl._askActor`) und arbeitet nach der Antwort weiter.
+- Eingabefeld: Plus (Fotos/PDF), Modell-Chip mit Aufwand (Auto/Low/Medium/High/Max), Diktat, Sprachmodus. Rückfragen der KI erscheinen als Karte im Eingabefeld (Kopf „Rückfrage x von y“, Antwortoptionen ohne Nummer davor); solange sie offen ist, bleibt der Hund mit Denkblase (`actor.ask()`, `msgEl._askActor`) und arbeitet nach der Antwort weiter.
 - Zeitleiste über der Antwort: Kopf = Hauptstatus (mit Hund, der passend arbeitet), darunter **nur echte Schritte** (siehe `ki.md`), am Ende „Fertig“ + blauer Haken, klappt dann zu.
 - Blöcke in Antworten: chart (Linie/Ring), mindmap (Baum mit Zoom/Vollbild), timeline (Datum im Kästchen), heft, praesentation (Lern-Agent), stock/chancen/merken (Börse), illustration (Bilder: FLUX über NVIDIA), ask (Rückfrage), app (Sprach-Agent steuert die App).
 - Unter jeder Antwort: Kopieren, Neu erzeugen, Ins Dokument; Quellen rechts (nur benutzte).
@@ -57,3 +57,9 @@
 - Agent steuert die Website: z. B. Bilder-Schlüssel fehlt → Karte direkt zum richtigen Einstellungs-Tab; „Wie ändere ich mein Aussehen?“ → Einstellungen direkt öffnen.
 - Automatisierungen allgemein als „Prompt zu einer Uhrzeit“ (z. B. Chats aufräumen, später E-Mails lesen).
 - Export der Aufgaben-Ergebnisse nach GoodNotes.
+
+
+## Dokumente – Icon, Projekt, KI-Cover
+- Icon-Auswahl nur gefüllt (keine Linien-Fassung mehr, alte `line`-Icons werden gefüllt gezeigt). Dokument-Tab ohne gewähltes Icon zeigt kein Symbol.
+- Neues Projekt: Name → Farbe antippen → Icon (in der Farbe) antippen legt an. Projekt-Chip in Projektfarbe (Icon, 13 %-Fläche, Text).
+- Cover „Mit KI erstellen“: nur kleines Eingabefeld im Chat-Design (Foto als Vorlage bis 3, Mikro, Senden), kein Agent; beim Erzeugen die Kachel-Welle der Bildgenerierung. Bild im normalen Banner-Format (`cover.ai`), Stil wie die übrigen Cover (stilisiert, Farbverläufe, Linien – nie realistisch), `/api/cover-image` mit `photos`.

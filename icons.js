@@ -339,9 +339,9 @@ const DocIcons = (() => {
     return `<symbol id="dl-${n}" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${x.u || ''}${x.b || ''}${x.c || ''}${x.cl || ''}${x.s || ''}</g>${x.k || ''}</symbol>`;
   }).join('')}</svg>`;
   document.body.insertAdjacentHTML('afterbegin', sprite + spriteLine);
-  const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#${line ? 'dl' : 'd'}-${name}"/></svg>`;
-  // Icon eines Dokuments/Projekts ({ name, c, line }) als <svg> in seiner Farbe
-  const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#${ic.line ? 'dl' : 'd'}-${ic.name}"/></svg>` : '');
+  const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#d-${name}"/></svg>`;
+  // Icon eines Dokuments/Projekts ({ name, c }) als <svg> in seiner Farbe – immer gefüllt (Linien-Fassung wird nicht mehr angeboten)
+  const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#d-${ic.name}"/></svg>` : '');
   return { names: NAMES, svg, of, has: (n) => NAMES.includes(n) };
 })();
 window.DocIcons = DocIcons;

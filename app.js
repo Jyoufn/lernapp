@@ -98,11 +98,11 @@ function openDocTab(id, title) {
 }
 window.openViewTab = openViewTab;
 window.openDocTab = openDocTab;
-const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#${ic.line ? 'dl' : 'd'}-${ic.name}"/></svg>`;
-// Icon eines Dokument-Tabs tauschen (ohne Icon wieder das normale Dokument-Symbol)
+const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#d-${ic.name}"/></svg>`;
+// Icon eines Dokument-Tabs tauschen (ohne gewähltes Icon: gar kein Symbol)
 window.setTabIcon = (tab, ic) => {
   const old = tab?.querySelector(':scope > svg'); if (!old) return;
-  old.outerHTML = ic ? docTabIcon(ic) : `<svg width="14" height="14" style="color:var(--text-3)"><use href="#${VIEW_TABS.doc.icon}"/></svg>`;
+  old.outerHTML = ic ? docTabIcon(ic) : '<svg class="tab-noicon" width="0" height="14" aria-hidden="true"></svg>'; // ohne Icon: kein Symbol
 };
 window.setTabTitle = (tab, title) => { if (!tab) return; tab.querySelector('.tab-title').textContent = title; snapToPixels([tab]); };
 // Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender.
@@ -178,7 +178,7 @@ function createTab(title = 'Neuer Chat', view = '', data = {}, { background = fa
   if (view) tab.dataset.view = view;
   Object.assign(tab.dataset, data); // z. B. data-doc für Dokument-Tabs
   const dIc = view === 'doc' ? window.Docs?.get(data.doc)?.icon : null; // Dokument mit eigenem Icon → dieses im Tab
-  const ic = dIc && window.DocIcons?.has(dIc.name) ? docTabIcon(dIc) : view ? `<svg width="14" height="14" style="color:var(--text-3)"><use href="#${VIEW_TABS[view].icon}"/></svg>` : '<svg width="14" height="14" style="color:#e0533d"><use href="#i-agent"/></svg>';
+  const ic = dIc && window.DocIcons?.has(dIc.name) ? docTabIcon(dIc) : view === 'doc' ? '<svg class="tab-noicon" width="0" height="14" aria-hidden="true"></svg>' : view ? `<svg width="14" height="14" style="color:var(--text-3)"><use href="#${VIEW_TABS[view].icon}"/></svg>` : '<svg width="14" height="14" style="color:#e0533d"><use href="#i-agent"/></svg>';
   tab.innerHTML = `${ic}<span class="tab-title"></span><button class="tab-close" type="button" aria-label="Tab schließen"><svg width="16" height="16"><use href="#i-x"/></svg></button>`;
   tab.querySelector('.tab-title').textContent = title;
   tabsEl.insertBefore(tab, newTabBtn);
@@ -2315,6 +2315,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (s.status === 'cancelled') { line.innerHTML = `${sub} – gestoppt`; return; }
     if (s.status === 'failed') { if (s.stage === 'browsing' || s.stage === 'searching_sources') { st.step.remove(); return; } line.innerHTML = `${sub} – nicht fertig geworden`; st.step.classList.add('warn'); return; }
     if (s.stage === 'browsing') {
+      // nur Seiten, die der Server als passend behalten hat (Relevanzprüfung) – fremde Treffer verschwinden wieder
+      if (!st.news) {
+        const keep = new Set(renderOpts.sources.filter(Boolean).map((x) => x.url));
+        st.pages = st.pages.filter((p) => keep.has(p.url));
+        fillChips(st.chips, st.pages, () => openSourcesModal(st.pages, null));
+      }
       const n = st.pages.length;
       const k = st.gathering ? 'gather' : st.key;
       if (!n) { st.step.remove(); return; } // nichts gefunden → kein Schritt (kein „keine Quellen“)
@@ -2404,7 +2410,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st = stages.web = { step, chips: el('div', 'chips'), ended: true };
         step.append(st.chips);
       }
-      st.step.querySelector('.web-line').innerHTML = `Im Web gesucht · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
+      st.step.querySelector('.web-line').innerHTML = `Quellen analysiert · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
       fillChips(st.chips, r.sources, () => openSourcesModal(r.sources, null));
       groundSrc = r.sources; // für unten an der Antwort, wenn es keine nummerierten Belege gibt
       return;
@@ -2661,7 +2667,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     // gestoppt, bevor Text kam: alles Bisherige bleibt sichtbar, darunter nur „Neu erzeugen“
     msgEl.append(restartBar(msgEl));
   }
-  if (interrupted) { msgEl._partial = answerR.text; msgEl.insertBefore(resumeCard(msgEl), msgEl.querySelector('.msg-actions')); }
+  if (interrupted) {
+    msgEl._partial = answerR.text; msgEl.insertBefore(resumeCard(msgEl), msgEl.querySelector('.msg-actions'));
+    // Max = kein Längenlimit: Zeitlimit des Servers erreicht → automatisch weiterschreiben (bis zu 8-mal), ohne dass man tippen muss
+    if (EFFORTS[state.effort] === 'Max' && (msgEl._autoResume = (msgEl._autoResume || 0) + 1) <= 8) {
+      setTimeout(() => { const c = msgEl.querySelector('.agent-suggest.resume'); if (c && !runOf()) { c.classList.add('chosen'); continueAnswer(msgEl); } }, 900);
+    }
+  }
   // Der Agent passt nicht zur Aufgabe → Karte zum Wechseln (z. B. „Zu Coden wechseln“)
   const suggested = answerR && !signal.aborted ? parseAgentBlock(answerR.text) : null;
   if (suggested) msgEl.insertBefore(agentSuggestCard(msgEl, suggested), msgEl.querySelector('.msg-actions'));
@@ -2775,7 +2787,7 @@ function renderAsk(dir = 0) {
     b.type = 'button';
     b.setAttribute('role', q.multi ? 'checkbox' : 'radio');
     b.setAttribute('aria-checked', String(a.picked.has(i)));
-    b.innerHTML = `<span class="ask-key">${i + 1}</span><span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
+    b.innerHTML = `<span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
     renderInline(b.querySelector('.ask-label'), opt);
     b.addEventListener('click', () => pickOption(i));
     list.append(b);
@@ -2955,7 +2967,7 @@ const qaText = (qa) => qa.map((x) => `${x.question} → ${x.picked.map((p) => p.
 async function continueAfterAsk(qa) {
   const tab = activeTab(), p = pendingOf(tab);
   tab._pendingAsk = null;
-  finishStep(p.step, 'Your answer');
+  finishStep(p.step, 'Deine Antwort');
   const box = el('div', 'qa-box');
   qa.forEach(({ question, picked }) => {
     const row = el('div', 'qa-row');
@@ -2964,7 +2976,6 @@ async function continueAfterAsk(qa) {
     const a = el('div', 'qa-a');
     picked.forEach((p) => {
       const pill = el('span', 'qa-pick');
-      if (p.num) pill.append(el('span', 'qa-num', String(p.num)));
       const label = el('span', 'qa-label md');
       renderInline(label, p.text);
       pill.append(label);
@@ -3791,7 +3802,7 @@ function vaRenderAsk(dir = '') {
     b.type = 'button';
     b.setAttribute('role', q.multi ? 'checkbox' : 'radio');
     b.setAttribute('aria-checked', String(a.picked.has(oi)));
-    b.innerHTML = `<span class="ask-key">${oi + 1}</span><span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
+    b.innerHTML = `<span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
     renderInline(b.querySelector('.ask-label'), opt);
     b.addEventListener('click', () => {
       if (q.multi) { a.picked.has(oi) ? a.picked.delete(oi) : a.picked.add(oi); }
@@ -5513,3 +5524,7 @@ document.addEventListener('click', (e) => {
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();
+// Dokumente (KI-Cover): dieselbe Spracheingabe und dieselbe Bild-Animation wie im Chat
+window.dictateInto = dictateInto;
+window.stopDictateInto = stopDictateInto;
+window.illustrationWave = illustrationWave;

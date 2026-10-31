@@ -9129,3 +9129,33 @@ div.tl4-h { cursor: default; }
 
 /* Rückfrage (31.10.): immer „Rückfrage · x von y“ */
 :is(#composer, #vaAsk) .ask-panel .ask-kicker .ask-of { margin-left: 6px; color: var(--text-2); font-weight: 500; }
+
+/* Dokumente (31.10.): Projekt-Chip in Projektfarbe (Icon, transparente Fläche, Text) · Icon-Auswahl beim Anlegen in der gewählten Farbe ·
+   Tabs ohne gewähltes Icon zeigen kein Symbol */
+.dc-pchip.set.tinted { background: color-mix(in srgb, var(--pc) 13%, transparent); border-color: color-mix(in srgb, var(--pc) 26%, transparent); color: color-mix(in srgb, var(--pc) 72%, #fff); }
+.dc-pchip.set.tinted:hover { background: color-mix(in srgb, var(--pc) 19%, transparent); }
+.dc-pchip.set.tinted .dc-pj-pic { color: var(--pc) !important; }
+.dc-pj-icons[style*="color"] .dc-pj-ic { color: inherit; opacity: 0.85; }
+.dc-pj-icons[style*="color"] .dc-pj-ic:hover { opacity: 1; background: color-mix(in srgb, currentColor 12%, transparent); }
+.tab > svg.tab-noicon { display: none; }
+
+/* Cover „Mit KI erstellen“ (31.10.): nur ein kleines Eingabefeld im Chat-Design (Foto +, Mikro, Senden) – darunter nichts;
+   beim Erzeugen dieselbe Kachel-Welle wie bei der Bildgenerierung im Chat */
+.dc-cai2 { display: flex; flex-direction: column; margin: 0; padding: 9px 8px 8px 12px; background: var(--card); border: 1px solid var(--card-border); border-radius: 16px; animation: cal-fade 180ms ease both; }
+.dc-cai2 .dc-cai-in { display: block; width: 100%; height: auto; min-height: 38px; max-height: 120px; padding: 0 4px 0 0; resize: none; border: 0; outline: none; background: none; color: var(--text); font: 400 13px/19px Inter, sans-serif; }
+.dc-cai2-bar { display: flex; align-items: center; gap: 4px; margin-top: 6px; }
+.dc-cai2-bar .grow { flex: 1; }
+.dc-cai2-btn { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, background-color 120ms ease; }
+.dc-cai2-btn:hover { color: var(--text); background: var(--hover); }
+.dc-cai2-mic.active { color: var(--text); background: var(--active); }
+.dc-cai2 .dc-cai-go { width: 28px; height: 28px; border-radius: 50%; }
+.dc-cai2-photos { display: flex; gap: 6px; margin: 0 0 8px; }
+.dc-cai2-ph { position: relative; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.08); }
+.dc-cai2-ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.dc-cai2-ph button { position: absolute; top: 2px; right: 2px; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; }
+.dc-cai-gen { display: flex; flex-direction: column; gap: 10px; animation: cal-fade 180ms ease both; }
+.dc-cai-gen .illustration-pending { display: flex; align-items: center; gap: 8px; color: var(--text-3); font-size: 13px; }
+.dc-cai-gen .ill-frame { position: relative; width: 100%; aspect-ratio: 16 / 7; overflow: hidden; border: 1px solid #262626; border-radius: 12px; pointer-events: none; }
+.dc-cai-gen .ill-frame svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.dc-cai-gen .ill-frame rect { opacity: 0; animation: ill-tile 5s ease-in-out infinite backwards; }
+@media (prefers-reduced-motion: reduce) { .dc-cai-gen .ill-frame rect { animation: none; opacity: 1; } }

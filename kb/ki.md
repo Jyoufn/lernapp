@@ -23,6 +23,8 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - **Nur echte Schritte**: Keine Zeile für „Verstehen“ (steht nur im Kopf), kein erfundenes „Analysieren“ nach der Suche, keine „Risiko bewerten“-Zeile ohne Rechnung.
 - Suche ohne Treffer oder fehlgeschlagen → der Schritt verschwindet ganz (kein „keine Quellen gefunden“).
 - Gefundene Quellen hängen als Chips direkt am Such-Schritt.
+- Nach einer Websuche heißt der Schritt „Quellen analysieren“ (Google-Suche des Modells: „Quellen analysiert · N“). Chips zeigen nur Seiten, die der Server als passend behalten hat.
+- Gemini denkt laut Prompt auf Deutsch (auch die Abschnitts-Überschriften) und denkt über den Inhalt nach – nicht über die Formulierung/das Diktat des Nutzers; Plan (`approach`/`points`) immer passend zur Frage, kein festes Schema.
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
 ## Quellen
@@ -30,9 +32,15 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Google-Grounding: Server meldet nur Chunks, auf die `groundingSupports` zeigen (= wirklich benutzt). Hat die Antwort keine nummerierten Belege, stehen diese unten.
 - Ohne Suche: gar nichts (keine Leiste, kein Hinweis).
 - Anzeige unten: rundes Logo (`/api/icon?domain=`) + Domain, max. 2, dann „+N“; Klick → Fenster mit allen.
+- **Nur passende Quellen** (verbindlich): Websites und deutsche Lernseiten laufen nach dem Wortabgleich durch `judgePages` (Modell-Bewertung, < 6 von 10 fällt weg); in `lib/research.js` fällt < 6 weg und Unbewertetes wird nicht übernommen. Lieber keine Quelle als eine fremde.
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
+## Länge / Max (verbindlich, nicht wieder einbauen!)
+- **Max hat kein Längen-/Kontextlimit**: 65 536 Tokens je Runde, 12 Weiterschreib-Runden, Verlauf bis 40 Nachrichten/600 000 Zeichen (`compactHistory(…, {max})`); Vercel-Zeitlimit → die App schreibt bei Max automatisch weiter (bis 8×). Prompt `EFFORT_STYLE.max`: lange Texte vollständig, nie kürzen. High: 65 536 Tokens, 6 Runden.
+- Bei neuen Systemen darauf achten, dass diese Grenzen nicht wieder gekappt werden.
+
 ## Regeln im Prompt (Auswahl)
+- Stichpunkte sind erlaubt, wo sie passen (gemischt mit Fließtext) – nicht alles Fließtext, nicht alles Stichpunkte.
 - Bei Diagramm-Wünschen nie nach der Form fragen (Typ wählt `bestType`: Zeitverlauf → Linie, sonst Ring).
 - Nie Code zum Selberzeichnen (matplotlib o. Ä.); Diagramme/Zeitstrahl/Mindmap nur als Block. Mindmap nur Stichpunkte, Zeitstrahl ohne Limit, keine `source`-Felder.
 - Jeder Chat ist für sich; Bilder nur bei Bedarf/Wunsch; Rückfragen nur, wenn wirklich etwas fehlt; Hintergrund-Aufgaben nie mit Rückfragen.
