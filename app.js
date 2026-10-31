@@ -1488,6 +1488,13 @@ function renderMarkdown(target, text, opts = {}) {
     }
     pre.replaceWith(keep.get(raw));
   });
+  // Funde mit Link (```links): Karten mit Vorschaubild, Titel und Website – "n" zeigt auf die Quellen dieser Antwort (keine erfundenen Adressen)
+  target.querySelectorAll('pre:has(code.language-links)').forEach((pre) => {
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._lk ||= new Map());
+    if (!keep.has(raw)) { const f = linksFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
+    pre.replaceWith(keep.get(raw));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -1934,6 +1941,67 @@ const STAGE_TEXT = {
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* ---------- Funde mit Link (```links) ----------
+   {"links":[{"n":4,"titel":"…","text":"…"} | {"url":"https://…","titel":"…"}]} → Raster aus Karten: Vorschaubild, Titel, Website mit Logo, ein Satz.
+   Bild: Foto des Funds (freie Bilder) → Seitenbild der Website (/api/link, og:image) → Screenshot der Seite (WordPress mShots; erst ein
+   Platzhalter 400×300, dann das echte Bild – wird nachgeladen) → sonst nur Logo. Nicht (mehr) vorhandene Seiten (404) fallen weg.
+   Noch unfertiger Block beim Schreiben: nichts zeigen (die Karten kommen, sobald das JSON vollständig ist). */
+const linkPreviews = new Map();
+const linkPreview = (url) => {
+  if (!linkPreviews.has(url)) linkPreviews.set(url, fetch(`/api/link?url=${encodeURIComponent(url)}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
+  return linkPreviews.get(url);
+};
+function linksFigure(raw, sources) {
+  let data = null;
+  try { data = JSON.parse(String(raw).trim()); } catch { return null; }
+  const list = (Array.isArray(data) ? data : data?.links || []).map((x) => {
+    const s = Number.isInteger(+x?.n) ? (sources[+x.n - 1]?.n === +x.n ? sources[+x.n - 1] : sources.find((q) => q?.n === +x.n)) : null;
+    const url = s?.url || (/^https?:\/\//i.test(x?.url || '') ? x.url : '');
+    if (!url || /vertexaisearch/.test(url)) return null;
+    let domain = s?.domain || '';
+    try { domain ||= new URL(url).hostname; } catch { return null; }
+    return { url, domain: domain.replace(/^www\./, ''), title: String(x.titel || x.title || s?.title || domain).slice(0, 90), text: String(x.text || '').slice(0, 200), image: s?.thumb || s?.image || '' };
+  }).filter(Boolean).filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i).slice(0, 30);
+  if (!list.length) return null;
+  const fig = el('figure', 'lk');
+  const grid = el('div', 'lk-grid');
+  fig.append(grid);
+  list.forEach((it) => {
+    const a = el('a', 'lk-card');
+    a.href = safeUrl(it.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
+    const pic = el('span', 'lk-img loading');
+    const meta = el('span', 'lk-meta');
+    const site = el('span', 'lk-site');
+    site.append(siteIcon(it.domain, it.title, 'lk-ico'), el('span', '', it.domain));
+    meta.append(el('b', '', it.title));
+    if (it.text) meta.append(el('span', 'lk-t', it.text));
+    meta.append(site);
+    a.append(pic, meta);
+    grid.append(a);
+    const img = document.createElement('img');
+    img.alt = ''; img.decoding = 'async'; img.referrerPolicy = 'no-referrer'; // nicht „lazy“: höchstens 30 Karten, und so laden sie auch im Hintergrund
+    const shot = (n = 0) => `https://s0.wp.com/mshots/v1/${encodeURIComponent(it.url)}?w=640&h=480${n ? `&r=${n}` : ''}`;
+    let tries = 0, mode = '';
+    const show = (src, m) => { mode = m; img.src = src; };
+    img.onload = () => {
+      if (mode === 'shot' && img.naturalWidth === 400 && img.naturalHeight === 300) { // mShots-Platzhalter: Screenshot entsteht noch
+        if (++tries <= 6) setTimeout(() => show(shot(tries), 'shot'), 3500); else { pic.classList.add('none'); pic.classList.remove('loading'); }
+        return;
+      }
+      pic.classList.remove('loading');
+    };
+    pic.append(img); // bis zum Laden unsichtbar (siehe .lk-img.loading img)
+    img.onerror = () => { if (mode !== 'shot') show(shot(), 'shot'); else { pic.classList.add('none'); pic.classList.remove('loading'); } };
+    if (it.image) show(it.image, 'image');
+    else linkPreview(it.url).then((p) => {
+      if (p?.ok === false && p.gone) { a.remove(); if (!grid.children.length) fig.remove(); return; }
+      if (p?.title && it.title === it.domain) meta.querySelector('b').textContent = p.title.slice(0, 90);
+      if (p?.image) show(p.image, 'og'); else show(shot(), 'shot');
+    });
+  });
+  return fig;
+}
+
 /* Logo der Quellen-Website – genau so, wie die Website es liefert; sonst ein Buchstabe */
 function siteIcon(domain, fallback, cls = 'chip-ico') {
   const box = el('span', `${cls} has-fav`);
@@ -2304,7 +2372,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const phase = (k) => { setActivity(P(k).kind, P(k).main); ensureActor(); actor?.set(P(k).anim); };
   const live = (k, from = Date.now()) => `<span class="shimmer">${P(k).sub}</span><span class="t live" data-from="${from}">1s</span>`;
   const doneLine = (k, extra = '', dur = '') => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}${dur ? ` <span class="t">${dur}</span>` : ''}`;
-  const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(lastAsk) && /(erstell|mach|zeichne|generier|zeig|gib|such|nimm)/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem|präsentation|praesentation|folien|powerpoint|keynote|pptx)/i.test(lastAsk); // mit Textwunsch / Präsentation: normaler Ablauf
+  // nur Erstell-Wunsch → Staffelei; „such mir Bilder raus“, „mit Link“, „echte Fotos“ = finden (wie lib/workflow.js FIND_PICS)
+  const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung|foto)\w*/i.test(lastAsk) && /(erstell|erzeug|generier|zeichne|\bmal(e|t|en)?\b|entw(i|e)rf|gestalte|kreier|\bmach|\bzeig|\bgib)/i.test(lastAsk)
+    && !/\b(such|raussuch|heraussuch|zusammensuch|find|recherchier|sammel|googl)\w*|\b(im|aus dem) (internet|netz|web)\b|\bmit (dem |den |einem )?links?\b|\blinks? dazu\b|\becht(e|en)? (bilder|fotos)\b/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem|präsentation|praesentation|folien|powerpoint|keynote|pptx)/i.test(lastAsk); // mit Textwunsch / Präsentation: normaler Ablauf
   // Bildbitte MIT Fotos/PDF: „Bild erzeugen“ erst NACH „Deine Dateien ansehen“ (vorher kein Bild-Schritt, kein Bildrahmen)
   let picWaitsForFiles = pictureAsk && !!([...historyOf(tab)].reverse().find((h) => h.role === 'user')?.images || []).length;
   let quiet = false; // Kurznachricht (z. B. „Moin“): kein Working/Thinking – die Antwort kommt einfach
@@ -2551,7 +2621,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (key === 'search') phase('discover');
       const src = { n: e.source.n, title: e.source.title, domain: e.source.domain, url: e.source.url };
       deep.all.push(src);
-      const q = e.source.query || 'Wikipedia & Fachliteratur';
+      const q = e.source.query || 'Nachschlagewerke';
       if (!deep.steps[key]) deepStep(key);
       const it = queryRow(key, q);
       it.list.push(src);
@@ -2582,7 +2652,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     scrollToBottom();
   };
   // Server-Stufe → Schritt im Ablauf des Agenten (thinking.js)
-  const stageKey = (stage, news) => ({ material: 'material', market: 'market', browsing: news ? 'news' : 'search', searching_sources: 'search', processing: 'work', verifying: 'review' }[stage] || 'work');
+  const stageKey = (stage, news) => ({ material: 'material', market: 'market', browsing: news ? 'news' : 'search', searching_sources: 'search', images: 'images', processing: 'work', verifying: 'review' }[stage] || 'work');
   // „Analyzing · Evaluating information“: nur, wenn vorher wirklich recherchiert wurde (nicht bei Research – der hat eigene Schritte)
   let analyzedNoted = false;
   const noteAnalyze = () => {
@@ -2622,7 +2692,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const dur = `<span class="t">${st.serverFrom && s.ts ? secs(st.serverFrom, Date.parse(s.ts)) : secs(st.from)}</span>`;
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
-    if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources') markerIcon(st.step, 'search');
+    if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources' || s.stage === 'images') markerIcon(st.step, 'search');
     st.step.hidden = false;
     const sub = P(st.key || stageKey(s.stage, st.news)).sub;
     if (s.status === 'cancelled') { line.innerHTML = `${sub} – gestoppt`; return; }
@@ -2646,6 +2716,16 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const chips = el('div', 'chips');
       st.step.append(chips);
       fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
+    } else if (s.stage === 'images') {
+      // Funde heraussuchen: Anzahl + bis zu 5 kleine Vorschaubilder (abgerundet, wie Datei-Chips)
+      const m = s.meta || {};
+      if (!m.count) { line.innerHTML = `${P('images').sub} <span class="ph-x">· nichts gefunden</span> ${dur}`; return; }
+      line.innerHTML = `${doneLine('images', `${m.count} Funde`)} ${dur}`;
+      if ((m.thumbs || []).length) {
+        const row = el('div', 'chips img-chips');
+        m.thumbs.slice(0, 5).forEach((src) => { const i = document.createElement('img'); i.alt = ''; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer'; i.src = src; i.onerror = () => i.remove(); row.append(i); });
+        st.step.append(row);
+      }
     } else if (s.stage === 'market') {
       // Börse: aus dem, was wirklich gerechnet wurde, die einzelnen Analyse-Schritte (nur die, die zur Frage gehören)
       const m = s.meta || {}, n = m.count || 0;

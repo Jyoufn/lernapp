@@ -31,6 +31,7 @@ const Thinking = (() => {
       work: F('Kochen', 'Antwort vorbereiten', 'write', 'cook'),
       review: F('Kochen', 'Richtigkeit prüfen', 'check', 'cook'),
       picture: F('Malen', 'Bild erzeugen', 'work', 'paint'),
+      images: F('Recherchieren', 'Bilder und Beispiele suchen', 'search', 'cook'),
       done: F('Fertig', 'Antwort fertig', 'check', 'done'),
     },
     learn: {
@@ -44,6 +45,7 @@ const Thinking = (() => {
       work: F('Arbeiten', 'Antwort ausarbeiten', 'write', 'book'),
       review: F('Prüfen', 'Richtigkeit prüfen', 'check', 'book'),
       picture: F('Malen', 'Illustration zeichnen', 'work', 'paint'),
+      images: F('Recherchieren', 'Bilder und Beispiele suchen', 'search', 'book'),
       done: F('Fertig', 'Erklärung fertig', 'check', 'done'),
     },
     research: {
@@ -60,6 +62,7 @@ const Thinking = (() => {
       crosscheck: F('Gegenprüfen', 'Angaben prüfen', 'search', 'search'),
       analyze: F('Analysieren', 'Informationen auswerten', 'check', 'search'),
       synthesize: F('Zusammenführen', 'Ergebnisse verbinden', 'think', 'quill'),
+      images: F('Quellen suchen', 'Bilder und Beispiele suchen', 'search', 'search'),
       thoughts: F('Zusammenführen', 'Ergebnisse verbinden', 'think', 'think'),
       work: F('Arbeiten', 'Bericht gliedern', 'write', 'quill'),
       review: F('Prüfen', 'Quellen und Ergebnisse prüfen', 'check', 'search'),

@@ -33,6 +33,7 @@ const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
 const WEB = require('./lib/web');
+const linkCache = new Map(); // Link-Vorschauen (/api/link) – je Server-Instanz, die ältesten fallen bei über 500 heraus
 const TTS = require('./lib/tts');
 const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
@@ -1429,6 +1430,16 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
     if (req.method === 'POST' && urlPath === '/api/lernset/grade') return sendJson(res, 200, await LSET.grade(readEnv(), await readBody(req, 400000)));
+    // Link-Vorschau für ```links-Karten: Titel + Seitenbild (og:image); nicht erreichbar → die Karte zeigt einen Screenshot bzw. fällt weg (gone: 404)
+    if (req.method === 'GET' && urlPath === '/api/link') {
+      const target = new URL(req.url, 'http://x').searchParams.get('url') || '';
+      const hit = linkCache.get(target);
+      if (hit) return sendJson(res, 200, hit);
+      const out = await WEB.linkPreview(target).then((p) => ({ ok: true, ...p }), (err) => ({ ok: false, gone: /HTTP (404|410)|ENOTFOUND|Interne Adresse|Nur http|Invalid URL/.test(err.message) }));
+      if (linkCache.size > 500) linkCache.delete(linkCache.keys().next().value);
+      linkCache.set(target, out);
+      return sendJson(res, 200, out);
+    }
     // Chats, Dokumente, Darstellung, Browser-Speicher: je Konto (lib/accounts.js)
     if (req.method === 'GET' && urlPath === '/api/chats') return sendJson(res, 200, await ACC.loadChats(store, user.id));
     if (req.method === 'PUT' && urlPath === '/api/chats') { await ACC.storeChats(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }

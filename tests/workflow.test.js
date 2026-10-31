@@ -801,6 +801,32 @@ test('Quellen: Research/Allgemein suchen offen (alle seriösen Seiten), Foren un
 
 // Gemini-nativ: kein Plan – nur eine kleine Einschätzung (Aufwand + Quellenart); Auto übernimmt die eingeschätzte Stufe, Gemini denkt dynamisch.
 // Max: immer Quellen (findet die eigene Suche nichts → Google im Modell) und Selbstkontrolle (Entwurf → geprüfte Endfassung)
+test('Bilder heraussuchen statt erzeugen: Research sucht Funde (keine Tiefen-Recherche), Antwort bekommt sie als Quellen + links-Regel; „erstelle ein Bild“ malt weiter', async () => {
+  const WEB = require('../lib/web');
+  const realFind = WEB.findVisuals, asked = [];
+  WEB.findVisuals = async (queries, o) => { asked.push({ queries, photos: o.photos }); return [{ url: 'https://dribbble.com/shots/1-flashcards', title: 'Flashcards App', snippet: '', image: '', thumb: '', domain: 'dribbble.com' }]; };
+  fx = M.installFetch([
+    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'medium', sources: 'none', queries: [], images: ['flashcard app UI design dribbble'], photos: false, why: 'Funde zeigen' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Hier sind Designs.'])) },
+  ]);
+  try {
+    const r = await run({ ...msg('Könntest du mir 10 bis 20 verschiedene Karteikarten-UI-Designs raussuchen, mir Bilder dazu zeigen bzw. mit dem Link dazu schicken'), agent: 'research', effort: 'auto' });
+    assert.equal(r.result.status, 'completed');
+    assert.deepEqual(asked, [{ queries: ['flashcard app UI design dribbble'], photos: false }]);
+    assert.ok(r.stages().includes('images:active'), 'Schritt „Bilder suchen“');
+    assert.ok(!r.stages().some((s) => s.startsWith('searching_sources')), 'keine Tiefen-Recherche mit Bericht');
+    const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+    assert.match(sys, /FUNDE ZEIGEN/);
+    assert.match(sys, /Seite auf dribbble\.com: Flashcards App/);
+    assert.match(sys, /```links/);
+    // Erstell-Wunsch bleibt ein Bild (keine Suche)
+    asked.length = 0;
+    const p = await run({ ...msg('Erstelle mir ein Bild von einer Tierzelle'), agent: 'general', effort: 'auto' });
+    assert.equal(p.result.status, 'completed');
+    assert.equal(asked.length, 0);
+  } finally { WEB.findVisuals = realFind; }
+});
+
 test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte Stufe mit dynamischem Denken; Max = Quellen + Selbstkontrolle', async () => {
   let level = 'high';
   fx = M.installFetch([
