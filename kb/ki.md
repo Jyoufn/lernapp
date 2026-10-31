@@ -40,6 +40,8 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Bei neuen Systemen darauf achten, dass diese Grenzen nicht wieder gekappt werden.
 
 ## Regeln im Prompt (Auswahl)
+- Prompts, E-Mails, Nachrichten, Briefe zum Weiterverwenden → Block ```kopie (erste Zeile „# Titel“) → Kopier-Kasten mit „Kopieren“ (`copyFigure` in `app.js`).
+- Bildbitte mit Fotos/PDF: Reihenfolge strikt „Deine Dateien ansehen“ → „Bild erzeugen“ (`picWaitsForFiles`); kommt der Bild-Block mitten im Text, startet der Bild-Schritt + Malen sofort.
 - Stichpunkte sind erlaubt, wo sie passen (gemischt mit Fließtext) – nicht alles Fließtext, nicht alles Stichpunkte.
 - Bei Diagramm-Wünschen nie nach der Form fragen (Typ wählt `bestType`: Zeitverlauf → Linie, sonst Ring).
 - Nie Code zum Selberzeichnen (matplotlib o. Ä.); Diagramme/Zeitstrahl/Mindmap nur als Block. Mindmap nur Stichpunkte, Zeitstrahl ohne Limit, keine `source`-Felder.

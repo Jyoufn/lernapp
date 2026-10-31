@@ -9189,3 +9189,10 @@ div.tl4-h { cursor: default; }
 .tk-src-in { display: block; width: 100%; min-height: 64px; max-height: 160px; padding: 6px 8px; resize: none; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; outline: none; background: none; color: var(--text); font: 400 12.5px/18px Inter, sans-serif; }
 .tk-src-in::placeholder { color: var(--text-4); }
 .dc-cai2 { margin: 2px; background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.1); }
+
+/* Kopier-Kasten (31.10.): Prompt, E-Mail, Nachricht – Kopf mit Titel, rechts „Kopieren“; Fläche wie Karten */
+.md .copybox { margin: 12px 0; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 12px; background: rgba(255, 255, 255, 0.025); overflow: hidden; }
+.md .copybox-head { display: flex; align-items: center; justify-content: space-between; height: 36px; padding: 0 6px 0 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.07); color: var(--text-3); font-size: 12px; font-weight: 500; }
+.md .copybox-btn { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 0; border-radius: 7px; background: none; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease; }
+.md .copybox-btn:hover { color: var(--text); }
+.md .copybox-body { padding: 12px 14px 14px; color: var(--text-2); font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; user-select: text; }

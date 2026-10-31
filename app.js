@@ -962,6 +962,29 @@ function heftFigure(code) {
   fig.append(page);
   return fig;
 }
+/* Kopier-Kasten (```kopie): Texte zum Weiterverwenden – Prompt, E-Mail, Nachricht, Brief. Erste Zeile „# Titel“ = Kopf (sonst „Text“),
+   rechts ein Kopieren-Knopf (kopiert nur den Inhalt, ohne Kopf). */
+function copyFigure(code) {
+  const lines = code.textContent.replace(/\n+$/, '').split('\n');
+  while (lines.length && !lines[0].trim()) lines.shift();
+  const head = /^#\s+(.{1,40})$/.exec(lines[0] || '') ? lines.shift().replace(/^#\s+/, '') : 'Text';
+  while (lines.length && !lines[0].trim()) lines.shift();
+  const text = lines.join('\n');
+  const fig = el('figure', 'copybox');
+  fig.dataset.viz = 'kopie';
+  const cap = el('figcaption', 'copybox-head');
+  cap.innerHTML = `<span>${escapeHtml(head)}</span>`;
+  const btn = el('button', 'copybox-btn', `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`);
+  btn.type = 'button';
+  btn.addEventListener('click', async () => {
+    try { await navigator.clipboard.writeText(text); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    btn.innerHTML = `${FadeIcons.svg('check', 13)}<span>Kopiert</span>`; setTimeout(() => { btn.innerHTML = `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`; }, 1600);
+  });
+  cap.append(btn);
+  const body = el('div', 'copybox-body'); body.textContent = text;
+  fig.append(cap, body);
+  return fig;
+}
 /* Mindmap als Baum (kb/design.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
    immer von Kästchen-Rand zu Kästchen-Rand durch die freie Spalte dazwischen (nie durch ein Kästchen). Kästchen ohne Fläche, feiner Rand.
    Zoomen (−/+, Strg/⌘ + Mausrad, zwei Finger), Verschieben (ziehen), Prozent-Knopf = alles einpassen, Vollbild für große Mindmaps.
@@ -1317,6 +1340,7 @@ function renderMarkdown(target, text, opts = {}) {
   });
   // Hefteintrag (```heft): nur das, was ins Heft kommt – auf Karopapier, Zeile für Zeile, Formeln schon gesetzt
   target.querySelectorAll('pre:has(code.language-heft)').forEach((pre) => pre.replaceWith(heftFigure(pre.querySelector('code'))));
+  target.querySelectorAll('pre:has(code.language-kopie)').forEach((pre) => pre.replaceWith(copyFigure(pre.querySelector('code'))));
   // Aktienchart (```stock): Kerzen, Umsatz, Zeiträume, Echtzeitkurs – wie in einer Börsen-App (stock-chart.js)
   target.querySelectorAll('pre:has(code.language-stock)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, spec = window.StockChart?.parse(raw);
@@ -1997,10 +2021,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const live = (k, from = Date.now()) => `<span class="shimmer">${P(k).sub}</span><span class="t live" data-from="${from}">1s</span>`;
   const doneLine = (k, extra = '', dur = '') => `${P(k).sub}${extra ? ` <span class="ph-x">· ${extra}</span>` : ''}${dur ? ` <span class="t">${dur}</span>` : ''}`;
   const pictureAsk = !coding && lastAsk.length < 220 && /\b(bild|grafik|illustration|abbildung|schaubild|skizze|zeichnung)\w*/i.test(lastAsk) && /(erstell|mach|zeichne|generier|zeig|gib|such|nimm)/i.test(lastAsk) && !/(erklär|warum|wieso|vergleich|unterschied|analys|text|schreib|beschreib|zusammenfass|aufsatz|referat|und dazu|außerdem|präsentation|praesentation|folien|powerpoint|keynote|pptx)/i.test(lastAsk); // mit Textwunsch / Präsentation: normaler Ablauf
+  // Bildbitte MIT Fotos/PDF: „Bild erzeugen“ erst NACH „Deine Dateien ansehen“ (vorher kein Bild-Schritt, kein Bildrahmen)
+  let picWaitsForFiles = pictureAsk && !!([...historyOf(tab)].reverse().find((h) => h.role === 'user')?.images || []).length;
   let quiet = false; // Kurznachricht (z. B. „Moin“): kein Working/Thinking – die Antwort kommt einfach
   const pendingTimer = setTimeout(() => {
     if (signal.aborted || quiet) return;
-    if (pictureAsk) { ensureWork(); showPicStep(); return; } // Bildbitte: „Generating picture“ als Schritt in der Zeitleiste, nicht frei
+    if (pictureAsk && !picWaitsForFiles) { ensureWork(); showPicStep(); return; } // Bildbitte: „Bild erzeugen“ als Schritt in der Zeitleiste, nicht frei
+    if (pictureAsk) { ensureWork(); return; } // mit Dateien: erst die Materialprüfung (Server-Stufe), dann der Bild-Schritt
     if (answerR || work) return;
     pending = el('div', 'pending');
     pending.append(el('span', 'spinner'), el('span', 'shimmer', 'Arbeiten'));
@@ -2028,7 +2055,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     // „Verstehen“ steht nur im Kopf – keine eigene Zeile, die gar nichts tut; Zeilen gibt es nur für echte Schritte
     work.endStart = () => {};
     // Standard-Tätigkeit nur, wenn im selben Moment keine konkrete gesetzt wird (kein kurzes Aufblitzen)
-    queueMicrotask(() => { if (!work.head.querySelector('.work-title').textContent) phase(pictureAsk ? 'picture' : 'start'); });
+    queueMicrotask(() => { if (!work.head.querySelector('.work-title').textContent) phase(pictureAsk && !picWaitsForFiles ? 'picture' : 'start'); });
     return work;
   };
   /* Kopf zeigt immer, was gerade passiert – mit eigener kleiner Animation je Tätigkeit */
@@ -2357,6 +2384,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
       line.innerHTML = `${doneLine('material', m.relevant === true ? 'passt zur Frage' : m.relevant === false ? 'nichts zum Thema' : '')} ${dur}`;
+      if (pictureAsk && picWaitsForFiles) { picWaitsForFiles = false; showPicStep(); } // Reihenfolge strikt: erst „Deine Dateien ansehen“, dann „Bild erzeugen“
     } else if (s.stage === 'processing') {
       line.innerHTML = `${doneLine('work', 'Entwurf')} ${dur}`;
     } else if (s.stage === 'verifying') {
@@ -2559,7 +2587,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         // Bild-Block fertig geschrieben → Bild schon jetzt erzeugen lassen, der Text läuft weiter
         if (!coding && /[`}]/.test(data.text)) {
           prefetchIllustrations(answerR.text, signal);
-          if (/```illustration[^\n]*\n[\s\S]*?```/.test(answerR.text)) showPicStep(); // Bild wird erzeugt → Schritt in der Zeitleiste
+          if (/```illustration[^\n]*\n[\s\S]*?```/.test(answerR.text)) { picWaitsForFiles = false; showPicStep(); ensureActor(); actor?.set('paint'); } // Bild wird erzeugt → Schritt in der Zeitleiste
         }
       } else if (event === 'error') {
         failed = true;

@@ -1200,7 +1200,7 @@ const Docs = (() => {
       const a = el('div', 'dcc-a'); a.dataset.dog = window.PixelDogs?.mode || 'general'; const body = el('div', 'dcc-body md');
       a.append(body); list.append(a);
       const pic = wantsPicture(chat.messages[chat.messages.length - 1]?.text);
-      const think = pic ? dccThink(a, list, pictureLabel(chat.messages[chat.messages.length - 1]?.text), 'Picture ready') : dccThink(a, list), rv = dccReveal(body, list, (s) => noAsk(visible(s)));
+      const think = pic ? dccThink(a, list, pictureLabel(chat.messages[chat.messages.length - 1]?.text), 'Bild fertig') : dccThink(a, list), rv = dccReveal(body, list, (s) => noAsk(visible(s)));
       list.scrollTop = list.scrollHeight;
       const context = `Du hilfst bei genau einem Dokument aus der Lern-App – mit denselben Fähigkeiten wie im normalen Chat (Erklären, Rückfragen, Diagramme, Bilder, Recherche). Beziehe dich zuerst und so oft wie möglich auf das Dokument. Steht etwas nicht darin, ergänze mit gesichertem Fachwissen bzw. vertrauenswürdigen Quellen und sag kurz, dass es nicht aus dem Dokument stammt. Rückfragen (nur wenn wirklich nötig) als ask-Block mit kurzen Antwortmöglichkeiten.
 Du kannst das Dokument auch ändern (ergänzen, umschreiben, kürzen, umstellen, Abschnitte oder Tabellen hinzufügen, Fehler korrigieren, Titel ändern) – aber NUR, wenn der Nutzer das ausdrücklich will (z. B. „füg das ein“, „pack das ins Dokument“, „schreib das rein“, „ändere/ergänze/kürze …“). Fragen, Erklärungen, Ideen, Bilder und Grafiken beantwortest du hier im Chat, OHNE das Dokument zu ändern; passt es gut, frag am Ende in einem kurzen Satz, ob du es ins Dokument übernehmen sollst. Will der Nutzer eine Änderung am Dokument, schreib 1–2 kurze Sätze, was du ändern wirst, und setz ganz ans Ende eine eigene Zeile:
@@ -1278,7 +1278,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const a = el('div', 'dcc-a'); a.dataset.dog = window.PixelDogs?.mode || 'general'; const body = el('div', 'dcc-body md');
       a.append(body); list.append(a);
       const pic = wantsPicture(q);
-      const think = pic ? dccThink(a, list, pictureLabel(q), 'Picture ready') : dccThink(a, list), rv = dccReveal(body, list, stripAskBlock);
+      const think = pic ? dccThink(a, list, pictureLabel(q), 'Bild fertig') : dccThink(a, list), rv = dccReveal(body, list, stripAskBlock);
       const ctrl = new AbortController(); dccRun = ctrl;
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
