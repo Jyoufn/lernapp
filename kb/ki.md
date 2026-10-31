@@ -62,6 +62,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - **Nur passende Quellen** (verbindlich): Websites und deutsche Lernseiten laufen nach dem Wortabgleich durch `judgePages` (Modell-Bewertung, < 6 von 10 fällt weg); in `lib/research.js` fällt < 6 weg und Unbewertetes wird nicht übernommen. Lieber keine Quelle als eine fremde.
 - **Lernen: NUR deutsche Fachwissensquellen** (verbindlich): keine englische Wikipedia, keine (englische) Fachliteratur/OpenAlex (`germanOnly`), Analyse liefert nur deutsche, themengenaue Suchbegriffe; Seiten, die nur ein ganzes Schulfach behandeln („Biologie“) oder Startseiten fallen weg (`GENERIC_SUBJECT`, Pfad „/“), Bewertung gibt ihnen 0–2. Andere Agenten: frei.
 - **Lernen: deutsche Lernplattformen zuerst** (ausdrücklicher Wunsch, verbindlich): Studyflix, simpleclub, serlo, sofatutor, Lernhelfer, LEIFIphysik, planet-schule/-wissen u. a. (`LEARN_FAVORITES`, höchster Rang in `rankGerman`, +2 in `JUDGE_SYSTEM`, eigene Suchanfrage „… studyflix simpleclub“ beim Lern-Agenten/Schulthemen).
+- **Mehrere Quellen** (Wunsch des Nutzers): Antwort stützt sich auf mehrere verschiedene Quellen (möglichst 3+), nie alles aus einer; eigene Google-Suche des Modells liest mindestens 3 Fachseiten.
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)

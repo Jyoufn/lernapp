@@ -19,6 +19,15 @@ const Lernset = (() => {
     quiz: { name: 'Quiz', icon: 'target', verb: 'Quiz starten', unit: ['Frage', 'Fragen'] },
     klausur: { name: 'Probeklausur', icon: 'book-open', verb: 'Klausur schreiben', unit: ['Aufgabe', 'Aufgaben'] },
   };
+  // Eigene zweifarbige Icons je Art (Karteikarten wie die Vorlage: blaue Karte vorn, zwei graue dahinter aufgefächert)
+  const KICON = (kind, n = 14) => {
+    const card = (r, c, o = 1) => `<rect x="2.6" y="3.2" width="7.2" height="10.2" rx="1.5" transform="rotate(${r} 4.6 13.4)" fill="${c}" opacity="${o}" stroke="#171717" stroke-width=".9"/>`;
+    const back = (r, c, o) => card(r, c, o), front = (c) => card(-7, c);
+    const inner = kind === 'karten' ? `${back(38, '#9a9a9a', '.7')}${back(17, '#c9c9c9', '.9')}${front('#5ec2da')}`
+      : kind === 'quiz' ? `${back(20, '#9a9a9a', '.75')}${front('#6aa8ff')}<g transform="rotate(-7 4.6 13.4)"><path d="M4.7 6.6a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.8.7-.8 1.2" fill="none" stroke="#0f2340" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.1" cy="10.9" r=".8" fill="#0f2340"/></g>`
+      : `${back(20, '#9a9a9a', '.75')}${front('#f0b37a')}<path d="M4.3 6h3.8M4.3 8.2h3.8M4.3 10.4h2.4" transform="rotate(-7 4.6 13.4)" stroke="#3a2410" stroke-width="1.1" stroke-linecap="round"/>`;
+    return `<svg class="ls-kicon" width="${n}" height="${n}" viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
+  };
   const ALIAS = { karten: 'karten', karteikarten: 'karten', lernkarten: 'karten', flashcards: 'karten', quiz: 'quiz', test: 'quiz', klausur: 'klausur', probeklausur: 'klausur', exam: 'klausur' };
   const TYPE_NAMES = { mc: 'Multiple Choice', wf: 'Wahr/Falsch', luecke: 'Lückentext', zuordnen: 'Zuordnung', offen: 'Offene Fragen' };
   const GAP = /_{3,}|\[\s*…?\s*\]|\[\.\.\.\]/g; // Lücke im Lückentext
@@ -154,7 +163,7 @@ const Lernset = (() => {
   function mount(fig, set) {
     // Kopfzeile: Icon + Titel, rechts Zähler und Vollbild – darunter direkt zum Lernen (Karteikarten und Quiz im Chat spielbar)
     fig.className = `ls ls-k-${set.kind}`;
-    fig.innerHTML = `<div class="ls-top"><span class="ls-top-t">${fi(KINDS[set.kind].icon, 13)}<b>${esc(set.title)}</b></span><span class="ls-top-n"></span>
+    fig.innerHTML = `<div class="ls-top"><span class="ls-top-t">${KICON(set.kind, 16)}<b>${esc(set.title)}</b></span><span class="ls-top-n"></span>
       <button type="button" class="ls-exp" aria-label="Im Vollbild öffnen">${fi('expand', 13)}</button></div><div class="ls-in"></div>`;
     const inner = fig.querySelector('.ls-in'), count = fig.querySelector('.ls-top-n');
     fig.querySelector('.ls-exp').addEventListener('click', (e) => { e.stopPropagation(); if (set.kind !== 'klausur' || !set.loading) open(set); });
@@ -174,7 +183,7 @@ const Lernset = (() => {
      Aktuelle Karte groß in der Mitte, links/rechts nur die Kanten der Nachbarkarten und Pfeile zum Blättern. Antippen dreht um (beide Seiten
      gleich dunkel). Darunter Daumen hoch / „so lala“ / Daumen runter: der Rand der Karte färbt sich kurz, dann gleitet sie weiter. */
   const THUMB = (down) => `<svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"${down ? ' style="transform:scale(-1,-1)"' : ''}><path fill="currentColor" d="M1.6 7.2c0-.5.4-.9.9-.9h1.6v7.6H2.5a.9.9 0 0 1-.9-.9V7.2Zm3.7 6.7V6.6l2.5-4.2c.3-.5.8-.7 1.3-.5.6.2.9.8.8 1.4l-.4 2.3h3.2c1 0 1.8.9 1.6 1.9l-.9 4.8c-.2.9-.9 1.6-1.8 1.6H5.3Z"/></svg>`;
-  const SOSO = '<svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 9.2c1.3-1.9 2.4-1.9 3.6 0s2.3 1.9 3.6 0 2.4-1.9 3.6 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  const SOSO = '<svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 5.7a2.5 2.5 0 1 1 3.8 2.1c-.8.5-1.3 1-1.3 1.9v.3" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="8" cy="12.9" r="1.2" fill="currentColor"/></svg>';
   const RATES = [{ r: 0, label: 'Nicht gewusst', icon: THUMB(true) }, { r: 1, label: 'Unsicher', icon: SOSO }, { r: 2, label: 'Gewusst', icon: THUMB(false) }];
   const keyOf = (raw) => { let h = 5381; const t = String(raw || ''); for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return `ls.rate.${h.toString(36)}`; };
   function deck(set, ui, base = set) {
@@ -229,10 +238,17 @@ const Lernset = (() => {
     // weich weiter: raus zur Seite, neue Karte kommt von der anderen Seite (wie ein Stapel, der sich verschiebt)
     const slide = async (dir, reset = false) => {
       if (busy) return; busy = true;
-      if (!reduced()) await card.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 38}%) scale(.94)`, opacity: 0 }], { duration: 240, easing: 'cubic-bezier(.4,0,.2,1)' }).finished.catch(() => {});
+      // die alte Karte gleitet als Kopie zur Seite (wird dort zur Kante), gleichzeitig kommt die neue von der anderen Seite
+      const ghost = !reduced() && card.cloneNode(true);
+      if (ghost) { ghost.classList.add('ls-ghost'); ghost.removeAttribute('tabindex'); stage.insertBefore(ghost, card); }
       if (!reset) at = Math.max(0, Math.min(order.length, at + dir));
       draw();
-      if (!reduced()) await card.animate([{ transform: `translateX(${dir * 38}%) scale(.94)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.16,1,.3,1)' }).finished.catch(() => {});
+      if (ghost) {
+        const ease = 'cubic-bezier(.32,.72,0,1)';
+        ghost.animate([{ transform: 'none', opacity: 1 }, { transform: `translateX(${-dir * 74}%) scale(.9)`, opacity: 0 }], { duration: 460, easing: ease, fill: 'forwards' });
+        await card.animate([{ transform: `translateX(${dir * 74}%) scale(.9)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 520, easing: ease }).finished.catch(() => {});
+        ghost.remove();
+      }
       busy = false;
     };
     // neue Karten aus dem Hintergrund: anhängen; wer schon am Ende wartete, bekommt die nächste Karte sofort
@@ -288,7 +304,7 @@ const Lernset = (() => {
       document.removeEventListener('keydown', onKey, true);
       root.classList.add('closing');
       document.documentElement.classList.remove('ls-open');
-      setTimeout(() => root.remove(), reduced() ? 0 : 220);
+      setTimeout(() => root.remove(), reduced() ? 0 : 260);
       prevFocus?.focus?.();
     };
     const onKey = (e) => { if (e.key === 'Escape') { e.preventDefault(); close(); } else ui.key?.(e); };
@@ -363,7 +379,7 @@ const Lernset = (() => {
       const opts = x.type === 'wf' ? ['Wahr', 'Falsch'] : x.options;
       const multi = x.type === 'mc' && x.right.length > 1;
       w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}${multi ? ' <span class="ls-hint">mehrere richtig</span>' : ''}</p>
-        <div class="ls-opts">${opts.map((o, i) => `<button type="button" class="ls-opt" data-o="${i}"><span class="ls-ck">${fi('check', 11)}</span><span>${rich(o)}</span></button>`).join('')}</div>`;
+        <div class="ls-opts">${opts.map((o, i) => `<button type="button" class="ls-opt" data-o="${i}"><span class="ls-ck"><b>${'ABCDEF'[i]}</b>${fi('check', 11)}</span><span>${rich(o)}</span></button>`).join('')}</div>`;
       w.querySelectorAll('.ls-opt').forEach((b) => b.addEventListener('click', () => {
         if (w.classList.contains('done')) return;
         if (!multi) w.querySelectorAll('.ls-opt.on').forEach((o) => o !== b && o.classList.remove('on'));
@@ -397,7 +413,7 @@ const Lernset = (() => {
           const i = +b.dataset.o, ok = right.includes(i), bad = b.classList.contains('on') && !ok;
           b.style.transitionDelay = reduced() ? '' : `${k * 40}ms`;
           b.classList.toggle('right', ok); b.classList.toggle('wrong', bad); b.classList.toggle('dim', !ok && !bad);
-          if (bad) b.querySelector('.ls-ck').innerHTML = fi('x', 10);
+          if (bad) b.querySelector('.ls-ck').innerHTML = fi('x', 10); else if (ok) b.querySelector('.ls-ck b')?.remove();
         });
       } else if (x.type === 'luecke') {
         w.querySelectorAll('.ls-gap').forEach((g, k) => { const ok = x.sol[k].split('/').some((alt) => norm(alt) === norm(g.value)); g.classList.add(ok ? 'right' : 'wrong'); if (!ok) g.insertAdjacentHTML('afterend', `<span class="ls-sol">${esc(x.sol[k].split('/')[0])}</span>`); });
@@ -433,35 +449,49 @@ const Lernset = (() => {
   const whyOf = (x) => `${x.type === 'offen' && x.expect.length > 110 ? `<p>${rich(x.expect)}</p>` : ''}${x.why ? `<p>${rich(x.why)}</p>` : ''}`;
 
   /* Quiz: eine Frage nach der anderen. Antwort wählen → „Bestätigen“ → erst dann richtig/falsch (verwählen ist kein Fehler).
-     Oben Segmente je Frage (grün/rot), Erklärung zum Aufklappen. Kommen noch Fragen aus dem Hintergrund, wartet „Weiter“ darauf. */
+     Oben Segmente je Frage (grün/rot) – antippen springt zu der Frage. Erklärung zum Aufklappen. Kommen noch Fragen aus dem Hintergrund,
+     wartet „Weiter“ darauf. */
   function quiz(set, ui) {
     if (ui.inline && !ui.body._keys) { ui.body._keys = true; ui.body.addEventListener('keydown', (e) => ui.key?.(e)); }
     const card = el('div', 'ls-qcard');
     card.innerHTML = '<div class="ls-segs"></div><div class="ls-qstage"></div>';
     ui.body.replaceChildren(card);
     const segs = card.querySelector('.ls-segs'), stage = card.querySelector('.ls-qstage');
-    let list = [], live = true, at = 0, got = 0, res = [], wrong = [], waitNext = null;
+    let list = [], live = true, at = 0, res = [], views = [], ending = false, busySwap = false;
     const loading = () => live && !!set.loading;
+    const got = () => res.filter((r) => r === true).length;
+    const allDone = () => list.length > 0 && list.every((_, i) => res[i] != null);
+    const nextOpen = () => { for (let k = 1; k <= list.length; k++) { const i = (at + k) % list.length; if (res[i] == null) return i; } return -1; };
     const chrome = () => {
-      if (at < list.length) counter(ui.sub, at + 1, list.length, loading());
-      segs.innerHTML = list.map((_, i) => `<i class="${res[i] === true ? 'ok' : res[i] === false ? 'no' : i === at ? 'on' : ''}"></i>`).join('') + (loading() ? '<i class="ld"></i>' : '');
-      if (waitNext && (at + 1 < list.length || !loading())) { const b = waitNext; waitNext = null; b.disabled = false; b.classList.remove('busy'); b.textContent = at + 1 < list.length ? 'Weiter' : 'Ergebnis'; }
+      if (ending) { if (ui.sub) ui.sub.textContent = `${got()} von ${list.length} richtig`; } else counter(ui.sub, at + 1, list.length, loading());
+      segs.innerHTML = list.map((_, i) => `<button type="button" data-i="${i}" class="${res[i] === true ? 'ok' : res[i] === false ? 'no' : ''}${i === at && !ending ? ' on' : ''}" aria-label="Frage ${i + 1}"><i></i></button>`).join('')
+        + (loading() ? '<span class="ld"><i></i></span>' : '');
+      if (!ending) views[at]?.refresh();
     };
     if (set.subs) { set.subs.add(chrome); ui.cleanup.push(() => set.subs.delete(chrome)); }
+    segs.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) show(+b.dataset.i, +b.dataset.i > at ? 1 : -1); });
     // Wechsel: alte Frage gleitet raus, die Karte passt ihre Höhe weich an, die neue gleitet rein
-    const swap = async (node, first) => {
+    const swap = async (node, dir, first) => {
       const h0 = stage.offsetHeight, old = stage.firstElementChild;
-      if (!first && old && !reduced()) await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-16px)' }], { duration: 170, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.catch(() => {});
+      if (old === node) return;
+      if (!first && old && !reduced()) { busySwap = true; await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 18}px)` }], { duration: 170, easing: 'cubic-bezier(.4,0,1,1)' }).finished.catch(() => {}); busySwap = false; }
       stage.replaceChildren(node);
       if (first || reduced()) return;
       const h1 = stage.offsetHeight;
-      if (Math.abs(h1 - h0) > 1) stage.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 380, easing: 'cubic-bezier(.32,.72,0,1)' });
-      node.animate([{ opacity: 0, transform: 'translateX(16px)' }, { opacity: 1, transform: 'none' }], { duration: 440, easing: 'cubic-bezier(.16,1,.3,1)' });
+      if (Math.abs(h1 - h0) > 1) stage.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 400, easing: 'cubic-bezier(.32,.72,0,1)' });
+      node.animate([{ opacity: 0, transform: `translateX(${dir * 18}px)` }, { opacity: 1, transform: 'none' }], { duration: 460, easing: 'cubic-bezier(.16,1,.3,1)' });
     };
-    const start = (items, isLive) => { list = items; live = isLive; at = 0; got = 0; res = []; wrong = []; waitNext = null; step(true); };
-    function step(first = false) {
-      if (at >= list.length) return end(first);
-      const x = list[at], q = question(x, at + 1);
+    function show(i, dir = 1, first = false) {
+      if (busySwap || i < 0 || i >= list.length || (i === at && !ending && !first)) return;
+      at = i; ending = false;
+      const v = views[i] || (views[i] = view(list[i], i));
+      ui.key = v.key;
+      swap(v.node, dir, first);
+      chrome();
+    }
+    const advance = () => { if (allDone() && !loading()) return end(); const n = nextOpen(); if (n >= 0) show(n, n > at ? 1 : -1); };
+    function view(x, i) {
+      const q = question(x, i + 1);
       const node = el('div', 'ls-quiz');
       const extra = el('div', 'ls-extra');
       const foot = el('div', 'ls-qf');
@@ -470,19 +500,25 @@ const Lernset = (() => {
       node.append(q.el, extra, foot, why);
       let btn = foot.querySelector('.ls-pill'), phase = 'answer';
       const st = foot.querySelector('.ls-st');
+      // Knopf nach der Antwort: Weiter / Ergebnis / wartet auf die nächste Frage aus dem Hintergrund
+      const refresh = () => {
+        if (phase !== 'next') return;
+        const wait = !(allDone() && !loading()) && nextOpen() < 0;
+        btn.disabled = wait; btn.classList.toggle('busy', wait);
+        const label = wait ? '<span class="shimmer">Nächste Frage wird erstellt</span>' : allDone() && !loading() ? 'Ergebnis' : 'Weiter';
+        if (btn.innerHTML !== label) btn.innerHTML = label;
+      };
       const settle = (ok, part = false) => {
         phase = 'next';
-        res[at] = ok; if (ok) got++; else wrong.push(x);
+        res[i] = ok;
         st.innerHTML = `<span class="ls-verdict ${ok ? 'ok' : part ? 'part' : 'no'}">${fi(ok ? 'check-circle' : 'x-circle', 14)}${ok ? 'Richtig' : part ? 'Teilweise richtig' : 'Leider falsch'}</span>
           ${x.why && x.type !== 'offen' ? `<button type="button" class="ls-whyt" aria-expanded="false">Erklärung${fi('chevron-down', 10)}</button>` : ''}`;
         st.querySelector('.ls-whyt')?.addEventListener('click', (e) => fold(e.currentTarget, why, () => `<p>${rich(x.why)}</p>`));
-        if (at + 1 >= list.length && loading()) { waitNext = btn; btn.disabled = true; btn.classList.add('busy'); btn.innerHTML = '<span class="shimmer">Nächste Frage wird erstellt</span>'; }
-        else { btn.disabled = false; btn.textContent = at + 1 >= list.length ? 'Ergebnis' : 'Weiter'; }
-        btn.focus({ preventScroll: true });
         chrome();
+        btn.focus({ preventScroll: true });
       };
       const confirm = () => {
-        if (phase === 'next') { if (!btn.disabled) { at++; step(); } return; }
+        if (phase === 'next') { if (!btn.disabled) advance(); return; }
         if (phase !== 'answer' || !q.answered()) return;
         q.mark();
         if (x.type !== 'offen') { const s = q.score(); return settle(s >= x.points - 0.001, s > 0); }
@@ -502,36 +538,35 @@ const Lernset = (() => {
       const update = () => { if (phase === 'answer') btn.disabled = !q.answered(); };
       q.el.addEventListener('ls-pick', update); q.el.addEventListener('input', update); q.el.addEventListener('change', update);
       btn.addEventListener('click', confirm);
-      ui.key = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.closest?.('.ls-dd')) { e.preventDefault(); confirm(); } };
-      swap(node, first);
-      chrome();
+      const key = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.closest?.('.ls-dd, .ls-segs')) { e.preventDefault(); confirm(); } };
+      return { node, refresh, key };
     }
-    function end(first) {
-      ui.key = null;
-      if (ui.sub) ui.sub.textContent = `${got} von ${list.length} richtig`;
-      const pct = list.length ? Math.round((got / list.length) * 100) : 0;
+    function end() {
+      ending = true; ui.key = null;
+      const wrong = list.filter((_, i) => res[i] === false), n = got();
+      const pct = list.length ? Math.round((n / list.length) * 100) : 0;
       const node = el('div', 'ls-end');
-      node.innerHTML = `<div class="ls-ring" style="--p:0"><b>0 %</b></div><p>${got} von ${list.length} richtig</p>
+      node.innerHTML = `<div class="ls-ring" style="--p:0"><b>0 %</b></div><p>${n} von ${list.length} richtig</p>
         ${wrong.length ? `<button type="button" class="ls-wt" aria-expanded="false">${wrong.length === 1 ? '1 falsche Antwort ansehen' : `${wrong.length} falsche Antworten ansehen`}${fi('chevron-down', 10)}</button><div class="ls-fold ls-wl"></div>` : ''}
         <div class="ls-row">${wrong.length ? '<button type="button" class="ls-pill ghost" data-wrong>Falsche wiederholen</button>' : ''}<button type="button" class="ls-pill" data-all>Neu starten</button></div>`;
       const wl = node.querySelector('.ls-wl');
-      node.querySelector('.ls-wt')?.addEventListener('click', (e) => fold(e.currentTarget, wl, () => wrong.map((x, i) => `<div class="ls-wi"><div class="qa-q">${rich(x.type === 'luecke' ? x.text.replace(GAP, '___') : x.q)}</div><div class="qa-a">${chips(x)}</div>
-        ${whyOf(x) ? `<button type="button" class="ls-wx" aria-expanded="false" data-i="${i}">Erklärung${fi('chevron-down', 10)}</button><div class="ls-fold"></div>` : ''}</div>`).join('')));
+      node.querySelector('.ls-wt')?.addEventListener('click', (e) => fold(e.currentTarget, wl, () => wrong.map((x, k) => `<div class="ls-wi"><div class="qa-q">${rich(x.type === 'luecke' ? x.text.replace(GAP, '___') : x.q)}</div><div class="qa-a">${chips(x)}</div>
+        ${whyOf(x) ? `<button type="button" class="ls-wx" aria-expanded="false" data-i="${k}">Erklärung${fi('chevron-down', 10)}</button><div class="ls-fold"></div>` : ''}</div>`).join('')));
       wl?.addEventListener('click', (e) => {
         const b = e.target.closest('.ls-wx'); if (!b) return;
         fold(b, b.nextElementSibling, () => whyOf(wrong[+b.dataset.i]));
         if (wl.style.height !== 'auto') { clearTimeout(wl._t); wl.style.height = 'auto'; } // äußere Liste wächst mit
       });
-      const wrongNow = wrong.slice();
-      node.querySelector('[data-wrong]')?.addEventListener('click', () => start(wrongNow, false));
+      node.querySelector('[data-wrong]')?.addEventListener('click', () => start(wrong, false));
       node.querySelector('[data-all]').addEventListener('click', () => start(set.items, true));
-      swap(node, first);
+      swap(node, 1, false);
       chrome();
       // Ring und Zahl laufen hoch
       const ring = node.querySelector('.ls-ring'), b = ring.querySelector('b'), t0 = performance.now(), D = reduced() ? 1 : 900;
       const tick = (t) => { const k = Math.min(1, (t - t0) / D), v = pct * (1 - Math.pow(1 - k, 3)); ring.style.setProperty('--p', v.toFixed(1)); b.textContent = `${Math.round(v)} %`; if (k < 1) requestAnimationFrame(tick); };
       requestAnimationFrame(tick);
     }
+    function start(items, isLive) { list = items; live = isLive; res = []; views = []; ending = false; at = -1; show(0, 1, !stage.firstElementChild); }
     start(set.items, true);
   }
   function solution(x) {
@@ -624,7 +659,7 @@ const Lernset = (() => {
         <textarea class="tk-f-notes" rows="1" placeholder="Wünsche hinzufügen" maxlength="600" aria-label="Wünsche"></textarea>
       </div>
       <div class="tk-sheet-rows">
-        ${fixed ? '' : pop('kind', Object.entries(KINDS).map(([v, x]) => mi(`data-kind="${v}"`, fi(x.icon, 13), x.name)).join(''))}
+        ${fixed ? '' : pop('kind', Object.entries(KINDS).map(([v, x]) => mi(`data-kind="${v}"`, KICON(v, 15), x.name)).join(''))}
         ${pop('src', '<div class="ls-srcs"></div><div class="ls-src-add"></div>')}
         ${secs.length ? pop('secs', '<div class="ls-secs2"></div>') : ''}
         ${pop('level', LEVELS.map(([v, n, d]) => mi(`data-level="${v}"`, fi('sliders', 12), n, false, d)).join(''))}
@@ -649,7 +684,7 @@ const Lernset = (() => {
     const row = (k, icon, text, empty) => { const b = form.querySelector(`.tk-pill[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${fi(icon, 14)}</span><span class="tk-rv">${text}</span>`; b.classList.toggle('empty', !!empty); } };
     function draw() {
       const k = st.kind;
-      row('kind', KINDS[k].icon, KINDS[k].name);
+      row('kind', KINDS[k].icon, KINDS[k].name); { const b = form.querySelector('.tk-pill[data-open="kind"] .tk-si'); if (b) b.innerHTML = KICON(k, 16); }
       form.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b.dataset.kind === k));
       const n = nSrc();
       row('src', 'files', n ? `${n} ${n === 1 ? 'Quelle' : 'Quellen'}` : 'Quellen hinzufügen', !n);

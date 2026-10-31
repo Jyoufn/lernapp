@@ -9922,3 +9922,60 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .ls-make-s { min-width: 0; padding-left: 4px; color: var(--text-3); font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ls-make .tk-form.busy .tk-sheet-rows, .ls-make .tk-form.busy .tk-sheet-main { pointer-events: none; opacity: .55; transition: opacity 200ms ease; }
 .ls-at { z-index: 240; }
+
+/* ===== 01.11.2026 (4) – Lernsets: eigene Art-Icons, Karteikarten getönt, weiches Blättern, Vollbild-Titel ohne Pille, sanftes Schließen,
+   klickbare Segmente, Optionen mit Buchstaben (Auswahl = voll blau), ruhigere Eingaben und Auswahlmenüs (nichts wird heller) ===== */
+.ls-kicon { flex: none; overflow: visible; }
+.ls-top-t .ls-kicon { color: inherit; }
+/* Karteikarten: dunkel mit leichtem Blaugrün-Ton (wie das Icon) */
+.ls-side, .ls-side.back, .ls-card.r0 .ls-side, .ls-card.r1 .ls-side, .ls-card.r2 .ls-side { background: color-mix(in srgb, #5ec2da 7%, #181818); }
+.ls-side, .ls-side.back { border-color: rgba(94,194,218,.14); }
+.ls-peek { background: color-mix(in srgb, #5ec2da 4%, #171717); border-color: rgba(94,194,218,.08); }
+.ls-ghost { z-index: 1; pointer-events: none; }
+/* Vollbild: Titel als ruhiger Text (keine Pille), sanftes Öffnen und Schließen */
+.ls-head-t { height: auto; padding: 0; border: 0; background: none; gap: 8px; }
+.ls-head-t b { font-size: 13.5px; font-weight: 500; }
+.ls-head-s { padding-left: 0; border-left: 0; color: var(--text-4); }
+.ls-head-s:not(:empty)::before { content: "·"; margin-right: 6px; color: var(--text-4); }
+.ls-full { animation: ls-in2 380ms var(--spring) both; }
+.ls-full.closing { animation: ls-out2 260ms cubic-bezier(.4,0,.2,1) both; }
+@keyframes ls-in2 { from { opacity: 0; transform: translateY(10px) scale(.985); } to { opacity: 1; transform: none; } }
+@keyframes ls-out2 { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(.985); } }
+@media (prefers-reduced-motion: reduce) { .ls-full, .ls-full.closing { animation: none; } }
+/* Segmente: antippbar (größere Fläche, sichtbarer Strich bleibt 3 px) */
+.ls-segs { gap: 4px; margin: -6px 0 10px; }
+.ls-segs button { flex: 1; min-width: 0; height: 15px; padding: 6px 0; border: 0; background: none; cursor: pointer; }
+.ls-segs button i, .ls-segs .ld i { display: block; height: 3px; border-radius: 2px; background: rgba(255,255,255,.08); transition: background-color 360ms ease; }
+.ls-segs button.on i { background: rgba(255,255,255,.5); }
+.ls-segs button.ok i { background: #4fcf8a; }
+.ls-segs button.no i { background: #f07a6e; }
+.ls-segs .ld { flex: .6; padding: 6px 0; animation: ls-pulse 1.2s ease-in-out infinite; }
+/* Optionen: Buchstabe links; gewählt = Feld voll blau mit weißem Haken – der Rand ändert sich nicht, nichts wird heller */
+.ls-opt, .ls-opt:hover, .ls-opt.on, .ls-q.done .ls-opt:hover { border-color: rgba(255,255,255,.08); }
+.ls-opt.on { color: var(--text); }
+.ls-ck { position: relative; width: 22px; height: 22px; border: 0; border-radius: 7px; background: rgba(255,255,255,.06); color: transparent; transition: background-color 220ms ease, color 220ms ease; transition-delay: inherit; }
+.ls-ck b { position: absolute; inset: 0; display: grid; place-items: center; color: var(--text-3); font-size: 11.5px; font-weight: 600; transition: opacity 160ms ease, transform 260ms var(--spring); }
+.ls-ck svg { transform: scale(.5); opacity: 0; transition: transform 320ms var(--spring), opacity 160ms ease; transition-delay: inherit; }
+.ls-opt.on .ls-ck, .ls-check.on .ls-ck { background: var(--accent); color: #fff; }
+.ls-opt.on .ls-ck b, .ls-opt.right .ls-ck b, .ls-opt.wrong .ls-ck b { opacity: 0; transform: scale(.6); }
+.ls-opt.on .ls-ck svg, .ls-opt.right .ls-ck svg, .ls-opt.wrong .ls-ck svg { transform: none; opacity: 1; }
+.ls-opt.right .ls-ck { background: #4fcf8a; color: #10251a; }
+.ls-opt.wrong .ls-ck { background: #f07a6e; color: #2a1210; }
+.ls-opt.right, .ls-q.done .ls-opt.right:hover { border-color: rgba(79,207,138,.35); }
+.ls-opt.wrong, .ls-q.done .ls-opt.wrong:hover { border-color: rgba(240,122,110,.35); }
+.ls-check .ls-ck { width: 18px; height: 18px; border-radius: 6px; }
+/* Lücken: weiche Fläche ohne Linie und ohne Fokus-Effekt */
+.ls-gap, .ls-gap:focus { height: 30px; padding: 0 10px; border: 0; border-radius: 8px; background: rgba(255,255,255,.06); }
+.ls-gap::placeholder { color: var(--text-4); }
+.ls-gap.right { background: rgba(79,207,138,.12); color: #8fe3b4; }
+.ls-gap.wrong { background: rgba(240,122,110,.12); color: #f3a39a; }
+/* Offene Antwort: wie das Eingabefeld im Chat, ohne Rand und ohne Fokus-Effekt */
+.ls-answer, .ls-answer:focus { padding: 14px 16px; border: 0; border-radius: 18px; background: rgba(255,255,255,.04); font-size: 14.5px; line-height: 1.6; }
+/* Zuordnung: ruhiger Knopf ohne Rand; Öffnen macht ihn nicht heller. Menü wie die Kästen im Aufgaben-Fenster */
+.ls-dd, .ls-dd:hover, .ls-dd.open { border: 0; background: rgba(255,255,255,.05); }
+.ls-dd { height: 34px; }
+.ls-mrow.right .ls-dd { background: rgba(79,207,138,.12); color: #8fe3b4; }
+.ls-mrow.wrong .ls-dd { background: rgba(240,122,110,.12); color: #f3a39a; }
+.ls-dd-menu { padding: 5px; border-radius: 12px; border-color: #2e2e2e; background: #232323; }
+.ls-dd-i { min-height: 32px; padding: 6px 9px; font-size: 13px; }
+.ls-dd-i:hover { background: #2b2b2b; }

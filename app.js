@@ -1485,6 +1485,9 @@ function renderMarkdown(target, text, opts = {}) {
     if (!figs[i]) figs[i] = Lernset.figure(raw, { live: !done });
     else figs[i].update(raw, done);
     pre.replaceWith(figs[i]);
+    // kein „Hier ist dein Quiz zu …“ über dem Lernset – Titel und Icon stehen im Lernset selbst
+    if (i === 0) { const lead = []; for (let e = figs[0].previousElementSibling; e; e = e.previousElementSibling) lead.push(e);
+      if (lead.length && lead.length <= 2 && lead.every((e) => e.matches('p')) && lead.reduce((n, e) => n + e.textContent.length, 0) < 240) lead.forEach((e) => e.remove()); }
   });
   // Funde mit Link (```links): Karten mit Vorschaubild, Titel und Website – "n" zeigt auf die Quellen dieser Antwort (keine erfundenen Adressen)
   target.querySelectorAll('pre:has(code.language-links)').forEach((pre) => {
