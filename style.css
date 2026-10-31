@@ -9250,3 +9250,12 @@ div.tl4-h { cursor: default; }
 .dc-cown:hover .dc-cown-x { opacity: 1; }
 @media (hover: none) { .dc-cown-x { opacity: 1; } }
 .dc-cai2 .dc-cai-in, .dc-cai2-wrap, .dc-cai2 { flex: none; }
+
+/* Dokument-Kopf (31.10.): Tags nicht mehr vom (klebenden) Titel angeschnitten – Abstand über das Titel-Polster statt negativem Rand.
+   Projekt-Zeile mit Cover: unter dem Cover; mit Icon rechts neben dem Icon-Kasten, knapp unter der Cover-Kante */
+.dc-page > .dc-meta { margin-top: 0; }
+.dc-page > .dc-meta .dc-meta-in { padding-top: 4px; }
+.dc-page .dc-title-in { padding-bottom: 2px; }
+.dc-page.with-cover .dc-adds.under-cover { margin: 8px 0 0 -9px !important; }
+.dc-page.with-cover .dc-adds.by-icon { position: relative; z-index: 5; margin: -22px 0 0 var(--by-icon, 96px) !important; min-height: 26px; }
+.dc-editor.focus .dc-page.with-cover .dc-adds { display: none !important; }

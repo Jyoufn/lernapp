@@ -1912,7 +1912,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (ic) { btn.style.setProperty('--c', ic.c); btn.querySelector('.dc-icon-g').innerHTML = DocIcons.svg(ic.name, 42, '', !!ic.line); }
       view.querySelector('.dc-page')?.classList.toggle('with-icon', !!ic);
       view.querySelectorAll('.dc-add').forEach((b) => { b.hidden = b.dataset.add === 'icon' ? !!ic : cover; });
-      view.querySelector('.dc-adds').hidden = !!ic && cover;
+      // Projekt-Zeile: ohne Cover oben über dem Titel; mit Cover direkt UNTER dem Cover – mit Icon rechts neben dessen Kasten, knapp unter dem Cover
+      const adds = view.querySelector('.dc-adds'), coverEl = view.querySelector('.dc-cover');
+      adds.hidden = false;
+      if (cover) { const anchor = ic ? btn : coverEl; if (anchor.nextElementSibling !== adds) anchor.after(adds); }
+      else if (coverEl && coverEl.previousElementSibling !== adds) coverEl.before(adds);
+      adds.classList.toggle('under-cover', cover && !ic);
+      adds.classList.toggle('by-icon', cover && !!ic);
+      if (cover && ic) requestAnimationFrame(() => { adds.style.setProperty('--by-icon', `${Math.max(0, btn.offsetLeft + btn.offsetWidth + 14 - coverEl.offsetLeft)}px`); }); // Abstand zum Icon-Kasten (inkl. Rand)
       window.setTabIcon?.(tab, ic);
     }
     function setIcon(ic) {

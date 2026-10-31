@@ -24,6 +24,7 @@
 - Cover-Stile (eigene Farbe): Wellen, Dünen, Bänder, Bögen, Schlicht, Gipfel, Prisma, Punkte, Bokeh, Bauhaus, Seide, Streifen, Mosaik (Horizont…Flüssig nicht mehr wählbar, alte Cover werden weiter gezeichnet).
 - Cover **„Mit KI erstellen“**: Kachel neben Hochladen → Eingabefeld oben im Fenster (Fenster bleibt offen) → `POST /api/cover-image {wish}` (Gemini → englischer Auftrag im festen Stil `COVER_STYLE`: gezeichnete, flache Illustration, nicht realistisch, keine Schrift → FLUX via `nvcfImage`).
 - Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat. Eigene Aufwand-Wahl im Eingabefeld (Auto/Low/Medium/High/Max, `docs.chatEffort`, kein Modellname). Neuer Text wird im Chat vollständig gezeigt + [[ÄNDERN]]; die KI liest das Dokument, doppelt nichts, ändert/löscht gezielt statt alles neu einzufügen. Leerer Chat: Feld wächst nach oben (Hund rutscht mit).
+- Projekt-Pille mit Cover: direkt unter dem Cover; mit Icon rechts neben dem Icon-Kasten, knapp unter der Cover-Kante (`under-cover`/`by-icon`, Abstand `--by-icon` aus dem Icon berechnet). Tags-Abstand zum Titel über das Titel-Polster (kein negativer Rand – sonst schneidet der klebende Titel die Tags an).
 - Fokusmodus: Titel klebt nicht oben; Verlassen mit weichem Einblenden (`focus-out`). Tags sitzen eng unter dem Titel.
 
 ## Aufgaben (`tasks.js`, Liste)
