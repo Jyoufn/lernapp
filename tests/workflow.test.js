@@ -71,7 +71,7 @@ test('1a Low mit ausdrücklichem Rechercheauftrag: Analyse plant die Suche, Rech
   assert.equal(r.of('status').at(-1).meta.effort.applied, 'low');
 });
 
-test('1b Gewählter Effort ist Obergrenze: High gewählt, Frage einfach → intern Medium, Anzeige bleibt High', async () => {
+test('1b Gewählter Effort ist verbindlich: High gewählt – auch bei einfacher Frage bleibt es High (kein internes Herunterstufen)', async () => {
   fx = M.installFetch([
     { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false, effort: 'high' }) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Lang.'])) },
@@ -82,7 +82,7 @@ test('1b Gewählter Effort ist Obergrenze: High gewählt, Frage einfach → inte
   assert.match(done.meta.effort.reason, /gewählt/);
   assert.ok(!r.stages().some((s) => /searching_sources|verifying/.test(s))); // keine Recherche, weil die Analyse keine braucht
   assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 8192);
-  // dieselbe Stufe, aber eine einfache Frage → intern Medium; gewählt bleibt High
+  // dieselbe Stufe, einfache Frage → trotzdem High (der Nutzer hat High gewählt)
   fx.restore();
   fx = M.installFetch([
     { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false, simple: true, effort: 'low' }) },
@@ -91,9 +91,9 @@ test('1b Gewählter Effort ist Obergrenze: High gewählt, Frage einfach → inte
   const s = await run({ ...msg('Wie heißt die Hauptstadt von Frankreich?'), effort: 'high' });
   const eff = s.of('status').at(-1).meta.effort;
   assert.equal(eff.requested, 'high');
-  assert.equal(eff.applied, 'low');
-  assert.match(eff.reason, /einfache Frage/);
-  assert.match(M.systemOf(fx.calls.find(M.is.geminiStream)), /AUFWAND LOW/);
+  assert.equal(eff.applied, 'high');
+  assert.match(eff.reason, /gewählt/);
+  assert.match(M.systemOf(fx.calls.find(M.is.geminiStream)), /AUFWAND HIGH/);
 });
 
 test('1c Effort ist Obergrenze: Low gewählt, Analyse empfiehlt Max → bleibt bei Low', async () => {
@@ -174,7 +174,7 @@ test('4 Max: Entwurf → Prüfung → gezielte Überarbeitung; der fehlerhafte E
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks([++gemini === 1 ? 'ENTWURF: Der Erste Weltkrieg 1918 begann.' : 'Der Erste Weltkrieg begann 1914.'])) },
   ]);
   const r = await run({ ...msg('Analysiere die Ursachen des Ersten Weltkriegs.'), effort: 'max' });
-  assert.deepEqual(r.stages().filter((s) => s.endsWith(':active')).map((s) => s.split(':')[0]), ['working', 'thinking', 'processing', 'verifying', 'answering']);
+  assert.deepEqual(r.stages().filter((s) => s.endsWith(':active')).map((s) => s.split(':')[0]), ['working', 'thinking', 'searching_sources', 'processing', 'verifying', 'answering']); // Max sucht immer Quellen
   assert.equal(r.text(), 'Der Erste Weltkrieg begann 1914.');
   assert.ok(!r.text().includes('ENTWURF'));
   assert.equal(r.of('reset').length, 1); // angefangener Entwurf wird sichtbar ersetzt
@@ -182,7 +182,7 @@ test('4 Max: Entwurf → Prüfung → gezielte Überarbeitung; der fehlerhafte E
   assert.equal(verifyDone.meta.corrected, 1);
   const revise = fx.calls.filter(M.is.geminiStream)[1];
   assert.match(M.systemOf(revise), /PRÜFLISTE:\n1\. \[fact\] „1918 begann“ – Der Krieg begann 1914\./);
-  assert.equal(revise.body.generationConfig.thinkingConfig.thinkingBudget, 8192);
+  assert.equal(revise.body.generationConfig.thinkingConfig.thinkingBudget, 24576);
 }));
 
 /* ---------- 5. Recherche erforderlich ---------- */
@@ -436,33 +436,32 @@ test('Zustandsmaschine: Stufen können nicht zurückspringen; ungültige Zitate 
   assert.deepEqual(c.invalid, [7]);
 });
 
-test('Max mit einfacher Frage: gewählt bleibt Max, intern Medium – keine Recherche/Prüfung, kein Max-Stil', async () => {
+test('Max ist verbindlich: auch bei „einfacher“ Frage Max-Stil, volles Denken, Planung kennt Max, Quellen werden gesucht', async () => {
   fx = M.installFetch([
-    { match: M.is.analyze, respond: () => M.nvidiaJson({ simple: true, approach: '', points: [], research: true, queriesEn: ['x'] }) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Kurz.'])) },
+    { match: M.is.analyze, respond: () => M.nvidiaJson({ simple: true, effort: 'medium', approach: '', points: [], research: false, queriesEn: [], queriesDe: [], topic: 'Photosynthese' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Ausführlich.'])) },
   ]);
   const r = await run({ ...msg('Was bedeutet das Wort Photosynthese wörtlich?'), effort: 'max' });
-  assert.ok(!r.stages().some((s) => /searching_sources|verifying|processing/.test(s)));
   const eff = r.of('status').at(-1).meta.effort;
   assert.equal(eff.requested, 'max');
-  assert.equal(eff.applied, 'medium');
+  assert.equal(eff.applied, 'max'); // kein internes Herunterstufen
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 0); // einfache Frage: kein Denken, auch wenn Max gewählt ist
-  assert.doesNotMatch(M.systemOf(gen), /AUFWAND MAX/);
-  // die Analyse schätzt den Bedarf neutral – ohne Hinweis auf den gewählten Effort
-  assert.doesNotMatch(fx.calls.find(M.is.analyze).body.messages[1].content, /MAX/);
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 24576); // Max: volles Denk-Budget
+  assert.match(M.systemOf(gen), /AUFWAND MAX/);
+  assert.match(fx.calls.find(M.is.analyze).body.messages[1].content, /effort MAX/); // die Planung weiß, dass Max gewählt ist
+  assert.ok(r.stages().some((s) => s.startsWith('searching_sources'))); // Max sucht immer Quellen
 });
 
-test('Max mit normaler Frage: Grenzen und Denk-Budget von Max, Antwortstil nach Bedarf (Medium)', async () => {
+test('High ist verbindlich: Antwortstil High statt „nach Bedarf“, Denken an', async () => {
   fx = M.installFetch([
-    { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false, effort: 'medium' }) },
+    { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false, effort: 'medium', think: false }) },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Erklärung.'])) },
   ]);
-  const r = await run({ ...msg('Was ist Mitose?'), effort: 'max' });
-  assert.equal(r.of('status').at(-1).meta.effort.applied, 'max');
+  const r = await run({ ...msg('Was ist Mitose?'), effort: 'high' });
+  assert.equal(r.of('status').at(-1).meta.effort.applied, 'high');
   const gen = fx.calls.find(M.is.geminiStream);
   assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192);
-  assert.match(M.systemOf(gen), /AUFWAND MEDIUM/);
+  assert.match(M.systemOf(gen), /AUFWAND HIGH/);
 });
 
 test('Kontingent erschöpft (429): das Modell wird bei den nächsten Anfragen übersprungen', async () => {

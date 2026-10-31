@@ -23,7 +23,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Modell: **Gemini 2.5 Flash** hat echtes Reasoning; `thinkingBudget` 0 = aus, sonst Obergrenze (Ersatzmodelle 3.x: `thinkingLevel`).
 - **Denken nur, wenn es die Antwort besser macht** (`thinkNeeded` in `runChat`): Die Analyse setzt `think`. Aus (Budget 0, keine Gedanken-Anzeige) bei
   einfachen E-Mails/Nachrichten, Übersetzungen, Definitionen, Fakten, Low/Schnell. An bei `think`, Recherche mit Quellen, Rechnen/Prüfung/
-  Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (außer ganz einfache Frage), Coden, Börse. Ohne Analyse: ab High.
+  Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (immer), Coden, Börse. Ohne Analyse: ab High.
 - **Gedanken-Anzeige** (`lib/thoughts.js`, `createThoughtFilter`): Geminis Zusammenfassungen je **Abschnitt** – reine Form-/Gliederungs-
   Gedanken („Refining the format“, „Structuring the response“, „Analyzing the approach“) fallen weg; inhaltliche werden sinngetreu und knapp
   ins Deutsche übertragen (kleiner Modellaufruf). Klappt das nicht → Abschnitt wird nicht gezeigt (nie Englisch, nie Erfundenes).
@@ -45,6 +45,20 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Anzeige unten: rundes Logo (`/api/icon?domain=`) + Domain, max. 2, dann „+N“; Klick → Fenster mit allen.
 - **Nur passende Quellen** (verbindlich): Websites und deutsche Lernseiten laufen nach dem Wortabgleich durch `judgePages` (Modell-Bewertung, < 6 von 10 fällt weg); in `lib/research.js` fällt < 6 weg und Unbewertetes wird nicht übernommen. Lieber keine Quelle als eine fremde.
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
+
+## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
+Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl im Eingabefeld), Aufgaben und Automatisierungen.
+- **Auto**: die Analyse beurteilt selbst, welche Stufe, ob Denken und ob Quellen nötig sind.
+- **Ausdrücklich gewählt** (Low/Medium/High/Max): GENAU diese Stufe – kein internes Herunterstufen bei „einfachen“ Fragen,
+  Antwortstil = gewählte Stufe (`EFFORT_STYLE`), Erinnerung am Ende des System-Prompts (High/Max). Nur Begrüßungen bleiben direkt.
+- **Planung kennt High/Max** (`CHOSEN_HINT` in `analyze`): plant dann tief (Max: 7–12 Punkte, research mit Suchbegriffen).
+- **Max = das Maximum**: volles Denk-Budget (24 576), immer Quellen (außer Coden/Börse/nur Material/Rückfrage; fehlen Suchbegriffe → aus der Frage),
+  umfassend auf Klausurniveau, Tabellen, Belege [n], kurzes Fazit, kein Längenlimit. Darf länger dauern.
+- **High**: gründlich, jeder Planpunkt eigener Abschnitt, Denken an, Quellen wenn sie helfen. **Medium**: normale vollständige Antwort. **Low**: kurz, ohne Denken.
+- Vergleiche (Regel in `BASE_PROMPT`): bei High/Max jedes Objekt für sich (eigene Tabelle), dann Gemeinsamkeiten, Unterschiede (Gegenüberstellung), Fazit.
+  Wichtige Infos nie in Klammern verstecken. Lern-Agent: fachliche Genauigkeit auf Klausurniveau.
+- Hintergrund-Aufgaben: Gesamtzeit höchstens 280 s (Vercel-Limit 300 s) – ein Teilergebnis wird trotzdem gespeichert.
+- Tests in `tests/workflow.test.js` („Max ist verbindlich …“, „High ist verbindlich …“, „1b …“) sichern das ab.
 
 ## Länge / Max (verbindlich, nicht wieder einbauen!)
 - **Max hat kein Längen-/Kontextlimit**: 65 536 Tokens je Runde, 12 Weiterschreib-Runden, Verlauf bis 40 Nachrichten/600 000 Zeichen (`compactHistory(…, {max})`); Vercel-Zeitlimit → die App schreibt bei Max automatisch weiter (bis 8×). Prompt `EFFORT_STYLE.max`: lange Texte vollständig, nie kürzen. High: 65 536 Tokens, 6 Runden.

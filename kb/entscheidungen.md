@@ -17,3 +17,5 @@ Damit nichts Abgelehntes wiederkommt. Kurz halten; nur Dinge, die man sonst wied
 - **Quellen**: nur benutzte; ohne Suche nichts anzeigen.
 - **Karten-Design**: nicht „Icon links + Titel + Untertitel“ als Standardlösung für neue Aktions-Karten.
 - **Dokument-Icons** 30.10.: neue Icons note/checklist/inbox/quote/feather/anchor/infinity/hashtag/flag2 abgelehnt („schrecklich“), nur `rainbow` bleibt. Neue Icons vorher zeigen.
+
+- Abgelehnt (31.10.): gewählter Aufwand nur als „Obergrenze“ mit neutraler Analyse und Antwortstil „nach Bedarf“ – Max wirkte dadurch wie Medium (kurze, flache Antworten). Jetzt: gewählter Aufwand ist verbindlich (kb/ki.md).
