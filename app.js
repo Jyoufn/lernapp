@@ -2071,10 +2071,13 @@ function placeSourceStack(answerEl, sources) {
   stack.type = 'button';
   stack.title = 'Quellen anzeigen';
   const nameOf = (s) => { const d = String(s.domain || '').replace(/^www\./i, ''); return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d) && !/vertexaisearch/i.test(d) ? d : String(s.title || d).slice(0, 28); };
-  // je Quelle nur das Logo als abgerundetes Quadrat (ohne Namen), leicht überlappend, höchstens drei – dahinter „+N“
+  // je Quelle nur das Logo als abgerundetes Quadrat (ohne Namen), nebeneinander aufgereiht, deutsche Quellen zuerst, höchstens fünf – dahinter „+N“
   void nameOf;
-  sources.slice(0, 3).forEach((src) => { const c = el('span', 'stack-src sq'); c.append(siteIcon(src.domain, src.title, 'stack-ico')); stack.append(c); });
-  if (sources.length > 3) stack.append(el('span', 'stack-more', `+${sources.length - 3}`));
+  const de = (s) => /\.(de|at|ch)$/i.test(String(s.domain || '').replace(/^www\./, '')) || s.german;
+  const sorted = [...sources].sort((a, b) => (de(b) ? 1 : 0) - (de(a) ? 1 : 0));
+  stack.classList.add('row');
+  sorted.slice(0, 5).forEach((src) => { const c = el('span', 'stack-src sq'); c.append(siteIcon(src.domain, src.title, 'stack-ico')); stack.append(c); });
+  if (sorted.length > 5) stack.append(el('span', 'stack-more', `+${sorted.length - 5}`));
   stack.addEventListener('click', () => openSourcesModal(sources, null));
   let last = answerEl.lastElementChild;
   while (last && (last.matches('ul, ol') ? last.lastElementChild : null)) last = last.lastElementChild; // in Listen: letzter Punkt
@@ -2566,6 +2569,19 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
       line.innerHTML = `${doneLine('material', m.relevant === true ? 'passt zur Frage' : m.relevant === false ? 'nichts zum Thema' : '')} ${dur}`;
+      // die gelesenen Dateien als Chips: Vorschaubild (abgerundet) bzw. Datei-Icon + Name
+      const files = ([...historyOf(tab)].reverse().find((h) => h.role === 'user')?.images || []).filter((f) => f.data || f.text);
+      if (files.length && !st.step.querySelector('.chips')) {
+        const chips = el('div', 'chips file-chips');
+        files.slice(0, 8).forEach((f) => {
+          const c = el('span', 'chip file-chip', `<span class="chip-label">${escapeHtml(String(f.name || (f.mime === 'application/pdf' ? 'PDF' : 'Bild')).slice(0, 48))}</span>`);
+          if (/^image\//.test(f.mime)) { const img = document.createElement('img'); img.alt = ''; img.className = 'chip-thumb'; img.src = `data:${f.mime};base64,${f.data}`; c.prepend(img); }
+          else c.prepend(el('span', 'chip-ico file-ico', FadeIcons.svg('file', 11)));
+          chips.append(c);
+        });
+        if (files.length > 8) chips.append(el('span', 'chip more-chip', `+${files.length - 8}`));
+        st.step.append(chips);
+      }
       if (pictureAsk && picWaitsForFiles) { picWaitsForFiles = false; showPicStep(); } // Reihenfolge strikt: erst „Deine Dateien ansehen“, dann „Bild erzeugen“
     } else if (s.stage === 'processing') {
       line.innerHTML = `${doneLine('work', 'Entwurf')} ${dur}`;

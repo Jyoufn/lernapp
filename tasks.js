@@ -259,7 +259,7 @@ const Tasks = (() => {
     el.innerHTML = `<div class="tk-row-line">
         <button type="button" class="tk-ck s-${st}" data-check aria-label="${done ? 'Wieder öffnen' : 'Erledigt'}" ${busy ? 'disabled' : ''}>${CHECK}</button>
         <b class="tk-row-title">${esc(t.title)}</b>
-        ${ts.length > 3 ? `<span class="tk-row-tags tk-row-dots" title="${ts.length} Tags" aria-label="${ts.length} Tags">${ts.slice(0, 3).map((g) => `<i style="--c:${g.c}"></i>`).join('')}</span>` : ts.length ? `<span class="tk-row-tags">${ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}</span>` : ''}
+        ${ts.length >= 3 ? `<button type="button" class="tk-row-tags tk-row-dots" data-tags="${t.id}" aria-label="${ts.length} Tags anzeigen">${ts.slice(0, 4).map((g) => `<i style="--c:${g.c}"></i>`).join('')}${ts.length > 4 ? `<b>+${ts.length - 4}</b>` : ''}</button>` : ts.length ? `<span class="tk-row-tags">${ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}"><i></i>${esc(g.name)}</span>`).join('')}</span>` : ''}
         <span class="grow"></span>
         ${leftText ? `<span class="tk-row-left" aria-label="wird gelöscht in ${leftText}">${fi('clock', 11)}${leftText}</span>` : ''}
         ${result || agentBit}
@@ -270,6 +270,25 @@ const Tasks = (() => {
       </div>
       <div class="tk-row-more"><div class="tk-row-more-in">${notes}${sendRow}</div></div>`;
     return el;
+  }
+  // Ab drei Tags zeigt die Zeile nur Punkte – Antippen öffnet ein kleines Menü mit allen Tags (getönt wie in der Liste)
+  let tagPop = null;
+  const closeTags = () => { tagPop?.remove(); tagPop = null; document.removeEventListener('pointerdown', onTagsOutside, true); };
+  const onTagsOutside = (e) => { if (!tagPop?.contains(e.target) && !e.target.closest?.('[data-tags]')) closeTags(); };
+  function showTags(btn, t) {
+    const open = tagPop?.dataset.for === t?.id;
+    closeTags();
+    if (open || !t) return;
+    const ts = (t.tags || []).map(tagOf).filter(Boolean);
+    tagPop = document.createElement('div');
+    tagPop.className = 'tk-tagpop';
+    tagPop.dataset.for = t.id;
+    tagPop.innerHTML = ts.map((g) => `<span class="tk-sub-tag" style="--c:${g.c}">${esc(g.name)}</span>`).join('');
+    document.body.append(tagPop);
+    const r = btn.getBoundingClientRect(), w = tagPop.offsetWidth;
+    tagPop.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))}px`;
+    tagPop.style.top = `${r.bottom + 6}px`;
+    document.addEventListener('pointerdown', onTagsOutside, true);
   }
   // Auf-/Zuklappen läuft über die Höhe (wie die Chancen-Karten)
   function toggleRow(el) {
@@ -909,6 +928,8 @@ const Tasks = (() => {
       if (!rowEl) return;
       if (e.target.closest('[data-check]')) { if (!e.target.closest('[data-check]').disabled) toggleDone(rowEl.dataset.id); return; }
       if (e.target.closest('[data-edit]')) { edit(rowEl.dataset.id); return; }
+      const tagsBtn = e.target.closest('[data-tags]');
+      if (tagsBtn) { e.stopPropagation(); showTags(tagsBtn, tasks.find((x) => x.id === rowEl.dataset.id)); return; }
       const sendB = e.target.closest('[data-send]');
       if (sendB) {
         const t = tasks.find((x) => x.id === rowEl.dataset.id); if (!t) return;
