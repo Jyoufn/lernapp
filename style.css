@@ -9126,3 +9126,6 @@ div.tl4-h { cursor: default; }
 .tk-row-res .tk-dog { width: 14px; height: 14px; background: none; }
 .tk-row-res .tk-dog svg { width: 14px; height: 14px; }
 .tk-mi-sub { margin-left: 7px; color: var(--text-4); font-size: 11.5px; font-style: normal; }
+
+/* Rückfrage (31.10.): immer „Rückfrage · x von y“ */
+:is(#composer, #vaAsk) .ask-panel .ask-kicker .ask-of { margin-left: 6px; color: var(--text-2); font-weight: 500; }

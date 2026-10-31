@@ -1988,6 +1988,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   let actor = null;
   const ensureActor = () => {
     if (actor || !window.PixelDogs?.actor) return;
+    if (msgEl._askActor) { actor = msgEl._askActor; msgEl._askActor = null; return; } // nach einer Rückfrage: derselbe Hund arbeitet weiter
     actor = PixelDogs.actor(agentId);
     msgEl.prepend(actor.el);
     msgEl.classList.add('acting');
@@ -2602,7 +2603,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (picsPending) {
       ensureActor(); actor?.set('paint');
       pictures.finally(() => actor?.finish(okEnd));
-    } else actor?.finish(okEnd);
+    } else if (!signal.aborted && !failed && /```ask/.test(answerR?.text || '') && actor?.ask) { actor.ask(); msgEl._askActor = actor; } // Rückfrage: Denkblase bleibt
+    else actor?.finish(okEnd);
     if (work) {
       work.endStart?.();
       const wTitle = work.head.querySelector('.work-title');
@@ -2719,6 +2721,7 @@ function skipAsk() {
   const pa = pendingOf();
   if (!pa) return;
   activeTab()._pendingAsk = null;
+  pa.msgEl._askActor?.finish(false); pa.msgEl._askActor = null;
   finishStep(pa.step, 'Frage übersprungen');
   const w = pa.work;
   w.work.classList.remove('active');
@@ -2747,7 +2750,7 @@ function renderAsk(dir = 0) {
   // Kopfzeile: „Rückfrage“ bzw. „Frage x von y“ mit Fortschritts-Strichen, rechts × (= Überspringen); darunter die Frage
   const head = el('div', 'ask-head');
   const top = el('div', 'ask-top');
-  top.append(el('span', 'ask-kicker', many ? `Frage ${ask.index + 1} von ${ask.questions.length}` : 'Rückfrage'));
+  top.append(el('span', 'ask-kicker', `Rückfrage <b class="ask-of">${ask.index + 1} von ${ask.questions.length}</b>`));
   if (many) {
     const bars = el('span', 'ask-progress');
     ask.questions.forEach((_, k) => bars.append(el('i', k < ask.index ? 'done' : k === ask.index ? 'on' : '')));
@@ -3191,6 +3194,7 @@ async function sendMessage(text, images) {
   const pa = pendingOf();
   if (pa) { // Rückfrage übersprungen → ganz normal weiter
     finishStep(pa.step, 'Frage übersprungen');
+    pa.msgEl._askActor?.finish(false); pa.msgEl._askActor = null;
     swapText(pa.work.head.querySelector('.work-title'), 'Fertig');
     pa.work.head.querySelector('.t').hidden = false;
     activeTab()._pendingAsk = null;

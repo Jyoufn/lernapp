@@ -1711,6 +1711,8 @@ const PixelDogs = (() => {
         onDone = () => setTimeout(() => { wrap.querySelectorAll('.pa-prop.on').forEach((g) => g.classList.remove('on')); wrap.classList.remove('glasses'); wrap.dataset.state = 'rest'; }, 200);
         this.set('done');
       },
+      // Rückfrage offen: Denkblase bleibt, bis geantwortet wird (danach geht es mit demselben Hund weiter)
+      ask() { onDone = null; worked = null; this.set('think'); },
       stop() { clearTimeout(wait); clearTimeout(loopT); },
     };
   }
