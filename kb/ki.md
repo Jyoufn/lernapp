@@ -85,3 +85,12 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 
 ## Kontingent schonen (verbindlich)
 - Neue Funktionen dürfen nicht pro Abschnitt/Satz/Quelle einen eigenen Gemini-Aufruf machen – sammeln und EIN Aufruf. Kleine Bewertungen (`smallJsonTask`) laufen standardmäßig zuerst über NVIDIA.
+
+## Modelle (verbindlich)
+- **Modell-Leiter** (`lib/providers.js` → `ladder`): Antworten `TEXT_LADDER` (3.8 → 3.7 → 3.6 → 3.5 Flash → 2.5 Flash → Flash-Lite-Modelle),
+  kleine Hilfsaufgaben `LITE_LADDER` (3.1 Flash-Lite → 2.5 Flash-Lite → 3.5 Flash-Lite …). Genommen wird nur, was der Schlüssel laut
+  Google-Modellliste wirklich kann (6 h gemerkt, auch „-preview“-Versionen); Abfrage fehlgeschlagen → bewährte Liste (2.5 Flash, 3.5 Flash, 3.5 Flash-Lite).
+- Limit: Tageslimit (quotaId „PerDay“) → Modell bis Mitternacht Pazifikzeit überspringen, sonst 90 s; 404 → 1 Tag. Dann automatisch das nächstbeste.
+- Google-Suche im Modell nur mit 2.5 Flash (kostenloses Grounding) → bei Aktuellem wird ein solches Modell nach vorn geholt.
+- Alle Regeln (Aufwand verbindlich, Denken, Quellen) gelten für jedes Modell der Leiter gleich. „Live“-Modelle sind Sprach-Echtzeit, nicht für Text.
+- Bildbearbeitung (Gemini Flash Image) hat laut Google keinen Gratis-Zugang → mit Gratis-Schlüssel wird neu gemalt (Ersatz).

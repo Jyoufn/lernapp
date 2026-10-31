@@ -256,9 +256,10 @@ let visionNextSkipUntil = 0;  // dasselbe für den ersten Ersatz (Gemini 3.5 Fla
 async function visionJson(env, system, text, images = [], budget = 1024) { // budget: Denkzeit (Tokens) für Gemini
   if (env.GEMINI_API_KEY) {
     // Hauptmodell, dann Ersatz; ist das Ersatzmodell gerade ausgelastet (429, mehrere Bilder gleichzeitig), ein zweiter Versuch nach kurzer Pause
-    for (const [model, wait] of [[P.GEMINI_MODEL, 0], [P.GEMINI_NEXT, 0], [P.GEMINI_BACKUP, 0], [P.GEMINI_BACKUP, 4000]]) {
-      if (model === P.GEMINI_MODEL && Date.now() < visionMainSkipUntil) continue;
-      if (model === P.GEMINI_NEXT && Date.now() < visionNextSkipUntil) continue;
+    // Modell-Leiter (bestes verfügbares zuerst, bei Limit das nächste); das letzte nach kurzer Pause noch einmal
+    const lad = (await P.ladder(env, 'text')).slice(0, 4);
+    for (const [model, wait] of [...lad.map((m) => [m, 0]), [lad[lad.length - 1], 4000]]) {
+      if (P.isCooling(model) && wait === 0 && lad.length > 1) continue;
       const t0 = Date.now();
       try {
         if (wait) await new Promise((ok) => setTimeout(ok, wait));
@@ -274,9 +275,8 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
         }
         console.warn(`[Bild] ${model}: ${r.ok ? 'keine lesbare Antwort' : `HTTP ${r.status}`}`);
         if (r.status === 429) P.noteLimit(await r.json().catch(() => null));
+        if (r.status === 429 || r.status === 404) P.markLimited(model, { status: r.status, message: '' });
         if (r.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000;
-        if (r.status === 429 && model === P.GEMINI_NEXT) visionNextSkipUntil = Date.now() + 5 * 60 * 1000;
-        if (r.status !== 429 && model === P.GEMINI_BACKUP) break;
       } catch (e) { console.warn(`[Bild] ${model}: ${e.message}`); }
     }
     console.warn('[Bild] Gemini nicht erreichbar – NVIDIA übernimmt');
@@ -1062,9 +1062,9 @@ async function handleDocAi(req, res) {
   // Hauptmodell, bei Überlastung/Fehler das nächste Gemini-Modell, dann NVIDIA – Fehler werden protokolliert (früher still verschluckt)
   const errs = [];
   if (env.GEMINI_API_KEY) {
-    for (const model of [P.GEMINI_MODEL, P.GEMINI_NEXT]) {
+    for (const model of (await P.ladder(env, 'text')).slice(0, 3)) { // Modell-Leiter
       try {
-        const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: model === P.GEMINI_MODEL ? { budget: 0 } : { level: 'low' }, json: true, signal: AbortSignal.timeout(120000) }));
+        const o = P.parseJsonLoose(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_SYSTEM, user, maxTokens: 65536, thinking: model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }, json: true, signal: AbortSignal.timeout(120000) }));
         if (ok(o)) { o.html = await resolveBlocks(o.html); return sendJson(res, 200, o); }
         errs.push(`${model}: kein HTML`);
       } catch (err) { errs.push(`${model}: ${err.message}`); }
@@ -1092,7 +1092,7 @@ async function handleDocIntent(req, res) {
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
   const ask = (raw) => /"create"\s*:\s*true/.test(String(raw || ''));
   if (text && env.GEMINI_API_KEY) {
-    for (const [model, thinking] of [[P.GEMINI_MODEL, { budget: 0 }], [P.GEMINI_NEXT, { level: 'low' }]]) {
+    for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) { // Modell-Leiter
       try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
     }
   }
@@ -1113,7 +1113,7 @@ async function handleTitle(req, res) {
   const clean = (t) => String(t || '').split('\n')[0].replace(/^["„“'»«\s]+|["„“'»«.\s]+$/g, '').replace(/^titel:\s*/i, '').slice(0, 60).trim();
   // Gemini 2.5 Flash (nach HTTP 429 eine Weile übersprungen) → Flash-Lite → Nemotron (kein Tageslimit) – damit nicht einfach der Prompt zum Titel wird
   if (env.GEMINI_API_KEY) {
-    for (const [model, thinking] of [[P.GEMINI_MODEL, { budget: 0 }], [P.GEMINI_NEXT, { level: 'low' }], [P.GEMINI_BACKUP, { level: 'low' }]]) {
+    for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) {
       if (model === P.GEMINI_MODEL && Date.now() < visionMainSkipUntil) continue;
       try {
         const t = clean(await P.geminiOnce({ key: env.GEMINI_API_KEY, model, system: TITLE_SYSTEM, user: text, maxTokens: 200, thinking, signal: AbortSignal.timeout(10000) }));
