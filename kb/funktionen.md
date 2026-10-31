@@ -23,13 +23,15 @@
 - Cover-Kacheln wachsen beim Darüberfahren nicht (iPad), Fenster scrollt überall.
 - Cover-Stile (eigene Farbe): Wellen, Dünen, Bänder, Bögen, Schlicht, Gipfel, Prisma, Punkte, Bokeh, Bauhaus, Seide, Streifen, Mosaik (Horizont…Flüssig nicht mehr wählbar, alte Cover werden weiter gezeichnet).
 - Cover **„Mit KI erstellen“**: Kachel neben Hochladen → Eingabefeld oben im Fenster (Fenster bleibt offen) → `POST /api/cover-image {wish}` (Gemini → englischer Auftrag im festen Stil `COVER_STYLE`: gezeichnete, flache Illustration, nicht realistisch, keine Schrift → FLUX via `nvcfImage`).
-- Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat.
+- Dokument-Chat rechts: eigener KI-Chat je Dokument (mehrere), gleiche Zeitleiste wie der Haupt-Chat. Eigene Aufwand-Wahl im Eingabefeld (Auto/Low/Medium/High/Max, `docs.chatEffort`, kein Modellname). Neuer Text wird im Chat vollständig gezeigt + [[ÄNDERN]]; die KI liest das Dokument, doppelt nichts, ändert/löscht gezielt statt alles neu einzufügen. Leerer Chat: Feld wächst nach oben (Hund rutscht mit).
+- Fokusmodus: Titel klebt nicht oben; Verlassen mit weichem Einblenden (`focus-out`). Tags sitzen eng unter dem Titel.
 
 ## Aufgaben (`tasks.js`, Liste)
 - Gruppen-Karten: Überfällig · Heute · Diese Woche · Später · Ohne Datum, unten „Erledigt“ (aufklappbar). Zeile 46 px: Kreis 15 px · Titel 14 px · Tags (leicht getönt) · rechts Hund-Ergebnis oder Datum (+Uhrzeit) · Priorität · Stift (gleitet beim Aufklappen herein).
 - Aufklappen nur, wenn es etwas zu zeigen gibt (Beschreibung oder „An Lernen geben“, falls im Fenster ein Agent gewählt ist). Kein „Keine Beschreibung“.
 - Vom Agenten erledigt: rechts Hund + Name des Ergebnisses (Dokument), Klick öffnet es.
 - Fenster: Datum (Kalender immer 6 Wochen, Uhrzeit-Schalter + Rad; **Schalter rechts in der Zeile**: aus = Datum grau, das zuletzt gewählte/heutige bleibt stehen), Priorität, Tags (anlegen mit Farbe), Agent, **Aufwand** (nur mit Agent: Auto/Niedrig/Mittel/Hoch/Max, Standard Hoch → `task.effort`, auch für Automatisierungen), **Automatisierung** als Schalter rechts (blau an, grau aus) → statt Datum der Zeitplan (Täglich/Werktags/Wöchentlich + Tag + Uhrzeit) und „Wiederholungen“ (Kein Limit, 1–20-mal). „Aufgabe erstellen“ schickt nicht automatisch ab; Ergebnis von Agenten ist immer ein Dokument.
+- Aufgaben mit Agent: Pille **Quellen** (Links, eine pro Zeile → `task.sources`, gehen in den Prompt). High/Max (Standard) → Prompt verlangt echte Recherche; Ergebnis-Dokument mit Tabellen/Diagrammen, bekommt passendes Icon (`pickIcon`) und die Priorität der Aufgabe (`doc.priority`). Sperre `agt:run:lock:*` → kein doppeltes Dokument. Prompt: jedes Mal frisch arbeiten, nicht an früheren Ergebnissen orientieren.
 - Hintergrund-Lauf: Server (`lib/agenttasks.js`) ohne Rückfragen (`noClarify`), auch bei geschlossener App (Cron). Ziel des Nutzers: Hausaufgaben eintragen → Agent erledigt sie → später Export (PDF) für GoodNotes.
 
 ## Kalender (`calendar.js`)

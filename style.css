@@ -9159,3 +9159,33 @@ div.tl4-h { cursor: default; }
 .dc-cai-gen .ill-frame svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .dc-cai-gen .ill-frame rect { opacity: 0; animation: ill-tile 5s ease-in-out infinite backwards; }
 @media (prefers-reduced-motion: reduce) { .dc-cai-gen .ill-frame rect { animation: none; opacity: 1; } }
+
+/* Dokument (31.10.): Tags näher am Titel */
+.dc-page > .dc-meta { margin-top: -6px; }
+.dc-page > .dc-meta .dc-meta-in { padding-top: 6px; }
+
+/* Dokument-Chat leer (31.10.): Unterkante des Eingabefelds steht fest → längerer Text lässt das Feld nach OBEN wachsen,
+   Hund und „Woran arbeiten wir heute?“ rutschen mit nach oben (nichts wird nach unten gedrückt) */
+.dcc:has(.dcc-list:empty) .dcc-list { flex: 1 1 auto; min-height: 0; }
+.dcc:has(.dcc-list:empty)::after { flex: 0 0 30%; }
+
+/* Dokument-Chat (31.10.): Aufwand-Wahl im Eingabefeld (Auto · Low · Medium · High · Max) */
+.dcc-form { position: relative; }
+.dcc-eff { display: inline-flex; align-items: center; gap: 4px; height: 26px; margin-left: 2px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dcc-eff:hover { color: var(--text); }
+.dcc-effmenu { position: absolute; left: 34px; bottom: 42px; z-index: 30; display: flex; flex-direction: column; min-width: 130px; padding: 4px; background: var(--menu-bg); border: 1px solid var(--menu-border); border-radius: 10px; }
+.dcc-effmenu button { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--text-2); font: 400 12.5px Inter, sans-serif; cursor: pointer; }
+.dcc-effmenu button:hover { background: var(--menu-hover); }
+.dcc-effmenu button svg { color: var(--accent); }
+
+/* Fokusmodus (31.10.): Titel klebt beim Scrollen nicht oben · weiches, ruhiges Verlassen */
+.dc-editor.focus .dc-title-in { position: static; background: none; box-shadow: none; }
+.dc-editor.focus-out .dc-page { animation: dc-unfocus 440ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+@keyframes dc-unfocus { from { opacity: 0.4; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dc-editor.focus-out .dc-page { animation: none; } }
+
+/* Aufgaben (31.10.): Quellen angeben (Links, eine pro Zeile) */
+.tk-src-row { padding: 6px; }
+.tk-src-in { display: block; width: 100%; min-height: 64px; max-height: 160px; padding: 6px 8px; resize: none; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; outline: none; background: none; color: var(--text); font: 400 12.5px/18px Inter, sans-serif; }
+.tk-src-in::placeholder { color: var(--text-4); }
+.dc-cai2 { margin: 2px; background: rgba(255, 255, 255, 0.03); border-color: rgba(255, 255, 255, 0.1); }

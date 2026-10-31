@@ -90,6 +90,9 @@ const Docs = (() => {
     const d = new Date(t);
     return `${d.getDate()}. ${MONTHS[d.getMonth()]}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ''}`;
   };
+  // Aufwand im Dokument-Chat (eigene Wahl, nur Stufen – kein Modellname)
+  const DCC_EFF_LABEL = { auto: 'Auto', low: 'Low', medium: 'Medium', high: 'High', max: 'Max' };
+  const dccEffort = () => { const v = localStorage.getItem('docs.chatEffort'); return DCC_EFF_LABEL[v] ? v : 'auto'; };
   const docIcon = (d) => (d?.icon && window.DocIcons?.has(d.icon.name) && /^#[\da-f]{6}$/i.test(d.icon.c || '') ? d.icon : null);
   const plain = (html) => { const d = document.createElement('div'); d.innerHTML = html || ''; return d.textContent || ''; };
   // leer = kein Titel, keine Beschreibung, kein Text → erscheint weder als Tab noch in Listen
@@ -730,6 +733,7 @@ const Docs = (() => {
           <div class="dcc-bar">
             <button type="button" class="plus-btn dcc-plus" aria-label="Bild hinzufügen" title="Bild hinzufügen">${icon('i-plus', 16)}</button>
             <input type="file" accept="image/*" multiple hidden />
+            <button type="button" class="dcc-eff" aria-haspopup="menu" aria-label="Aufwand"><span>${DCC_EFF_LABEL[dccEffort()]}</span>${fi('chevron-down', 9)}</button>
             <span class="flex-spacer"></span>
             <button type="button" class="mic-btn dcc-mic" aria-label="Diktieren" title="Diktieren"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
             <button type="button" class="voice-btn dcc-voice" aria-label="Sprachmodus" title="Sprachmodus">${fi('voice', 16)}</button>
@@ -745,6 +749,15 @@ const Docs = (() => {
         p.querySelector('.dcc-form textarea').placeholder = 'Frag etwas oder lass dir etwas erklären …';
       } else (curChat(doc)?.messages || []).forEach((m) => { const n = dccMsg(m.role, m.text, [], m); list.append(n); if (m.role === 'user' && m.imgId) showThumbs(n, m); });
       wireChatList(p);
+      // Aufwand nur für den Dokument-Chat: Auto · Low · Medium · High · Max (kein Modellname)
+      p.querySelector('.dcc-eff')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const btn = e.currentTarget, old = p.querySelector('.dcc-effmenu'); if (old) { old.remove(); return; }
+        const m = el('div', 'tk-box dcc-effmenu', Object.keys(DCC_EFF_LABEL).map((k) => `<button type="button" data-eff="${k}" class="${k === dccEffort() ? 'on' : ''}"><span>${DCC_EFF_LABEL[k]}</span>${k === dccEffort() ? fi('check', 12) : ''}</button>`).join(''));
+        btn.closest('.dcc-form').append(m);
+        m.addEventListener('click', (ev) => { const b = ev.target.closest('[data-eff]'); if (!b) return; localStorage.setItem('docs.chatEffort', b.dataset.eff); btn.querySelector('span').textContent = DCC_EFF_LABEL[b.dataset.eff]; m.remove(); });
+        setTimeout(() => document.addEventListener('pointerdown', (ev) => { if (!m.contains(ev.target)) m.remove(); }, { once: true }), 0);
+      });
       list.scrollTop = list.scrollHeight;
       const ta = p.querySelector('textarea'), form = p.querySelector('form');
       const growTa = () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(Math.max(ta.scrollHeight, 40), 160)}px`; };
@@ -1192,7 +1205,7 @@ const Docs = (() => {
       const context = `Du hilfst bei genau einem Dokument aus der Lern-App – mit denselben Fähigkeiten wie im normalen Chat (Erklären, Rückfragen, Diagramme, Bilder, Recherche). Beziehe dich zuerst und so oft wie möglich auf das Dokument. Steht etwas nicht darin, ergänze mit gesichertem Fachwissen bzw. vertrauenswürdigen Quellen und sag kurz, dass es nicht aus dem Dokument stammt. Rückfragen (nur wenn wirklich nötig) als ask-Block mit kurzen Antwortmöglichkeiten.
 Du kannst das Dokument auch ändern (ergänzen, umschreiben, kürzen, umstellen, Abschnitte oder Tabellen hinzufügen, Fehler korrigieren, Titel ändern) – aber NUR, wenn der Nutzer das ausdrücklich will (z. B. „füg das ein“, „pack das ins Dokument“, „schreib das rein“, „ändere/ergänze/kürze …“). Fragen, Erklärungen, Ideen, Bilder und Grafiken beantwortest du hier im Chat, OHNE das Dokument zu ändern; passt es gut, frag am Ende in einem kurzen Satz, ob du es ins Dokument übernehmen sollst. Will der Nutzer eine Änderung am Dokument, schreib 1–2 kurze Sätze, was du ändern wirst, und setz ganz ans Ende eine eigene Zeile:
 [[ÄNDERN: genaue Anweisung, was im Dokument geändert werden soll]]
-Den neuen Dokument-Text schreibst du NICHT in den Chat – er wird danach automatisch erstellt, und der Nutzer muss die Änderung erst akzeptieren. Bei Fragen oder Erklärungen ohne Änderungswunsch: keine solche Zeile.
+Soll neuer Text ins Dokument (z. B. „schreib einen Text über …“), schreib diesen Text VOLLSTÄNDIG hier im Chat aus (der Nutzer will ihn lesen) und setz danach die [[ÄNDERN]]-Zeile (z. B. „Füge den Text oben aus dem Chat unter … ein“); der Nutzer akzeptiert die Änderung danach. Bei reinen Umbauten (kürzen, löschen, umstellen) reicht ein kurzer Satz, was du änderst.\nLIES DAS DOKUMENT GENAU: Nichts doppeln. Steht ein Thema schon drin, verbessere/ergänze genau diese Stelle, statt es noch einmal einzufügen; Überflüssiges, Falsches oder Doppeltes darfst du löschen oder umschreiben. Schick nie das ganze Dokument noch einmal neu hinein – beschreibe in [[ÄNDERN]] gezielt, was wo geändert, ersetzt oder gelöscht wird. Bei Fragen oder Erklärungen ohne Änderungswunsch: keine solche Zeile.
 Du kannst auch Blöcke wie in Notion einfügen: Aufgabenliste, Tabelle, Trennlinie, Hervorhebung, Bild (wird passend gesucht oder ein hochgeladenes Bild), Galerie, Video (wird auf YouTube gesucht oder per Link), Audio-Link, Website-Karte, Kalender mit Terminen, Zeit (Countdown, Zeitraum oder „seit“), Dashboard und Diagramme (Säulen, Balken, Linie, auch mehrere Datenreihen) und eine Karte (Landkarte mit einem Ort). Beschreibe in [[ÄNDERN: …]] genau, was hinein soll (z. B. „Säulendiagramm Lernzeit Mo–Fr: 2, 3, 1,5, 4, 2 Stunden“, „Karte: Brandenburger Tor, Berlin“, „hochgeladenes Bild 1 unter der Einleitung“).
 Soll etwas ins Dokument und passt ein Block klar besser als Text (Zahlen → Diagramm, Termine → Kalender, Frist → Zeit, Ort → Karte), nimm den Block. Bilder gelten wie im normalen Chat: nur wenn sie wirklich nötig sind oder der Nutzer eins möchte – dann hier im Chat als \`\`\`illustration-Block (im "prompt" genau beschreiben, welche Teile beschriftet werden sollen). Will der Nutzer ein Bild aus dem Internet bzw. ein echtes Bild („such ein Bild“, „nimm ein Bild aus dem Internet“), setze "source":"web" – dann wird ein passendes freies Bild gesucht statt eins zu erzeugen. Denk vorher still nach, ob überhaupt ein Bild nötig ist. Hervorhebungen können eine Farbe, deckend/transparent und eine Abrundung haben.
 Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B. welcher Ort, welche Werte, welches Datum), stell genau eine kurze Rückfrage und setz noch KEINE [[ÄNDERN]]-Zeile. Kannst du es sinnvoll selbst festlegen oder wurde nicht danach gefragt, mach es direkt.\n\nTitel: ${d.title || 'Unbenannt'}\nBeschreibung: ${d.subtitle || '–'}\n\nINHALT DES DOKUMENTS:\n${plain(d.content).replace(/\n{3,}/g, '\n\n').slice(0, 30000)}`;
@@ -1212,7 +1225,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
       try {
-        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: typeof EFFORTS !== 'undefined' ? EFFORTS[state.effort].toLowerCase() : 'auto', fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
+        const res = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages, model: (typeof state !== 'undefined' && state.model) || 'gemini', effort: dccEffort(), fast: typeof state !== 'undefined' ? state.fast : undefined, agent: a.dataset.dog, noClarify: true }), signal: ctrl.signal });
         if (!res.ok || !res.body) throw new Error('Die KI ist gerade nicht erreichbar.');
         for await (const { event, data } of readSse(res)) {
           if (event === 'thought' && !answer && !pic) think.thought(data.text);
@@ -1361,6 +1374,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         a?.classList.remove('doc-focus');
         a?.classList.toggle('collapsed', !!focusPrev?.collapsed);
         drawPane();
+        // sauberes Verlassen: Seite blendet weich ein, statt zu springen
+        view.classList.remove('focus-out'); void view.offsetWidth; view.classList.add('focus-out');
+        setTimeout(() => view.classList.remove('focus-out'), 460);
       }
       applyFocus();
     }

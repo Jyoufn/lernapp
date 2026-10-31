@@ -923,6 +923,7 @@ Besondere Blöcke (wie in Notion) – nutze sie, wenn der Nutzer sie verlangt, u
   · calendar – Kalender: {"events":[{"date":"JJJJ-MM-TT","title":"Termin","time":"HH:MM","end":"HH:MM"}]} (time/end optional)
   · time – Zeit: {"mode":"countdown|range|since","title":"…","start":"JJJJ-MM-TTTHH:MM","end":"JJJJ-MM-TTTHH:MM"}
 Bestehende Blöcke (data-blk, data-todo, data-callout, data-doclink) behältst du unverändert bei, wenn sie nicht geändert werden sollen.
+GEZIELT ÄNDERN: Lies das bestehende Dokument genau. Nichts doppeln – steht ein Thema schon drin, verbessere/ergänze genau diese Stelle statt es erneut einzufügen. Löschen, Kürzen, Ersetzen und Umstellen sind erlaubt, wenn die Anweisung es verlangt. Alles Übrige bleibt wörtlich unverändert.
 Antworte NUR mit JSON.`;
 const DOC_FORMAT = {
   create: 'Erstelle ein neues Dokument aus dem Gespräch nach der Anweisung. JSON: {"title": "kurzer Titel", "subtitle": "ein Satz Beschreibung", "html": "Inhalt", "reply": "ein kurzer Satz an den Nutzer, was du angelegt hast"}',
