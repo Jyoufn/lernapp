@@ -23,7 +23,7 @@ const Thinking = (() => {
     general: {
       start: F('Verstehen', 'Anfrage wird gelesen', 'read', 'think'),
       plan: F('Nachdenken', 'Anforderungen klären', 'think', 'think'),
-      material: F('Verstehen', 'Deine Dateien ansehen', 'read', 'cook'),
+      material: F('Verstehen', 'Dokumente analysieren', 'read', 'cook'),
       search: F('Recherchieren', 'Quellen suchen', 'search', 'cook'),
       gather: F('Recherchieren', 'Quellen analysieren', 'read', 'cook'),
       analyze: F('Analysieren', 'Informationen auswerten', 'check', 'cook'),
@@ -36,7 +36,7 @@ const Thinking = (() => {
     learn: {
       start: F('Verstehen', 'Lernziel verstehen', 'read', 'think'),
       plan: F('Verstehen', 'Frage analysieren', 'think', 'think'),
-      material: F('Kontext prüfen', 'Dokumente ansehen', 'read', 'book'),
+      material: F('Kontext prüfen', 'Dokumente analysieren', 'read', 'book'),
       search: F('Recherchieren', 'Lernquellen suchen', 'search', 'book'),
       gather: F('Recherchieren', 'Quellen analysieren', 'read', 'book'),
       analyze: F('Analysieren', 'Fachwissen prüfen', 'check', 'book'),
@@ -50,7 +50,7 @@ const Thinking = (() => {
       start: F('Recherche planen', 'Umfang festlegen', 'read', 'think'),
       plan: F('Recherche planen', 'Umfang festlegen', 'think', 'think'),
       strategy: F('Nachdenken', 'Vorgehen planen', 'think', 'think'),
-      material: F('Recherche planen', 'Deine Dateien ansehen', 'read', 'search'),
+      material: F('Recherche planen', 'Dokumente analysieren', 'read', 'search'),
       search: F('Quellen suchen', 'Im Web suchen', 'search', 'search'),
       web: F('Quellen suchen', 'Im Web suchen', 'search', 'search'),
       discover: F('Quellen suchen', 'Passende Quellen finden', 'read', 'search'),
@@ -69,7 +69,7 @@ const Thinking = (() => {
     boerse: {
       start: F('Verstehen', 'Anfrage verstehen', 'read', 'think'),
       plan: F('Verstehen', 'Anfrage verstehen', 'think', 'think'),
-      material: F('Depot-Analyse', 'Deine Dateien ansehen', 'read', 'news'),
+      material: F('Depot-Analyse', 'Dokumente analysieren', 'read', 'news'),
       extract: F('Depot-Analyse', 'Deine Käufe auslesen', 'read', 'news'),
       saveDepot: F('Depot-Analyse', 'Ins Depot eintragen', 'write', 'chartop'),
       depot: F('Depot-Analyse', 'Depot ansehen', 'read', 'news'),

@@ -1683,7 +1683,7 @@ const PENDING_DELAY = 700;    // „Working“-Hinweis, falls noch nichts zu seh
 const THINK_SHOW_DELAY = 900; // Thinking erst zeigen, wenn die Analyse nicht sofort fertig ist
 const THINK_HOLD_MS = 700;    // geschriebenes Vorgehen kurz stehen lassen, dann „Planned the answer“
 const STAGE_TEXT = {
-  material: 'Dein Material prüfen', // angehängte Fotos/PDFs: passt das Material zur Frage?
+  material: 'Dokumente analysieren', // angehängte Fotos/PDFs: Gemini liest sie (bzw. prüft, ob sie zur Frage passen)
   market: 'Kurse prüfen', // Börsen-Agent: Live-Kurse, Signale, Depot, Marktscan
   browsing: 'Quellen suchen',
   searching_sources: 'Quellen suchen',

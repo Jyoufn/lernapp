@@ -660,29 +660,22 @@ test('Material: Hinweis im System-Prompt ohne Rückfrage', () => {
 });
 
 // Material an der Frage, das nicht passt: „Analyzing your sources“ läuft, dann ganz normale Antwort (ohne Material-Hinweis, ohne Rückfrage)
-test('Material passt nicht → Prüfung sichtbar, dann normale Antwort ohne Rückfrage', async () => {
+test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokumente analysieren“, Bild mit Namensschild, nur Gemini', async () => {
   fx = M.installFetch([
-    { match: (c) => c.url.includes('generativelanguage') && c.url.includes(':generateContent'), respond: () => M.json({ candidates: [{ content: { parts: [{ text: '{"relevant":false,"shows":"eine Katze auf einem Sofa"}' }] } }] }) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Der demografische Wandel …'])) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Executing Task**\n\n', '## Aufgabe 1\n\nLösung …'])) },
   ]);
-  const r = await run({ messages: [{ role: 'user', text: 'Erkläre mir den demographischen Wandel', images: [{ mime: 'image/jpeg', data: 'AAAA' }] }], effort: 'low' });
-  assert.equal(r.text(), 'Der demografische Wandel …');
-  assert.ok(r.stages().includes('material:active') && r.stages().includes('material:done'), 'Stufe „Analyzing your sources“');
+  const r = await run({ messages: [{ role: 'user', text: 'Bearbeite auf Seite 34 Aufgabe 1', images: [{ mime: 'image/jpeg', data: 'AAAA', name: 's34.jpg' }] }], effort: 'auto' });
+  assert.equal(r.text(), '## Aufgabe 1\n\nLösung …', 'durchgerutschte Gedanken-Überschrift fällt weg');
+  const st = r.stages();
+  assert.ok(st.indexOf('material:active') < st.indexOf('answering:active'), 'erst Dokumente analysieren, dann schreiben');
+  assert.ok(!st.some((x) => x.startsWith('thinking:')), 'keine Planung ohne Bild');
+  assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent')).length, 0, 'kein Vorab-Check');
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.doesNotMatch(gen.body.systemInstruction.parts[0].text, /MATERIAL:/);
-  const check = fx.calls.find((c) => c.url.includes(':generateContent'));
-  assert.equal(check.body.contents[0].parts.find((p) => p.inline_data).inline_data.mime_type, 'image/jpeg', 'das Bild geht mit in die Prüfung');
-});
-
-test('Material passt → Antwort nur mit dem Material', async () => {
-  fx = M.installFetch([
-    { match: (c) => c.url.includes('generativelanguage') && c.url.includes(':generateContent'), respond: () => M.json({ candidates: [{ content: { parts: [{ text: '{"relevant":true,"shows":"Bevölkerungspyramide Deutschland"}' }] } }] }) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Die Pyramide zeigt …'])) },
-  ]);
-  const r = await run({ messages: [{ role: 'user', text: 'Erkläre mir den demographischen Wandel', images: [{ mime: 'image/jpeg', data: 'AAAA' }] }], effort: 'low' });
-  assert.equal(r.text(), 'Die Pyramide zeigt …');
-  const gen = fx.calls.find(M.is.geminiStream);
-  assert.match(gen.body.systemInstruction.parts[0].text, /NUR mit dem Material/);
+  assert.match(gen.body.systemInstruction.parts[0].text, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);
+  const parts = gen.body.contents.at(-1).parts;
+  assert.equal(parts[0].text, '[Datei 1: s34.jpg]');
+  assert.equal(parts[1].inline_data.mime_type, 'image/jpeg');
+  assert.ok(!gen.body.tools, 'keine Websuche dazwischen');
 });
 
 // Überschriften: bei gegliederten Antworten auch für den ersten Abschnitt; der Hinweis kommt nur bei mehreren Planpunkten
@@ -720,30 +713,21 @@ test('Überlastung (503): dasselbe Modell wird kurz danach noch einmal gefragt, 
   } finally { f.restore(); }
 });
 
-test('Research-Agent: Tiefen-Recherche statt einfacher Suche – Phasen gehen an die App, Quellenvergleich steht im Prompt', async () => {
+test('Research-Agent mit Gemini: Gemini recherchiert selbst (Google-Suche im Modell) statt eigener Tiefen-Recherche', async () => {
   const DEEP = require('../lib/deepresearch');
   const orig = DEEP.run;
-  DEEP.run = async ({ emit }) => {
-    emit({ phase: 'plan', done: true, subs: [{ id: 1, q: 'Was ist die Lichtreaktion?' }] });
-    emit({ phase: 'read', source: { n: 1, title: 'Lexikon', domain: 'bpb.de', url: 'https://bpb.de/a', subs: [1] } });
-    return { status: 'ok', subs: [{ id: 1, q: 'Was ist die Lichtreaktion?' }], counts: { queries: 3, found: 9, fetched: 3, failed: 0, evaluated: 3, used: 3, cited: 0 }, failures: [],
-      sources: [1, 2, 3].map((n) => ({ id: `s${n}`, n, title: `Quelle ${n}`, domain: `q${n}.de`, url: `https://q${n}.de`, type: 'web', text: `Text ${n} zur Lichtreaktion`, publisher: `q${n}.de` })),
-      comparison: { subs: [{ id: 1, claims: [{ claim: 'ATP entsteht in den Thylakoiden', sources: [1, 3], status: 'agree', note: '' }], gaps: [] }], quality: [], followUp: [], stats: { claims: 1, agree: 1, conflict: 0, single: 0, high: 0 } } };
-  };
+  let deepRan = false;
+  DEEP.run = async () => { deepRan = true; return { status: 'failed', sources: [] }; };
   fx = M.installFetch([
     { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
-    { match: M.is.verify, respond: () => M.nvidiaJson({ verdict: 'ok', issues: [] }) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['**Kurzfazit:** Licht wird zu ATP [1][3].'])) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Licht wird zu ATP.'])) },
   ]);
   try {
     const r = await run({ ...msg('Recherchiere gründlich: Wie funktioniert die Lichtreaktion?'), agent: 'research', effort: 'high' });
     assert.equal(r.result.status, 'completed');
-    assert.ok(r.of('deep').some((e) => e.phase === 'plan' && e.subs?.length === 1), 'Phasen kommen bei der App an');
-    const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
-    assert.match(sys, /TIEFEN-RECHERCHE: 3 Quellen gelesen und verglichen/);
-    assert.match(sys, /\[ÜBEREINSTIMMEND\] ATP entsteht in den Thylakoiden \(Quellen \[1\] \[3\]\)/);
-    assert.match(sys, /<quelle n="3"/);
-    assert.ok(r.of('research').some((e) => e.status === 'done' && e.sources.length === 3));
+    assert.equal(deepRan, false, 'keine eigene Tiefen-Recherche');
+    const gen = fx.calls.filter(M.is.geminiStream).pop();
+    assert.ok(JSON.stringify(gen.body.tools || []).includes('google_search'), 'Google-Suche im Modell an');
   } finally { DEEP.run = orig; }
 });
 

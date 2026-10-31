@@ -41,12 +41,18 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
 ## Material des Nutzers (hochgeladene Dateien) – verbindlich
-- ALLE Dateien einbeziehen: jede Datei kommt mit Namensschild „[Datei N: Name]“ an (`fileParts` in `lib/providers.js`); Prompt `MATERIAL_LOOK` verlangt, jede auszuwerten und bei wichtigen Aussagen die Datei zu nennen.
-- Keine feste Dateizahl mehr (früher 8 im Chat, 6 im Dokument-Chat), sondern Größenbudget je Anfrage (`fitMaterial` in `app.js`, Vercel ≤ 4,5 MB): neueste zuerst als echte Datei, passt ein PDF nicht mehr → sein im Gerät gelesener Text (pdf.js 3.11 von cdnjs, `pdfText`, max. 60 000 Zeichen je PDF). Was gar nicht passt → `materialDropped`, die KI sagt es in einem Satz.
-- Ersatzmodelle (Groq/OpenRouter) bekommen den PDF-Text statt „kann PDFs nicht lesen“; Fotos dort nur als Hinweis (keine Bildmodelle).
-- Keine Rückfrage bei angehängtem Material (die Planung sieht die Bilder nicht → fragte sonst „welches Fach?“): frisches Material → `clarify` leer; älteres Material → Fragen nach Fach/Thema/Klasse fallen weg.
-- Material an DIESER Frage: kein vorgegebener Plan (Planung sieht die Bilder nicht → `points`/`approach` leer), Nachdenken an; Gemini liest die Aufgaben selbst. Prompt „AUFGABEN AUS DEM MATERIAL“: Aufgaben + Operator still finden, Lösung nach „## Aufgabe N“, keine Analyse-/Vorgehens-Abschnitte, keine Wiederholung des Materials.
-- Bezieht sich die Frage auf die Dateien (`SOURCE_REF`: Quelle, PDF, Datei, Material, „laut dem …“ …) → Modus `first`: Antwort AUS dem Material, keine Websuche dazwischen (außer ausdrücklich gewünscht). Frisches Material ohne passende Prüfung: trotzdem zuerst prüfen und nutzen.
+- **Bild/PDF an DIESER Frage (`materialMode`)**: Gemini arbeitet selbst. KEIN Planungs-Aufruf, KEIN Vorab-Check (beide sahen die Bilder nicht und haben geraten → falsche Aufgabe), keine Websuche. Aufwand = gewählte Stufe (Auto → High), Nachdenken an (außer Low). Zeitleiste: „Dokumente analysieren“ läuft, solange Gemini liest/denkt, mit dem ersten Antworttext „Antwort schreiben“.
+- Prompt `MATERIAL_PROMPT({only:'solo'})` + `MATERIAL_LOOK`: genau die genannte Seite/Aufgabe im Material suchen (nie eine andere oder ähnliche aus dem Gedächtnis), Operator lesen, Lösung je „## Aufgabe N“, keine Analyse-/Vorgehens-Abschnitte. Fehlt etwas im Material → ein Satz + gesichertes Schulwissen kenntlich. Rückfrage (```ask) NUR bei wirklich unklarer Aufgabenstellung, nie nach Fach/Klasse/Thema.
+- **Nur Gemini, sobald Material im Verlauf ist** (`geminiOnly`): Groq/OpenRouter sehen keine Bilder und haben sonst eine andere Aufgabe erfunden. Auch abkühlende Gemini-Modelle/Schlüssel kommen als letzte Chance dran.
+- ALLE Dateien einbeziehen: Namensschild „[Datei N: Name]“ (`fileParts`), Größenbudget statt Dateizahl (`fitMaterial` in `app.js`, Vercel ≤ 4,5 MB; PDF passt nicht → im Gerät gelesener Text via pdf.js 3.11, max. 60 000 Zeichen); was gar nicht passt → `materialDropped`, die KI sagt es.
+- Älteres Material (frühere Nachrichten): Bezug auf die Dateien (`SOURCE_REF`) → Modus `first` (aus dem Material, keine Websuche); Rückfragen nach Fach/Thema/Klasse fallen weg.
+- Antwort-Wächter (`lib/thoughts.js`): ein ganzer Absatz „**Executing Task**“/„**Task Analysis Confirmed**“ (englische Gedanken-Überschrift) am Anfang einer deutschen Antwort fällt weg.
+
+## Gedanken
+- Gezeigt werden Geminis eigene Gedanken-Abschnitte (Überschrift + Text), treu ins Deutsche übersetzt (EIN Aufruf je Antwort), nicht umgedeutet. Weg fallen nur reine Formatierungs-Abschnitte (Markdown, Ton, Aufbau der Antwort).
+
+## Recherche
+- Research-Agent (mit Gemini): Gemini recherchiert selbst (Google-Suche im Modell), keine eigene Tiefen-Recherche. Lernen/Allgemein behalten die eigene Suche (deutsche Fachquellen, Relevanz-Prüfung).
 
 ## Quellen
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
@@ -78,7 +84,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 
 ## Regeln im Prompt (Auswahl)
 - Prompts, E-Mails, Nachrichten, Briefe zum Weiterverwenden → Block ```kopie (ohne Titelzeile; E-Mail: „Betreff: …“ zuerst) → Kopier-Kasten ohne Kopf/Trennstrich, Betreff abgesetzt, „Kopieren“ oben rechts (`copyFigure` in `app.js`). Ein kurzer Einleitungssatz steht davor im Text.
-- Bildbitte mit Fotos/PDF: Reihenfolge strikt „Deine Dateien ansehen“ → „Bild erzeugen“ (`picWaitsForFiles`); kommt der Bild-Block mitten im Text, startet der Bild-Schritt + Malen sofort.
+- Bildbitte mit Fotos/PDF: Reihenfolge strikt „Dokumente analysieren“ → „Bild erzeugen“ (`picWaitsForFiles`); kommt der Bild-Block mitten im Text, startet der Bild-Schritt + Malen sofort.
 - Stichpunkte sind erlaubt, wo sie passen (gemischt mit Fließtext) – nicht alles Fließtext, nicht alles Stichpunkte.
 - Bei Diagramm-Wünschen nie nach der Form fragen (Typ wählt `bestType`: Zeitverlauf → Linie, sonst Ring).
 - Nie Code zum Selberzeichnen (matplotlib o. Ä.); Diagramme/Zeitstrahl/Mindmap nur als Block. Mindmap nur Stichpunkte, Zeitstrahl ohne Limit, keine `source`-Felder.
