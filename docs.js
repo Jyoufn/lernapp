@@ -898,7 +898,64 @@ const Docs = (() => {
        Karte mit Akzeptieren / Ablehnen. Erst beim Akzeptieren wird geändert, vorher wird ein Checkpoint gemerkt. */
     const WANTS_EDIT = /(füg\w*\s.*(ein|hinzu|dazu)|einfüg|einbau|hinzufüg|ins dokument|in das dokument|in mein dokument|übernimm|übernehm|ergänz|änder|umschreib|schreib\w*\s.*(rein|dazu|ins)|pack\w*\s.*(rein|dazu|ins)|nimm\w*\s.*(rein|auf)|kürz|korrigier|ersetz|lösch|entfern|umstell|formatier)/i;
     const EDIT_MARK = /\[\[\s*ÄNDERN\s*:\s*([\s\S]*?)\s*(?:\]\]|$)/i;
-    const visible = (t) => t.replace(/\[\[\s*ÄNDERN\s*:[\s\S]*?(?:\]\]|$)/gi, '').replace(/\[\[?[A-ZÄÖÜ]{0,6}$/i, '').trimEnd();
+    const OP_LINE = /^[ \t]*\[\[\s*(EINFÜGEN|ERSETZEN|LÖSCHEN|TITEL|ENDE)\b[^\]\n]*(?:\]\]|$)[ \t]*$/gim;
+    const visible = (t) => t.replace(/\[\[\s*ÄNDERN\s*:[\s\S]*?(?:\]\]|$)/gi, '').replace(OP_LINE, '').replace(/\n{3,}/g, '\n\n').replace(/\[\[?[A-ZÄÖÜ]{0,9}$/i, '').trimEnd();
+    /* Änderungen direkt aus der Chat-Antwort (kein zweiter KI-Aufruf): die KI schreibt den Text sichtbar in den Chat zwischen Markierungen,
+       die App setzt GENAU diesen Text ein. [[EINFÜGEN: nach „X“ | vor „X“ | unter „X“ | am Anfang | am Ende]] … [[ENDE]],
+       [[ERSETZEN: „X“]] … [[ENDE]] (X = Überschrift → ganzer Abschnitt, sonst der Absatz), [[LÖSCHEN: „X“]], [[TITEL: neuer Titel]] */
+    function parseOps(t) {
+      const ops = [], re = /\[\[\s*(EINFÜGEN|ERSETZEN|LÖSCHEN|TITEL)\s*:?\s*([^\]\n]*)\]\]/gi;
+      let m;
+      while ((m = re.exec(t))) {
+        const kind = m[1].toUpperCase(), arg = m[2].trim();
+        if (kind === 'LÖSCHEN' || kind === 'TITEL') { ops.push({ kind, arg }); continue; }
+        const rest = t.slice(re.lastIndex), end = rest.search(/\[\[\s*(ENDE|EINFÜGEN|ERSETZEN|LÖSCHEN|TITEL)\b/i);
+        const md = (end < 0 ? rest : rest.slice(0, end)).replace(/^\s*\n/, '').trim();
+        if (md) ops.push({ kind, arg, md });
+      }
+      return ops;
+    }
+    // Markdown → Dokument-HTML (marked, falls geladen; sonst einfacher Ersatz für Überschriften, Listen, Absätze, Fettdruck)
+    const mdLite = (md) => { const out = []; let list = null; const inl = (x) => esc(x).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/(^|\W)\*(.+?)\*(?=\W|$)/g, '$1<i>$2</i>');
+      const close = () => { if (list) { out.push(`</${list}>`); list = null; } };
+      md.split('\n').forEach((ln) => { const h = /^(#{1,4})\s+(.*)$/.exec(ln), li = /^\s*(?:[-*•]|(\d+)[.)])\s+(.*)$/.exec(ln);
+        if (h) { close(); out.push(`<h${Math.max(2, h[1].length)}>${inl(h[2])}</h${Math.max(2, h[1].length)}>`); }
+        else if (li) { const k = li[1] ? 'ol' : 'ul'; if (list !== k) { close(); out.push(`<${k}>`); list = k; } out.push(`<li>${inl(li[2])}</li>`); }
+        else if (!ln.trim()) close(); else { close(); out.push(`<p>${inl(ln)}</p>`); } });
+      close(); return out.join(''); };
+    const mdHtml = (md) => { try { if (window.marked && window.DOMPurify) return window.DOMPurify.sanitize(window.marked.parse(md, { gfm: true, breaks: false })); } catch {} return mdLite(md); };
+    function applyOps(html, ops) {
+      const box = document.createElement('div'); box.innerHTML = html || '';
+      const notes = []; let title = '';
+      const norm = (x) => String(x || '').toLowerCase().replace(/[„“"'»«‚‘]/g, '').replace(/^(nach|vor|unter|abschnitt|überschrift)\s+/, '').replace(/\s+/g, ' ').trim();
+      const isH = (n) => /^H[1-4]$/.test(n.tagName);
+      const find = (anchor) => {
+        const a = norm(anchor); if (!a) return null; const kids = [...box.children];
+        return kids.find((k) => isH(k) && norm(k.textContent) === a) || kids.find((k) => isH(k) && norm(k.textContent).includes(a))
+          || kids.find((k) => norm(k.textContent).startsWith(a.slice(0, 60))) || kids.find((k) => norm(k.textContent).includes(a.slice(0, 60))) || null;
+      };
+      const section = (n) => { const out = [n]; if (!isH(n)) return out; const lv = +n.tagName[1]; let x = n.nextElementSibling; while (x && !(isH(x) && +x.tagName[1] <= lv)) { out.push(x); x = x.nextElementSibling; } return out; };
+      const nodes = (md) => { const t = document.createElement('div'); t.innerHTML = mdHtml(md); return [...t.childNodes]; };
+      for (const op of ops) {
+        if (op.kind === 'TITEL') { title = op.arg.replace(/^[„“"]|[„“"]$/g, '').trim(); continue; }
+        if (op.kind === 'LÖSCHEN') { const n = find(op.arg); if (n) section(n).forEach((x) => x.remove()); else notes.push(`„${op.arg}“ nicht gefunden`); continue; }
+        if (op.kind === 'ERSETZEN') {
+          const n = find(op.arg);
+          if (n) { const sec = section(n); sec[sec.length - 1].after(...nodes(op.md)); sec.forEach((x) => x.remove()); }
+          else { box.append(...nodes(op.md)); notes.push(`„${op.arg}“ nicht gefunden – am Ende eingefügt`); }
+          continue;
+        }
+        // EINFÜGEN
+        const where = op.arg.toLowerCase();
+        if (/anfang|oben|beginn/.test(where) && !/[„“"]/.test(op.arg)) { box.prepend(...nodes(op.md)); continue; }
+        const quoted = (/[„“"]([^„“"]+)[„“"]/.exec(op.arg) || [])[1] || op.arg.replace(/^(nach|vor|unter|hinter|am ende von|ende von)\s+/i, '');
+        const n = /ende/.test(where) && !/[„“"]/.test(op.arg) ? null : find(quoted);
+        if (!n) { box.append(...nodes(op.md)); continue; }
+        if (/^\s*vor\b/i.test(op.arg)) n.before(...nodes(op.md));
+        else { const sec = section(n); sec[sec.length - 1].after(...nodes(op.md)); }
+      }
+      return { html: box.innerHTML, title, notes };
+    }
     const words = (h) => plain(h || '').split(/\s+/).filter(Boolean).length;
     const diffStat = (a, b) => { const n = words(b) - words(a); return n ? `${n > 0 ? '+' : '−'}${Math.abs(n)} Wörter` : 'gleich lang'; };
     const EDIT_HEAD = { work: 'Änderung wird vorbereitet …', pending: 'Änderung am Dokument', accepted: 'Änderung übernommen', rejected: 'Änderung abgelehnt', restored: 'Checkpoint wiederhergestellt', fail: 'Änderung hat nicht geklappt' };
@@ -1210,11 +1267,20 @@ const Docs = (() => {
       list.scrollTop = list.scrollHeight;
       const context = `Du hilfst bei genau einem Dokument aus der Lern-App – mit denselben Fähigkeiten wie im normalen Chat (Erklären, Rückfragen, Diagramme, Bilder, Recherche). Beziehe dich zuerst und so oft wie möglich auf das Dokument. Steht etwas nicht darin, ergänze mit gesichertem Fachwissen bzw. vertrauenswürdigen Quellen und sag kurz, dass es nicht aus dem Dokument stammt. Rückfragen (nur wenn wirklich nötig) als ask-Block mit kurzen Antwortmöglichkeiten.
 Du kannst das Dokument auch ändern (ergänzen, umschreiben, kürzen, umstellen, Abschnitte oder Tabellen hinzufügen, Fehler korrigieren, Titel ändern) – aber NUR, wenn der Nutzer das ausdrücklich will (z. B. „füg das ein“, „pack das ins Dokument“, „schreib das rein“, „ändere/ergänze/kürze …“). Fragen, Erklärungen, Ideen, Bilder und Grafiken beantwortest du hier im Chat, OHNE das Dokument zu ändern; passt es gut, frag am Ende in einem kurzen Satz, ob du es ins Dokument übernehmen sollst. Will der Nutzer eine Änderung am Dokument, schreib 1–2 kurze Sätze, was du ändern wirst, und setz ganz ans Ende eine eigene Zeile:
-[[ÄNDERN: genaue Anweisung, was im Dokument geändert werden soll]]
-Soll neuer Text ins Dokument (z. B. „schreib einen Text über …“), schreib diesen Text VOLLSTÄNDIG hier im Chat aus (der Nutzer will ihn lesen) und setz danach die [[ÄNDERN]]-Zeile (z. B. „Füge den Text oben aus dem Chat unter … ein“); der Nutzer akzeptiert die Änderung danach. Bei reinen Umbauten (kürzen, löschen, umstellen) reicht ein kurzer Satz, was du änderst.\nLIES DAS DOKUMENT GENAU: Nichts doppeln. Steht ein Thema schon drin, verbessere/ergänze genau diese Stelle, statt es noch einmal einzufügen; Überflüssiges, Falsches oder Doppeltes darfst du löschen oder umschreiben. Schick nie das ganze Dokument noch einmal neu hinein – beschreibe in [[ÄNDERN]] gezielt, was wo geändert, ersetzt oder gelöscht wird. Bei Fragen oder Erklärungen ohne Änderungswunsch: keine solche Zeile.
+SO ÄNDERST DU DAS DOKUMENT: Schreib den neuen Text VOLLSTÄNDIG hier im Chat (der Nutzer liest ihn) – zwischen Markierungen, die App setzt GENAU diesen Text ein (Markdown: ## Überschriften, Listen, Tabellen):
+[[EINFÜGEN: nach „Überschrift“]] (oder: vor „…“, unter „…“, am Anfang, am Ende)
+…neuer Text…
+[[ENDE]]
+[[ERSETZEN: „Überschrift oder Anfang des Absatzes“]] – ersetzt den ganzen Abschnitt bzw. Absatz
+…verbesserter Text…
+[[ENDE]]
+[[LÖSCHEN: „Überschrift oder Anfang des Absatzes“]] · [[TITEL: neuer Titel]]
+Mehrere Markierungen hintereinander sind erlaubt. Die Stelle („…“) wörtlich aus dem Dokument übernehmen. Vor den Markierungen höchstens ein kurzer Satz, was du änderst.
+LIES DAS DOKUMENT GENAU: Nichts doppeln. Steht ein Thema schon drin, verbessere genau diese Stelle mit ERSETZEN, statt es noch einmal einzufügen; Überflüssiges, Falsches oder Doppeltes darfst du mit LÖSCHEN entfernen. Schick nie das ganze Dokument noch einmal.
+Nur wenn das ganze Dokument umgebaut werden soll (alles umstellen/neu gliedern), stattdessen eine Zeile: [[ÄNDERN: genaue Anweisung]].
 Du kannst auch Blöcke wie in Notion einfügen: Aufgabenliste, Tabelle, Trennlinie, Hervorhebung, Bild (wird passend gesucht oder ein hochgeladenes Bild), Galerie, Video (wird auf YouTube gesucht oder per Link), Audio-Link, Website-Karte, Kalender mit Terminen, Zeit (Countdown, Zeitraum oder „seit“), Dashboard und Diagramme (Säulen, Balken, Linie, auch mehrere Datenreihen) und eine Karte (Landkarte mit einem Ort). Beschreibe in [[ÄNDERN: …]] genau, was hinein soll (z. B. „Säulendiagramm Lernzeit Mo–Fr: 2, 3, 1,5, 4, 2 Stunden“, „Karte: Brandenburger Tor, Berlin“, „hochgeladenes Bild 1 unter der Einleitung“).
 Soll etwas ins Dokument und passt ein Block klar besser als Text (Zahlen → Diagramm, Termine → Kalender, Frist → Zeit, Ort → Karte), nimm den Block. Bilder gelten wie im normalen Chat: nur wenn sie wirklich nötig sind oder der Nutzer eins möchte – dann hier im Chat als \`\`\`illustration-Block (im "prompt" genau beschreiben, welche Teile beschriftet werden sollen). Will der Nutzer ein Bild aus dem Internet bzw. ein echtes Bild („such ein Bild“, „nimm ein Bild aus dem Internet“), setze "source":"web" – dann wird ein passendes freies Bild gesucht statt eins zu erzeugen. Denk vorher still nach, ob überhaupt ein Bild nötig ist. Hervorhebungen können eine Farbe, deckend/transparent und eine Abrundung haben.
-Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B. welcher Ort, welche Werte, welches Datum), stell genau eine kurze Rückfrage und setz noch KEINE [[ÄNDERN]]-Zeile. Kannst du es sinnvoll selbst festlegen oder wurde nicht danach gefragt, mach es direkt.\n\nTitel: ${d.title || 'Unbenannt'}\nBeschreibung: ${d.subtitle || '–'}\n\nINHALT DES DOKUMENTS:\n${plain(d.content).replace(/\n{3,}/g, '\n\n').slice(0, 30000)}`;
+Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B. welcher Ort, welche Werte, welches Datum), stell genau eine kurze Rückfrage und setz noch KEINE Markierung. Kannst du es sinnvoll selbst festlegen oder wurde nicht danach gefragt, mach es direkt.\n\nTitel: ${d.title || 'Unbenannt'}\nBeschreibung: ${d.subtitle || '–'}\n\nINHALT DES DOKUMENTS:\n${plain(d.content).replace(/\n{3,}/g, '\n\n').slice(0, 30000)}`;
       // nur Rolle und Text schicken (Checkpoints und Vorschläge bleiben hier)
       const recent = chat.messages.slice(-12).map((m) => ({ role: m.role, text: m.text + (m.edit ? `\n\n(Vorgeschlagene Änderung: ${EDIT_HEAD[m.edit.state] || ''})` : '') }));
       // Anhänge der letzten eigenen Nachrichten mitschicken (wie im Haupt-Chat) – auch beim Neu erzeugen und bei Nachfragen
@@ -1226,7 +1292,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const imgs = (k === lastMsgs.length - 1 && images.length ? images : await imagesOf(m)).slice(0, budget);
         if (imgs.length) { recent[k] = { ...recent[k], images: imgs }; budget -= imgs.length; }
       }
-      const messages = [{ role: 'user', text: context }, { role: 'assistant', text: 'Verstanden – ich beziehe mich nur auf dieses Dokument und schlage Änderungen mit [[ÄNDERN: …]] vor.' }, ...recent];
+      const messages = [{ role: 'user', text: context }, { role: 'assistant', text: 'Verstanden – ich beziehe mich nur auf dieses Dokument und schreibe Änderungen direkt hier mit [[EINFÜGEN …]] / [[ERSETZEN …]] / [[LÖSCHEN …]] … [[ENDE]].' }, ...recent];
       const ctrl = new AbortController(); dccRun = ctrl;
       p.querySelector('.dcc-send')?.classList.add('stop');
       let answer = '';
@@ -1259,7 +1325,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           // Die KI vergisst die [[ÄNDERN]]-Zeile manchmal, obwohl ausdrücklich eine Änderung gewünscht war („füg das ein“) –
           // dann gilt die Frage selbst als Anweisung, damit die Änderung trotzdem kommt (der Nutzer muss sie ja noch akzeptieren)
           const lastQ = [...chat.messages].reverse().find((x) => x.role === 'user')?.text || '';
-          const instruction = mk?.[1]?.trim() || (WANTS_EDIT.test(lastQ) && !window.parseAskBlock?.(answer)?.length ? lastQ : '');
+          const ops = parseOps(answer);
+          const instruction = ops.length ? '' : mk?.[1]?.trim() || (WANTS_EDIT.test(lastQ) && !window.parseAskBlock?.(answer)?.length && !/\[\[/.test(answer) ? lastQ : '');
+          if (ops.length) { // Text steht schon im Chat → direkt als Vorschlag zum Akzeptieren (kein zweiter KI-Aufruf)
+            const r = applyOps(d.content || '', ops);
+            const what = ops.map((o) => ({ EINFÜGEN: 'Text eingefügt', ERSETZEN: 'Abschnitt ersetzt', LÖSCHEN: 'Abschnitt gelöscht', TITEL: 'Titel geändert' }[o.kind]));
+            m.edit = { id: newId('e'), docId: d.id, state: 'pending', html: fillUploads(r.html, images.map((x) => (typeof x === 'string' ? x : `data:${x.mime};base64,${x.data}`))), title: r.title, instruction: r.title ? 'Titel ändern' : 'direkt',
+              summary: [...new Set(what)].join(', ') + (r.notes.length ? ` (${r.notes.join('; ')})` : ''), stat: diffStat(d.content, r.html) };
+          }
           if (instruction) {
             m.edit = { id: newId('e'), docId: d.id, state: 'work', instruction: instruction.slice(0, 2000) };
             const ups = [...images, ...chat.messages.slice(-6).flatMap((x) => editUploads.get(x) || [])].map((x) => (typeof x === 'string' ? x : `data:${x.mime};base64,${x.data}`));
@@ -1268,7 +1341,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           chat.messages = [...chat.messages, m].slice(-40); chat.updated = Date.now(); save();
           if (!noAsk(m.text)) body.remove();
           msgEls.set(m, a); fillMsg(a, m); list.scrollTop = list.scrollHeight;
-          if (m.edit) runEdit(m);
+          if (m.edit?.state === 'work') runEdit(m); // nur der Umbau-Fall ([[ÄNDERN]]) braucht den zweiten Aufruf
         } else if (!a.querySelector('.dcc-err')) a.remove();
       }
     }
