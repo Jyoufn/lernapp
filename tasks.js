@@ -96,6 +96,17 @@ const Tasks = (() => {
   const COLS = cols ? ALL_COLS.filter((c) => cols.includes(c.id)) : ALL_COLS;
   const hasCol = (id) => COLS.some((c) => c.id === id);
   let tasks = store.load() || [];
+  // Erledigte Aufgaben verschwinden einen Tag nach dem Abhaken komplett (alte ohne Zeitstempel: ab jetzt gezählt)
+  const DONE_KEEP_MS = 24 * 60 * 60 * 1000;
+  function purgeDone() {
+    let changed = false;
+    tasks.forEach((t) => { if (t.status === 'done' && !t.doneAt) { t.doneAt = Date.now(); changed = true; } });
+    const keep = tasks.filter((t) => !(t.status === 'done' && !t.repeat && Date.now() - t.doneAt > DONE_KEEP_MS));
+    if (keep.length !== tasks.length) { tasks = keep; changed = true; }
+    if (changed) store.save?.(tasks);
+    return changed;
+  }
+  purgeDone();
   tasks.forEach((t) => { if (!Array.isArray(t.tags)) t.tags = t.tag ? [t.tag] : []; delete t.tag; if (!COLS.some((c) => c.id === t.status)) t.status = COLS.some((c) => c.id === 'doing') ? 'doing' : COLS[0].id; });
   const save = () => { store.save(tasks); saveTags(); };
   const filter = { q: '', tags: new Set(), prios: new Set(), due: '' };
@@ -271,6 +282,7 @@ const Tasks = (() => {
       { duration: open ? 320 : 160, delay: open ? 60 : 0, easing: open ? ease : 'ease-out', fill: 'backwards' });
   }
   function renderList() {
+    purgeDone(); // auch bei offener App: nach einem Tag weg
     const open = tasks.filter((t) => t.status !== 'done' && matches(t));
     const done = tasks.filter((t) => t.status === 'done' && matches(t)).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
     const sortOpen = (a, b) => (a.date || '9999').localeCompare(b.date || '9999') || PRIO_RANK[a.prio || 'none'] - PRIO_RANK[b.prio || 'none'] || (a.order ?? 0) - (b.order ?? 0);
@@ -941,6 +953,7 @@ const Tasks = (() => {
           if (t.status !== 'done' && hasCol('review')) { t.status = 'review'; t.order = -1; }
           if (listMode && t.status !== 'done' && !t.repeat) { t.status = 'done'; t.doneAt = Date.now(); justDone.add(t.id); } // Liste: der Agent hakt die Aufgabe selbst ab
           t.progress = 100;
+          if (s.docId) window.Docs?.sync?.(); // neues Dokument sofort in Sidebar und Bibliothek – nicht erst beim Öffnen
           t.comments = [...(t.comments || []), { text: `${AGENT_NAMES[t.agent] || 'Agent'}: fertig – ${t.output === 'doc' ? 'Dokument' : 'Chat'} „${s.title || t.title}“ ist bereit.`, at: s.finished || Date.now() }];
         }
         changed = true;

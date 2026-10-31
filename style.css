@@ -9276,3 +9276,36 @@ div.tl4-h { cursor: default; }
 .tk-src-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tk-src-link button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--text-4); cursor: pointer; }
 .tk-src-link button:hover { color: var(--text); }
+
+/* Aufgaben (31.10.): Antippen von „Erledigt“ (Kopf und Haken) leuchtet nicht mehr hell auf – kein Tap-Highlight,
+   kein klebender Hover auf dem iPad, kein Fokusrand, nichts schrumpft */
+.tk-grp-head, .tk-ck, .tk-row { -webkit-tap-highlight-color: transparent; }
+.tk-grp-head:focus, .tk-grp-head:focus-visible, .tk-ck:focus, .tk-ck:focus-visible { outline: none; }
+.tk-ck:active { transform: none; }
+@media (hover: none) {
+  .tk-grp.g-done .tk-grp-head:hover { background: none; }
+  .tk-ck:not(.s-done):hover { border-color: #4f4f4f; }
+}
+
+/* Projekt bearbeiten (31.10.): Name, Farbe, Icon; unten „Aus Dokument entfernen“ und „Projekt löschen“ (rot transparent) */
+.dc-pj-acts { display: flex; align-items: center; gap: 6px; margin: 6px 4px 4px; }
+.dc-pj-acts .grow { flex: 1; }
+.dc-pj-acts button { height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: none; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.dc-pj-acts button:hover { color: var(--text); }
+.dc-pj-acts button.danger { background: rgba(239, 107, 95, 0.12); color: #f07a6e; }
+.dc-pj-acts button.danger:hover { background: rgba(239, 107, 95, 0.18); color: #f07a6e; }
+.dc-proj-list .tk-mi .tk-tag-pen { margin-left: auto; }
+
+/* Sidebar „Dokumente“ (31.10.): Projekte als Ordner – Icon in Projektfarbe + Name, rechts kleiner Pfeil; aufgeklappt stehen die
+   Dokumente etwas nach rechts eingerückt darunter (weiches Auf-/Zuklappen über die Höhe) */
+.sbp-head { position: relative; }
+.sbp-ic { display: inline-grid; place-items: center; flex: none; width: 15px; height: 15px; }
+.sbp-chev { display: inline-grid; place-items: center; margin-left: auto; color: var(--text-4); opacity: 0; transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), opacity 120ms ease; }
+.sbp-head:hover .sbp-chev, .sbp.open .sbp-chev { opacity: 1; }
+.sbp.open .sbp-chev { transform: rotate(90deg); }
+@media (hover: none) { .sbp-chev { opacity: 1; } }
+.sbp-kids { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 300ms cubic-bezier(0.32, 0.72, 0, 1); }
+.sbp.open .sbp-kids { grid-template-rows: 1fr; }
+.sbp-in { min-height: 0; overflow: hidden; padding-left: 14px; opacity: 0; transition: opacity 200ms ease; }
+.sbp.open .sbp-in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .sbp-kids, .sbp-in, .sbp-chev { transition: none; } }

@@ -555,11 +555,17 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   function renderSide() {
-    const loose = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated).slice(0, 6);
-    side.hidden = !loose.length; // ohne Dokumente keine leere Überschrift
+    const mine = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated);
+    const link = (d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : '<svg width="15" height="15"><use href="#o-doc"/></svg>'}<span>${esc(d.title || 'Unbenannt')}</span></a>`;
+    // Projekte als Ordner (Icon in Projektfarbe + Name, ein-/ausklappbar), darin die Dokumente etwas eingerückt; danach Dokumente ohne Projekt
+    const folders = projects.map((p) => ({ p, list: mine.filter((d) => d.projectId === p.id) })).filter((f) => f.list.length)
+      .sort((a, b) => b.list[0].updated - a.list[0].updated);
+    const loose = mine.filter((d) => !d.projectId || !projOf(d.projectId)).slice(0, 6);
+    side.hidden = !loose.length && !folders.length; // ohne Dokumente keine leere Überschrift
     side.innerHTML = (window.sbSectionHead?.('Dokumente', 'docs') || '<div class="section-label">Dokumente</div>')
-      // Projekt-Ordner stehen nicht in der Seitenleiste (nur in der Bibliothek); Dokumente ohne Projekt mit eigenem Icon oder Linien-Icon
-      + `<div class="sb-sec-body"><div class="sb-sec-in">${loose.map((d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : '<svg width="15" height="15"><use href="#o-doc"/></svg>'}<span>${esc(d.title || 'Unbenannt')}</span></a>`).join('')}</div></div>`;
+      + `<div class="sb-sec-body"><div class="sb-sec-in">${folders.map(({ p, list: l }) => `<div class="dc-proj sbp${open$.has(p.id) ? ' open' : ''}" data-proj="${p.id}">
+          <a class="nav-item sbp-head" href="#" data-side="toggle"><span class="sbp-ic" style="color:${esc(p.c)}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'folder', 15)}</span><span>${esc(p.name)}</span><span class="sbp-chev">${fi('chevron-right', 10)}</span></a>
+          <div class="sbp-kids"><div class="sbp-in">${l.slice(0, 12).map(link).join('')}</div></div></div>`).join('')}${loose.map(link).join('')}</div></div>`;
     if (side.querySelector('.dc-newp')) side.querySelector('.dc-newp input').focus();
     window.dispatchEvent(new Event('docs-changed'));
   }
@@ -1627,9 +1633,17 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen mit nächster Farbe
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen – wie bei den Tags: erst der Name, dann Icon und Farbe
     // Neues Projekt: erst der Name, dann die Farbe antippen, danach das Icon (in dieser Farbe) – das Icon legt das Projekt an
-    let projNew = '', projIcon = 'folder', projColor = '';
+    let projNew = '', projIcon = 'folder', projColor = '', projEdit = ''; // projEdit: ID des Projekts, das gerade bearbeitet wird
     function drawMetaProj() {
       const list = view.querySelector('.dc-proj-list'), inp = view.querySelector('.dc-proj-in'); if (!list) return;
+      const ed = projEdit && projOf(projEdit);
+      if (ed) { // Projekt bearbeiten: Name, Farbe, Icon (in der Farbe), aus dem Dokument nehmen, löschen
+        list.innerHTML = `<span class="tk-tag-new-l">Name</span><span class="tk-tag-row"><input class="tk-tag-in dc-pj-name" value="${esc(ed.name)}" maxlength="40" aria-label="Projektname" /></span>
+          <span class="tk-tag-new-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-pjecolor')}
+          <span class="tk-tag-new-l">Icon</span><span class="dc-pj-icons" style="color:${esc(ed.c)}">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic${n === ed.icon ? ' on' : ''}" data-pjeicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>
+          <span class="dc-pj-acts">${doc.projectId === ed.id ? '<button type="button" data-pjout>Aus Dokument entfernen</button>' : ''}<span class="grow"></span><button type="button" class="danger" data-pjdel>Projekt löschen</button></span>`;
+        return;
+      }
       if (projNew && !projColor) {
         list.innerHTML = `<span class="tk-tag-new-l">Farbe für „${esc(projNew)}“</span>${UIKit.colorRow('', 'data-pjcolor')}`;
         return;
@@ -1644,7 +1658,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
       list.innerHTML = (q && !exact ? `<span class="tk-mi dc-pj-add" data-mproj-new role="button" tabindex="0"><span>„${esc(q)}“ anlegen</span></span>` : '')
-        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-pjedit="${p.id}" aria-label="Projekt bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
@@ -1663,7 +1677,22 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       drawProj();
       const pop = box.querySelector('.dc-ppop'), inp = box.querySelector('.dc-proj-in');
       box.addEventListener('click', (e) => {
-        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
+        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; projEdit = doc.projectId && projOf(doc.projectId) ? doc.projectId : ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
+        const pe = e.target.closest('[data-pjedit]'); if (pe) { e.stopPropagation(); projEdit = pe.dataset.pjedit; drawMetaProj(); return; }
+        if (projEdit) {
+          const ed = projOf(projEdit);
+          const after = () => { save(); drawProj(); renderSide(); if (list.open) list.render(); };
+          const ec = e.target.closest('[data-pjecolor]'); if (ec && ed) { ed.c = ec.dataset.pjecolor; after(); drawMetaProj(); return; }
+          const ei = e.target.closest('[data-pjeicon]'); if (ei && ed) { ed.icon = ei.dataset.pjeicon; delete ed.line; after(); box.querySelectorAll('.dc-pj-ic').forEach((x) => x.classList.toggle('on', x === ei)); return; }
+          if (e.target.closest('[data-pjout]')) { doc.projectId = ''; touch(doc); changed(); projEdit = ''; drawProj(); pop.classList.remove('open'); return; }
+          if (e.target.closest('[data-pjdel]') && ed) {
+            projects = projects.filter((x) => x.id !== ed.id);
+            docs.forEach((d) => { if (d.projectId === ed.id) { d.projectId = ''; d.updated = Date.now(); } });
+            projEdit = ''; after(); changed(); pop.classList.remove('open'); return;
+          }
+          const ecu = e.target.closest('[data-custom]');
+          if (ecu && ed) { const host = ecu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker(ed.c, (hex, done) => { ecu.style.setProperty('--c', hex); if (done) { ed.c = hex; after(); drawMetaProj(); } }, 'Übernehmen')); return; }
+        }
         const pj = e.target.closest('[data-mproj]'); if (pj) { setProj(pj.dataset.mproj); return; }
         if (e.target.closest('[data-mproj-new]')) { newProj(inp.value.trim()); return; }
         const pi = e.target.closest('[data-pjicon]');
@@ -1673,7 +1702,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const cu = e.target.closest('[data-custom]');
         if (cu && projNew) { const host = cu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker('#5b8cff', (hex, done) => { cu.style.setProperty('--c', hex); cu.classList.add('on'); if (done) { projColor = hex; drawMetaProj(); } }, 'Weiter')); }
       });
-      inp.addEventListener('input', () => { projNew = ''; projColor = ''; drawMetaProj(); });
+      inp.addEventListener('input', () => { projNew = ''; projColor = ''; projEdit = ''; drawMetaProj(); });
+      box.addEventListener('input', (e) => { if (!e.target.classList.contains('dc-pj-name')) return; const ed = projOf(projEdit); if (!ed) return; const v = e.target.value.trim(); if (v) { ed.name = v.slice(0, 40); save(); drawProj(); renderSide(); } });
+      box.addEventListener('keydown', (e) => { if (e.target.classList.contains('dc-pj-name')) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } });
       inp.addEventListener('keydown', (e) => {
         e.stopPropagation();
         if (e.key === 'Escape') { pop.classList.remove('open'); return; }
@@ -2746,6 +2777,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     open(id);
   }
   // Dokumente, die auf dem Server entstanden sind (z. B. Ergebnis einer Agenten-Aufgabe), in die Liste übernehmen
+  // neue Dokumente vom Server (Aufgaben, Automatisierungen, andere Geräte) ohne Zutun holen: beim Zurückkehren in die App und jede Minute
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+  setInterval(() => { if (document.visibilityState === 'visible') sync(); }, 60000);
   async function sync() {
     if (!ready) return;
     try {

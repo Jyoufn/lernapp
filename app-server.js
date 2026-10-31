@@ -593,7 +593,9 @@ async function editIllustration(env, meta, description) {
   let img = { ...meta.base, seed: meta.seed }, prompt = meta.prompt;
   if (plan.repaint === true && String(plan.prompt || '').trim().length > 30) {
     prompt = String(plan.prompt).trim();
-    const painted = await paint(env, prompt, null, meta.seed); // gleicher Startwert → gleicher Bildaufbau
+    // echte Bearbeitung des vorhandenen Bildes (nur die Änderung) – neues Motiv nach Referenzbild oder Fehlschlag: neu malen wie bisher
+    const edited = /referenzbild/i.test(description) ? null : await geminiImageEdit(env, meta.base, `${description}\n(Bisher: ${meta.description})`);
+    const painted = edited ? { ...edited, seed: meta.seed, prompt } : await paint(env, prompt, null, meta.seed); // gleicher Startwert → gleicher Bildaufbau
     if (!painted) return null;
     img = painted;
     prompt = painted.prompt || prompt;
@@ -700,6 +702,29 @@ async function locateParts(env, img, labels, parts, required = []) {
   return { points, box: first.box || null, checked: true };
 }
 
+/* ---------- Echte Bildbearbeitung: Gemini 2.5 Flash Image („Nano Banana“) ----------
+   Bekommt das vorhandene Bild + den Wunsch und ändert NUR das Gewünschte (Rest bleibt pixelgenau gleich).
+   FLUX bei NVIDIA kann keine eigenen Bilder bearbeiten – deshalb dieses Modell. Nicht verfügbar (z. B. Kontingent 429) → null,
+   dann malt FLUX wie bisher anhand einer Beschreibung neu (Ersatz). */
+const IMAGE_EDIT_MODEL = 'gemini-2.5-flash-image';
+async function geminiImageEdit(env, img, instruction) {
+  if (!env.GEMINI_API_KEY || !img) return null;
+  try {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_EDIT_MODEL}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY }, signal: AbortSignal.timeout(90000),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: img.mime, data: img.data } }, { text: `Bearbeite dieses Bild: ${instruction}\nÄndere NUR das Gewünschte. Stil, Motiv, Aufbau, Farben und Bildformat bleiben sonst genau gleich. Keine Schrift hinzufügen.` }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+      }),
+    });
+    if (!r.ok) { console.warn(`[Bild-Bearbeitung] ${IMAGE_EDIT_MODEL}: HTTP ${r.status}`); return null; }
+    const j = await r.json();
+    const part = (j?.candidates?.[0]?.content?.parts || []).find((x) => (x.inlineData || x.inline_data)?.data);
+    const d = part && (part.inlineData || part.inline_data);
+    return d ? { mime: d.mimeType || d.mime_type || 'image/png', data: d.data } : null;
+  } catch (e) { console.warn(`[Bild-Bearbeitung] ${e.message}`); return null; }
+}
+
 /* ---------- /api/image-edit: Bild im Dokument „mit KI bearbeiten“ ----------
    Gemini sieht das Bild, beschreibt es als Bild-Auftrag und baut die gewünschte Änderung ein → FLUX malt das neue Bild.
    (Das Bearbeitungs-Modell FLUX.1 Kontext lehnt bei NVIDIA eigene Bilder ab.) */
@@ -725,6 +750,8 @@ async function handleImageEdit(req, res) {
     } catch {}
   }
   if (!img) return sendJson(res, 400, { error: 'Dieses Bild kann ich nicht lesen.' });
+  const edited = await geminiImageEdit(env, img, wish); // echte Bearbeitung zuerst
+  if (edited) return sendJson(res, 200, { src: `data:${edited.mime};base64,${edited.data}`, mode: 'edit' });
   const plan = await visionJson(env, EDIT_SYSTEM, `Änderungswunsch: ${wish}`, [img]);
   const prompt = String(plan?.prompt || '').trim();
   if (prompt.length < 30) return sendJson(res, 502, { error: 'Die KI konnte das Bild gerade nicht beschreiben.' });
@@ -765,6 +792,10 @@ async function handleCoverImage(req, res) {
   // Bearbeiten: das aktuelle Cover-Bild kommt als erstes Bild mit (die KI beschreibt es und ändert nur, was gewünscht ist)
   const baseImg = edit && /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(base || ''));
   if (baseImg) imgs.unshift({ mime: baseImg[1], data: baseImg[2] });
+  if (baseImg) { // Cover bearbeiten: echtes Bearbeiten des vorhandenen Bildes, nur bei Fehlschlag neu malen
+    const edited = await geminiImageEdit(env, { mime: baseImg[1], data: baseImg[2] }, w);
+    if (edited) return sendJson(res, 200, { src: `data:${edited.mime};base64,${edited.data}`, mode: 'edit' });
+  }
   const editNote = edit ? `\nBEARBEITEN: ${baseImg ? 'Das ERSTE Bild ist das aktuelle Cover.' : `Aktuelles Cover: ${String(baseDesc || 'abstraktes Farb-Cover').slice(0, 200)}.`} Ändere nur, was gewünscht ist.` : '';
   const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}${editNote}${imgs.length - (baseImg ? 1 : 0) ? `\n(${imgs.length - (baseImg ? 1 : 0)} Foto(s) als Orientierung angehängt)` : ''}`, imgs, 1024).catch(() => null);
   let prompt = String(plan?.prompt || '').trim();

@@ -75,3 +75,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 
 - Aufgaben-Ergebnis als Dokument (`mdToHtml` in `lib/agenttasks.js`): ```illustration/chart/mindmap/timeline/stock-Blöcke werden `<div data-viz>`-Grafiken (die App zeichnet/erzeugt sie beim Öffnen), nicht Text.
 - Tabellen: bei Vergleichen (3+ Kriterien) und Bestandteilen mit Funktion eine knappe Tabelle statt langer Liste (Regel in `lib/workflow.js`).
+
+## Bilder bearbeiten
+- Echte Bearbeitung über **Gemini 2.5 Flash Image** (`geminiImageEdit` in `app-server.js`): Cover „Mit KI bearbeiten“, Bild im Dokument „mit KI bearbeiten“, Folgewünsche zu Chat-Bildern. Ändert nur das Gewünschte.
+- FLUX (NVIDIA) kann keine eigenen Bilder bearbeiten → nur Ersatz, wenn Gemini Flash Image nicht verfügbar ist (Kontingent/Fehler): dann wird anhand einer Beschreibung neu gemalt. Antwort enthält `mode: 'edit'`, wenn wirklich bearbeitet wurde.
