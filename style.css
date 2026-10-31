@@ -9225,3 +9225,13 @@ div.tl4-h { cursor: default; }
 .dc-cover.movable { cursor: grab; touch-action: none; }
 .dc-cover.movable.moving { cursor: grabbing; }
 .dc-editor.focus .dc-cover.movable { cursor: default; }
+
+/* Kopier-Kasten (31.10., überarbeitet): kein Kopf, kein Trennstrich – nur der Text; „Kopieren“ oben rechts; Betreff abgesetzt */
+.md .copybox { position: relative; }
+.md .copybox-head { display: none; }
+.md .copybox-btn { position: absolute; top: 8px; right: 8px; z-index: 1; }
+.md .copybox-body { padding: 14px 16px 16px; white-space: normal; }
+.md .copybox-subj { display: flex; align-items: baseline; gap: 10px; margin: 0 96px 12px 0; color: var(--text); font-weight: 500; }
+.md .copybox-subj-l { flex: none; color: var(--text-4); font-size: 12px; font-weight: 500; }
+.md .copybox-text { margin-right: 0; white-space: pre-wrap; word-break: break-word; }
+.md .copybox-body > .copybox-text:first-child::before { content: ''; float: right; width: 92px; height: 22px; } /* Platz für „Kopieren“ nur neben der ersten Zeile */

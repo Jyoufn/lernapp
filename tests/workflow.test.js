@@ -53,7 +53,7 @@ test('1 Low, einfache Frage: direkt ohne Vorab-Planung – keine Recherche, klei
   assert.ok(!fx.calls.some(M.is.analyze));
   const gen = fx.calls.filter(M.is.geminiStream);
   assert.equal(gen.length, 1);
-  assert.equal(gen[0].body.generationConfig.thinkingConfig.thinkingBudget, 1024);
+  assert.equal(gen[0].body.generationConfig.thinkingConfig.thinkingBudget, 0); // Low: ohne Denken (schnell)
   assert.equal(gen[0].body.generationConfig.maxOutputTokens, 16384);
   assert.equal(gen[0].body.tools, undefined);
 });
@@ -328,7 +328,7 @@ test('12a API-Fehler: Limit bei Gemini → Ersatzmodell übernimmt, solange noch
   const r = await run({ ...msg('Wie funktioniert ein Elektromotor?'), effort: 'medium' });
   assert.equal(r.text(), 'Hallo Welt');
   assert.ok(!r.text().includes('geheim')); // Gedanken stehen nie im Antworttext – sie kommen getrennt als „thought“
-  assert.deepEqual(r.of('thought').map((t) => t.text), ['geheim']);
+  assert.deepEqual(r.of('thought').map((t) => t.text), []); // einfache Erklärung ohne Analyse (Medium) → kein Denken, keine Gedanken-Anzeige
   assert.equal(r.of('status').at(-1).meta.provider, 'Nemotron 3 Ultra (NVIDIA)');
 });
 test('12b API-Fehler: alle Modelle fallen aus → generation_failed mit verständlicher Meldung', async () => {
@@ -447,7 +447,7 @@ test('Max mit einfacher Frage: gewählt bleibt Max, intern Medium – keine Rech
   assert.equal(eff.requested, 'max');
   assert.equal(eff.applied, 'medium');
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 4096);
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 0); // einfache Frage: kein Denken, auch wenn Max gewählt ist
   assert.doesNotMatch(M.systemOf(gen), /AUFWAND MAX/);
   // die Analyse schätzt den Bedarf neutral – ohne Hinweis auf den gewählten Effort
   assert.doesNotMatch(fx.calls.find(M.is.analyze).body.messages[1].content, /MAX/);

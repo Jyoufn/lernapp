@@ -19,12 +19,23 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 6. Optional Entwurf + Prüfung (`processing`, `verifying`), dann Antwort (`answering`).
 7. Google-Suche im Modell (Grounding) nur bei Aktuellem (`TIME_SENSITIVE`, ganze Wörter) oder Research/Lernen-mit-Bild.
 
+## Denken (verbindlich – nicht zurückbauen, außer der Nutzer will es)
+- Modell: **Gemini 2.5 Flash** hat echtes Reasoning; `thinkingBudget` 0 = aus, sonst Obergrenze (Ersatzmodelle 3.x: `thinkingLevel`).
+- **Denken nur, wenn es die Antwort besser macht** (`thinkNeeded` in `runChat`): Die Analyse setzt `think`. Aus (Budget 0, keine Gedanken-Anzeige) bei
+  einfachen E-Mails/Nachrichten, Übersetzungen, Definitionen, Fakten, Low/Schnell. An bei `think`, Recherche mit Quellen, Rechnen/Prüfung/
+  Textanalyse/Vergleich, Lernen ab High, ausdrücklich High/Max (außer ganz einfache Frage), Coden, Börse. Ohne Analyse: ab High.
+- **Gedanken-Anzeige** (`lib/thoughts.js`, `createThoughtFilter`): Geminis Zusammenfassungen je **Abschnitt** – reine Form-/Gliederungs-
+  Gedanken („Refining the format“, „Structuring the response“, „Analyzing the approach“) fallen weg; inhaltliche werden sinngetreu und knapp
+  ins Deutsche übertragen (kleiner Modellaufruf). Klappt das nicht → Abschnitt wird nicht gezeigt (nie Englisch, nie Erfundenes).
+  Der erste Antworttext wartet, bis alle Gedanken gemeldet sind.
+- **Antworttext ohne Vorgehen**: Prompt-Regel „NUR DAS ERGEBNIS“ + `createAnswerGuard` (verwirft Vorgehens-Absätze nur am Antwortanfang).
+  Nie wieder Denk-Anweisungen („denke auf Deutsch mit Überschriften“) in den System-Prompt schreiben – Gemini schreibt sie sonst in die Antwort.
+
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
 - **Nur echte Schritte**: Keine Zeile für „Verstehen“ (steht nur im Kopf), kein erfundenes „Analysieren“ nach der Suche, keine „Risiko bewerten“-Zeile ohne Rechnung.
 - Suche ohne Treffer oder fehlgeschlagen → der Schritt verschwindet ganz (kein „keine Quellen gefunden“).
 - Gefundene Quellen hängen als Chips direkt am Such-Schritt.
 - Nach einer Websuche heißt der Schritt „Quellen analysieren“ (Google-Suche des Modells: „Quellen analysiert · N“). Chips zeigen nur Seiten, die der Server als passend behalten hat.
-- Gemini denkt laut Prompt auf Deutsch (auch die Abschnitts-Überschriften) und denkt über den Inhalt nach – nicht über die Formulierung/das Diktat des Nutzers; Plan (`approach`/`points`) immer passend zur Frage, kein festes Schema.
 - Bezeichnungen deutsch: Kopf z. B. Verstehen / Nachdenken / Recherchieren / Kochen / Arbeiten / Prüfen / Malen / Fertig, je Format eigene (Präsentation erstellen, Mindmap bauen …).
 
 ## Quellen
@@ -40,7 +51,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Bei neuen Systemen darauf achten, dass diese Grenzen nicht wieder gekappt werden.
 
 ## Regeln im Prompt (Auswahl)
-- Prompts, E-Mails, Nachrichten, Briefe zum Weiterverwenden → Block ```kopie (erste Zeile „# Titel“) → Kopier-Kasten mit „Kopieren“ (`copyFigure` in `app.js`).
+- Prompts, E-Mails, Nachrichten, Briefe zum Weiterverwenden → Block ```kopie (ohne Titelzeile; E-Mail: „Betreff: …“ zuerst) → Kopier-Kasten ohne Kopf/Trennstrich, Betreff abgesetzt, „Kopieren“ oben rechts (`copyFigure` in `app.js`). Ein kurzer Einleitungssatz steht davor im Text.
 - Bildbitte mit Fotos/PDF: Reihenfolge strikt „Deine Dateien ansehen“ → „Bild erzeugen“ (`picWaitsForFiles`); kommt der Bild-Block mitten im Text, startet der Bild-Schritt + Malen sofort.
 - Stichpunkte sind erlaubt, wo sie passen (gemischt mit Fließtext) – nicht alles Fließtext, nicht alles Stichpunkte.
 - Bei Diagramm-Wünschen nie nach der Form fragen (Typ wählt `bestType`: Zeitverlauf → Linie, sonst Ring).

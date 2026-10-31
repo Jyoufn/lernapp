@@ -962,27 +962,31 @@ function heftFigure(code) {
   fig.append(page);
   return fig;
 }
-/* Kopier-Kasten (```kopie): Texte zum Weiterverwenden – Prompt, E-Mail, Nachricht, Brief. Erste Zeile „# Titel“ = Kopf (sonst „Text“),
-   rechts ein Kopieren-Knopf (kopiert nur den Inhalt, ohne Kopf). */
+/* Kopier-Kasten (```kopie): Texte zum Weiterverwenden – Prompt, E-Mail, Nachricht, Brief. Kein Kopf, kein Trennstrich:
+   nur der sauber gegliederte Text, oben rechts „Kopieren“ (kopiert genau den Text). „Betreff: …“ steht abgesetzt als Betreffzeile.
+   Eine alte Titelzeile „# …“ wird ausgeblendet. */
 function copyFigure(code) {
   const lines = code.textContent.replace(/\n+$/, '').split('\n');
   while (lines.length && !lines[0].trim()) lines.shift();
-  const head = /^#\s+(.{1,40})$/.exec(lines[0] || '') ? lines.shift().replace(/^#\s+/, '') : 'Text';
+  if (/^#\s+.{1,40}$/.test(lines[0] || '')) lines.shift();
   while (lines.length && !lines[0].trim()) lines.shift();
   const text = lines.join('\n');
   const fig = el('figure', 'copybox');
   fig.dataset.viz = 'kopie';
-  const cap = el('figcaption', 'copybox-head');
-  cap.innerHTML = `<span>${escapeHtml(head)}</span>`;
   const btn = el('button', 'copybox-btn', `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`);
   btn.type = 'button';
   btn.addEventListener('click', async () => {
     try { await navigator.clipboard.writeText(text); } catch { const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
     btn.innerHTML = `${FadeIcons.svg('check', 13)}<span>Kopiert</span>`; setTimeout(() => { btn.innerHTML = `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`; }, 1600);
   });
-  cap.append(btn);
-  const body = el('div', 'copybox-body'); body.textContent = text;
-  fig.append(cap, body);
+  const body = el('div', 'copybox-body');
+  const subj = /^(betreff|subject)\s*:\s*(.+)$/i.exec(lines[0] || '');
+  if (subj) {
+    const s = el('div', 'copybox-subj'); s.append(el('span', 'copybox-subj-l', 'Betreff')); const v = el('span'); v.textContent = subj[2].trim(); s.append(v);
+    body.append(s);
+    const rest = el('div', 'copybox-text'); rest.textContent = lines.slice(1).join('\n').replace(/^\n+/, ''); body.append(rest);
+  } else { const t = el('div', 'copybox-text'); t.textContent = text; body.append(t); }
+  fig.append(btn, body);
   return fig;
 }
 /* Mindmap als Baum (kb/design.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
