@@ -9374,3 +9374,7 @@ div.tl4-h { cursor: default; }
 .pz-wave .ill-frame svg { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
 .pz-wave .ill-frame rect { opacity: 0; animation: ill-tile 5s ease-in-out infinite backwards; }
 @media (prefers-reduced-motion: reduce) { .pz-wave .ill-frame rect { animation: none; opacity: 1; } }
+
+/* ===== 01.11.2026 – Dokument-Chat: PDF/GoodNotes als Karte im Eingabefeld ===== */
+.dcc-att.dcc-att-doc { width: auto; max-width: 190px; display: inline-flex; align-items: center; gap: 6px; padding: 0 26px 0 10px; color: var(--text-3); font-size: 12px; background: var(--field-bg, #1d1d1d); }
+.dcc-att.dcc-att-doc > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -376,7 +376,7 @@ composer.addEventListener('submit', (e) => {
 $('attachBtn')?.addEventListener('click', () => fileInput.click());
 fileInput.addEventListener('change', () => { addFiles(fileInput.files); fileInput.value = ''; });
 input.addEventListener('paste', (e) => {
-  const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf');
+  const files = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith('image/') || f.type === 'application/pdf' || isGoodnotes(f));
   if (files.length) { e.preventDefault(); addFiles(files); }
 });
 
@@ -384,6 +384,7 @@ function addFiles(files) {
   for (const file of files) {
     if (file.type.startsWith('image/')) attachments.push({ file, url: URL.createObjectURL(file) });
     else if (file.type === 'application/pdf' && file.size <= PDF_MAX_BYTES) attachments.push({ file, url: null, pdf: true });
+    else if (isGoodnotes(file) && file.size <= 80 * 1024 * 1024) attachments.push({ file, url: null, pdf: true }); // GoodNotes: Karte wie ein PDF
   }
   renderAttachments();
 }
@@ -1552,8 +1553,56 @@ async function pdfPagesAsImages(bytes, name, max = 1600) {
   }
   return out;
 }
-// Liefert eine Datei – oder bei gescannten PDFs eine Liste von Seitenbildern (Aufrufer glätten mit .flat())
+/* GoodNotes (.goodnotes) ist ein ZIP: eingebettete PDFs (z. B. das importierte Arbeitsblatt) und Bilder lassen sich lesen; die eigene
+   Handschrift liegt in einem GoodNotes-eigenen Format und ist darin nicht lesbar → Hinweis an die KI, die dann den PDF-Export empfiehlt
+   (ein exportiertes PDF mit Handschrift wird als Scan erkannt und als Seitenbilder gelesen). Entpacken ohne Bibliothek (DecompressionStream). */
+const isGoodnotes = (f) => /\.goodnotes$/i.test(f?.name || '');
+async function unzip(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
+  let eocd = -1;
+  for (let i = buf.byteLength - 22; i >= Math.max(0, buf.byteLength - 70000); i--) if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error('Keine ZIP-Datei');
+  const out = [];
+  let p = v.getUint32(eocd + 16, true);
+  for (let k = 0, n = v.getUint16(eocd + 10, true); k < n && v.getUint32(p, true) === 0x02014b50; k++) {
+    const method = v.getUint16(p + 10, true), csize = v.getUint32(p + 20, true), size = v.getUint32(p + 24, true), off = v.getUint32(p + 42, true);
+    const nlen = v.getUint16(p + 28, true), name = dec.decode(u8.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + v.getUint16(p + 30, true) + v.getUint16(p + 32, true);
+    if (name.endsWith('/') || csize === 0xffffffff) continue;
+    const start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true);
+    const raw = u8.subarray(start, start + csize);
+    out.push({ name, size, read: async () => (method === 0 ? raw : method === 8
+      ? new Uint8Array(await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()) : null) });
+  }
+  return out;
+}
+const fileKind = (b) => (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 ? 'application/pdf'
+  : b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png'
+  : String.fromCharCode(...b.subarray(4, 12)).startsWith('ftyphei') ? 'image/heic' : '');
+async function goodnotesToInline(file) {
+  const base = file.name.replace(/\.goodnotes$/i, '');
+  const found = [];
+  for (const e of (await unzip(await file.arrayBuffer())).filter((x) => x.size > 2000).slice(0, 80)) {
+    const bytes = await e.read().catch(() => null);
+    const type = bytes && fileKind(bytes);
+    if (type) found.push({ type, bytes, thumb: /thumb/i.test(e.name) });
+  }
+  const docs = found.filter((f) => !f.thumb).sort((a, b) => (a.type === 'application/pdf' ? 0 : 1) - (b.type === 'application/pdf' ? 0 : 1));
+  const use = (docs.length ? docs : found).slice(0, 8);
+  const out = [];
+  for (const [i, f] of use.entries()) {
+    const name = f.type === 'application/pdf' ? `${base} (PDF ${i + 1}).pdf` : `${base} – Bild ${i + 1}`;
+    const item = await fileToInline(new File([f.bytes], name, { type: f.type })).catch(() => null);
+    if (item) out.push(...[item].flat());
+  }
+  out.push({ mime: 'text/plain', name: file.name, text: out.length
+    ? 'HINWEIS DER APP: Aus dieser GoodNotes-Datei sind nur die eingebetteten PDFs/Bilder lesbar – handschriftliche Notizen darin nicht. Geht es um die Handschrift, sag kurz: in GoodNotes „Teilen → Exportieren → PDF“ wählen und das PDF hochladen.'
+    : 'HINWEIS DER APP: Diese GoodNotes-Datei enthält nur handschriftliche Notizen im GoodNotes-eigenen Format, die die App nicht direkt lesen kann. Sag dem Nutzer in einem Satz: In GoodNotes „Teilen → Exportieren → PDF“ wählen und das PDF hochladen – dann ist auch die Handschrift lesbar.' });
+  return out;
+}
+// Liefert eine Datei – oder bei gescannten PDFs/GoodNotes eine Liste (Aufrufer glätten mit .flat())
 async function fileToInline(file, max = 1600) {
+  if (isGoodnotes(file)) return goodnotesToInline(file);
   if (file.type === 'application/pdf') {
     const buf = new Uint8Array(await file.arrayBuffer());
     let bin = '';
@@ -4890,7 +4939,7 @@ function savedThoughts(h) {
 function renderSavedHistory(list) {
   list.forEach((h, i) => {
     if (h.role === 'user') {
-      addUserMessage(h.text || '', (h.images || []).map((img) => ({ url: `data:${img.mime};base64,${img.data}`, name: img.name || (img.mime === 'application/pdf' ? 'PDF' : 'Bild'), mime: img.mime })));
+      addUserMessage(h.text || '', (h.images || []).filter((img) => img.data).map((img) => ({ url: `data:${img.mime};base64,${img.data}`, name: img.name || (img.mime === 'application/pdf' ? 'PDF' : 'Bild'), mime: img.mime })));
       return;
     }
     const msgEl = el('div', 'msg-ai');

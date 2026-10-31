@@ -738,7 +738,7 @@ const Docs = (() => {
         <form class="dcc-form"><div class="dcc-atts"></div><textarea rows="2" placeholder="Frag etwas zu diesem Dokument …" aria-label="Frage zum Dokument"></textarea>
           <div class="dcc-bar">
             <button type="button" class="plus-btn dcc-plus" aria-label="Bild hinzufügen" title="Bild hinzufügen">${icon('i-plus', 16)}</button>
-            <input type="file" accept="image/*" multiple hidden />
+            <input type="file" accept="image/*,application/pdf,.goodnotes" multiple hidden />
             <button type="button" class="dcc-eff" aria-haspopup="menu" aria-label="Aufwand"><span>${DCC_EFF_LABEL[dccEffort()]}</span>${fi('chevron-down', 9)}</button>
             <span class="flex-spacer"></span>
             <button type="button" class="mic-btn dcc-mic" aria-label="Diktieren" title="Diktieren"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
@@ -789,10 +789,14 @@ const Docs = (() => {
     }
     // angehängte Bilder (nur für die nächste Frage)
     let dccFiles = [];
-    function addAtts(files) { [...files].filter((f) => f.type.startsWith('image/')).slice(0, 6).forEach((file) => dccFiles.push({ file, url: URL.createObjectURL(file) })); drawAtts(); }
+    // Bilder, PDFs und GoodNotes-Dateien (PDF/GoodNotes als Karte mit Namen; gelesen wird wie im Chat über fileToInline)
+    const docLike = (f) => f.type === 'application/pdf' || /\.goodnotes$/i.test(f.name || '');
+    function addAtts(files) { [...files].filter((f) => f.type.startsWith('image/') || docLike(f)).slice(0, 6).forEach((file) => dccFiles.push({ file, url: docLike(file) ? null : URL.createObjectURL(file), doc: docLike(file) })); drawAtts(); }
     function drawAtts() {
       const box = pane()?.querySelector('.dcc-atts'); if (!box) return;
-      box.innerHTML = dccFiles.map((f, i) => `<span class="dcc-att" style="background-image:url('${f.url}')"><button type="button" data-att="${i}" aria-label="Bild entfernen">${fi('x', 10)}</button></span>`).join('');
+      box.innerHTML = dccFiles.map((f, i) => (f.doc
+        ? `<span class="dcc-att dcc-att-doc">${fi('file', 13)}<span>${esc(f.file.name)}</span><button type="button" data-att="${i}" aria-label="Datei entfernen">${fi('x', 10)}</button></span>`
+        : `<span class="dcc-att" style="background-image:url('${f.url}')"><button type="button" data-att="${i}" aria-label="Bild entfernen">${fi('x', 10)}</button></span>`)).join('');
       box.hidden = !dccFiles.length;
       box.querySelectorAll('[data-att]').forEach((b) => b.addEventListener('click', () => { const [f] = dccFiles.splice(+b.dataset.att, 1); URL.revokeObjectURL(f.url); drawAtts(); }));
     }
@@ -1108,7 +1112,7 @@ const Docs = (() => {
       if (files.length) um.imgId = newId('i'); // Anhänge bleiben im Gerät (siehe msgImages)
       chat.messages = [...chat.messages, um].slice(-40);
       chat.updated = Date.now();
-      list.append(dccMsg('user', q, files.map((f) => f.url)));
+      list.append(dccMsg('user', q, files.filter((f) => f.url).map((f) => f.url)));
       const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).flat().filter(Boolean);
       if (images.length) { editUploads.set(um, images); msgImages.set(um.imgId, images); imgDb.put(um.imgId, images); } // falls die KI erst nachfragt und das Bild später einfügt
       else delete um.imgId;
@@ -1353,7 +1357,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const p = pane(), list = p?.querySelector('.dcc-list'); if (!list) return;
       if (!tabChats.get(tab) && !tab.classList.contains('active')) tabChats.set(tab, { nodes: document.createDocumentFragment(), history: [] });
       const hist = historyOf(tab);
-      list.append(dccMsg('user', q, files.map((f) => f.url)));
+      list.append(dccMsg('user', q, files.filter((f) => f.url).map((f) => f.url)));
       const images = (await Promise.all(files.map((f) => fileToInline(f.file).catch(() => null)))).flat().filter(Boolean);
       hist.push({ role: 'user', text: q, ...(images.length ? { images } : {}) });
       const a = el('div', 'dcc-a'); a.dataset.dog = window.PixelDogs?.mode || 'general'; const body = el('div', 'dcc-body md');
