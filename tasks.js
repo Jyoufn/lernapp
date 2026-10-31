@@ -214,7 +214,7 @@ const Tasks = (() => {
   const repText = (r) => (r.every === 'daily' ? `Täglich um ${r.time}` : r.every === 'weekdays' ? `Werktags um ${r.time}` : `Jeden ${WD_LONG[r.day ?? 1]} um ${r.time}`);
   const repShort = (r) => (r.every === 'daily' ? `Täglich ${r.time}` : r.every === 'weekdays' ? `Mo–Fr ${r.time}` : `${WD_LONG[r.day ?? 1].slice(0, 2)} ${r.time}`);
   function syncAuto(t, removeIt = false) {
-    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', prio: t.prio || 'none', agent: t.agent || 'general', effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
+    const body = removeIt ? { id: t.id } : { task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], prio: t.prio || 'none', agent: t.agent || 'general', effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main', repeat: t.repeat } };
     fetch('/api/agent-tasks/automation', { method: removeIt ? 'DELETE' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), keepalive: true }).catch(() => {});
   }
   const openRows = new Set(); // aufgeklappte Zeilen bleiben beim Neuzeichnen offen
@@ -372,7 +372,7 @@ const Tasks = (() => {
   function edit(id, status = 'backlog', presetDate = '') {
     const t0 = tasks.find((x) => x.id === id);
     const startAgent = agents && window.PixelDogs && !window.PixelDogs.UNAVAILABLE?.has(window.PixelDogs.mode) && AGENT_NAMES[window.PixelDogs.mode] ? window.PixelDogs.mode : 'general';
-    const t = t0 ? { ...t0, tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, time: '', progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
+    const t = t0 ? { ...t0, srcFiles: [...(t0.srcFiles || [])], srcLinks: [...(t0.srcLinks || [])], tags: [...t0.tags], comments: [...(t0.comments || [])], repeat: t0.repeat ? { ...t0.repeat } : null } : { id: '', title: '', notes: '', status, tags: [], prio: 'none', date: presetDate, time: '', progress: 0, comments: [], ...(agents ? { agent: listMode ? '' : startAgent, output: listMode ? 'doc' : 'chat' } : {}) };
     const hadRepeat = !!t0?.repeat; // war vorher eine Automatisierung → beim Entfernen auch beim Server löschen
     const locked = !!(t0?.agent && t0.run && t0.run.state !== 'failed'); // Agent arbeitet schon / ist fertig → Agent nicht mehr wechseln
     if (!PRIOS.some((p) => p.id === t.prio)) t.prio = 'none';
@@ -400,7 +400,7 @@ const Tasks = (() => {
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
         ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
         ${listMode && agents && !locked ? pill('effort', EFFORTS_T.map(([id, n, d]) => `<button type="button" class="tk-mi" data-teffort="${id}"><span class="tk-mi-ic">${fi('sliders', 12)}</span><span>${n}<i class="tk-mi-sub">${d}</i></span>${fi('check', 12)}</button>`).join('')) : ''}
-        ${listMode && agents && !locked ? pill('src', `<div class="tk-src-row"><textarea class="tk-src-in" rows="3" maxlength="1500" placeholder="Links oder Quellen – eine pro Zeile" aria-label="Quellen">${esc(t.sources || '')}</textarea></div>`, 'srcs') : ''}
+        ${listMode && agents && !locked ? pill('src', '<div class="tk-src"></div>', 'srcs') : ''}
         ${listMode && agents && !locked ? `<div class="tk-pop tk-swpop" data-k="auto"><button type="button" class="tk-pill" data-autosw></button><button type="button" class="ce-switch tk-rowsw" data-autosw role="switch" aria-label="Automatisierung"><i></i></button></div>` : ''}
         ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
       </div>
@@ -441,7 +441,34 @@ const Tasks = (() => {
 
     let swapping = false; // läuft gerade der Wechsel Datum ↔ Zeitplan
     /* Pillen beschriften */
-    form.addEventListener('input', (e) => { if (e.target.classList?.contains('tk-src-in')) { t.sources = e.target.value.slice(0, 1500); draw(); } });
+    /* Quellen (nur mit Agent): gestrichelter Kasten zum Hochladen von Fotos (Arbeitsblatt, Buchseite …) und darunter Websites (Link + Enter).
+       t.srcFiles = verkleinerte Fotos (JPEG, höchstens 4), t.srcLinks = Links; t.sources = Links als Text für den Agenten. */
+    const srcBox = form.querySelector('.tk-src');
+    const drawSrc = () => {
+      if (!srcBox) return;
+      const files = t.srcFiles || [], links = t.srcLinks || [];
+      srcBox.innerHTML = `<button type="button" class="tk-src-up" data-srcup aria-label="Fotos hochladen">${fi('cloud-up', 20)}<span>Fotos hochladen</span></button>
+        ${files.length ? `<div class="tk-src-ph">${files.map((f, i) => `<span><img src="${f}" alt="" /><button type="button" data-srcrm="${i}" aria-label="Foto entfernen">${fi('x', 9)}</button></span>`).join('')}</div>` : ''}
+        <div class="tk-src-web">${fi('globe', 13)}<input class="tk-src-url" placeholder="Website hinzufügen" inputmode="url" aria-label="Website hinzufügen" /></div>
+        ${links.map((u, i) => `<div class="tk-src-link"><span>${esc(u.replace(/^https?:\/\//, ''))}</span><button type="button" data-linkrm="${i}" aria-label="Link entfernen">${fi('x', 10)}</button></div>`).join('')}
+        <input type="file" class="tk-src-file" accept="image/*" multiple hidden />`;
+    };
+    const shrink = (f) => new Promise((ok, no) => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1024 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); URL.revokeObjectURL(im.src); ok(c.toDataURL('image/jpeg', 0.82)); }; im.onerror = no; im.src = URL.createObjectURL(f); });
+    const srcChanged = () => { t.sources = (t.srcLinks || []).join('\n'); drawSrc(); draw(); };
+    const addLink = (v) => { v = String(v || '').trim(); if (!v) return; if (!/^https?:\/\//i.test(v)) v = `https://${v}`; try { new URL(v); } catch { return; } t.srcLinks = [...new Set([...(t.srcLinks || []), v])].slice(0, 8); srcChanged(); setTimeout(() => form.querySelector('.tk-src-url')?.focus(), 0); };
+    srcBox?.addEventListener('click', (e) => {
+      if (e.target.closest('[data-srcup]')) { srcBox.querySelector('.tk-src-file').click(); return; }
+      const r = e.target.closest('[data-srcrm]'); if (r) { t.srcFiles.splice(+r.dataset.srcrm, 1); srcChanged(); return; }
+      const l = e.target.closest('[data-linkrm]'); if (l) { t.srcLinks.splice(+l.dataset.linkrm, 1); srcChanged(); }
+    });
+    srcBox?.addEventListener('change', async (e) => {
+      if (!e.target.classList.contains('tk-src-file')) return;
+      for (const f of [...e.target.files].filter((x) => x.type.startsWith('image/')).slice(0, 4 - (t.srcFiles || []).length)) { try { t.srcFiles = [...(t.srcFiles || []), await shrink(f)]; } catch {} }
+      srcChanged();
+    });
+    srcBox?.addEventListener('keydown', (e) => { if (e.target.classList.contains('tk-src-url') && e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); addLink(e.target.value); } });
+    srcBox?.addEventListener('focusout', (e) => { if (e.target.classList?.contains('tk-src-url') && e.target.value.trim()) addLink(e.target.value); });
+    drawSrc();
     const draw = () => {
       const st = byId(COLS, t.status), pr = byId(PRIOS, t.prio), du = dueInfo(t.date);
       const ts = t.tags.map(tagOf).filter(Boolean);
@@ -486,7 +513,7 @@ const Tasks = (() => {
         form.querySelectorAll('[data-teffort]').forEach((b) => b.classList.toggle('on', b.dataset.teffort === ef[0]));
         const efp = form.querySelector('.tk-pop[data-k="effort"]'); if (efp) efp.hidden = !t.agent;
         // Quellen (nur mit Agent): Links/Quellen, die der Agent lesen und nutzen soll
-        const srcN = String(t.sources || '').split('\n').filter((x) => x.trim()).length;
+        const srcN = (t.srcFiles || []).length + (t.srcLinks || []).length;
         set('src', [fi('link', 14), srcN ? `${srcN} ${srcN === 1 ? 'Quelle' : 'Quellen'}` : 'Quellen angeben'], !srcN);
         const srp = form.querySelector('.tk-pop[data-k="src"]'); if (srp) srp.hidden = !t.agent;
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
@@ -761,7 +788,6 @@ const Tasks = (() => {
         return;
       }
       if (form.classList.contains('saving')) return;
-      const srcIn = form.querySelector('.tk-src-in'); if (srcIn) t.sources = srcIn.value.trim().slice(0, 1500);
       Object.assign(t, { title, notes: String(f.get('notes')).trim() });
       if (t0) {
         if (t.status !== t0.status) t.order = -1; // in neuer Spalte oben
@@ -880,7 +906,7 @@ const Tasks = (() => {
   /* ---------- Agenten: Aufgabe an den Server geben, Zustand abholen, Ergebnis öffnen ---------- */
   function startRun(t) {
     if (!agents) return;
-    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', prio: t.prio || 'none', agent: t.agent, output: t.output, effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main' } });
+    const body = JSON.stringify({ task: { id: t.id, title: t.title, notes: t.notes, sources: t.sources || '', files: t.srcFiles || [], prio: t.prio || 'none', agent: t.agent, output: t.output, effort: t.effort || 'high', ws: window.Workspaces?.active() || 'main' } });
     // keepalive: die Anfrage geht auch raus, wenn die App gleich geschlossen wird – der Server arbeitet dann allein weiter
     fetch('/api/agent-tasks/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true })
       .then(() => pull()).catch(() => {});

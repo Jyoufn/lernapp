@@ -1335,7 +1335,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
             <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Suchen" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span>
             <button type="button" class="dc-add" data-act="icon" data-add="icon">${fi('smile', 13)}Icon hinzufügen</button><button type="button" class="dc-add" data-act="cover" data-add="cover">${fi('image', 13)}Cover hinzufügen</button></div>
           <div class="dc-cover"><div class="dc-cover-img"></div><div class="dc-cover-acts">
-            <button type="button" data-act="cover">${fi('image', 12)}Cover ändern</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
+            <button type="button" data-act="cover">${fi('image', 12)}Cover ändern</button><button type="button" data-act="cover-ai">${fi('sparkle', 12)}Mit KI bearbeiten</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
           <button type="button" class="dc-icon" data-act="icon" aria-label="Icon ändern" title="Icon ändern" hidden><span class="dc-icon-g"></span></button>
           <textarea class="dc-title-in" rows="1" placeholder="Titel" maxlength="160" aria-label="Titel">${esc(doc.title)}</textarea>
           <textarea class="dc-sub-in" rows="1" placeholder="Beschreibung hinzufügen …" maxlength="400" aria-label="Beschreibung">${esc(doc.subtitle || '')}</textarea>
@@ -2090,7 +2090,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     ];
     const OLD_STYLE = { wave: 'waves', soft: 'dunes', mesh: 'ribbons', aurora: 'ribbons', lines: 'arcs', flat: 'plain' };
     const styleOfCover = (cv) => (cv?.kind === 'preset' ? COVER_PRESETS.find((p) => p.id === cv.id)?.group : cv?.kind === 'color' ? (OLD_STYLE[cv.style] || cv.style) : null);
-    function openCoverPop() {
+    function openCoverPop(editAi = false) {
       if (coverPop) { coverPop.close(); return; }
       // gleiches Fenster wie bei Kalender und Aufgaben: mittig über einer leicht abgedunkelten Fläche
       const modal = el('div', 'tk-modal dc-cmodal');
@@ -2112,12 +2112,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       function render(dir = 0) {
         if (!step && (ai.open || ai.busy)) {
           // „Mit KI erstellen“: alles andere verschwindet – nur das Eingabefeld (Chat-Design, kleiner) bzw. die Bild-Animation
-          title.innerHTML = `${ai.busy ? '' : `<button type="button" class="dc-cback" data-ai-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>`}Mit KI erstellen`;
+          title.innerHTML = `${ai.busy ? '' : `<button type="button" class="dc-cback" data-ai-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>`}${ai.edit ? 'Mit KI bearbeiten' : 'Mit KI erstellen'}`;
           body.innerHTML = ai.busy
             ? `<div class="dc-cai-gen">${(window.illustrationWave?.() || '').replace('xMidYMid meet', 'xMidYMid slice')}</div>` // nur die Wellen-Animation, kein Text
             : `<div class="dc-cai2-wrap">${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}<form class="dc-cai2" data-ai-form>
               ${ai.photos.length ? `<div class="dc-cai2-photos">${ai.photos.map((ph, i) => `<span class="dc-cai2-ph"><img src="${esc(ph)}" alt="" /><button type="button" data-ai-rm="${i}" aria-label="Foto entfernen">${fi('x', 10)}</button></span>`).join('')}</div>` : ''}
-              <textarea class="dc-cai-in" rows="2" maxlength="400" placeholder="Was soll auf dem Cover sein?" aria-label="Cover beschreiben">${esc(ai.text)}</textarea>
+              <textarea class="dc-cai-in" rows="2" maxlength="400" placeholder="${ai.edit ? 'Was soll am Cover anders werden?' : 'Was soll auf dem Cover sein?'}" aria-label="Cover beschreiben">${esc(ai.text)}</textarea>
               <div class="dc-cai2-bar"><button type="button" class="dc-cai2-btn" data-ai-photo aria-label="Foto als Vorlage hinzufügen">${fi('plus', 15)}</button><span class="grow"></span>
                 <button type="button" class="mic-btn dc-cai2-mic" data-ai-mic aria-label="Sprachaufnahme"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
                 <button type="submit" class="dc-cai-go" aria-label="Erstellen">${fi('arrow-up', 14)}</button></div>
@@ -2196,7 +2196,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (e.target.closest('[data-upload]')) { file.click(); return; }
         const orm = e.target.closest('[data-own-rm]'); if (orm) { const it = ownImages()[+orm.dataset.ownRm]; if (it) removeOwnImage(it[0]); render(); return; }
         if (e.target.closest('[data-ai]')) { if (ai.busy) return; ai.open = true; ai.err = ''; render(1); body.querySelector('.dc-cai-in')?.focus(); return; }
-        if (e.target.closest('[data-ai-back]')) { window.stopDictateInto?.(); ai.open = false; ai.err = ''; render(-1); return; }
+        if (e.target.closest('[data-ai-back]')) { window.stopDictateInto?.(); if (ai.edit) { close(); return; } ai.open = false; ai.err = ''; render(-1); return; }
         if (e.target.closest('[data-ai-photo]')) { if (ai.photos.length < 3) body.querySelector('.dc-cai2-file')?.click(); return; }
         const rm = e.target.closest('[data-ai-rm]'); if (rm) { ai.photos.splice(+rm.dataset.aiRm, 1); ai.text = body.querySelector('.dc-cai-in').value; render(); return; }
         const mic = e.target.closest('[data-ai-mic]'); if (mic) { window.dictateInto?.(body.querySelector('.dc-cai-in'), mic); return; }
@@ -2211,7 +2211,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         window.stopDictateInto?.();
         ai.busy = true; ai.err = ''; render();
         try {
-          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos }) });
+          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos, ...(ai.edit ? { edit: true, base: doc.cover?.kind === 'image' ? doc.cover.src : '', baseDesc: doc.cover?.kind !== 'image' ? `abstraktes Farb-Cover (${COVER_STYLES.find((x) => x.id === styleOfCover(doc.cover))?.name || 'Verlauf'}, Farbe ${doc.cover?.c || ''})` : '' } : {}) }) });
           const j = await r.json().catch(() => ({}));
           if (!r.ok || !j.src) throw new Error(j.error || 'Das Cover konnte gerade nicht erstellt werden.');
           const src = await shrinkCover(j.src); // JPEG – passt in den Speicher „Deine Bilder“
@@ -2242,7 +2242,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       }
       document.addEventListener('keydown', esc_);
       coverPop = { close, refresh: render };
+      if (editAi) { ai.open = true; ai.edit = true; } // „Mit KI bearbeiten“: gleich das Eingabefeld, der Wunsch ändert das aktuelle Cover
       render();
+      if (editAi) body.querySelector('.dc-cai-in')?.focus();
     }
 
     // eingeklappt = Überschrift trägt data-fold; alles darunter (bis zur nächsten gleich hohen Überschrift) ist versteckt
@@ -2620,6 +2622,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (act === 'undo' || act === 'redo') { stepHist(act === 'undo'); return; }
       if (act === 'pane') { paneOpen = !paneOpen; localStorage.setItem('docs.pane', paneOpen ? '1' : '0'); drawPane(); return; }
       if (act === 'cover') { openCoverPop(); return; }
+      if (act === 'cover-ai') { openCoverPop(true); return; }
       if (act === 'settings') { openSettings(); return; }
       if (act === 'icon') { openIconPop(); return; }
       if (act === 'cover-del') { setCover(null); return; }

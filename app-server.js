@@ -737,7 +737,7 @@ async function handleImageEdit(req, res) {
    Gemini macht aus dem deutschen Wunsch (und optionalen Vorlage-Fotos) einen englischen Bild-Auftrag im Stil der übrigen Cover
    (farbige flache Illustration mit gemaltem Look, Merkmale klar erkennbar, kreativ angeordnet – nie realistisch, nie skizziert) → FLUX malt (1344×768).
    Die App zeigt das Bild im normalen Banner-Format der Cover (füllt die Fläche, kein eigenes Seitenverhältnis). */
-const COVER_STYLE = 'colorful flat vector-style illustration with a painted look: clean bold shapes, smooth flat color fills with soft subtle shading and a gentle drop shadow under each element, '
+const COVER_STYLE = 'wide panoramic banner composition, all elements in one horizontal band across the vertical center, empty calm background above and below, colorful flat vector-style illustration with a painted look: clean bold shapes, smooth flat color fills with soft subtle shading and a gentle drop shadow under each element, '
   + 'every element clearly recognizable by its characteristic features (scientifically correct structures, e.g. distinct organelles inside a cell), '
   + 'creative composition: many related elements arranged into a pleasing overall shape or pattern, balanced and tidy, wide horizontal banner with the composition centered and some breathing room, '
   + 'harmonious palette, calm soft plain background, not a sketch, no pencil lines, not photorealistic, no 3d render, no photo, no text, no letters, no border';
@@ -749,15 +749,24 @@ const COVER_SYSTEM = `Du bekommst einen Wunsch für ein Cover (breites Titelbild
   kreativ angeordnet (viele passende Elemente bilden zusammen eine schöne Form oder ein Muster). Nicht gezeichnet/skizziert, nicht realistisch.
 - Nennt der Nutzer Farben (z. B. „in Grün“), bestimmen sie die Palette und den Hintergrund (z. B. "palette of fresh greens on a soft light green background").
 - Fotos (falls dabei) nur als Orientierung für Motiv, Farben oder Aufbau – nie nachmalen.
+- FORMAT: Das Bild wird als sehr breites Banner gezeigt (etwa 3,6 : 1) – sichtbar ist nur der mittlere Streifen (ca. 45 % der Höhe).
+  Plane danach: alle wichtigen Elemente in einer Reihe bzw. einem flachen Band in der Mitte, oben und unten nur ruhiger Hintergrund;
+  lieber weniger, dafür gut erkennbare Elemente (etwa 5–12), nichts am oberen/unteren Rand, nichts Wichtiges angeschnitten.
+- BEARBEITEN: Steht „BEARBEITEN“ im Auftrag, ist ein bestehendes Cover gegeben (Bild oder Beschreibung). Beschreibe dann dieses Cover so genau,
+  dass es neu gemalt werden kann, und baue NUR die gewünschte Änderung ein – alles andere (Motiv, Farben, Anordnung) bleibt gleich.
 Der Auftrag endet mit diesem Stil: ${COVER_STYLE}.
 Keine Schrift im Bild.`;
 async function handleCoverImage(req, res) {
   const env = readEnv();
-  const { wish, photos } = await readBody(req, 4 * 1024 * 1024);
+  const { wish, photos, edit, base, baseDesc } = await readBody(req, 12 * 1024 * 1024);
   const w = String(wish || '').trim().slice(0, 400);
   if (w.length < 3) return sendJson(res, 400, { error: 'Beschreib kurz, was auf dem Cover sein soll.' });
   const imgs = (Array.isArray(photos) ? photos : []).slice(0, 3).map((x) => /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(x || ''))).filter(Boolean).map((m) => ({ mime: m[1], data: m[2] }));
-  const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}${imgs.length ? `\n(${imgs.length} ${imgs.length === 1 ? 'Foto' : 'Fotos'} als Orientierung angehängt)` : ''}`, imgs, 1024).catch(() => null);
+  // Bearbeiten: das aktuelle Cover-Bild kommt als erstes Bild mit (die KI beschreibt es und ändert nur, was gewünscht ist)
+  const baseImg = edit && /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(base || ''));
+  if (baseImg) imgs.unshift({ mime: baseImg[1], data: baseImg[2] });
+  const editNote = edit ? `\nBEARBEITEN: ${baseImg ? 'Das ERSTE Bild ist das aktuelle Cover.' : `Aktuelles Cover: ${String(baseDesc || 'abstraktes Farb-Cover').slice(0, 200)}.`} Ändere nur, was gewünscht ist.` : '';
+  const plan = await visionJson(env, COVER_SYSTEM, `Wunsch: ${w}${editNote}${imgs.length - (baseImg ? 1 : 0) ? `\n(${imgs.length - (baseImg ? 1 : 0)} Foto(s) als Orientierung angehängt)` : ''}`, imgs, 1024).catch(() => null);
   let prompt = String(plan?.prompt || '').trim();
   if (prompt.length < 30) prompt = `${w}. ${COVER_STYLE}`;
   if (!/flat vector-style/i.test(prompt)) prompt = `${prompt}. ${COVER_STYLE}`;
@@ -1353,18 +1362,18 @@ async function handle(req, res) {
     // Aufgaben für die Agenten: Zustand holen / Aufgabe abarbeiten (läuft weiter, auch wenn die App geschlossen wird) / Zustand entfernen
     if (req.method === 'GET' && urlPath === '/api/agent-tasks') return sendJson(res, 200, await AGT.list(store, user.id));
     if (req.method === 'POST' && urlPath === '/api/agent-tasks/run') {
-      const b = await readBody(req, 20000);
+      const b = await readBody(req, 8 * 1024 * 1024);
       return sendJson(res, 200, await AGT.run({ store, uid: user.id, task: b.task || {}, env: readEnv(), prepareBody: (x) => withAgentData(x, user) }));
     }
     // Automatisierungen: speichern/entfernen, auflisten, fällige anstoßen (bei offener App)
-    if (urlPath === '/api/agent-tasks/automation' && req.method === 'POST') { const b = await readBody(req, 20000); return sendJson(res, 200, { automation: await AGT.saveAuto(store, user.id, b.task || {}) }); }
+    if (urlPath === '/api/agent-tasks/automation' && req.method === 'POST') { const b = await readBody(req, 8 * 1024 * 1024); return sendJson(res, 200, { automation: await AGT.saveAuto(store, user.id, b.task || {}) }); }
     if (urlPath === '/api/agent-tasks/automation' && req.method === 'DELETE') { const b = await readBody(req, 4000); await AGT.removeAuto(store, user.id, String(b.id || '')); return sendJson(res, 200, { ok: true }); }
     if (req.method === 'GET' && urlPath === '/api/agent-tasks/automations') return sendJson(res, 200, await AGT.listAuto(store, user.id));
     if (req.method === 'POST' && urlPath === '/api/agent-tasks/due') {
       const env = readEnv();
       return sendJson(res, 200, { started: await AGT.runDue(store, { uid: user.id, start: (u, task) => AGT.run({ store, uid: u, task, env, prepareBody: (x) => withAgentData(x, user) }) }) });
     }
-    if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 20000); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
+    if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 8 * 1024 * 1024); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
     // Geteilte Workspaces (lib/workspaces.js)
     if (req.method === 'GET' && urlPath === '/api/workspaces') return sendJson(res, 200, await WSP.overview(store, serverEnv(), user.id));
     if (req.method === 'POST' && urlPath.startsWith('/api/workspaces/')) {

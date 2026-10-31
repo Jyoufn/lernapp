@@ -9259,3 +9259,20 @@ div.tl4-h { cursor: default; }
 .dc-page.with-cover .dc-adds.under-cover { margin: 8px 0 0 -9px !important; }
 .dc-page.with-cover .dc-adds.by-icon { position: relative; z-index: 5; margin: -22px 0 0 var(--by-icon, 96px) !important; min-height: 26px; }
 .dc-editor.focus .dc-page.with-cover .dc-adds { display: none !important; }
+
+/* Aufgaben – Quellen (31.10., überarbeitet): gestrichelter Kasten „Fotos hochladen“ (wie beim Cover), Fotos als Kacheln,
+   darunter Websites (Link + Enter) als Zeilen mit × */
+.tk-src { display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.tk-src-up { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 76px; padding: 0; border: 1.5px dashed rgba(255, 255, 255, 0.16); border-radius: 10px; background: transparent; color: var(--text-3); font: 500 12px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease, color 120ms ease; }
+.tk-src-up:hover { background: rgba(255, 255, 255, 0.025); color: var(--text-2); }
+.tk-src-ph { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-src-ph span { position: relative; width: 52px; height: 52px; overflow: hidden; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.08); }
+.tk-src-ph img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.tk-src-ph button { position: absolute; top: 3px; right: 3px; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.65); color: #fff; cursor: pointer; }
+.tk-src-web { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; color: var(--text-4); }
+.tk-src-url { flex: 1; min-width: 0; border: 0; outline: none; background: none; color: var(--text); font: 400 12.5px Inter, sans-serif; }
+.tk-src-url::placeholder { color: var(--text-4); }
+.tk-src-link { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 4px 0 10px; color: var(--text-2); font-size: 12.5px; }
+.tk-src-link span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-src-link button { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 5px; background: none; color: var(--text-4); cursor: pointer; }
+.tk-src-link button:hover { color: var(--text); }
