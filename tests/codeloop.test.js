@@ -267,7 +267,7 @@ test('Coden ist vorerst gesperrt: ohne CODE_AGENT=on läuft eine Coden-Anfrage w
   ]);
   try {
     const c = M.collect();
-    const result = await W.runChat({ env: { GEMINI_API_KEY: 'g', NVIDIA_CODE_API_KEY: 'test-code-key' }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Hallo' }] }, send: c.send, signal: new AbortController().signal });
+    const result = await W.runChat({ env: { ...M.ENV, NVIDIA_CODE_API_KEY: 'test-code-key' }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Hallo' }] }, send: c.send, signal: new AbortController().signal });
     assert.ok(!fx.calls.some(isCode), 'keine Werkzeug-Schleife');
     assert.match(result.answer, /Hallo!/);
   } finally { fx.restore(); W.cooldowns.clear(); }
@@ -282,7 +282,7 @@ test('Allgemein-Agent programmiert normal im Chat: keine Werkzeug-Schleife, kein
   ]);
   try {
     const c = M.collect();
-    const result = await W.runChat({ env: { GEMINI_API_KEY: 'g', NVIDIA_CODE_API_KEY: 'test-code-key', CODE_AGENT: 'on' }, body: { log: false, agent: 'general', effort: 'low', messages: [{ role: 'user', text: 'Programmier mir ein kleines Snake-Spiel' }] }, send: c.send, signal: new AbortController().signal });
+    const result = await W.runChat({ env: { ...M.ENV, NVIDIA_CODE_API_KEY: 'test-code-key', CODE_AGENT: 'on' }, body: { log: false, agent: 'general', effort: 'low', messages: [{ role: 'user', text: 'Programmier mir ein kleines Snake-Spiel' }] }, send: c.send, signal: new AbortController().signal });
     assert.ok(!fx.calls.some(isCode), 'keine Werkzeug-Schleife beim Allgemein-Agenten');
     const sys = M.systemOf(fx.calls.find(M.is.geminiStream));
     assert.match(sys, /AGENT: ALLGEMEIN/);

@@ -17,6 +17,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
   - **Quellenart** (`sourceKind`): Research → `deep` (Tiefen-Recherche, `lib/deepresearch.js`); Lernen → `learn` (nur deutsche Fachquellen); Allgemein → was die Einschätzung sagt (Lernfrage → `learn`, Aktuelles/Produkte/Personen → `web`). Max immer mit Quellen. Material an der Frage: nur auf ausdrücklichen Wunsch (`gap`).
   - **Erst eigene Suche, dann schreibt das beste Modell mit [n]-Belegen.** Google-Suche im Modell nur als Ersatz, wenn die eigene Suche nichts fand – Grounding ist mit Gratis-Schlüssel NUR bei 2.5 Flash frei (3.x: Limit 0), dort schreibt dann das schwächere 2.5 Flash.
   - **Max = Selbstkontrolle** (`REFINE_MAX`): unsichtbarer Entwurf → dasselbe Modell prüft ihn gegen Aufgabe, Material, Quellen (Reihenfolgen, Begriffe, Belege) → sichtbare Endfassung. Zeitleiste: Entwurf/„Dokumente analysieren“ → `verifying` „Entwurf wird geprüft und verbessert“ → Antwort. Grund: bei Gemini 3 ist „hohes Denken“ schon Standard, Max hätte sonst keinen Mehrwert.
+  - **Funde heraussuchen** (`picFind`): Einschätzung liefert `images` (Suchbegriffe) + `photos`; ohne sie `FIND_PICS` + `VISUAL_WORD`. Schritt `images` „Bilder und Beispiele suchen“ (`WEB.findVisuals`: Websuche + bei Fotos Wikimedia Commons, Ersatz Openverse; Google-Weiterleitungen werden aufgelöst) → Funde als Quellen `type: 'fund'` → Antwort als ```links mit `n`. Keine Tiefen-Recherche dafür, kein Bild erzeugen.
   - Zeitleiste: Bild/PDF → „Dokumente analysieren“ (während Gemini liest/denkt) → „Antwort schreiben“; nach einer Suche direkt „Antwort schreiben“ (feste Reihenfolge der Stufen).
 - Börse, Coden, Sprache und Aufrufe ohne Agent: bisheriger Ablauf (Planung `analyze`, Börse fester Plan `BOERSE_PLAN`, Recherche-Pipeline, Tests).
 - Schulstärke im `BASE_PROMPT`: „SCHULAUFGABEN“ (Aufgabe Wort für Wort lesen, Operatoren-Liste, Material-Belege, Musterlösung je „## Aufgabe N“); nie nach Fach/Klasse/Thema fragen. High/Max bei konkreter Aufgabe: beste Lösung GENAU dieser Aufgabe, kein Referat.
@@ -49,6 +50,8 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 ## Recherche
 - Research-Agent: **Tiefen-Recherche** (Teilfragen → Websuche DDG/Bing/Google → ~20 Seiten lesen → Quellen vergleichen → Lücken schließen), dann schreibt das beste Modell mit Kurzfazit, „Was die Quellen sagen“, „Offene Fragen“. Nur eine kurze Faktenfrage (Einschätzung low) → einfache Websuche.
 - Allgemein: Websuche (`web`) bzw. Fachquellen (`learn`) laut Einschätzung. Lernen: nur deutsche Fachquellen, Relevanz-Prüfung an der ersten Suchanfrage.
+- Tiefen-Recherche: Nachschlagewerke (Wikipedia/Fachliteratur über `R.research`) nur, wenn der Plan `reference` nicht verneint (Designs, Produkte, Aktuelles → kein Lexikon); kein eigener „Wikipedia“-Eintrag in der Zeitleiste, die Treffer hängen an der ersten Suche.
+- `searchWeb`: „genug Treffer“ zählt nur Passendes (`R.relevance` von Titel/Auszug ≥ 0,34) – DuckDuckGo blockt Server oft, Bing liefert Servern teils fremde Treffer; dann springt Google über Gemini ein. Bot-Prüfungen werden nie umgangen (keine Bing-/DDG-Bildersuche).
 - **Schutz** (verbindlich): `searchWeb` (lib/web.js) verwirft Erwachsenen-/Glücksspielseiten (`UNSAFE`); die Tiefen-Recherche nimmt eine gelesene Seite nur, wenn sie zum Thema passt (`R.relevance` ≥ 0,34) – vorher landeten Duden-Einträge, Hilfeseiten und eine Pornoseite unter den Treffer-Chips.
 
 ## Quellen
@@ -80,12 +83,14 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 
 ## Regeln im Prompt (Auswahl)
 - Prompts, E-Mails, Nachrichten, Briefe zum Weiterverwenden → Block ```kopie (ohne Titelzeile; E-Mail: „Betreff: …“ zuerst) → Kopier-Kasten ohne Kopf/Trennstrich, Betreff abgesetzt, „Kopieren“ oben rechts (`copyFigure` in `app.js`). Ein kurzer Einleitungssatz steht davor im Text.
+- **Bild erzeugen vs. finden** (verbindlich, Wunsch 31.10.): ```illustration nur auf Erstell-Wunsch (`CREATE_PIC`: erstell/zeichne/mal/mach/zeig/gib …). „such/raussuchen/finde“, „mit Link“, „im Internet“, „echte Fotos“ (`FIND_PICS`) = finden → ```links mit echten Funden. Gleiche Regel im Client (`pictureAsk` in `app.js`).
 - Bildbitte mit Fotos/PDF: Reihenfolge strikt „Dokumente analysieren“ → „Bild erzeugen“ (`picWaitsForFiles`); kommt der Bild-Block mitten im Text, startet der Bild-Schritt + Malen sofort.
 - Stichpunkte sind erlaubt, wo sie passen (gemischt mit Fließtext) – nicht alles Fließtext, nicht alles Stichpunkte.
 - Bei Diagramm-Wünschen nie nach der Form fragen (Typ wählt `bestType`: Zeitverlauf → Linie, sonst Ring).
 - Nie Code zum Selberzeichnen (matplotlib o. Ä.); Diagramme/Zeitstrahl/Mindmap nur als Block. Mindmap nur Stichpunkte, Zeitstrahl ohne Limit, keine `source`-Felder.
 - Jeder Chat ist für sich; Bilder nur bei Bedarf/Wunsch; Rückfragen nur, wenn wirklich etwas fehlt; Hintergrund-Aufgaben nie mit Rückfragen.
 - Präsentationen (Lern-Agent) immer mit echten Quellen und echten Fotos (Wikimedia).
+- Lernsets: Chat-Wunsch (`LS.ASK`) oder Erstellen-Fenster (`last.lernset`) → `LS.PROMPT(spec)`; Inhalt nur aus gegebenem Material, Titel kurz/deutsch, Anzahl genau. Korrektur offener Klausuraufgaben: `LS.grade` (leere Antwort 0 ohne Modell, sonst Text-Leiter, Punkte auf 0,5 gerundet und begrenzt).
 
 - Aufgaben-Ergebnis als Dokument (`mdToHtml` in `lib/agenttasks.js`): ```illustration/chart/mindmap/timeline/stock-Blöcke werden `<div data-viz>`-Grafiken (die App zeichnet/erzeugt sie beim Öffnen), nicht Text.
 - Tabellen: bei Vergleichen (3+ Kriterien) und Bestandteilen mit Funktion eine knappe Tabelle statt langer Liste (Regel in `lib/workflow.js`).

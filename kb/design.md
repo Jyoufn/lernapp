@@ -48,5 +48,8 @@ Keine neuen Grautöne erfinden.
 - **Karten im Chat** (Agent-Empfehlung, Fehler, API-Key fehlt, Unterbrochen): Hund links, Titel + Satz, rechts ein Knopf; Fläche/Rand wie Eingabefeld. Nicht noch eine Karte im Muster „Icon links + Titel + Untertitel“ erfinden – der Nutzer will dafür bessere Lösungen.
 - **Tags**: getönte Fläche 12 %, farbiger Text, ohne Punkt (Liste) – im Dokument mit Punkt.
 - **Leisten oben mittig** (`.cs-pill`): runde Pille 36 px, Rand #2a2a2a, Fläche #1a1a1a; gewählt = weißer Text, sonst `--text-4`.
-- **Quellen**: Chips in der Zeitleiste; unter der Antwort `src-stack` = nur Logos als abgerundete Quadrate (20 px, Radius 6, leicht überlappend, OHNE Namen), höchstens 3, dann „+N“, Klick → Quellenfenster.
+- **Quellen**: Chips in der Zeitleiste; unter der Antwort `src-stack` = nur Logos als abgerundete Quadrate (20 px, Radius 6, leicht überlappend, OHNE Namen), in einer Reihe, deutsche zuerst, höchstens 5, dann „+N“, Klick → Quellenfenster; endet die Antwort mit einer Grafik, stehen sie neben den Aktions-Icons.
+- **Lernsets im Chat**: keine Box mit Knopf unten rechts – ruhige Kopfzeile (Art · Titel, Zähler, Vollbild-Icon), darunter direkt die Lernfläche; Aktionen als runde Pillen (34 px), mittig. Karteikarte Radius 24, Nachbarkarten nur als Kante.
+- **Funde (```links)**: Raster `minmax(172px,1fr)`, Karte Radius 16, Bild 4:3 oben (Schimmer beim Laden), darunter Titel (2 Zeilen), Satz, Website mit Logo.
+- **Zeitleiste**: ein einzelner Schritt steht nur im Hauptstatus; die Liste erscheint ab dem 2. Schritt (der erste abgehakt). Keine Drehkreise – Punkt pulsiert, der Hund arbeitet.
 - **Pixel-Hunde** im groben 32er-Raster; Größen nur 32/24/20 (andere Größen gibt es nicht → Fehler).
