@@ -51,18 +51,23 @@ function installFetch(routes) {
 }
 
 /* Typische Regeln */
+// Hilfsaufgaben (Planung, Prüfung, Bewertung) laufen beim Anbieter der Anfrage – in den Tests Gemini (generateContent, nicht gestreamt)
+const helper = (c) => (c.url.includes('generativelanguage') && c.url.includes(':generateContent')) || c.url.includes('integrate.api.nvidia.com');
+const sysText = (c) => c.body?.systemInstruction?.parts?.[0]?.text || c.body?.messages?.[0]?.content || '';
 const is = {
   geminiStream: (c) => c.url.includes('generativelanguage') && c.url.includes('streamGenerateContent'),
   nvidia: (c) => c.url.includes('integrate.api.nvidia.com'),
-  analyze: (c) => c.url.includes('integrate.api.nvidia.com') && /plan how a learning assistant/.test(c.body?.messages?.[0]?.content || ''),
-  verify: (c) => c.url.includes('integrate.api.nvidia.com') && /strict reviewer/.test(c.body?.messages?.[0]?.content || ''),
-  judge: (c) => c.url.includes('integrate.api.nvidia.com') && /rate candidate sources/.test(c.body?.messages?.[0]?.content || ''),
+  analyze: (c) => helper(c) && /plan how a learning assistant/.test(sysText(c)),
+  verify: (c) => helper(c) && /strict reviewer/.test(sysText(c)),
+  judge: (c) => helper(c) && /rate candidate sources/.test(sysText(c)),
   nvidiaStream: (c) => c.url.includes('integrate.api.nvidia.com') && c.body?.stream === true,
   wikiSearch: (c) => c.url.includes('wikipedia.org') && c.url.includes('list=search'),
   wikiPage: (c) => c.url.includes('wikipedia.org') && c.url.includes('prop=extracts'),
   openAlex: (c) => c.url.includes('api.openalex.org'),
 };
-const nvidiaJson = (obj) => json({ choices: [{ message: { content: JSON.stringify(obj) } }] });
+// Antwort einer Hilfsaufgabe – passt für Gemini (candidates) und OpenAI-Form (choices)
+const nvidiaJson = (obj) => json({ choices: [{ message: { content: JSON.stringify(obj) } }], candidates: [{ content: { parts: [{ text: JSON.stringify(obj) }] } }] });
+const userOf = (c) => c.body?.messages?.[1]?.content || (c.body?.contents?.[0]?.parts || []).map((x) => x.text || '').join('');
 const systemOf = (call) => call.body?.systemInstruction?.parts?.[0]?.text || call.body?.messages?.[0]?.content || '';
 
 /* OpenAlex-Treffer mit Abstract (als inverted index) */
@@ -89,4 +94,4 @@ function collect() {
   return { events, send, stages, text, of };
 }
 
-module.exports = { ENV, sseResponse, json, geminiChunks, hang, installFetch, is, nvidiaJson, systemOf, openAlexWork, collect };
+module.exports = { userOf, ENV, sseResponse, json, geminiChunks, hang, installFetch, is, nvidiaJson, systemOf, openAlexWork, collect };

@@ -283,9 +283,9 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
     }
     console.warn('[Bild] Gemini nicht erreichbar – NVIDIA übernimmt');
   }
-  const nvKey = P.nvidiaKeyOf(env);
-  if (!nvKey) return null;
-  try { return P.parseJsonLoose(await P.nvidiaChat({ key: nvKey, model: images.length ? P.NVIDIA_VISION_MODEL : P.NVIDIA_TEXT_MODEL, system, messages: [{ role: 'user', text, images }], maxTokens: 4000, signal: AbortSignal.timeout(60000) })); } catch { return null; }
+  // Gemini nicht erreichbar: ohne Bilder beim nächsten Anbieter (Groq/OpenRouter); Bilder kann nur Gemini lesen. Kein Nemotron.
+  if (images.length) return null;
+  try { return P.parseJsonLoose(await P.textTask({ ...env, __family: undefined }, { system, user: text, maxTokens: 4000, timeoutMs: 60000, json: true })); } catch { return null; }
 }
 // Bildstil: Standard ist die klare Schulbuch-Grafik (wie gute Biologie-Bücher); realistisch nur, wenn der Nutzer es verlangt
 const STYLE_CLEAN = 'Clean modern flat vector textbook illustration like in a high-quality school science book, soft pastel colors, smooth flat shading with subtle gentle gradients, thin clean darker outlines, simple clear shapes, a 3D cutaway view where it helps to show the inside, high detail where it matters, pure white background, the subject centered and occupying only the middle 55 percent of the image width, empty white space on the left, on the right and at the top, every structure large, clearly separated from its neighbours and easy to recognise, no text, no labels, no letters, no numbers';
@@ -1098,8 +1098,7 @@ async function handleDocIntent(req, res) {
       try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
     }
   }
-  const nvKey = nvidiaKeyOf(env);
-  if (text && nvKey) { try { return sendJson(res, 200, { create: ask(await P.nvidiaComplete(nvKey, DOC_INTENT_SYSTEM, text, AbortSignal.timeout(20000), 800)) }); } catch {} }
+  if (text) { try { return sendJson(res, 200, { create: ask(await P.textTask(env, { system: DOC_INTENT_SYSTEM, user: text, maxTokens: 800, timeoutMs: 15000 })) }); } catch {} } // Groq/OpenRouter, wenn Gemini aufgebraucht
   sendJson(res, 200, { create: null }); // keine KI erreichbar → die App entscheidet selbst (nur eindeutige Bitten)
 }
 
@@ -1123,13 +1122,7 @@ async function handleTitle(req, res) {
       } catch (e) { if (e.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000; }
     }
   }
-  const nvKey = nvidiaKeyOf(env);
-  if (nvKey) {
-    try {
-      const t = clean(await P.nvidiaComplete(nvKey, TITLE_SYSTEM, text, AbortSignal.timeout(30000), 2000));
-      if (t) return sendJson(res, 200, { title: t });
-    } catch {}
-  }
+  try { const t = clean(await P.textTask(env, { system: TITLE_SYSTEM, user: text, maxTokens: 200, timeoutMs: 12000 })); if (t) return sendJson(res, 200, { title: t }); } catch {} // Groq/OpenRouter, wenn Gemini aufgebraucht
   sendJson(res, 200, { title: '' });
 }
 

@@ -33,7 +33,7 @@ const researchRoutes = (overrides = {}) => [
 ];
 
 let fx = null;
-test.afterEach(() => { fx?.restore(); fx = null; W.cooldowns.clear(); });
+test.afterEach(() => { fx?.restore(); fx = null; W.cooldowns.clear(); require('../lib/providers').resetLimits(); });
 /* Prüfrunde ist standardmäßig aus – für die Tests der Prüfung kurz einschalten */
 const withVerify = (fn) => async () => {
   const before = [W.EFFORTS.high.verify, W.EFFORTS.max.verify];
@@ -124,7 +124,7 @@ test('2 Auto, einfache Frage: Aufwand erst nach der Analyse festgelegt (hier Low
   assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 0);
   assert.equal(r.result.status, 'completed');
   // Auto plant ohne Max-Vorgabe (die würde einfache Fragen hochstufen)
-  assert.doesNotMatch(fx.calls.find(M.is.analyze).body.messages[1].content, /MAX effort/);
+  assert.doesNotMatch(M.userOf(fx.calls.find(M.is.analyze)), /MAX effort/);
   // Begrüßung → sofort Low, ohne Analyse und ohne Denkphase
   assert.equal(W.resolveEffort('auto', { text: 'Moin!' }).level, 'low');
   assert.equal(W.resolveEffort('high', { text: 'Moin!' }).level, 'low');
@@ -284,7 +284,7 @@ test('9 Widersprüchliche Quellen: beide gehen an Modell und Prüfer, mit Regel 
   assert.match(sys, /4 percent/);
   assert.match(sys, /Widersprechen sich Quellen, sag das offen/);
   const verifyCall = fx.calls.find(M.is.verify);
-  assert.match(verifyCall.body.messages[1].content, /10 percent[\s\S]*4 percent/);
+  assert.match(M.userOf(verifyCall), /10 percent[\s\S]*4 percent/);
   assert.deepEqual(r.of('citations')[0].cited, [1, 2]);
 }));
 
@@ -448,7 +448,7 @@ test('Max ist verbindlich: auch bei „einfacher“ Frage Max-Stil, volles Denke
   const gen = fx.calls.find(M.is.geminiStream);
   assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 24576); // Max: volles Denk-Budget
   assert.match(M.systemOf(gen), /AUFWAND MAX/);
-  assert.match(fx.calls.find(M.is.analyze).body.messages[1].content, /effort MAX/); // die Planung weiß, dass Max gewählt ist
+  assert.match(M.userOf(fx.calls.find(M.is.analyze)), /effort MAX/); // die Planung weiß, dass Max gewählt ist
   assert.ok(r.stages().some((s) => s.startsWith('searching_sources'))); // Max sucht immer Quellen
 });
 
@@ -520,7 +520,7 @@ test('Inhaltliche Quellenbewertung: thematisch unpassende Studie wird trotz Wort
   fx = M.installFetch([
     { match: M.is.analyze, respond: () => M.nvidiaJson(ANALYSIS_RESEARCH) },
     { match: M.is.judge, respond: (c) => {
-      judgeInput = c.body.messages[1].content;
+      judgeInput = M.userOf(c);
       const ids = [...judgeInput.matchAll(/<quelle i="(\d+)"[^>]*>\n([^\n]*)/g)].map((m) => ({ i: Number(m[1]), s: /pyruvate/i.test(m[2]) ? 2 : 9 }));
       return M.nvidiaJson({ scores: ids });
     } },
