@@ -41,7 +41,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Antwort-Wächter (`lib/thoughts.js`): ein ganzer Absatz „**Executing Task**“/„**Task Analysis Confirmed**“ (englische Gedanken-Überschrift) am Anfang einer deutschen Antwort fällt weg.
 
 ## Recherche
-- Research-Agent (mit Gemini): Gemini recherchiert selbst (Google-Suche im Modell), keine eigene Tiefen-Recherche. Lernen/Allgemein behalten die eigene Suche (deutsche Fachquellen, Relevanz-Prüfung).
+- Research-Agent und Allgemein (mit Gemini): Gemini recherchiert selbst (Google-Suche im Modell), keine eigene Tiefen-Recherche. Lernen behält die eigene Suche (nur deutsche Fachquellen, Relevanz-Prüfung).
 
 ## Quellen
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
