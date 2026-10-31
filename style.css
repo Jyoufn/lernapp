@@ -9235,3 +9235,18 @@ div.tl4-h { cursor: default; }
 .md .copybox-subj-l { flex: none; color: var(--text-4); font-size: 12px; font-weight: 500; }
 .md .copybox-text { margin-right: 0; white-space: pre-wrap; word-break: break-word; }
 .md .copybox-body > .copybox-text:first-child::before { content: ''; float: right; width: 92px; height: 22px; } /* Platz für „Kopieren“ nur neben der ersten Zeile */
+
+/* Cover „Mit KI“ (31.10., Runde 2): Eingabefeld unten im Fenster, wächst mit dem Text (scrollt ab ~180 px), Mikro wie im Chat;
+   beim Erzeugen nur die Wellen-Animation; „Deine Bilder“ mit × zum Entfernen */
+.dc-cpop-body:has(.dc-cai2-wrap) { display: flex; flex-direction: column; justify-content: flex-end; }
+.dc-cai2-wrap { display: flex; flex-direction: column; gap: 8px; }
+.dc-cai2 .dc-cai-in { max-height: 180px; overflow-y: auto; }
+.dc-cai2 .mic-btn { width: 28px; height: 28px; }
+.dc-cpop-body:has(.dc-cai-gen) { display: flex; flex-direction: column; justify-content: center; }
+.dc-cai-gen .ill-frame { aspect-ratio: 16 / 9; }
+.dc-cown { position: relative; }
+.dc-cown > .dc-ctile { width: 100%; }
+.dc-cown-x { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, 0.6); color: #fff; opacity: 0; cursor: pointer; transition: opacity 120ms ease; -webkit-tap-highlight-color: transparent; }
+.dc-cown:hover .dc-cown-x { opacity: 1; }
+@media (hover: none) { .dc-cown-x { opacity: 1; } }
+.dc-cai2 .dc-cai-in, .dc-cai2-wrap, .dc-cai2 { flex: none; }

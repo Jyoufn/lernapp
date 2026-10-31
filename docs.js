@@ -2048,7 +2048,27 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     }
     // eigene Bilder: alle, die in irgendeinem Dokument als Cover benutzt werden (ohne Doppelte)
     // eigene Bilder (KI-Cover behalten ihr Banner-Format: ai-Merker geht mit)
-    const ownImages = () => { const m = new Map(); docs.forEach((d) => { if (d.cover?.kind === 'image' && d.cover.src && !m.has(d.cover.src)) m.set(d.cover.src, !!d.cover.ai); }); return [...m].slice(0, 24); };
+    // „Deine Bilder“: KI-Cover und hochgeladene Bilder bleiben gespeichert (docs.coverImages), bis man sie entfernt (×)
+    const OWN_KEY = 'docs.coverImages', OWN_HIDE = 'docs.coverHidden';
+    const readOwn = () => { try { return JSON.parse(localStorage.getItem(OWN_KEY) || '[]'); } catch { return []; } };
+    const hidden = () => { try { return new Set(JSON.parse(localStorage.getItem(OWN_HIDE) || '[]')); } catch { return new Set(); } };
+    const keyOf = (src) => `${src.length}:${src.slice(-40)}`;
+    function saveOwnImage(src) {
+      let list = readOwn().filter((x) => x !== src); list.unshift(src); list = list.slice(0, 12);
+      for (;;) { try { localStorage.setItem(OWN_KEY, JSON.stringify(list)); break; } catch { if (!list.length) break; list.pop(); } } // Speicher voll → älteste weg
+      const h = hidden(); h.delete(keyOf(src)); localStorage.setItem(OWN_HIDE, JSON.stringify([...h]));
+    }
+    function removeOwnImage(src) {
+      try { localStorage.setItem(OWN_KEY, JSON.stringify(readOwn().filter((x) => x !== src))); } catch {}
+      const h = hidden(); h.add(keyOf(src)); try { localStorage.setItem(OWN_HIDE, JSON.stringify([...h].slice(-60))); } catch {}
+    }
+    const shrinkCover = (src) => new Promise((ok) => { const im = new Image(); im.onload = () => { const k = Math.min(1, 1600 / im.width); const cv = document.createElement('canvas'); cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k); cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); ok(cv.toDataURL('image/jpeg', 0.86)); }; im.onerror = () => ok(src); im.src = src; });
+    const ownImages = () => {
+      const m = new Map(), h = hidden();
+      readOwn().forEach((src) => m.set(src, true));
+      docs.forEach((d) => { if (d.cover?.kind === 'image' && d.cover.src && !m.has(d.cover.src)) m.set(d.cover.src, !!d.cover.ai); });
+      return [...m].filter(([src]) => !h.has(keyOf(src))).slice(0, 24);
+    };
 
     let coverPop = null;
     // Stile: erst Stil wählen, dann Farbe (Varianten des Stils oder eigene Farbe)
@@ -2087,20 +2107,20 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           // „Mit KI erstellen“: alles andere verschwindet – nur das Eingabefeld (Chat-Design, kleiner) bzw. die Bild-Animation
           title.innerHTML = `${ai.busy ? '' : `<button type="button" class="dc-cback" data-ai-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>`}Mit KI erstellen`;
           body.innerHTML = ai.busy
-            ? `<div class="dc-cai-gen"><div class="illustration-pending"><span class="shimmer ill-ico"></span><span class="shimmer">Cover erzeugen</span></div>${(window.illustrationWave?.() || '').replace('xMidYMid meet', 'xMidYMid slice')}</div>`
-            : `<form class="dc-cai2" data-ai-form>
+            ? `<div class="dc-cai-gen">${(window.illustrationWave?.() || '').replace('xMidYMid meet', 'xMidYMid slice')}</div>` // nur die Wellen-Animation, kein Text
+            : `<div class="dc-cai2-wrap">${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}<form class="dc-cai2" data-ai-form>
               ${ai.photos.length ? `<div class="dc-cai2-photos">${ai.photos.map((ph, i) => `<span class="dc-cai2-ph"><img src="${esc(ph)}" alt="" /><button type="button" data-ai-rm="${i}" aria-label="Foto entfernen">${fi('x', 10)}</button></span>`).join('')}</div>` : ''}
               <textarea class="dc-cai-in" rows="2" maxlength="400" placeholder="Was soll auf dem Cover sein?" aria-label="Cover beschreiben">${esc(ai.text)}</textarea>
               <div class="dc-cai2-bar"><button type="button" class="dc-cai2-btn" data-ai-photo aria-label="Foto als Vorlage hinzufügen">${fi('plus', 15)}</button><span class="grow"></span>
-                <button type="button" class="dc-cai2-btn dc-cai2-mic" data-ai-mic aria-label="Sprachaufnahme">${fi('mic', 15)}</button>
+                <button type="button" class="mic-btn dc-cai2-mic" data-ai-mic aria-label="Sprachaufnahme"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg><svg class="icon-stop" width="16" height="16"><use href="#i-stop"/></svg></button>
                 <button type="submit" class="dc-cai-go" aria-label="Erstellen">${fi('arrow-up', 14)}</button></div>
               <input type="file" class="dc-cai2-file" accept="image/png,image/jpeg,image/webp" multiple hidden />
-            </form>${ai.err ? `<div class="dc-cerr">${esc(ai.err)}</div>` : ''}`;
-          if (ai.busy) { const pend = body.querySelector('.illustration-pending'); if (pend) window.sweepRow?.(pend); }
-          else {
+            </form></div>`;
+          if (!ai.busy) {
             const f = body.querySelector('.dc-cai2-file');
             f.addEventListener('change', async () => { for (const x of [...f.files].slice(0, 3 - ai.photos.length)) { try { ai.photos.push(await smallPhoto(x)); } catch {} } ai.text = body.querySelector('.dc-cai-in').value; f.value = ''; render(); body.querySelector('.dc-cai-in')?.focus(); });
             const ta = body.querySelector('.dc-cai-in');
+            const grow = () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 180)}px`; }; ta.addEventListener('input', grow); grow(); // wächst mit dem Text, darüber scrollt es
             ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ta.form.requestSubmit(); } });
           }
         } else if (!step) {
@@ -2114,7 +2134,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
                 <span class="dc-cup-in">${fi('image', 20)}<i>Mit KI erstellen</i></span></button></div>
               ${COVER_STYLES.map((st) => `<div class="dc-cstyle"><button type="button" class="dc-ctile${cur === st.id ? ' on' : ''}" data-style="${st.id}" aria-label="${esc(st.name)}" title="${esc(st.name)}"><span style="background:${esc(previewOf(st.id))}"></span></button></div>`).join('')}
             </div>
-            ${own.length ? `<div class="dc-clabel">Deine Bilder</div><div class="dc-cgrid">${own.map(([src, isAi]) => tile({ kind: 'image', src, ...(isAi ? { ai: true } : {}) }, `center / cover no-repeat url("${src}")`, 'Eigenes Bild')).join('')}</div>` : ''}`;
+            ${own.length ? `<div class="dc-clabel">Deine Bilder</div><div class="dc-cgrid">${own.map(([src, isAi], i) => `<div class="dc-cown">${tile({ kind: 'image', src, ...(isAi ? { ai: true } : {}) }, `center / cover no-repeat url("${src}")`, 'Eigenes Bild')}<button type="button" class="dc-cown-x" data-own-rm="${i}" aria-label="Bild entfernen">${fi('x', 9)}</button></div>`).join('')}</div>` : ''}`;
         } else {
           const st = COVER_STYLES.find((x) => x.id === step);
           title.innerHTML = `<button type="button" class="dc-cback" data-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>${esc(st.name)}`;
@@ -2167,6 +2187,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         }
         const sw = e.target.closest('[data-c]'); if (sw) { applyColor(sw.dataset.c); showPreview(sw.dataset.c); setTimeout(close, 160); return; } // Farbe gewählt → übernehmen und schließen
         if (e.target.closest('[data-upload]')) { file.click(); return; }
+        const orm = e.target.closest('[data-own-rm]'); if (orm) { const it = ownImages()[+orm.dataset.ownRm]; if (it) removeOwnImage(it[0]); render(); return; }
         if (e.target.closest('[data-ai]')) { if (ai.busy) return; ai.open = true; ai.err = ''; render(1); body.querySelector('.dc-cai-in')?.focus(); return; }
         if (e.target.closest('[data-ai-back]')) { window.stopDictateInto?.(); ai.open = false; ai.err = ''; render(-1); return; }
         if (e.target.closest('[data-ai-photo]')) { if (ai.photos.length < 3) body.querySelector('.dc-cai2-file')?.click(); return; }
@@ -2186,15 +2207,19 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos }) });
           const j = await r.json().catch(() => ({}));
           if (!r.ok || !j.src) throw new Error(j.error || 'Das Cover konnte gerade nicht erstellt werden.');
-          setCover({ kind: 'image', src: j.src, ai: true }); // KI-Cover: normales Banner-Format wie die anderen Cover (kein eigenes Seitenverhältnis)
-          ai.open = false; ai.text = ''; ai.photos = [];
+          const src = await shrinkCover(j.src); // JPEG – passt in den Speicher „Deine Bilder“
+          setCover({ kind: 'image', src, ai: true }); // KI-Cover: normales Banner-Format wie die anderen Cover (kein eigenes Seitenverhältnis)
+          saveOwnImage(src);
+          ai.open = false; ai.text = ''; ai.photos = []; ai.busy = false;
+          if (coverPop) close(); // fertig → ganzes Cover-Fenster zu
+          return;
         } catch (err) { ai.err = err.message; }
         ai.busy = false;
         if (coverPop) render();
       });
       const upload = async (f) => {
         if (!f || !/^image\//.test(f.type)) return;
-        try { const im = await readImage(f); setCover({ kind: 'image', src: im.src, ai: true, y: 50 }); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
+        try { const im = await readImage(f); setCover({ kind: 'image', src: im.src, ai: true, y: 50 }); saveOwnImage(im.src); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
       };
       file.addEventListener('change', () => { upload(file.files[0]); file.value = ''; });
       pop.addEventListener('dragover', (e) => { e.preventDefault(); pop.classList.add('drag'); });
