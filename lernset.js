@@ -17,24 +17,41 @@ const Lernset = (() => {
   const KINDS = {
     karten: { name: 'Karteikarten', icon: 'stack', verb: 'Lernen', unit: ['Karte', 'Karten'] },
     quiz: { name: 'Quiz', icon: 'target', verb: 'Quiz starten', unit: ['Frage', 'Fragen'] },
-    klausur: { name: 'Probeklausur', icon: 'clipboard', verb: 'Klausur schreiben', unit: ['Aufgabe', 'Aufgaben'] },
+    klausur: { name: 'Probeklausur', icon: 'book-open', verb: 'Klausur schreiben', unit: ['Aufgabe', 'Aufgaben'] },
   };
   const ALIAS = { karten: 'karten', karteikarten: 'karten', lernkarten: 'karten', flashcards: 'karten', quiz: 'quiz', test: 'quiz', klausur: 'klausur', probeklausur: 'klausur', exam: 'klausur' };
   const TYPE_NAMES = { mc: 'Multiple Choice', wf: 'Wahr/Falsch', luecke: 'Lückentext', zuordnen: 'Zuordnung', offen: 'Offene Fragen' };
   const GAP = /_{3,}|\[\s*…?\s*\]|\[\.\.\.\]/g; // Lücke im Lückentext
 
   /* ---------- KI-JSON lesen und prüfen ---------- */
+  // Teilstück retten, solange die KI noch schreibt (oder die Antwort abgeschnitten wurde): Kopf + alle schon vollständigen Einträge
+  function salvage(src) {
+    const m = /"(karten|fragen|aufgaben)"\s*:\s*\[/.exec(src);
+    if (!m) return null;
+    const before = src.slice(0, m.index);
+    const head = (k) => { const h = new RegExp(`"${k}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(before); try { return h ? JSON.parse(`"${h[1]}"`) : ''; } catch { return ''; } };
+    const list = [];
+    let depth = 0, start = -1, inStr = false, bs = false;
+    for (let i = m.index + m[0].length; i < src.length; i++) {
+      const c = src[i];
+      if (inStr) { if (bs) bs = false; else if (c === '\\') bs = true; else if (c === '"') inStr = false; continue; }
+      if (c === '"') inStr = true;
+      else if (c === '{' || c === '[') { if (!depth && c === '{') start = i; depth++; }
+      else if (c === '}' || c === ']') { if (!depth) break; depth--; if (!depth && start >= 0) { try { list.push(JSON.parse(src.slice(start, i + 1))); } catch {} start = -1; } }
+    }
+    return { art: head('art'), titel: head('titel'), fach: head('fach'), dauer: +(/"dauer"\s*:\s*(\d+)/.exec(before)?.[1] || 0), [m[1]]: list };
+  }
   function parse(raw) {
-    let o = null;
+    let o = null, partial = false;
     const src = String(raw || '').trim();
     try { o = JSON.parse(src); } catch {
-      try { o = JSON.parse(src.slice(src.indexOf('{'), src.lastIndexOf('}') + 1).replace(/,\s*([}\]])/g, '$1')); } catch { return null; }
+      try { o = JSON.parse(src.slice(src.indexOf('{'), src.lastIndexOf('}') + 1).replace(/,\s*([}\]])/g, '$1')); } catch { o = salvage(src); partial = true; }
     }
     if (!o || typeof o !== 'object') return null;
     const kind = ALIAS[String(o.art || o.kind || '').toLowerCase()] || (Array.isArray(o.karten) ? 'karten' : Array.isArray(o.aufgaben) ? 'klausur' : 'quiz');
-    const set = { kind, title: str(o.titel || o.title || KINDS[kind].name, 120), subject: str(o.fach, 40), minutes: +o.dauer > 0 ? Math.max(5, Math.min(240, Math.round(+o.dauer))) : 0, cards: [], items: [] };
+    const set = { kind, title: str(o.titel || o.title || KINDS[kind].name, 120), subject: str(o.fach, 40), minutes: +o.dauer > 0 ? Math.max(5, Math.min(240, Math.round(+o.dauer))) : 0, cards: [], items: [], partial };
     if (kind === 'karten') {
-      set.cards = (Array.isArray(o.karten) ? o.karten : []).map((c) => ({ front: str(c?.vorne ?? c?.front, 400), back: str(c?.hinten ?? c?.back, 900) })).filter((c) => c.front && c.back).slice(0, 80);
+      set.cards = (Array.isArray(o.karten) ? o.karten : []).map((c) => ({ front: str(c?.vorne ?? c?.front ?? c?.frage ?? c?.begriff, 400), back: str(c?.hinten ?? c?.back ?? c?.antwort ?? c?.erklaerung, 900) })).filter((c) => c.front && c.back).slice(0, 80);
       return set.cards.length ? set : null;
     }
     const list = Array.isArray(o.aufgaben) ? o.aufgaben : Array.isArray(o.fragen) ? o.fragen : [];
@@ -91,78 +108,123 @@ const Lernset = (() => {
     return `<div class="ls-pv ls-pv-paper"><div class="ls-pv-ph"><b>${esc(set.subject || 'Probeklausur')}</b><span>${set.minutes} Min · ${pointsOf(set)} Punkte</span></div>
       <p><span class="ls-pv-n">1</span>${rich(x.q || x.text)}</p><i></i><i></i><i></i></div>`;
   }
-  // Warten, solange die KI den Block schreibt: dieselbe Wellen-Animation wie bei Bildern, dazu der Fortschritt
-  function progress(fig, raw) {
-    const n = (String(raw || '').match(/"(vorne|frage|text|typ)"\s*:/g) || []).length;
-    const k = fig.querySelector('.ls-wait-n');
-    if (k) k.textContent = n ? ` · ${n}` : '';
-  }
-  function figure(raw) {
+  // Warten, solange die KI die ersten Einträge schreibt: Wellen-Kachelfeld über die volle Breite (Fortschritt steht in der Zeitleiste)
+  let waveSvg = '';
+  const wave = () => waveSvg || (waveSvg = (() => {
+    const W = 1024, H = 352, S = 24, G = 8, C = 31, R = 10, ox = (W - C * S - (C - 1) * G) / 2, oy = (H - R * S - (R - 1) * G) / 2;
+    let t = '';
+    for (let r = 0; r < R; r++) for (let c = 0; c < C; c++) t += `<rect x="${ox + c * (S + G)}" y="${oy + r * (S + G)}" width="${S}" height="${S}" rx="6" style="animation-delay:${Math.round((c / (C - 1) * 0.85 + r / (R - 1) * 0.15) * 2600)}ms"/>`;
+    return `<div class="ill-frame" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><g fill="#fff" fill-opacity="0.09">${t}</g></svg></div>`;
+  })());
+  const sizeOf = (s) => (s ? (s.kind === 'karten' ? s.cards.length : s.items.length) : 0);
+  const kindOf = (raw) => { const t = String(raw || ''); return ALIAS[String(/"art"\s*:\s*"([^"]*)"/.exec(t)?.[1] || '').toLowerCase()] || (/"karten"\s*:/.test(t) ? 'karten' : /"aufgaben"\s*:/.test(t) ? 'klausur' : 'quiz'); };
+  // Text für den Schritt in der Zeitleiste, solange die KI schreibt („Fragen schreiben · 4“) bzw. danach („Quiz erstellt · 9 Fragen“)
+  function status(raw) { const n = sizeOf(parse(raw)), w = { karten: 'Karteikarten schreiben', quiz: 'Fragen schreiben', klausur: 'Aufgaben schreiben' }[kindOf(raw)]; return n ? `${w} · ${n}` : w; }
+  function wrote(raw) { const s = parse(raw); return s ? `${KINDS[s.kind].name} erstellt · ${countText(s)}` : ''; }
+  function progress() {} // alt: Fortschritt steht jetzt in der Zeitleiste (status)
+  // Zähler „3 / 9“ – solange noch erstellt wird, pulsiert statt der Gesamtzahl ein Punkt
+  const counter = (node, at, total, loading) => { if (node) node.innerHTML = `<span>${at}</span><span class="ls-of">/</span>${loading ? '<i class="ls-load"></i>' : `<span>${total}</span>`}`; };
+  const MIN_SHOW = 3; // ab so vielen fertigen Einträgen kann man schon lernen, der Rest entsteht im Hintergrund
+
+  /* Lernset im Chat. live: die KI schreibt noch – fig.update(raw, done) bekommt jeden neuen Stand; neue Einträge hängen sich an, ohne
+     dass der Lernstand verloren geht (set.subs meldet sie den Ansichten) */
+  function figure(raw, { live = false } = {}) {
     const fig = el('figure', 'ls');
-    const set = parse(raw);
-    if (!set) {
-      fig.classList.add('ls-waiting');
-      fig.innerHTML = `<div class="ls-wait">${window.illustrationWave?.() || ''}</div><div class="ls-wait-l"><span class="shimmer">Lernset wird erstellt</span><span class="ls-wait-n"></span></div>`;
-      progress(fig, raw);
-      return fig;
-    }
-    // Kopfzeile: Art · Titel, rechts Zähler und Vollbild – darunter direkt zum Lernen (Karteikarten und Quiz im Chat spielbar)
-    fig.classList.add(`ls-k-${set.kind}`);
-    fig.innerHTML = `<div class="ls-top"><span class="ls-top-t">${KINDS[set.kind].name}<b>${esc(set.title)}</b></span><span class="ls-top-n"></span>
+    let set = null;
+    fig.update = (raw2, done = true) => {
+      const s = parse(raw2);
+      if (!set) {
+        if (s && (done || sizeOf(s) >= (s.kind === 'klausur' ? 1 : MIN_SHOW))) {
+          const waited = fig.classList.contains('ls-waiting');
+          set = s; set.loading = !done; set.subs = new Set();
+          mount(fig, set);
+          if (waited) fig.classList.add('ls-reveal');
+        } else if (done) { fig.className = 'ls ls-fail'; fig.textContent = 'Das Lernset konnte nicht erstellt werden – bitte noch einmal versuchen.'; }
+        else if (!fig.classList.contains('ls-waiting')) { fig.className = 'ls ls-waiting'; fig.innerHTML = `<div class="ls-wait">${wave()}</div>`; }
+        return;
+      }
+      if (!set.loading) return;
+      if (s && s.kind === set.kind) { if (set.kind === 'karten') set.cards.push(...s.cards.slice(set.cards.length)); else set.items.push(...s.items.slice(set.items.length)); }
+      if (done) set.loading = false;
+      set.subs.forEach((f) => f());
+    };
+    fig.update(raw, !live);
+    return fig;
+  }
+  function mount(fig, set) {
+    // Kopfzeile: Icon + Titel, rechts Zähler und Vollbild – darunter direkt zum Lernen (Karteikarten und Quiz im Chat spielbar)
+    fig.className = `ls ls-k-${set.kind}`;
+    fig.innerHTML = `<div class="ls-top"><span class="ls-top-t">${fi(KINDS[set.kind].icon, 13)}<b>${esc(set.title)}</b></span><span class="ls-top-n"></span>
       <button type="button" class="ls-exp" aria-label="Im Vollbild öffnen">${fi('expand', 13)}</button></div><div class="ls-in"></div>`;
     const inner = fig.querySelector('.ls-in'), count = fig.querySelector('.ls-top-n');
-    fig.querySelector('.ls-exp').addEventListener('click', (e) => { e.stopPropagation(); open(set); });
+    fig.querySelector('.ls-exp').addEventListener('click', (e) => { e.stopPropagation(); if (set.kind !== 'klausur' || !set.loading) open(set); });
     const ui = { body: inner, sub: count, right: null, setBar: () => {}, cleanup: [], inline: true };
-    if (set.kind === 'karten') deck(set, ui);
-    else if (set.kind === 'quiz') quiz(set, ui);
-    else {
-      inner.innerHTML = `${preview(set)}<div class="ls-start"><button type="button" class="ls-pill">${KINDS.klausur.verb}</button><span>${set.minutes} Min · ${pointsOf(set)} Punkte · ${countText(set)}</span></div>`;
-      inner.querySelector('.ls-pill').addEventListener('click', () => open(set));
-    }
-    return fig;
+    if (set.kind === 'karten') return deck(set, ui);
+    if (set.kind === 'quiz') return quiz(set, ui);
+    const draw = () => {
+      inner.innerHTML = `${preview(set)}<div class="ls-start"><button type="button" class="ls-pill${set.loading ? ' busy' : ''}"${set.loading ? ' disabled' : ''}>${set.loading ? '<span class="shimmer">Wird erstellt …</span>' : KINDS.klausur.verb}</button>
+        <span>${set.loading ? countText(set) : `${set.minutes} Min · ${pointsOf(set)} Punkte · ${countText(set)}`}</span></div>`;
+      inner.querySelector('.ls-pill').addEventListener('click', () => { if (!set.loading) open(set); });
+    };
+    set.subs.add(draw);
+    draw();
   }
 
   /* ---------- Karteikarten-Stapel (im Chat und im Vollbild) ----------
-     Aktuelle Karte groß in der Mitte, links/rechts nur die Kanten der Nachbarkarten (ohne Text). Antippen dreht um. Darunter Daumen
-     hoch / seitlich / runter: die Karte färbt sich kurz (grün/orange/rot) und gleitet weiter; die Bewertung wird gemerkt (Punkte unten). */
-  const THUMB = (rot) => `<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true" style="transform:rotate(${rot}deg)"><path fill="currentColor" d="M2 7h2.2v7H2a.7.7 0 0 1-.7-.7V7.7A.7.7 0 0 1 2 7Zm3.3 7V6.9l2.6-4.3a1.1 1.1 0 0 1 2 .7l-.4 2.5h3.3a1.6 1.6 0 0 1 1.6 1.9l-.9 4.8A1.8 1.8 0 0 1 11.7 14H5.3Z"/></svg>`;
-  const RATES = [{ r: 2, label: 'Gewusst', rot: 0 }, { r: 1, label: 'Unsicher', rot: -90 }, { r: 0, label: 'Nicht gewusst', rot: 180 }];
+     Aktuelle Karte groß in der Mitte, links/rechts nur die Kanten der Nachbarkarten und Pfeile zum Blättern. Antippen dreht um (beide Seiten
+     gleich dunkel). Darunter Daumen hoch / „so lala“ / Daumen runter: der Rand der Karte färbt sich kurz, dann gleitet sie weiter. */
+  const THUMB = (down) => `<svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"${down ? ' style="transform:scale(-1,-1)"' : ''}><path fill="currentColor" d="M1.6 7.2c0-.5.4-.9.9-.9h1.6v7.6H2.5a.9.9 0 0 1-.9-.9V7.2Zm3.7 6.7V6.6l2.5-4.2c.3-.5.8-.7 1.3-.5.6.2.9.8.8 1.4l-.4 2.3h3.2c1 0 1.8.9 1.6 1.9l-.9 4.8c-.2.9-.9 1.6-1.8 1.6H5.3Z"/></svg>`;
+  const SOSO = '<svg width="17" height="17" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 9.2c1.3-1.9 2.4-1.9 3.6 0s2.3 1.9 3.6 0 2.4-1.9 3.6 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>';
+  const RATES = [{ r: 0, label: 'Nicht gewusst', icon: THUMB(true) }, { r: 1, label: 'Unsicher', icon: SOSO }, { r: 2, label: 'Gewusst', icon: THUMB(false) }];
   const keyOf = (raw) => { let h = 5381; const t = String(raw || ''); for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return `ls.rate.${h.toString(36)}`; };
   function deck(set, ui, base = set) {
-    const store = keyOf(JSON.stringify(base.cards));
+    const store = keyOf(`${base.title}|${base.cards[0]?.front || ''}`); // gleich bleibend, auch wenn noch Karten dazukommen
     const idOf = (i) => base.cards.indexOf(set.cards[i]); // Bewertung je Karte des Original-Stapels (auch wenn gemischt)
     let rates = {};
     try { rates = JSON.parse(localStorage.getItem(store) || '{}') || {}; } catch {}
     const save = () => { try { localStorage.setItem(store, JSON.stringify(rates)); } catch {} };
-    let order = set.cards.map((_, i) => i), at = 0, busy = false;
-    ui.body.innerHTML = `<div class="ls-stage"><span class="ls-peek l"></span><span class="ls-peek r"></span>
-        <div class="ls-card" tabindex="0" aria-label="Karte umdrehen"><div class="ls-card-in"><div class="ls-side front"><p></p></div><div class="ls-side back"><p></p></div></div></div></div>
-      <div class="ls-rate">${RATES.map((x) => `<button type="button" class="ls-r r${x.r}" data-r="${x.r}" aria-label="${x.label}">${THUMB(x.rot)}</button>`).join('')}</div>
+    let order = set.cards.map((_, i) => i), all = true, at = 0, busy = false;
+    const loading = () => all && set === base && !!base.loading;
+    const wrap = el('div', 'ls-deck');
+    wrap.innerHTML = `<div class="ls-stage"><span class="ls-peek l"></span><span class="ls-peek r"></span>
+        <div class="ls-card" tabindex="0" aria-label="Karte umdrehen"><div class="ls-card-in"><div class="ls-side front"><p></p></div><div class="ls-side back"><p></p></div></div></div>
+        <button type="button" class="ls-nav l" data-d="-1" aria-label="Vorherige Karte">${fi('chevron-right', 13)}</button><button type="button" class="ls-nav r" data-d="1" aria-label="Nächste Karte">${fi('chevron-right', 13)}</button></div>
+      <div class="ls-rate">${RATES.map((x) => `<button type="button" class="ls-r r${x.r}" data-r="${x.r}" aria-label="${x.label}">${x.icon}</button>`).join('')}</div>
       <div class="ls-dots"></div>`;
-    const stage = ui.body.querySelector('.ls-stage'), card = stage.querySelector('.ls-card'), rateRow = ui.body.querySelector('.ls-rate'), dots = ui.body.querySelector('.ls-dots');
+    ui.body.replaceChildren(wrap);
+    const stage = wrap.querySelector('.ls-stage'), card = stage.querySelector('.ls-card'), rateRow = wrap.querySelector('.ls-rate'), dots = wrap.querySelector('.ls-dots');
     const front = card.querySelector('.front p'), back = card.querySelector('.back p');
-    const draw = () => {
+    // Zähler, Punkte, Kanten, Pfeile (ohne die Karte selbst neu zu zeichnen)
+    const chrome = () => {
       const done = at >= order.length;
-      stage.classList.toggle('end', done);
-      stage.querySelector('.l').hidden = at === 0;
-      stage.querySelector('.r').hidden = at >= order.length - 1;
+      stage.querySelector('.ls-peek.l').hidden = at === 0;
+      stage.querySelector('.ls-peek.r').hidden = at >= order.length - 1 && !loading();
+      stage.querySelector('.ls-nav.l').disabled = at === 0;
+      stage.querySelector('.ls-nav.r').disabled = done;
+      if (done && !loading()) { if (ui.sub) ui.sub.textContent = `${set.cards.length} Karten`; }
+      else counter(ui.sub, Math.min(at + 1, order.length + 1), order.length, loading());
+      dots.innerHTML = order.length <= 48 ? order.map((i, k) => `<button type="button" class="${rates[idOf(i)] != null ? `d${rates[idOf(i)]}` : ''}${k === at ? ' on' : ''}" data-at="${k}" aria-label="Karte ${k + 1}"></button>`).join('') + (loading() ? '<i class="ls-load"></i>' : '') : '';
+    };
+    const draw = () => {
+      const done = at >= order.length, wait = done && loading();
+      stage.classList.toggle('end', done && !wait);
+      stage.classList.toggle('wait', wait);
       rateRow.hidden = done;
-      card.classList.remove('flipped', 'r0', 'r1', 'r2');
-      if (done) {
+      card.classList.remove('flipped', 'r0', 'r1', 'r2', 'was0', 'was1', 'was2');
+      if (wait) front.innerHTML = '<span class="shimmer">Weitere Karten werden erstellt …</span>';
+      else if (done) {
         const n = (r) => set.cards.filter((_, i) => rates[idOf(i)] === r).length;
         front.innerHTML = `<span class="ls-sum3"><i class="g">${n(2)}</i><i class="o">${n(1)}</i><i class="r">${n(0)}</i></span><span class="ls-end-t">gewusst · unsicher · nicht gewusst</span>
           <span class="ls-end-b">${n(0) + n(1) ? '<button type="button" class="ls-pill" data-hard>Schwierige wiederholen</button>' : ''}<button type="button" class="ls-pill ghost" data-again>Von vorn</button></span>`;
-        front.querySelector('[data-hard]')?.addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i).filter((i) => rates[idOf(i)] !== 2); at = 0; slide(1, true); });
-        front.querySelector('[data-again]').addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i); at = 0; slide(1, true); });
+        front.querySelector('[data-hard]')?.addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i).filter((i) => rates[idOf(i)] !== 2); all = false; at = 0; slide(1, true); });
+        front.querySelector('[data-again]').addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i); all = true; at = 0; slide(1, true); });
       } else {
         const c = set.cards[order[at]];
         front.innerHTML = rich(c.front); back.innerHTML = rich(c.back);
         const r = rates[idOf(order[at])];
-        if (r != null) card.classList.add(`was${r}`); else card.classList.remove('was0', 'was1', 'was2');
+        if (r != null) card.classList.add(`was${r}`);
       }
-      ui.sub && (ui.sub.textContent = done ? `${set.cards.length} Karten` : `${at + 1} / ${order.length}`);
-      ui.setBar(Math.min(1, at / order.length));
-      dots.innerHTML = order.length <= 48 ? order.map((i, k) => `<button type="button" class="${rates[idOf(i)] != null ? `d${rates[idOf(i)]}` : ''}${k === at ? ' on' : ''}" data-at="${k}" aria-label="Karte ${k + 1}"></button>`).join('') : '';
+      chrome();
     };
     // weich weiter: raus zur Seite, neue Karte kommt von der anderen Seite (wie ein Stapel, der sich verschiebt)
     const slide = async (dir, reset = false) => {
@@ -173,6 +235,13 @@ const Lernset = (() => {
       if (!reduced()) await card.animate([{ transform: `translateX(${dir * 38}%) scale(.94)`, opacity: 0 }, { transform: 'none', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.16,1,.3,1)' }).finished.catch(() => {});
       busy = false;
     };
+    // neue Karten aus dem Hintergrund: anhängen; wer schon am Ende wartete, bekommt die nächste Karte sofort
+    const grow = () => {
+      if (all) for (let i = order.length; i < set.cards.length; i++) order.push(i);
+      if (stage.classList.contains('wait') && (at < order.length || !loading())) { draw(); if (!reduced()) card.animate([{ opacity: 0, transform: 'translateX(12%) scale(.96)' }, { opacity: 1, transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.16,1,.3,1)' }); }
+      else chrome();
+    };
+    if (set === base && base.subs) { base.subs.add(grow); ui.cleanup.push(() => base.subs.delete(grow)); }
     const flip = () => { if (at < order.length && !busy) card.classList.toggle('flipped'); };
     const rate = async (r) => {
       if (busy || at >= order.length) return;
@@ -184,6 +253,7 @@ const Lernset = (() => {
       slide(1);
     };
     card.addEventListener('click', flip);
+    stage.addEventListener('click', (e) => { const b = e.target.closest('.ls-nav'); if (b && !b.disabled) { e.stopPropagation(); slide(+b.dataset.d); } });
     rateRow.addEventListener('click', (e) => { const b = e.target.closest('[data-r]'); if (b) rate(+b.dataset.r); });
     dots.addEventListener('click', (e) => { const b = e.target.closest('[data-at]'); if (b) { const k = +b.dataset.at; if (k !== at) { const d = k > at ? 1 : -1; at = k - d; slide(d); } } });
     // Wischen: links/rechts blättern (ohne Bewertung)
@@ -200,19 +270,19 @@ const Lernset = (() => {
     draw();
   }
 
-  /* ---------- Vollbild-Lernansicht (Fokus) ---------- */
+  /* ---------- Vollbild-Lernansicht (Fokus) ----------
+     Kopf wie die Leisten oben mittig: runde Pille mit Titel und Zähler, links ×, rechts Mischen bzw. Zeit – keine Linie, kein Balken */
   function open(set) {
     const prevFocus = document.activeElement;
     const root = el('div', 'ls-full');
     root.setAttribute('role', 'dialog');
     root.setAttribute('aria-label', set.title);
-    root.innerHTML = `<div class="ls-head"><button type="button" class="ls-x" aria-label="Schließen">${fi('x', 14)}</button>
-      <div class="ls-head-t"><b>${esc(set.title)}</b><span class="ls-head-s"></span></div><div class="ls-head-r"></div></div>
-      <div class="ls-bar"><i></i></div><div class="ls-body"></div>`;
+    root.innerHTML = `<div class="ls-head"><button type="button" class="ls-x" aria-label="Schließen">${fi('x', 13)}</button>
+      <div class="ls-head-t"><b>${esc(set.title)}</b><span class="ls-head-s"></span></div><div class="ls-head-r"></div></div><div class="ls-body"></div>`;
     document.body.append(root);
     document.documentElement.classList.add('ls-open');
-    const body = root.querySelector('.ls-body'), sub = root.querySelector('.ls-head-s'), right = root.querySelector('.ls-head-r'), bar = root.querySelector('.ls-bar i');
-    const ui = { root, body, sub, right, setBar: (p) => { bar.style.width = `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`; }, cleanup: [] };
+    const body = root.querySelector('.ls-body'), sub = root.querySelector('.ls-head-s'), right = root.querySelector('.ls-head-r');
+    const ui = { root, body, sub, right, setBar: () => {}, cleanup: [] };
     const close = () => {
       ui.cleanup.forEach((f) => f());
       document.removeEventListener('keydown', onKey, true);
@@ -225,16 +295,47 @@ const Lernset = (() => {
     document.addEventListener('keydown', onKey, true);
     root.querySelector('.ls-x').addEventListener('click', close);
     (set.kind === 'karten' ? flashcards : set.kind === 'quiz' ? quiz : exam)(set, ui);
-    root.querySelector('.ls-x').focus();
+    root.querySelector('.ls-x').focus({ preventScroll: true });
   }
 
-  // Vollbild: derselbe Stapel, größer – oben rechts „Mischen“
+  // Vollbild: derselbe Stapel, größer – oben rechts „Mischen“ (erst, wenn alle Karten da sind)
   function flashcards(set, ui) {
-    ui.right.innerHTML = `<button type="button" class="ls-hbtn" data-shuffle>${fi('refresh', 13)}<span>Mischen</span></button>`;
+    ui.right.innerHTML = `<button type="button" class="ls-hbtn" data-shuffle aria-label="Mischen">${fi('refresh', 13)}<span>Mischen</span></button>`;
+    const sh = ui.right.querySelector('[data-shuffle]');
+    const lock = () => { sh.disabled = !!set.loading; };
+    lock(); if (set.subs) { set.subs.add(lock); ui.cleanup.push(() => set.subs.delete(lock)); }
     const shuffled = () => { const s = { ...set, cards: set.cards.slice() }; for (let i = s.cards.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [s.cards[i], s.cards[j]] = [s.cards[j], s.cards[i]]; } return s; };
-    ui.right.querySelector('[data-shuffle]').addEventListener('click', () => deck(shuffled(), ui, set));
+    sh.addEventListener('click', () => { if (!set.loading) deck(shuffled(), ui, set); });
     deck(set, ui, set);
   }
+
+  /* Eigenes Auswahlmenü (statt des System-Menüs): Kasten wie die übrigen Menüs, Auswahl = blauer Haken */
+  let ddClose = null;
+  function dropdown(btn, choices, used) {
+    if (ddClose) { const was = btn.classList.contains('open'); ddClose(); if (was) return; }
+    const menu = el('div', 'ls-dd-menu');
+    menu.innerHTML = choices.map((c) => `<button type="button" class="ls-dd-i${String(c.v) === btn.dataset.v ? ' on' : used.has(String(c.v)) ? ' used' : ''}" data-v="${c.v}"><span>${esc(c.label)}</span>${fi('check', 12)}</button>`).join('');
+    document.body.append(menu);
+    const r = btn.getBoundingClientRect(), mh = Math.min(menu.scrollHeight, 280);
+    menu.style.minWidth = `${r.width}px`;
+    menu.style.left = `${Math.max(8, Math.min(r.left, innerWidth - menu.offsetWidth - 8))}px`;
+    menu.style.top = `${innerHeight - r.bottom > mh + 12 ? r.bottom + 6 : Math.max(8, r.top - 6 - mh)}px`;
+    btn.classList.add('open');
+    const out = (e) => { if (!menu.contains(e.target) && !btn.contains(e.target)) close(); };
+    const scroll = (e) => { if (!menu.contains(e.target)) close(); };
+    const key = (e) => { if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+    const close = () => { menu.remove(); btn.classList.remove('open'); document.removeEventListener('pointerdown', out, true); removeEventListener('scroll', scroll, true); removeEventListener('keydown', key, true); ddClose = null; };
+    document.addEventListener('pointerdown', out, true); addEventListener('scroll', scroll, true); addEventListener('keydown', key, true);
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-v]'); if (!b) return;
+      btn.dataset.v = b.dataset.v; btn.classList.add('set');
+      btn.querySelector('.ls-dd-t').textContent = choices.find((c) => String(c.v) === b.dataset.v)?.label || '';
+      close(); btn.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    ddClose = close;
+  }
+  // Lücke wächst mit dem Text
+  const fitGap = (g) => { g.style.width = `${Math.max(7, Math.min(28, g.value.length + 3))}ch`; };
 
   /* Eine Frage zeichnen (Quiz und Klausur): Eingabe je Fragetyp; read() liefert die Antwort, mark() zeigt richtig/falsch */
   function question(x, n, { exam = false } = {}) {
@@ -243,20 +344,25 @@ const Lernset = (() => {
     const mat = x.material ? `<div class="ls-mat">${rich(x.material)}</div>` : '';
     if (x.type === 'luecke') {
       let k = 0;
-      const text = esc(x.text).replace(/_{3,}|\[\s*…?\s*\]|\[\.\.\.\]/g, () => `<input class="ls-gap" data-g="${k++}" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Lücke ${k}">`);
+      const text = esc(x.text).replace(/_{3,}|\[\s*…?\s*\]|\[\.\.\.\]/g, () => `<input class="ls-gap" data-g="${k++}" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Lücke ${k}">`);
       w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}</p><p class="ls-cloze">${text.replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')}</p>`;
+      w.querySelectorAll('.ls-gap').forEach((g) => { fitGap(g); g.addEventListener('input', () => fitGap(g)); });
     } else if (x.type === 'zuordnen') {
-      const rights = x.pairs.map((p) => p[1]).map((v, i) => ({ v, i })).sort((a, b) => a.v.localeCompare(b.v, 'de'));
-      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}</p><div class="ls-match">${x.pairs.map((p, i) => `<label class="ls-mrow"><span>${rich(p[0])}</span>
-        <select data-m="${i}"><option value="">Auswählen …</option>${rights.map((r) => `<option value="${r.i}">${esc(r.v)}</option>`).join('')}</select></label>`).join('')}</div>`;
+      const choices = x.pairs.map((p, i) => ({ v: i, label: p[1] })).sort((a, b) => a.label.localeCompare(b.label, 'de'));
+      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}</p><div class="ls-match">${x.pairs.map((p, i) => `<div class="ls-mrow"><span>${rich(p[0])}</span>
+        <button type="button" class="ls-dd" data-m="${i}" data-v="" aria-label="Zuordnung für ${esc(p[0])}"><span class="ls-dd-t">Auswählen</span>${fi('chevron-down', 11)}</button></div>`).join('')}</div>`;
+      w.querySelectorAll('.ls-dd').forEach((b) => b.addEventListener('click', () => {
+        if (b.disabled) return;
+        dropdown(b, choices, new Set([...w.querySelectorAll('.ls-dd')].filter((o) => o !== b && o.dataset.v !== '').map((o) => o.dataset.v)));
+      }));
     } else if (x.type === 'offen') {
-      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}</p><textarea class="ls-answer" rows="5" placeholder="Deine Antwort …"></textarea>`;
+      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}</p><textarea class="ls-answer" rows="4" placeholder="Deine Antwort …"></textarea>`;
       const ta = w.querySelector('textarea');
-      ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight, 520)}px`; });
+      ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(ta.scrollHeight + 2, 520)}px`; });
     } else {
       const opts = x.type === 'wf' ? ['Wahr', 'Falsch'] : x.options;
       const multi = x.type === 'mc' && x.right.length > 1;
-      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}${multi ? ' <span class="ls-hint">(mehrere richtig)</span>' : ''}</p>
+      w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}${multi ? ' <span class="ls-hint">mehrere richtig</span>' : ''}</p>
         <div class="ls-opts">${opts.map((o, i) => `<button type="button" class="ls-opt" data-o="${i}"><span class="ls-ck">${fi('check', 11)}</span><span>${rich(o)}</span></button>`).join('')}</div>`;
       w.querySelectorAll('.ls-opt').forEach((b) => b.addEventListener('click', () => {
         if (w.classList.contains('done')) return;
@@ -267,7 +373,7 @@ const Lernset = (() => {
     }
     const read = () => {
       if (x.type === 'luecke') return [...w.querySelectorAll('.ls-gap')].map((i) => i.value.trim());
-      if (x.type === 'zuordnen') return [...w.querySelectorAll('select')].map((s) => (s.value === '' ? null : +s.value));
+      if (x.type === 'zuordnen') return [...w.querySelectorAll('.ls-dd')].map((s) => (s.dataset.v === '' ? null : +s.dataset.v));
       if (x.type === 'offen') return w.querySelector('textarea').value.trim();
       return [...w.querySelectorAll('.ls-opt.on')].map((b) => +b.dataset.o);
     };
@@ -284,60 +390,149 @@ const Lernset = (() => {
     };
     const mark = () => {
       w.classList.add('done');
-      w.querySelectorAll('input, select, textarea').forEach((i) => { i.disabled = true; });
+      w.querySelectorAll('input, textarea, .ls-dd').forEach((i) => { i.disabled = true; });
       if (x.type === 'mc' || x.type === 'wf') {
         const right = x.type === 'wf' ? [x.right ? 0 : 1] : x.right;
-        w.querySelectorAll('.ls-opt').forEach((b) => { const i = +b.dataset.o; b.classList.toggle('right', right.includes(i)); b.classList.toggle('wrong', b.classList.contains('on') && !right.includes(i)); });
+        w.querySelectorAll('.ls-opt').forEach((b, k) => {
+          const i = +b.dataset.o, ok = right.includes(i), bad = b.classList.contains('on') && !ok;
+          b.style.transitionDelay = reduced() ? '' : `${k * 40}ms`;
+          b.classList.toggle('right', ok); b.classList.toggle('wrong', bad); b.classList.toggle('dim', !ok && !bad);
+          if (bad) b.querySelector('.ls-ck').innerHTML = fi('x', 10);
+        });
       } else if (x.type === 'luecke') {
         w.querySelectorAll('.ls-gap').forEach((g, k) => { const ok = x.sol[k].split('/').some((alt) => norm(alt) === norm(g.value)); g.classList.add(ok ? 'right' : 'wrong'); if (!ok) g.insertAdjacentHTML('afterend', `<span class="ls-sol">${esc(x.sol[k].split('/')[0])}</span>`); });
       } else if (x.type === 'zuordnen') {
-        w.querySelectorAll('.ls-mrow').forEach((r, k) => { const s = r.querySelector('select'), ok = +s.value === k && s.value !== ''; r.classList.add(ok ? 'right' : 'wrong'); if (!ok) r.insertAdjacentHTML('beforeend', `<span class="ls-sol">${esc(x.pairs[k][1])}</span>`); });
+        w.querySelectorAll('.ls-mrow').forEach((r, k) => { const s = r.querySelector('.ls-dd'), ok = s.dataset.v !== '' && +s.dataset.v === k; r.classList.add(ok ? 'right' : 'wrong'); if (!ok) r.insertAdjacentHTML('beforeend', `<span class="ls-sol">${esc(x.pairs[k][1])}</span>`); });
       }
     };
     return { el: w, read, answered, score, mark };
   }
 
-  /* Quiz: eine Frage nach der anderen, sofortige Rückmeldung mit Erklärung, am Ende Ergebnis und „Falsche wiederholen“ */
+  // Auf- und zuklappen (Erklärung, falsche Antworten): nur die Höhe läuft, der Inhalt blendet leicht mit
+  function fold(btn, box, html) {
+    const open = btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', String(open));
+    if (open && !box.childElementCount) box.innerHTML = `<div class="ls-fold-in">${html()}</div>`;
+    const from = box.offsetHeight;
+    box.classList.toggle('open', open);
+    clearTimeout(box._t);
+    if (reduced()) { box.style.height = open ? 'auto' : '0px'; return; }
+    box.style.height = `${from}px`; void box.offsetHeight;
+    box.style.height = `${open ? box.scrollHeight : 0}px`;
+    if (open) box._t = setTimeout(() => { box.style.height = 'auto'; }, 420);
+  }
+  // Richtige Antwort kurz als blaue Chips (wie die gewählten Antworten in der Zeitleiste); Reihenfolgen mit Nummern
+  function chips(x) {
+    const pill = (t, n) => `<span class="qa-pick">${n != null ? `<span class="qa-num">${n}</span>` : ''}<span class="qa-label">${rich(t)}</span></span>`;
+    if (x.type === 'mc') return x.right.map((i) => pill(x.options[i])).join('');
+    if (x.type === 'wf') return pill(x.right ? 'Wahr' : 'Falsch');
+    if (x.type === 'luecke') return x.sol.map((s, k) => pill(s.split('/')[0], k + 1)).join('');
+    if (x.type === 'zuordnen') return x.pairs.map((p, k) => pill(`${p[0]} → ${p[1]}`, k + 1)).join('');
+    return pill(x.expect.length > 110 ? `${x.expect.slice(0, 107).trim()} …` : x.expect);
+  }
+  const whyOf = (x) => `${x.type === 'offen' && x.expect.length > 110 ? `<p>${rich(x.expect)}</p>` : ''}${x.why ? `<p>${rich(x.why)}</p>` : ''}`;
+
+  /* Quiz: eine Frage nach der anderen. Antwort wählen → „Bestätigen“ → erst dann richtig/falsch (verwählen ist kein Fehler).
+     Oben Segmente je Frage (grün/rot), Erklärung zum Aufklappen. Kommen noch Fragen aus dem Hintergrund, wartet „Weiter“ darauf. */
   function quiz(set, ui) {
-    if (ui.inline && !ui.body._keys) { ui.body._keys = true; ui.body.addEventListener('keydown', (e) => ui.key?.(e)); } // im Chat: Enter prüft
-    let list = set.items.slice(), at = 0, got = 0, wrong = [];
-    const start = (items) => { list = items; at = 0; got = 0; wrong = []; step(); };
-    function step() {
-      ui.setBar(at / list.length);
-      ui.sub.textContent = at >= list.length ? `${got} von ${list.length} richtig` : `Frage ${at + 1} von ${list.length}`;
-      if (at >= list.length) {
-        const pct = Math.round((got / list.length) * 100);
-        ui.body.innerHTML = `<div class="ls-end"><div class="ls-ring" style="--p:${pct}"><b>${pct}%</b></div><p>${got} von ${list.length} richtig</p>
-          ${wrong.length ? `<div class="ls-wrong">${wrong.map((x) => `<div><b>${rich(x.q || x.text)}</b><span>${rich(solution(x))}</span></div>`).join('')}</div>` : ''}
-          <div class="ls-row">${wrong.length ? '<button type="button" class="ls-btn2" data-wrong>Falsche wiederholen</button>' : ''}<button type="button" class="ls-btn" data-all>Neu starten</button></div></div>`;
-        ui.body.querySelector('[data-wrong]')?.addEventListener('click', () => start(wrong.slice()));
-        ui.body.querySelector('[data-all]').addEventListener('click', () => start(set.items.slice()));
-        ui.key = null;
-        return;
-      }
+    if (ui.inline && !ui.body._keys) { ui.body._keys = true; ui.body.addEventListener('keydown', (e) => ui.key?.(e)); }
+    const card = el('div', 'ls-qcard');
+    card.innerHTML = '<div class="ls-segs"></div><div class="ls-qstage"></div>';
+    ui.body.replaceChildren(card);
+    const segs = card.querySelector('.ls-segs'), stage = card.querySelector('.ls-qstage');
+    let list = [], live = true, at = 0, got = 0, res = [], wrong = [], waitNext = null;
+    const loading = () => live && !!set.loading;
+    const chrome = () => {
+      if (at < list.length) counter(ui.sub, at + 1, list.length, loading());
+      segs.innerHTML = list.map((_, i) => `<i class="${res[i] === true ? 'ok' : res[i] === false ? 'no' : i === at ? 'on' : ''}"></i>`).join('') + (loading() ? '<i class="ld"></i>' : '');
+      if (waitNext && (at + 1 < list.length || !loading())) { const b = waitNext; waitNext = null; b.disabled = false; b.classList.remove('busy'); b.textContent = at + 1 < list.length ? 'Weiter' : 'Ergebnis'; }
+    };
+    if (set.subs) { set.subs.add(chrome); ui.cleanup.push(() => set.subs.delete(chrome)); }
+    // Wechsel: alte Frage gleitet raus, die Karte passt ihre Höhe weich an, die neue gleitet rein
+    const swap = async (node, first) => {
+      const h0 = stage.offsetHeight, old = stage.firstElementChild;
+      if (!first && old && !reduced()) await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-16px)' }], { duration: 170, easing: 'cubic-bezier(.4,0,1,1)', fill: 'forwards' }).finished.catch(() => {});
+      stage.replaceChildren(node);
+      if (first || reduced()) return;
+      const h1 = stage.offsetHeight;
+      if (Math.abs(h1 - h0) > 1) stage.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 380, easing: 'cubic-bezier(.32,.72,0,1)' });
+      node.animate([{ opacity: 0, transform: 'translateX(16px)' }, { opacity: 1, transform: 'none' }], { duration: 440, easing: 'cubic-bezier(.16,1,.3,1)' });
+    };
+    const start = (items, isLive) => { list = items; live = isLive; at = 0; got = 0; res = []; wrong = []; waitNext = null; step(true); };
+    function step(first = false) {
+      if (at >= list.length) return end(first);
       const x = list[at], q = question(x, at + 1);
-      const wrap = el('div', 'ls-quiz');
-      const fb = el('div', 'ls-fb');
-      const btn = el('button', 'ls-btn', 'Prüfen'); btn.type = 'button'; btn.disabled = true;
-      const row = el('div', 'ls-row ls-row-end'); row.append(btn);
-      wrap.append(q.el, fb, row);
-      ui.body.replaceChildren(wrap);
-      const check = () => {
-        if (btn.dataset.next) { at++; step(); return; }
-        const s = q.score(), ok = s >= x.points - 0.001;
-        if (ok) got++; else wrong.push(x);
-        q.mark();
-        fb.className = `ls-fb ${ok ? 'ok' : 'no'}`;
-        fb.innerHTML = `<b>${ok ? 'Richtig' : 'Nicht ganz'}</b>${!ok ? `<span>Richtig: ${rich(solution(x))}</span>` : ''}${x.why ? `<p>${rich(x.why)}</p>` : ''}`;
-        btn.textContent = at === list.length - 1 ? 'Ergebnis' : 'Weiter'; btn.dataset.next = '1'; btn.disabled = false; btn.focus();
+      const node = el('div', 'ls-quiz');
+      const extra = el('div', 'ls-extra');
+      const foot = el('div', 'ls-qf');
+      foot.innerHTML = '<div class="ls-st"></div><button type="button" class="ls-pill" disabled>Bestätigen</button>';
+      const why = el('div', 'ls-fold');
+      node.append(q.el, extra, foot, why);
+      let btn = foot.querySelector('.ls-pill'), phase = 'answer';
+      const st = foot.querySelector('.ls-st');
+      const settle = (ok, part = false) => {
+        phase = 'next';
+        res[at] = ok; if (ok) got++; else wrong.push(x);
+        st.innerHTML = `<span class="ls-verdict ${ok ? 'ok' : part ? 'part' : 'no'}">${fi(ok ? 'check-circle' : 'x-circle', 14)}${ok ? 'Richtig' : part ? 'Teilweise richtig' : 'Leider falsch'}</span>
+          ${x.why && x.type !== 'offen' ? `<button type="button" class="ls-whyt" aria-expanded="false">Erklärung${fi('chevron-down', 10)}</button>` : ''}`;
+        st.querySelector('.ls-whyt')?.addEventListener('click', (e) => fold(e.currentTarget, why, () => `<p>${rich(x.why)}</p>`));
+        if (at + 1 >= list.length && loading()) { waitNext = btn; btn.disabled = true; btn.classList.add('busy'); btn.innerHTML = '<span class="shimmer">Nächste Frage wird erstellt</span>'; }
+        else { btn.disabled = false; btn.textContent = at + 1 >= list.length ? 'Ergebnis' : 'Weiter'; }
+        btn.focus({ preventScroll: true });
+        chrome();
       };
-      const update = () => { if (!btn.dataset.next) btn.disabled = !q.answered(); };
-      q.el.addEventListener('ls-pick', () => { update(); if ((x.type === 'wf' || (x.type === 'mc' && x.right.length === 1)) && q.answered()) check(); });
-      q.el.addEventListener('input', update); q.el.addEventListener('change', update);
-      btn.addEventListener('click', check);
-      ui.key = (e) => { if (e.key === 'Enter' && !btn.disabled && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); check(); } };
+      const confirm = () => {
+        if (phase === 'next') { if (!btn.disabled) { at++; step(); } return; }
+        if (phase !== 'answer' || !q.answered()) return;
+        q.mark();
+        if (x.type !== 'offen') { const s = q.score(); return settle(s >= x.points - 0.001, s > 0); }
+        // offene Frage im Quiz: Musterlösung zeigen, selbst einschätzen
+        phase = 'self';
+        extra.innerHTML = `<div class="ls-model"><span>Musterlösung</span><p>${rich(x.expect)}</p>${x.why ? `<p class="ls-why">${rich(x.why)}</p>` : ''}</div>`;
+        st.innerHTML = '<span class="ls-ask">Hattest du das?</span>';
+        btn.remove();
+        const two = el('div', 'ls-two', '<button type="button" class="ls-pill ghost" data-s="0">Nein</button><button type="button" class="ls-pill" data-s="1">Ja</button>');
+        foot.append(two);
+        two.addEventListener('click', (e) => {
+          const b = e.target.closest('[data-s]'); if (!b) return;
+          two.remove(); btn = el('button', 'ls-pill'); btn.type = 'button'; btn.addEventListener('click', confirm); foot.append(btn);
+          settle(b.dataset.s === '1');
+        });
+      };
+      const update = () => { if (phase === 'answer') btn.disabled = !q.answered(); };
+      q.el.addEventListener('ls-pick', update); q.el.addEventListener('input', update); q.el.addEventListener('change', update);
+      btn.addEventListener('click', confirm);
+      ui.key = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.closest?.('.ls-dd')) { e.preventDefault(); confirm(); } };
+      swap(node, first);
+      chrome();
     }
-    start(list);
+    function end(first) {
+      ui.key = null;
+      if (ui.sub) ui.sub.textContent = `${got} von ${list.length} richtig`;
+      const pct = list.length ? Math.round((got / list.length) * 100) : 0;
+      const node = el('div', 'ls-end');
+      node.innerHTML = `<div class="ls-ring" style="--p:0"><b>0 %</b></div><p>${got} von ${list.length} richtig</p>
+        ${wrong.length ? `<button type="button" class="ls-wt" aria-expanded="false">${wrong.length === 1 ? '1 falsche Antwort ansehen' : `${wrong.length} falsche Antworten ansehen`}${fi('chevron-down', 10)}</button><div class="ls-fold ls-wl"></div>` : ''}
+        <div class="ls-row">${wrong.length ? '<button type="button" class="ls-pill ghost" data-wrong>Falsche wiederholen</button>' : ''}<button type="button" class="ls-pill" data-all>Neu starten</button></div>`;
+      const wl = node.querySelector('.ls-wl');
+      node.querySelector('.ls-wt')?.addEventListener('click', (e) => fold(e.currentTarget, wl, () => wrong.map((x, i) => `<div class="ls-wi"><div class="qa-q">${rich(x.type === 'luecke' ? x.text.replace(GAP, '___') : x.q)}</div><div class="qa-a">${chips(x)}</div>
+        ${whyOf(x) ? `<button type="button" class="ls-wx" aria-expanded="false" data-i="${i}">Erklärung${fi('chevron-down', 10)}</button><div class="ls-fold"></div>` : ''}</div>`).join('')));
+      wl?.addEventListener('click', (e) => {
+        const b = e.target.closest('.ls-wx'); if (!b) return;
+        fold(b, b.nextElementSibling, () => whyOf(wrong[+b.dataset.i]));
+        if (wl.style.height !== 'auto') { clearTimeout(wl._t); wl.style.height = 'auto'; } // äußere Liste wächst mit
+      });
+      const wrongNow = wrong.slice();
+      node.querySelector('[data-wrong]')?.addEventListener('click', () => start(wrongNow, false));
+      node.querySelector('[data-all]').addEventListener('click', () => start(set.items, true));
+      swap(node, first);
+      chrome();
+      // Ring und Zahl laufen hoch
+      const ring = node.querySelector('.ls-ring'), b = ring.querySelector('b'), t0 = performance.now(), D = reduced() ? 1 : 900;
+      const tick = (t) => { const k = Math.min(1, (t - t0) / D), v = pct * (1 - Math.pow(1 - k, 3)); ring.style.setProperty('--p', v.toFixed(1)); b.textContent = `${Math.round(v)} %`; if (k < 1) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }
+    start(set.items, true);
   }
   function solution(x) {
     if (x.type === 'mc') return x.right.map((i) => x.options[i]).join(' · ');
@@ -410,67 +605,101 @@ const Lernset = (() => {
   }
 
   /* ---------- Erstellen-Fenster ----------
+     Gleiches Fenster wie „Neue Aufgabe“: Thema als Titel, „Wünsche hinzufügen“, darunter Zeilen, die bündig einen Kasten aufklappen
+     (Art – nur ohne Vorauswahl –, Quellen, Abschnitte, Schwierigkeit, Aufgabentypen). Die Anzahl bestimmt die KI selbst.
      opts: { kind, mode: 'chat'|'doc', sections: [{ title, text }], mentions: () => [{ kind, id, title }], mentionText: async (m) => text, onSubmit(spec) }
-     onSubmit bekommt { kind, topic, count, minutes, level, types, files: [File], links, texts: [{ name, text }], sections: [{ title, text }] } */
-  const COUNTS = { karten: [10, 20, 30, 40], quiz: [5, 10, 15, 20], klausur: [30, 45, 60, 90] };
-  const LEVELS = [['leicht', 'Leicht'], ['mittel', 'Mittel'], ['schwer', 'Schwer'], ['gemischt', 'Gemischt']];
+     onSubmit bekommt { kind, topic, count: 0, minutes: 0, level, types, files: [File], links, texts: [{ name, text }], sections: [{ title, text }] } */
+  const LEVELS = [['gemischt', 'Gemischt', 'von leicht nach schwer'], ['leicht', 'Leicht', 'Grundwissen'], ['mittel', 'Mittel', 'Verstehen und Anwenden'], ['schwer', 'Schwer', 'Transfer']];
   function dialog(opts = {}) {
-    const st = { kind: KINDS[opts.kind] ? opts.kind : 'karten', count: null, level: 'gemischt', types: new Set(['mc', 'wf', 'luecke', 'zuordnen', 'offen']), files: [], links: [], texts: [], mentions: [],
-      sections: new Set((opts.sections || []).map((_, i) => i)) };
-    const m = el('div', 'ls-modal');
-    const w = el('div', 'ls-win');
-    m.append(w);
+    const fixed = !!KINDS[opts.kind];
+    const st = { kind: fixed ? opts.kind : 'karten', level: 'gemischt', types: new Set(['mc', 'wf', 'luecke', 'zuordnen', 'offen']), files: [], links: [], texts: [], mentions: [],
+      sections: new Set((opts.sections || []).map((_, i) => i)), topic: '', notes: '' };
+    const secs = opts.sections || [];
+    const m = el('div', 'tk-modal ls-make');
+    const mi = (attr, icon, label, on, sub = '') => `<button type="button" class="tk-mi${on ? ' on' : ''}" ${attr}><span class="tk-mi-ic">${icon}</span><span>${label}${sub ? `<i class="tk-mi-sub">${sub}</i>` : ''}</span>${fi('check', 12)}</button>`;
+    const pop = (k, menu) => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu"><div class="tk-box">${menu}</div></div></div>`;
+    m.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
+      <div class="tk-sheet-main">
+        <input class="tk-f-title" placeholder="${fixed ? `${KINDS[st.kind].name} zu …` : 'Thema'}" maxlength="200" aria-label="Thema" />
+        <textarea class="tk-f-notes" rows="1" placeholder="Wünsche hinzufügen" maxlength="600" aria-label="Wünsche"></textarea>
+      </div>
+      <div class="tk-sheet-rows">
+        ${fixed ? '' : pop('kind', Object.entries(KINDS).map(([v, x]) => mi(`data-kind="${v}"`, fi(x.icon, 13), x.name)).join(''))}
+        ${pop('src', '<div class="ls-srcs"></div><div class="ls-src-add"></div>')}
+        ${secs.length ? pop('secs', '<div class="ls-secs2"></div>') : ''}
+        ${pop('level', LEVELS.map(([v, n, d]) => mi(`data-level="${v}"`, fi('sliders', 12), n, false, d)).join(''))}
+        ${pop('types', '<div class="ls-types2"></div>')}
+      </div>
+      <div class="tk-sheet-foot"><span class="ls-make-s"></span><span class="grow"></span><button type="submit" class="tk-create tk-make">${fixed ? `${KINDS[st.kind].name} erstellen` : 'Lernset erstellen'}</button></div>
+    </form>`;
     document.body.append(m);
-    const close = () => { document.removeEventListener('keydown', key, true); m.classList.add('closing'); setTimeout(() => m.remove(), 200); };
-    const key = (e) => { if (e.key === 'Escape' && !w.classList.contains('busy')) { e.preventDefault(); e.stopPropagation(); close(); } };
+    const form = m.querySelector('form'), title = form.querySelector('.tk-f-title'), notes = form.querySelector('.tk-f-notes'), status = form.querySelector('.ls-make-s');
+    window.UIKit?.foldRows?.(form);
+    window.UIKit?.autoGrow?.(notes);
+    const busy = () => form.classList.contains('busy');
+    const close = () => { document.removeEventListener('keydown', key, true); m.classList.add('closing'); setTimeout(() => m.remove(), 220); };
+    const key = (e) => {
+      if (e.key !== 'Escape' || busy()) return;
+      e.preventDefault(); e.stopPropagation();
+      const o = form.querySelector('.tk-pop.open'); if (o) o.classList.remove('open'); else close();
+    };
     document.addEventListener('keydown', key, true);
-    m.addEventListener('pointerdown', (e) => { if (e.target === m && !w.classList.contains('busy')) close(); });
-    const seg = (name, items, cur) => `<div class="ls-seg" data-seg="${name}">${items.map(([v, l]) => `<button type="button" data-v="${v}" class="${String(v) === String(cur) ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    m.addEventListener('pointerdown', (e) => { if (e.target === m && !busy()) close(); });
+    const nSrc = () => st.files.length + st.links.length + st.texts.length + st.mentions.length;
+    const row = (k, icon, text, empty) => { const b = form.querySelector(`.tk-pill[data-open="${k}"]`); if (b) { b.innerHTML = `<span class="tk-si">${fi(icon, 14)}</span><span class="tk-rv">${text}</span>`; b.classList.toggle('empty', !!empty); } };
     function draw() {
       const k = st.kind;
-      if (!COUNTS[k].includes(st.count)) st.count = COUNTS[k][1];
-      const srcChips = [
-        ...st.files.map((f, i) => `<span class="ls-chip">${fi(/^image\//.test(f.type) ? 'image' : 'file', 12)}<span>${esc(f.name)}</span><button type="button" data-rm="files:${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`),
-        ...st.links.map((u, i) => `<span class="ls-chip">${fi('link', 12)}<span>${esc(u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 40))}</span><button type="button" data-rm="links:${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`),
-        ...st.texts.map((t, i) => `<span class="ls-chip">${fi('pencil', 12)}<span>${esc(t.name)}</span><button type="button" data-rm="texts:${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`),
-        ...st.mentions.map((x, i) => `<span class="ls-chip at">${fi(x.kind === 'chat' ? 'chat' : 'file', 12)}<span>${esc(x.title)}</span><button type="button" data-rm="mentions:${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`),
+      row('kind', KINDS[k].icon, KINDS[k].name);
+      form.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('on', b.dataset.kind === k));
+      const n = nSrc();
+      row('src', 'files', n ? `${n} ${n === 1 ? 'Quelle' : 'Quellen'}` : 'Quellen hinzufügen', !n);
+      const chip = (icon, name, rm) => `<div class="tk-mi ls-srci"><span class="tk-mi-ic">${fi(icon, 12)}</span><span>${esc(name)}</span><b class="ls-rm" data-rm="${rm}" role="button" aria-label="Entfernen">${fi('x', 10)}</b></div>`;
+      form.querySelector('.ls-srcs').innerHTML = [
+        ...st.files.map((f, i) => chip(/^image\//.test(f.type) ? 'image' : 'file', f.name, `files:${i}`)),
+        ...st.links.map((u, i) => chip('link', u.replace(/^https?:\/\/(www\.)?/, '').slice(0, 48), `links:${i}`)),
+        ...st.texts.map((t, i) => chip('pencil', t.name, `texts:${i}`)),
+        ...st.mentions.map((x, i) => chip(x.kind === 'chat' ? 'chat' : 'file', x.title, `mentions:${i}`)),
       ].join('');
-      const secs = opts.sections || [];
-      w.innerHTML = `<div class="ls-win-h"><b>Lernset erstellen</b><button type="button" class="ls-x2" data-close aria-label="Schließen">${fi('x', 12)}</button></div>
-        ${seg('kind', Object.entries(KINDS).map(([v, x]) => [v, x.name]), k)}
-        <textarea class="ls-topic" rows="2" placeholder="Worum soll es gehen? z. B. „Zellatmung, Kapitel 4“ – leer lassen, dann nutzt die KI deine Quellen.">${esc(st.topic || '')}</textarea>
-        <div class="ls-sec"><span class="ls-lab">Quellen</span>
-          <div class="ls-chips">${srcChips}</div>
-          <div class="ls-add"><button type="button" data-add="files">${fi('upload', 12)}Dateien</button><button type="button" data-add="link">${fi('link', 12)}Link</button>
-            <button type="button" data-add="text">${fi('pencil', 12)}Text</button><button type="button" data-add="at"><b>@</b>Chat oder Dokument</button></div>
-          <div class="ls-inline" hidden></div></div>
-        ${secs.length ? `<div class="ls-sec"><div class="ls-lab-row"><span class="ls-lab">Abschnitte aus diesem Dokument</span><button type="button" class="ls-all" data-all>${st.sections.size === secs.length ? 'Keine' : 'Alle'}</button></div>
-          <div class="ls-secs">${secs.map((s, i) => `<button type="button" class="ls-check${st.sections.has(i) ? ' on' : ''}" data-sec="${i}"><span class="ls-ck">${fi('check', 11)}</span><span>${esc(s.title || 'Ohne Überschrift')}</span></button>`).join('')}</div></div>` : ''}
-        <div class="ls-sec ls-opts2">
-          <div><span class="ls-lab">${k === 'klausur' ? 'Dauer' : 'Anzahl'}</span>${seg('count', COUNTS[k].map((n) => [n, k === 'klausur' ? `${n} Min` : String(n)]), st.count)}</div>
-          <div><span class="ls-lab">Schwierigkeit</span>${seg('level', LEVELS, st.level)}</div>
-          ${k !== 'karten' ? `<div><span class="ls-lab">Aufgabentypen</span><div class="ls-types">${Object.entries(TYPE_NAMES).filter(([t]) => k === 'klausur' || t !== 'offen').map(([t, l]) => `<button type="button" class="ls-check${st.types.has(t) ? ' on' : ''}" data-type="${t}"><span class="ls-ck">${fi('check', 11)}</span><span>${l}</span></button>`).join('')}</div></div>` : ''}
-        </div>
-        <div class="ls-win-f"><span class="ls-win-s"></span><button type="button" class="ls-btn" data-make>Erstellen</button></div>`;
-      const ta = w.querySelector('.ls-topic');
-      ta.addEventListener('input', () => { st.topic = ta.value; });
+      const add = form.querySelector('.ls-src-add');
+      if (!add.childElementCount) add.innerHTML = `${n ? '<i class="ls-sep"></i>' : ''}<button type="button" class="tk-mi" data-add="files"><span class="tk-mi-ic">${fi('upload', 12)}</span><span>Dateien hochladen</span></button>
+        <button type="button" class="tk-mi" data-add="link"><span class="tk-mi-ic">${fi('link', 12)}</span><span>Link hinzufügen</span></button>
+        <button type="button" class="tk-mi" data-add="text"><span class="tk-mi-ic">${fi('pencil', 12)}</span><span>Text einfügen</span></button>
+        <button type="button" class="tk-mi" data-add="at"><span class="tk-mi-ic"><b class="ls-at-ic">@</b></span><span>Chat oder Dokument</span></button>`;
+      else add.querySelector('.ls-sep')?.toggleAttribute('hidden', !n);
+      if (secs.length) {
+        row('secs', 'list', st.sections.size === secs.length ? 'Alle Abschnitte' : st.sections.size ? `${st.sections.size} von ${secs.length} Abschnitten` : 'Keine Abschnitte', !st.sections.size);
+        form.querySelector('.ls-secs2').innerHTML = mi('data-all', fi('check-circle', 12), st.sections.size === secs.length ? 'Keine' : 'Alle', false)
+          + secs.map((s, i) => mi(`data-sec="${i}"`, fi('hash', 12), esc(s.title || 'Ohne Überschrift'), st.sections.has(i))).join('');
+      }
+      const lv = LEVELS.find((l) => l[0] === st.level);
+      row('level', 'sliders', `Schwierigkeit: ${lv[1]}`);
+      form.querySelectorAll('[data-level]').forEach((b) => b.classList.toggle('on', b.dataset.level === st.level));
+      const types = Object.entries(TYPE_NAMES).filter(([t]) => k === 'klausur' || t !== 'offen');
+      form.querySelector('.tk-pop[data-k="types"]').hidden = k === 'karten';
+      const on = types.filter(([t]) => st.types.has(t));
+      row('types', 'list', on.length === types.length ? 'Alle Aufgabentypen' : on.map(([, l]) => l).join(', '));
+      form.querySelector('.ls-types2').innerHTML = types.map(([t, l]) => mi(`data-type="${t}"`, fi('list', 12), l, st.types.has(t))).join('');
     }
-    const inline = (html, onOk) => {
-      const box = w.querySelector('.ls-inline');
-      box.hidden = false; box.innerHTML = html;
-      const f = box.querySelector('input, textarea');
-      f?.focus();
-      box.querySelector('[data-ok]')?.addEventListener('click', () => { if (onOk(f.value.trim()) !== false) { box.hidden = true; box.innerHTML = ''; } });
-      f?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && f.tagName === 'INPUT') { e.preventDefault(); box.querySelector('[data-ok]').click(); } });
+    // kleines Eingabefeld im Quellen-Kasten (Link oder Text)
+    const inline = (multi, ph, onOk) => {
+      form.querySelector('.ls-src-in')?.remove();
+      const box = el('div', 'tk-src-row ls-src-in', `${multi ? `<textarea class="tk-src-in" placeholder="${ph}"></textarea>` : `<input class="tk-src-in ls-src-1" placeholder="${ph}" />`}`);
+      form.querySelector('.ls-src-add').after(box);
+      const f = box.firstElementChild; f.focus();
+      f.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && (!multi || e.metaKey || e.ctrlKey)) { e.preventDefault(); if (onOk(f.value.trim()) !== false) { box.remove(); draw(); } }
+        if (e.key === 'Escape') { e.stopPropagation(); box.remove(); }
+      });
+      if (multi) f.addEventListener('blur', () => { const v = f.value.trim(); if (v && onOk(v) !== false) { box.remove(); draw(); } });
     };
-    w.addEventListener('click', async (e) => {
-      const t = e.target.closest('button'); if (!t || w.classList.contains('busy')) return;
-      if (t.dataset.close != null) { close(); return; }
-      const sg = t.closest('[data-seg]');
-      if (sg) { const v = t.dataset.v; const name = sg.dataset.seg; st[name] = name === 'count' ? +v : v; draw(); return; }
+    form.addEventListener('click', (e) => {
+      const t = e.target.closest('button, [data-rm]'); if (!t || busy()) return;
+      if (t.dataset.open) { e.preventDefault(); const k = t.dataset.open; form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open'))); return; }
+      if (t.dataset.kind) { st.kind = t.dataset.kind; draw(); t.closest('.tk-pop').classList.remove('open'); return; }
+      if (t.dataset.level) { st.level = t.dataset.level; draw(); t.closest('.tk-pop').classList.remove('open'); return; }
       if (t.dataset.rm) { const [k, i] = t.dataset.rm.split(':'); st[k].splice(+i, 1); draw(); return; }
       if (t.dataset.sec != null) { const i = +t.dataset.sec; if (st.sections.has(i)) st.sections.delete(i); else st.sections.add(i); draw(); return; }
-      if (t.dataset.all != null) { st.sections = st.sections.size === (opts.sections || []).length ? new Set() : new Set((opts.sections || []).map((_, i) => i)); draw(); return; }
+      if (t.hasAttribute('data-all')) { st.sections = st.sections.size === secs.length ? new Set() : new Set(secs.map((_, i) => i)); draw(); return; }
       if (t.dataset.type) { const ty = t.dataset.type; if (st.types.has(ty) && st.types.size > 1) st.types.delete(ty); else st.types.add(ty); draw(); return; }
       const add = t.dataset.add;
       if (add === 'files') {
@@ -478,23 +707,25 @@ const Lernset = (() => {
         inp.addEventListener('change', () => { st.files.push(...[...inp.files].slice(0, 12)); draw(); });
         inp.click(); return;
       }
-      if (add === 'link') { inline('<input type="url" placeholder="https://…" /><button type="button" class="ls-btn" data-ok>Hinzufügen</button>', (v) => { if (!/^https?:\/\/\S+\.\S+/.test(v)) return false; st.links.push(v); draw(); return true; }); return; }
-      if (add === 'text') { inline('<textarea rows="4" placeholder="Text einfügen, z. B. Notizen oder ein Tafelbild …"></textarea><button type="button" class="ls-btn" data-ok>Hinzufügen</button>', (v) => { if (!v) return false; st.texts.push({ name: `Text ${st.texts.length + 1}: ${v.slice(0, 24)}${v.length > 24 ? '…' : ''}`, text: v }); draw(); return true; }); return; }
-      if (add === 'at') { pickMention(t, opts.mentions?.() || [], (x) => { if (!st.mentions.some((y) => y.kind === x.kind && y.id === x.id)) st.mentions.push(x); draw(); }); return; }
-      if (t.dataset.make != null) {
-        const secs = (opts.sections || []).filter((_, i) => st.sections.has(i));
-        const hasSource = st.files.length || st.links.length || st.texts.length || st.mentions.length || secs.length;
-        if (!String(st.topic || '').trim() && !hasSource) { w.querySelector('.ls-win-s').textContent = 'Gib ein Thema an oder füge eine Quelle hinzu.'; w.querySelector('.ls-topic').focus(); return; }
-        const texts = st.texts.slice();
-        for (const x of st.mentions) { const txt = await opts.mentionText?.(x).catch(() => ''); if (txt) texts.push({ name: `${x.kind === 'chat' ? 'Chat' : 'Dokument'}: ${x.title}`, text: txt }); }
-        const spec = { kind: st.kind, topic: String(st.topic || '').trim(), count: st.count, minutes: st.kind === 'klausur' ? st.count : 0, level: st.level,
-          types: st.kind === 'karten' ? [] : [...st.types].filter((ty) => st.kind === 'klausur' || ty !== 'offen'), files: st.files.slice(), links: st.links.slice(), texts, sections: secs };
-        const keep = await opts.onSubmit?.(spec, { busy: (txt) => { w.classList.add('busy'); w.querySelector('.ls-win-s').innerHTML = txt ? `<span class="shimmer">${esc(txt)}</span>` : ''; }, done: close, fail: (msg) => { w.classList.remove('busy'); w.querySelector('.ls-win-s').textContent = msg; } });
-        if (keep !== true) close(); // true: das Fenster zeigt den Fortschritt selbst und schließt sich später (done)
-      }
+      if (add === 'link') { inline(false, 'https://… und Enter', (v) => { if (!/^https?:\/\/\S+\.\S+/.test(v)) return false; st.links.push(v); return true; }); return; }
+      if (add === 'text') { inline(true, 'Text einfügen, z. B. Notizen oder ein Tafelbild …', (v) => { if (!v) return false; st.texts.push({ name: `Text ${st.texts.length + 1}: ${v.slice(0, 24)}${v.length > 24 ? '…' : ''}`, text: v }); return true; }); return; }
+      if (add === 'at') { pickMention(t, opts.mentions?.() || [], (x) => { if (!st.mentions.some((y) => y.kind === x.kind && y.id === x.id)) st.mentions.push(x); draw(); }); }
+    });
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (busy()) return;
+      const chosen = secs.filter((_, i) => st.sections.has(i));
+      const topic = [title.value.trim(), notes.value.trim()].filter(Boolean).join(' – ');
+      if (!topic && !nSrc() && !chosen.length) { status.textContent = 'Thema oder Quelle angeben'; title.focus(); return; }
+      const texts = st.texts.slice();
+      for (const x of st.mentions) { const txt = await opts.mentionText?.(x).catch(() => ''); if (txt) texts.push({ name: `${x.kind === 'chat' ? 'Chat' : 'Dokument'}: ${x.title}`, text: txt }); }
+      const spec = { kind: st.kind, topic, count: 0, minutes: 0, level: st.level, types: st.kind === 'karten' ? [] : [...st.types].filter((ty) => st.kind === 'klausur' || ty !== 'offen'),
+        files: st.files.slice(), links: st.links.slice(), texts, sections: chosen };
+      const keep = await opts.onSubmit?.(spec, { busy: (txt) => { form.classList.add('busy'); status.innerHTML = txt ? `<span class="shimmer">${esc(txt)}</span>` : ''; }, done: close, fail: (msg) => { form.classList.remove('busy'); status.textContent = msg; } });
+      if (keep !== true) close(); // true: das Fenster zeigt den Fortschritt selbst und schließt sich später (done)
     });
     draw();
-    w.querySelector('.ls-topic')?.focus();
+    title.focus();
     return { close };
   }
 
@@ -557,8 +788,8 @@ const Lernset = (() => {
   /* Auftrag an die KI aus dem Erstellen-Fenster (sichtbarer Text der Nachricht; die Einstellungen gehen zusätzlich als „lernset“ mit) */
   function requestText(spec) {
     const k = KINDS[spec.kind].name;
-    const what = spec.kind === 'klausur' ? `eine ${k} (${spec.minutes} Minuten)` : `${spec.count} ${k}`;
-    const parts = [`Erstelle ${spec.kind === 'quiz' ? `ein Quiz mit ${spec.count} Fragen` : what}${spec.topic ? ` zu: ${spec.topic}` : ' aus meinen Quellen'}.`];
+    const what = spec.kind === 'klausur' ? `eine ${k}${spec.minutes ? ` (${spec.minutes} Minuten)` : ''}` : spec.count ? `${spec.count} ${k}` : k;
+    const parts = [`Erstelle ${spec.kind === 'quiz' ? `ein Quiz${spec.count ? ` mit ${spec.count} Fragen` : ''}` : what}${spec.topic ? ` zu: ${spec.topic}` : ' aus meinen Quellen'}.`];
     if (spec.level !== 'gemischt') parts.push(`Schwierigkeit: ${spec.level}.`);
     if (spec.types.length && spec.kind !== 'karten') parts.push(`Aufgabentypen: ${spec.types.map((t) => TYPE_NAMES[t]).join(', ')}.`);
     if (spec.links.length) parts.push(`Quellen (Links): ${spec.links.join(' ')}`);
@@ -566,7 +797,7 @@ const Lernset = (() => {
   }
   const settingsOf = (spec) => ({ kind: spec.kind, count: spec.count, minutes: spec.minutes, level: spec.level, types: spec.types, topic: spec.topic.slice(0, 300) });
 
-  return { parse, figure, progress, open, dialog, pickMention, sectionsOf, requestText, settingsOf, KINDS, TYPE_NAMES };
+  return { parse, figure, progress, status, wrote, open, dialog, pickMention, sectionsOf, requestText, settingsOf, KINDS, TYPE_NAMES };
 })();
 if (typeof window !== 'undefined') window.Lernset = Lernset;
 if (typeof module !== 'undefined') module.exports = Lernset;

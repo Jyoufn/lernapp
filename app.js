@@ -1476,17 +1476,15 @@ function renderMarkdown(target, text, opts = {}) {
     pre.replaceWith(keep.get(raw));
   });
   // Lernset (```lernset): Karteikarten, Quiz, Probeklausur – Vorschau im Chat, Antippen öffnet die Lernansicht im Vollbild (lernset.js)
-  target.querySelectorAll('pre:has(code.language-lernset)').forEach((pre) => {
+  // live: die KI schreibt noch → EIN Lernset je Block, das neue Einträge im Hintergrund anhängt (ab 3 fertigen kann man schon lernen)
+  const lsClosed = (text.match(/```lernset[^\n]*\n[\s\S]*?\n```/g) || []).length;
+  target.querySelectorAll('pre:has(code.language-lernset)').forEach((pre, i) => {
     if (!window.Lernset) { pre.remove(); return; }
     const raw = pre.querySelector('code').textContent;
-    const keep = (target._ls ||= new Map());
-    if (!keep.has(raw)) {
-      if (!Lernset.parse(raw)) { target._lsWait ||= Lernset.figure(raw); Lernset.progress(target._lsWait, raw); pre.replaceWith(target._lsWait); return; }
-      const f = Lernset.figure(raw);
-      if (target._lsWait) { f.classList.add('ls-reveal'); target._lsWait = null; }
-      keep.set(raw, f);
-    }
-    pre.replaceWith(keep.get(raw));
+    const figs = (target._lsFigs ||= []), done = !opts.live || i < lsClosed;
+    if (!figs[i]) figs[i] = Lernset.figure(raw, { live: !done });
+    else figs[i].update(raw, done);
+    pre.replaceWith(figs[i]);
   });
   // Funde mit Link (```links): Karten mit Vorschaubild, Titel und Website – "n" zeigt auf die Quellen dieser Antwort (keine erfundenen Adressen)
   target.querySelectorAll('pre:has(code.language-links)').forEach((pre) => {
@@ -1574,8 +1572,9 @@ function makeRenderer(target, opts = {}) {
 
   const blocksOf = () => target.querySelectorAll(':scope > *, :scope > ul > li, :scope > ol > li');
 
+  let ended = false; // Antwort komplett (finish/flush) → Blöcke wie Lernsets wissen, dass nichts mehr kommt
   const draw = () => {
-    renderMarkdown(target, text.slice(0, shown), opts);
+    renderMarkdown(target, text.slice(0, shown), { ...opts, live: !ended || shown < text.length });
     // neue Blöcke weich einblenden – auch über Neuzeichnungen hinweg ohne Flackern
     const now = performance.now();
     blocksOf().forEach((block, i) => {
@@ -1594,6 +1593,7 @@ function makeRenderer(target, opts = {}) {
     const backlog = text.length - shown;
     if (backlog <= 0) {
       timer = null;
+      if (ended && finishWaiters.length) draw();
       finishWaiters.forEach((resolve) => resolve());
       finishWaiters = [];
       return;
@@ -1611,11 +1611,11 @@ function makeRenderer(target, opts = {}) {
   const start = () => { if (!timer) timer = setTimeout(tick, 0); };
 
   return {
-    append(t) { text += t; start(); },
+    append(t) { text += t; ended = false; start(); },
     /* sofort alles zeigen (z. B. beim Stoppen) */
-    flush() { clearTimeout(timer); timer = null; shown = text.length; draw(); finishWaiters.forEach((r) => r()); finishWaiters = []; },
+    flush() { clearTimeout(timer); timer = null; shown = text.length; ended = true; draw(); finishWaiters.forEach((r) => r()); finishWaiters = []; },
     /* warten, bis der Rest sauber zu Ende animiert ist */
-    finish() { if (shown >= text.length) { draw(); return Promise.resolve(); } start(); return new Promise((r) => finishWaiters.push(r)); },
+    finish() { ended = true; if (shown >= text.length) { draw(); return Promise.resolve(); } start(); return new Promise((r) => finishWaiters.push(r)); },
     get text() { return text; },
   };
 }
@@ -2334,6 +2334,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const wroteLabel = () => {
     const n = /```ask/.test(answerR?.text || '') ? parseAskBlock(answerR.text)?.length || 1 : 0;
     if (n) return n === 1 ? 'Eine Frage gestellt' : `${n} Fragen gestellt`;
+    const ls = /```lernset[^\n]*\n([\s\S]*?)(?:\n```|$)/.exec(answerR?.text || '');
+    if (ls && window.Lernset?.wrote) { const w = Lernset.wrote(ls[1]); if (w) { const i = w.indexOf(' · '); return i > 0 ? `${w.slice(0, i)} <span class="ph-x">${w.slice(i)}</span>` : w; } }
     // Format gebaut: „Built mind map · 5 branches · 19 points“ (Zahlen aus dem Block)
     const F = fmt && window.Thinking?.FORMATS?.[fmt];
     if (F && workKey === 'work' && window.Thinking.blockFormat(answerR?.text || '') === fmt) {
@@ -2961,6 +2963,14 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
             if (sh && workKey === 'work') sh.textContent = P('work').sub;
             if (workKey === 'work') phase('work');
           }
+        }
+        // Lernset/Präsentation entsteht: Fortschritt steht im Schritt der Zeitleiste („Fragen schreiben · 4“), nicht unter der Antwort
+        const lsOpen = /```lernset[^\n]*\n([\s\S]*)$/.exec(answerR.text), pzOpen = !lsOpen && /```praesentation[^\n]*\n([\s\S]*)$/.exec(answerR.text);
+        if ((lsOpen || pzOpen) && !/\n```/.test((lsOpen || pzOpen)[1])) {
+          const sh = stages.answering?.step.querySelector('.shimmer'), raw = (lsOpen || pzOpen)[1];
+          const n = pzOpen && (raw.match(/"type"\s*:/g) || []).length;
+          const txt = lsOpen ? window.Lernset?.status?.(raw) : `Folien gestalten${n ? ` · ${n}` : ''}`;
+          if (sh && txt && sh.textContent !== txt) sh.textContent = txt;
         }
         updatePlan(); // Planpunkte abhaken, sobald sie in der Antwort stehen
         // Bild-Block fertig geschrieben → Bild schon jetzt erzeugen lassen, der Text läuft weiter

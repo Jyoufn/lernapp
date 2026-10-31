@@ -51,3 +51,14 @@ test('Klausur bewerten: leere Antwort ohne Modell 0 Punkte, sonst Punkte vom Mod
     assert.equal(fx.calls.filter((c) => c.url.includes(':generateContent')).length, 1, 'nur die nicht leere Antwort geht ans Modell');
   } finally { fx.restore(); }
 });
+
+test('Lernset im Entstehen: fertige Einträge werden schon gelesen, Zeitleiste zeigt den Fortschritt', () => {
+  const Lernset = require('../lernset.js');
+  const raw = '{"art":"quiz","titel":"Zelle","fragen":[{"typ":"wf","frage":"A {x}","richtig":true},{"typ":"wf","frage":"B","richtig":false},{"typ":"mc","frage":"C","optione';
+  const s = Lernset.parse(raw);
+  assert.equal(s.partial, true);
+  assert.equal(s.title, 'Zelle');
+  assert.equal(s.items.length, 2, 'nur vollständige Fragen');
+  assert.equal(Lernset.status(raw), 'Fragen schreiben · 2');
+  assert.equal(Lernset.wrote(`${raw}n":["a","b"],"richtig":0}]}`), 'Quiz erstellt · 3 Fragen');
+});
