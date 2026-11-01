@@ -59,6 +59,16 @@ const Praesentation = (() => {
       image: img(s?.image), notes: str(s?.notes, 1200), ...(['links', 'rechts', 'karten', 'liste'].includes(s?.layout) ? { layout: s.layout } : {}),
     })).filter((s) => s.title || s.text || s.points.length);
     if (!slides.length) return null;
+    // Bilder sind Pflicht: hat die KI zu wenige gesetzt, bekommen Titel und passende Folien ein Bild zum Folientitel (Foto, sonst KI-Bild)
+    const topic = plain(str(o.title || slides[0].title, 80));
+    let have = slides.filter((x) => x.image).length;
+    const wantImgs = Math.min(6, Math.max(3, Math.round(slides.length / 3)));
+    for (const x of slides) {
+      if (have >= wantImgs) break;
+      if (x.image || !['titel', 'bild', 'frage', 'abschnitt', 'punkte', 'definition'].includes(x.type) || (x.type === 'punkte' && x.points.length > 4)) continue;
+      x.image = { query: '', prompt: `Foto passend zur Folie „${x.title || topic}“ einer Schulpräsentation über ${topic}, sachlich, Motiv gut erkennbar` };
+      have++;
+    }
     // Gliederung ist Pflicht: fehlt sie, kommt sie hinter die Titelfolie (Abschnitte, sonst die Folientitel)
     if (!slides.some((s) => s.type === 'gliederung')) {
       const secs = slides.filter((s) => s.type === 'abschnitt').map((s) => s.title);
@@ -659,6 +669,13 @@ const Praesentation = (() => {
 
   /* ---------- Karte im Chat: nur die Präsentation (ohne Kopf), Designs zum Umschalten, Ausgabe als drei Kacheln ---------- */
   const fi = (n, s = 13) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
+  // eigene Datei-Icons (Blatt mit Eselsohr in der Farbe der Dateiart + Zeichen) – keine Nachbildung fremder Logos
+  const sheet = (c, glyph) => `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M8 3h10.5L25 9.5V25a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="${c}"/><path d="M18.5 3v4.5a2 2 0 0 0 2 2H25Z" fill="#fff" fill-opacity=".35"/>${glyph}</svg>`;
+  const FILE_ICON = {
+    pptx: sheet('#E5673E', '<rect x="9.5" y="12" width="12" height="8" rx="1.2" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M12.5 17.5v-2M15.5 17.5v-3.5M18.5 17.5v-1.2M15.5 20v2.6M13 22.8h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
+    key: sheet('#3D8BFF', '<path d="M11 13.5h9l-1.4 4.5h-6.2Z" fill="#fff"/><path d="M15.5 18v4.6M12.8 22.8h5.4M15.5 13.5v-2.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
+    pdf: sheet('#E5534B', '<path d="M10.5 13h10M10.5 16.5h10M10.5 20h6.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>'),
+  };
   const OUTS = [
     { id: 'pptx', label: 'PowerPoint', hint: 'Bearbeitbar', badge: 'PPTX' },
     { id: 'key', label: 'Keynote', hint: 'iPad & Mac', badge: 'KEY' },
@@ -724,7 +741,7 @@ const Praesentation = (() => {
         <span class="pz-count"></span></div>
       <div class="pz-strip"></div>
       <div class="pz-bar">
-        <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${o.badge}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
+        <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${FILE_ICON[o.id]}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
       </div>
       <div class="pz-msg" aria-live="polite"></div>`;
     let cur = 0;

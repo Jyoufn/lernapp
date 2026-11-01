@@ -118,7 +118,7 @@ const Lernset = (() => {
       return `<div class="ls-pv ls-pv-quiz"><span class="ls-pv-k">Frage 1 von ${set.items.length}</span><p>${rich(x.q)}</p>${opts.map((o) => `<span class="ls-pv-opt">${rich(o)}</span>`).join('')}</div>`;
     }
     const x = set.items[0];
-    return `<div class="ls-pv ls-pv-paper"><div class="ls-pv-ph"><b>${esc(set.subject || 'Probeklausur')}</b><span>${set.minutes} Min · ${pointsOf(set)} Punkte</span></div>
+    return `<div class="ls-pv ls-pv-paper"><div class="ls-pv-ph"><b>${esc(set.subject || 'Probeklausur')}</b></div>
       <p><span class="ls-pv-n">1</span>${rich(x.q || x.text)}</p><i></i><i></i><i></i></div>`;
   }
   // Warten, solange die KI die ersten Einträge schreibt: Wellen-Kachelfeld über die volle Breite (Fortschritt steht in der Zeitleiste)
@@ -168,19 +168,14 @@ const Lernset = (() => {
     // Kopfzeile: Icon + Titel, rechts Zähler und Vollbild – darunter direkt zum Lernen (Karteikarten und Quiz im Chat spielbar)
     fig.className = `ls ls-k-${set.kind}`;
     fig.innerHTML = `<div class="ls-top"><span class="ls-top-t">${KICON(set.kind, 16)}<b>${esc(set.title)}</b></span><span class="ls-top-n"></span>
-      <button type="button" class="ls-exp" aria-label="Im Vollbild öffnen">${fi('expand', 13)}</button></div><div class="ls-in"></div>`;
+      ${set.kind === 'karten' ? `<button type="button" class="ls-exp" data-stats aria-label="Übersicht: gewusst und nicht gewusst">${fi('info', 14)}</button>` : ''}<button type="button" class="ls-exp" data-full aria-label="Im Vollbild öffnen">${fi('expand', 13)}</button></div><div class="ls-in"></div>`;
     const inner = fig.querySelector('.ls-in'), count = fig.querySelector('.ls-top-n');
-    fig.querySelector('.ls-exp').addEventListener('click', (e) => { e.stopPropagation(); if (set.kind !== 'klausur' || !set.loading) open(set); });
+    fig.querySelector('[data-stats]')?.addEventListener('click', (e) => { e.stopPropagation(); ui.stats?.(); });
+    fig.querySelector('[data-full]').addEventListener('click', (e) => { e.stopPropagation(); if (set.kind !== 'klausur' || !set.loading) open(set); });
     const ui = { body: inner, sub: count, right: null, setBar: () => {}, cleanup: [], inline: true };
     if (set.kind === 'karten') return deck(set, ui);
     if (set.kind === 'quiz') return quiz(set, ui);
-    const draw = () => {
-      inner.innerHTML = `${preview(set)}<div class="ls-start"><button type="button" class="ls-pill${set.loading ? ' busy' : ''}"${set.loading ? ' disabled' : ''}>${set.loading ? '<span class="shimmer">Wird erstellt …</span>' : KINDS.klausur.verb}</button>
-        <span>${set.loading ? countText(set) : `${set.minutes} Min · ${pointsOf(set)} Punkte · ${countText(set)}`}</span></div>`;
-      inner.querySelector('.ls-pill').addEventListener('click', () => { if (!set.loading) open(set); });
-    };
-    set.subs.add(draw);
-    draw();
+    return exam(set, ui);
   }
 
   /* ---------- Karteikarten-Stapel (im Chat und im Vollbild) ----------
@@ -196,7 +191,7 @@ const Lernset = (() => {
     let rates = {};
     try { rates = JSON.parse(localStorage.getItem(store) || '{}') || {}; } catch {}
     const save = () => { try { localStorage.setItem(store, JSON.stringify(rates)); } catch {} };
-    let order = set.cards.map((_, i) => i), all = true, at = 0, busy = false;
+    let order = set.cards.map((_, i) => i), all = true, at = 0, busy = false, stats = false;
     const loading = () => all && set === base && !!base.loading;
     const wrap = el('div', 'ls-deck');
     wrap.innerHTML = `<div class="ls-stage"><span class="ls-peek l"></span><span class="ls-peek r"></span>
@@ -219,18 +214,21 @@ const Lernset = (() => {
       dots.innerHTML = order.length <= 48 ? order.map((i, k) => `<button type="button" class="${rates[idOf(i)] != null ? `d${rates[idOf(i)]}` : ''}${k === at ? ' on' : ''}" data-at="${k}" aria-label="Karte ${k + 1}"></button>`).join('') + (loading() ? '<i class="ls-load"></i>' : '') : '';
     };
     const draw = () => {
-      const done = at >= order.length, wait = done && loading();
-      stage.classList.toggle('end', done && !wait);
+      const done = at >= order.length, wait = done && loading() && !stats;
+      stage.classList.toggle('end', (done && !wait) || stats);
       stage.classList.toggle('wait', wait);
-      rateRow.hidden = done;
+      rateRow.hidden = done || stats;
       card.classList.remove('flipped', 'r0', 'r1', 'r2', 'was0', 'was1', 'was2');
       if (wait) front.innerHTML = '<span class="shimmer">Weitere Karten werden erstellt …</span>';
-      else if (done) {
-        const n = (r) => set.cards.filter((_, i) => rates[idOf(i)] === r).length;
-        front.innerHTML = `<span class="ls-sum3"><i class="g">${n(2)}</i><i class="o">${n(1)}</i><i class="r">${n(0)}</i></span><span class="ls-end-t">gewusst · unsicher · nicht gewusst</span>
-          <span class="ls-end-b">${n(0) + n(1) ? '<button type="button" class="ls-pill" data-hard>Schwierige wiederholen</button>' : ''}<button type="button" class="ls-pill ghost" data-again>Von vorn</button></span>`;
-        front.querySelector('[data-hard]')?.addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i).filter((i) => rates[idOf(i)] !== 2); all = false; at = 0; slide(1, true); });
-        front.querySelector('[data-again]').addEventListener('click', (e) => { e.stopPropagation(); order = set.cards.map((_, i) => i); all = true; at = 0; slide(1, true); });
+      else if (done || stats) {
+        const n = (r) => set.cards.filter((_, i) => rates[idOf(i)] === r).length, open = set.cards.length - n(0) - n(1) - n(2);
+        const row = (c, label, v) => `<span class="ls-srow"><i class="${c}"></i>${label}<b>${v}</b></span>`;
+        front.innerHTML = `<span class="ls-stats"><span class="ls-sbar">${[['g', n(2)], ['o', n(1)], ['r', n(0)], ['x', open]].map(([c, v]) => (v ? `<i class="${c}" style="flex:${v}"></i>` : '')).join('')}</span>
+          <span class="ls-srows">${row('g', 'Gewusst', n(2))}${row('o', 'Unsicher', n(1))}${row('r', 'Nicht gewusst', n(0))}${open ? row('x', 'Noch offen', open) : ''}</span>
+          <span class="ls-end-b">${n(0) + n(1) ? '<button type="button" class="ls-pill" data-hard>Schwierige wiederholen</button>' : ''}${stats && !done ? '<button type="button" class="ls-pill ghost" data-back>Weiterlernen</button>' : '<button type="button" class="ls-pill ghost" data-again>Von vorn</button>'}</span></span>`;
+        front.querySelector('[data-hard]')?.addEventListener('click', (e) => { e.stopPropagation(); stats = false; order = set.cards.map((_, i) => i).filter((i) => rates[idOf(i)] !== 2); all = false; at = 0; slide(1, true); });
+        front.querySelector('[data-again]')?.addEventListener('click', (e) => { e.stopPropagation(); stats = false; order = set.cards.map((_, i) => i); all = true; at = 0; slide(1, true); });
+        front.querySelector('[data-back]')?.addEventListener('click', (e) => { e.stopPropagation(); stats = false; slide(1, true); });
       } else {
         const c = set.cards[order[at]];
         front.innerHTML = rich(c.front); back.innerHTML = rich(c.back);
@@ -262,9 +260,10 @@ const Lernset = (() => {
       else chrome();
     };
     if (set === base && base.subs) { base.subs.add(grow); ui.cleanup.push(() => base.subs.delete(grow)); }
-    const flip = () => { if (at < order.length && !busy) card.classList.toggle('flipped'); };
+    const flip = () => { if (at < order.length && !busy && !stats) card.classList.toggle('flipped'); };
+    ui.stats = () => { if (busy) return; stats = !stats; slide(stats ? 1 : -1, true); }; // Info-Knopf: Übersicht ein/aus
     const rate = async (r) => {
-      if (busy || at >= order.length) return;
+      if (busy || stats || at >= order.length) return;
       rates[idOf(order[at])] = r; save();
       card.classList.add(`r${r}`);
       rateRow.querySelector(`.r${r}`).classList.add('hit');
@@ -320,7 +319,8 @@ const Lernset = (() => {
 
   // Vollbild: derselbe Stapel, größer – oben rechts „Mischen“ (erst, wenn alle Karten da sind)
   function flashcards(set, ui) {
-    ui.right.innerHTML = `<button type="button" class="ls-hbtn" data-shuffle aria-label="Mischen">${SHUFFLE}<span>Mischen</span></button>`;
+    ui.right.innerHTML = `<button type="button" class="ls-hicon" data-stats aria-label="Übersicht: gewusst und nicht gewusst">${fi('info', 15)}</button><button type="button" class="ls-hicon" data-shuffle aria-label="Mischen">${SHUFFLE}</button>`;
+    ui.right.querySelector('[data-stats]').addEventListener('click', () => ui.stats?.());
     const sh = ui.right.querySelector('[data-shuffle]');
     const lock = () => { sh.disabled = !!set.loading; };
     lock(); if (set.subs) { set.subs.add(lock); ui.cleanup.push(() => set.subs.delete(lock)); }
@@ -465,7 +465,7 @@ const Lernset = (() => {
     const loading = () => live && !!set.loading;
     const got = () => res.filter((r) => r === true).length;
     const allDone = () => list.length > 0 && list.every((_, i) => res[i] != null);
-    const nextOpen = () => { for (let k = 1; k <= list.length; k++) { const i = (at + k) % list.length; if (res[i] == null) return i; } return -1; };
+    const nextOpen = (self = true) => { for (let k = 1; k <= list.length - (self ? 0 : 1); k++) { const i = (at + k) % list.length; if (res[i] == null) return i; } return -1; };
     const chrome = () => {
       if (ending) { if (ui.sub) ui.sub.textContent = `${got()} von ${list.length} richtig`; } else counter(ui.sub, at + 1, list.length, loading());
       segs.innerHTML = list.map((_, i) => `<button type="button" data-i="${i}" class="${res[i] === true ? 'ok' : res[i] === false ? 'no' : ''}${i === at && !ending ? ' on' : ''}" aria-label="Frage ${i + 1}"><i></i></button>`).join('')
@@ -499,13 +499,14 @@ const Lernset = (() => {
       const node = el('div', 'ls-quiz');
       const extra = el('div', 'ls-extra');
       const foot = el('div', 'ls-qf');
-      foot.innerHTML = '<div class="ls-st"></div><button type="button" class="ls-pill" disabled>Bestätigen</button>';
+      foot.innerHTML = '<div class="ls-st"><button type="button" class="ls-skip" hidden>Überspringen</button></div><button type="button" class="ls-pill" disabled>Bestätigen</button>';
       const why = el('div', 'ls-fold');
       node.append(q.el, extra, foot, why);
       let btn = foot.querySelector('.ls-pill'), phase = 'answer';
       const st = foot.querySelector('.ls-st');
       // Knopf nach der Antwort: Weiter / Ergebnis / wartet auf die nächste Frage aus dem Hintergrund
       const refresh = () => {
+        if (phase === 'answer') { const sk = st.querySelector('.ls-skip'); if (sk) sk.hidden = nextOpen(false) < 0; return; }
         if (phase !== 'next') return;
         const wait = !(allDone() && !loading()) && nextOpen() < 0;
         btn.disabled = wait; btn.classList.toggle('busy', wait);
@@ -542,6 +543,7 @@ const Lernset = (() => {
       const update = () => { if (phase === 'answer') btn.disabled = !q.answered(); };
       q.el.addEventListener('ls-pick', update); q.el.addEventListener('input', update); q.el.addEventListener('change', update);
       btn.addEventListener('click', confirm);
+      st.querySelector('.ls-skip').addEventListener('click', () => { const n = nextOpen(false); if (n >= 0 && phase === 'answer') show(n, n > at ? 1 : -1); });
       const key = (e) => { if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA' && !e.target.closest?.('.ls-dd, .ls-segs')) { e.preventDefault(); confirm(); } };
       return { node, refresh, key };
     }
@@ -581,35 +583,94 @@ const Lernset = (() => {
     return x.expect;
   }
 
-  /* Probeklausur: Klausurblatt mit Zeit, Abgeben → geschlossene Fragen sofort, offene über die KI bewertet → Punkte, Note, Musterlösung */
-  const NOTE = (p) => (p >= 0.92 ? 1 : p >= 0.81 ? 2 : p >= 0.67 ? 3 : p >= 0.5 ? 4 : p >= 0.3 ? 5 : 6);
+  /* Probeklausur: erst Übersicht (Dauer, Anzahl) + „Klausur starten“; dann Aufgabe für Aufgabe in EINER Karte (‹ Zurück / Weiter, Segmente
+     antippbar), die Zeit läuft oben rechts. Abgeben → geschlossene Aufgaben sofort, offene streng über die KI → Notenpunkte (0–15),
+     danach je Aufgabe Punkte, Rückmeldung und Musterlösung zum Durchblättern. Gleiche Ansicht im Chat und im Vollbild. */
+  const NP = [95, 90, 85, 80, 75, 70, 65, 60, 55, 50, 45, 40, 33, 27, 20]; // ab so viel Prozent: 15 … 1 Notenpunkte (Oberstufe)
+  const notenpunkte = (p) => { const i = NP.findIndex((x) => p * 100 >= x - 1e-9); return i < 0 ? 0 : 15 - i; };
+  const noteWord = (np) => (np >= 13 ? 'sehr gut' : np >= 10 ? 'gut' : np >= 7 ? 'befriedigend' : np >= 4 ? 'ausreichend' : np >= 1 ? 'mangelhaft' : 'ungenügend');
+  async function slideSwap(stage, node, dir, first) {
+    const h0 = stage.offsetHeight, old = stage.firstElementChild;
+    if (old === node) return;
+    if (!first && old && !reduced()) await old.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: `translateX(${-dir * 16}px)` }], { duration: 160, easing: 'cubic-bezier(.4,0,1,1)' }).finished.catch(() => {});
+    stage.replaceChildren(node);
+    if (first || reduced()) return;
+    const h1 = stage.offsetHeight;
+    if (Math.abs(h1 - h0) > 1) stage.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 400, easing: 'cubic-bezier(.32,.72,0,1)' });
+    node.animate([{ opacity: 0, transform: `translateX(${dir * 16}px)` }, { opacity: 1, transform: 'none' }], { duration: 440, easing: 'cubic-bezier(.16,1,.3,1)' });
+  }
   function exam(set, ui) {
-    const total = pointsOf(set);
-    const sheet = el('div', 'ls-sheet');
-    sheet.innerHTML = `<div class="ls-sheet-h"><b>${esc(set.title)}</b><span>${esc(set.subject ? `${set.subject} · ` : '')}${set.minutes} Minuten · ${total} Punkte · ${set.items.length} Aufgaben</span></div>`;
-    const qs = set.items.map((x, i) => question(x, i + 1, { exam: true }));
-    qs.forEach((q) => sheet.append(q.el));
-    const foot = el('div', 'ls-row ls-row-end ls-sheet-f');
-    const give = el('button', 'ls-btn', 'Abgeben'); give.type = 'button';
-    foot.append(give); sheet.append(foot);
-    ui.body.replaceChildren(sheet);
-    // Zeit läuft (oben rechts); abgelaufen → rot, Abgeben bleibt möglich
-    const end = Date.now() + set.minutes * 60000;
-    ui.right.innerHTML = '<span class="ls-timer"></span>';
-    const timer = ui.right.querySelector('.ls-timer');
-    const tick = () => { const s = Math.max(0, Math.round((end - Date.now()) / 1000)); timer.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; timer.classList.toggle('over', !s); ui.setBar(1 - s / (set.minutes * 60)); };
-    tick();
-    const t = setInterval(tick, 1000);
-    ui.cleanup.push(() => clearInterval(t));
-    const answered = () => { const n = qs.filter((q) => q.answered()).length; ui.sub.textContent = `${n} von ${qs.length} bearbeitet`; };
-    answered();
-    sheet.addEventListener('input', answered); sheet.addEventListener('change', answered); sheet.addEventListener('ls-pick', answered);
-    give.addEventListener('click', async () => {
-      if (give.disabled) return;
+    const card = el('div', 'ls-xcard');
+    ui.body.replaceChildren(card);
+    let qs = [], at = 0, end = 0, timer = null, phase = 'intro', pts = [], sure = false, busy = false;
+    const stop = () => { clearInterval(timer); timer = null; };
+    ui.cleanup.push(stop);
+    const total = () => pointsOf(set);
+    function intro() {
+      phase = 'intro';
+      card.innerHTML = `<div class="ls-xintro">${preview(set)}<div class="ls-xmeta"><span>${fi('clock', 13)}${set.minutes} Minuten</span><span>${fi('list', 13)}${countText(set)}</span>${set.subject ? `<span>${fi('book-open', 13)}${esc(set.subject)}</span>` : ''}</div>
+        <button type="button" class="ls-pill${set.loading ? ' busy' : ''}"${set.loading ? ' disabled' : ''}>${set.loading ? '<span class="shimmer">Wird erstellt …</span>' : 'Klausur starten'}</button></div>`;
+      card.querySelector('.ls-pill').addEventListener('click', start);
+      if (ui.sub) ui.sub.textContent = '';
+    }
+    if (set.subs) { const re = () => { if (phase === 'intro') intro(); }; set.subs.add(re); ui.cleanup.push(() => set.subs.delete(re)); }
+    const segs = () => card.querySelector('.ls-segs'), stage = () => card.querySelector('.ls-qstage');
+    const chrome = () => {
+      const s = segs(); if (!s) return;
+      s.innerHTML = qs.map((q, i) => { const p = pts[i], x = set.items[i];
+        const c = phase === 'review' ? (p == null ? '' : p >= x.points - 0.001 ? 'ok' : p > 0 ? 'part' : 'no') : q.answered() ? 'fill' : '';
+        return `<button type="button" data-i="${i}" class="${c}${i === at && phase !== 'result' ? ' on' : ''}" aria-label="Aufgabe ${i + 1}"><i></i></button>`; }).join('');
+      if (phase !== 'result') counter(ui.sub, at + 1, qs.length, false);
+      const back = card.querySelector('[data-d]'), next = card.querySelector('[data-next]');
+      if (back) back.disabled = at === 0 || phase === 'result';
+      if (next) {
+        const last = at === qs.length - 1, open = qs.filter((q) => !q.answered()).length;
+        next.textContent = phase === 'review' ? (last ? 'Ergebnis' : 'Weiter') : last ? (sure ? 'Wirklich abgeben' : 'Abgeben') : 'Weiter';
+        const st = card.querySelector('.ls-xst');
+        st.textContent = phase === 'write' && last && sure && open ? `${open} ${open === 1 ? 'Aufgabe ist' : 'Aufgaben sind'} noch offen` : '';
+      }
+    };
+    const tick = () => {
+      const t = card.querySelector('.ls-timer'); if (!t) return;
+      const s = Math.max(0, Math.round((end - Date.now()) / 1000));
+      t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; t.classList.toggle('over', !s);
+    };
+    function frame() {
+      card.innerHTML = `<div class="ls-xtop"><div class="ls-segs"></div><span class="ls-timer"></span></div><div class="ls-qstage"></div>
+        <div class="ls-qf ls-xnav"><button type="button" class="ls-prev" data-d="-1">${fi('chevron-right', 11)}Zurück</button><span class="ls-xst"></span><button type="button" class="ls-pill" data-next>Weiter</button></div>`;
+      card.querySelector('.ls-segs').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) show(+b.dataset.i); });
+      card.querySelector('[data-d]').addEventListener('click', () => show(at - 1));
+      card.querySelector('[data-next]').addEventListener('click', next);
+    }
+    function show(i, first = false) {
+      if (busy || i < 0 || i >= qs.length) return;
+      const dir = i >= at ? 1 : -1; at = i; sure = false;
+      if (phase === 'result') { phase = 'review'; frame(); first = true; tick(); }
+      slideSwap(stage(), qs[i].el, dir, first);
+      chrome();
+    }
+    function start() {
+      if (set.loading) return;
+      phase = 'write'; qs = set.items.map((x, i) => question(x, i + 1, { exam: true })); pts = []; at = 0;
+      qs.forEach((q) => { const upd = () => chrome(); q.el.addEventListener('input', upd); q.el.addEventListener('change', upd); q.el.addEventListener('ls-pick', upd); });
+      frame();
+      end = Date.now() + set.minutes * 60000; tick(); stop(); timer = setInterval(tick, 1000);
+      show(0, true);
+    }
+    function next() {
+      if (busy) return;
+      if (at < qs.length - 1) return show(at + 1);
+      if (phase === 'review') return result();
+      const open = qs.filter((q) => !q.answered()).length;
+      if (open && !sure) { sure = true; chrome(); return; }
+      submit();
+    }
+    async function submit() {
+      busy = true; stop();
+      const btn = card.querySelector('[data-next]');
+      btn.disabled = true; btn.classList.add('busy'); btn.innerHTML = '<span class="shimmer">Wird korrigiert …</span>';
       const open = qs.map((q, i) => ({ q, i, x: set.items[i] })).filter((o) => o.x.type === 'offen');
-      give.disabled = true; give.innerHTML = '<span class="shimmer">Wird korrigiert …</span>';
-      clearInterval(t);
-      let graded = new Map();
+      const graded = new Map();
       if (open.length) {
         try {
           const r = await fetch('/api/lernset/grade', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -617,30 +678,37 @@ const Lernset = (() => {
           if (r.ok) (await r.json()).results?.forEach((g) => graded.set(+g.i, g));
         } catch {}
       }
-      const pts = qs.map((q, i) => { const x = set.items[i]; if (x.type !== 'offen') return q.score(); const g = graded.get(i); return g ? Math.max(0, Math.min(x.points, +g.punkte || 0)) : null; });
+      pts = qs.map((q, i) => { const x = set.items[i]; if (x.type !== 'offen') return q.score(); const g = graded.get(i); return g ? Math.max(0, Math.min(x.points, +g.punkte || 0)) : null; });
       qs.forEach((q, i) => {
-        const x = set.items[i], p = pts[i];
+        const x = set.items[i], p = pts[i], g = graded.get(i);
         q.mark();
         const badge = q.el.querySelector('.ls-pts');
-        if (badge) { badge.textContent = p == null ? `– / ${x.points}` : `${Math.round(p * 10) / 10} / ${x.points}`; badge.className = `ls-pts ${p == null ? '' : p >= x.points - 0.001 ? 'full' : p > 0 ? 'part' : 'zero'}`; }
-        const g = graded.get(i);
+        if (badge) { badge.textContent = p == null ? `– / ${x.points} P.` : `${Math.round(p * 10) / 10} / ${x.points} P.`; badge.className = `ls-pts ${p == null ? '' : p >= x.points - 0.001 ? 'full' : p > 0 ? 'part' : 'zero'}`; }
         const res = el('div', 'ls-res');
         res.innerHTML = `${g?.feedback ? `<p>${rich(g.feedback)}</p>` : x.type === 'offen' ? '<p>Konnte gerade nicht automatisch bewertet werden – vergleiche mit der Musterlösung.</p>' : ''}
-          <details><summary>Musterlösung</summary><p>${rich(solution(x))}</p>${x.why ? `<p class="ls-why">${rich(x.why)}</p>` : ''}</details>`;
+          <button type="button" class="ls-whyt" aria-expanded="false">Musterlösung${fi('chevron-down', 10)}</button><div class="ls-fold"></div>`;
+        res.querySelector('.ls-whyt').addEventListener('click', (e) => fold(e.currentTarget, res.querySelector('.ls-fold'), () => `<p>${rich(solution(x))}</p>${x.why ? `<p>${rich(x.why)}</p>` : ''}`));
         q.el.append(res);
       });
-      const got = pts.reduce((n, p) => n + (p || 0), 0), unknown = pts.some((p) => p == null);
-      const pct = total ? got / total : 0;
-      const sum = el('div', 'ls-sum');
-      sum.innerHTML = `<div class="ls-sum-n"><span>Note</span><b>${NOTE(pct)}</b></div><div class="ls-sum-t"><b>${Math.round(got * 10) / 10} von ${total} Punkten · ${Math.round(pct * 100)} %</b>
-        <span>${unknown ? 'Ohne die nicht bewerteten Aufgaben · ' : ''}Richtwert nach üblichem Notenschlüssel</span></div><button type="button" class="ls-btn2" data-redo>Neu schreiben</button>`;
-      sheet.querySelector('.ls-sheet-h').after(sum);
-      sum.querySelector('[data-redo]').addEventListener('click', () => { ui.cleanup.forEach((f) => f()); ui.cleanup.length = 0; exam(set, ui); });
-      foot.remove();
-      ui.sub.textContent = `${Math.round(got * 10) / 10} / ${total} Punkte`;
-      ui.setBar(pct);
-      sum.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
-    });
+      busy = false; phase = 'review';
+      result();
+    }
+    function result() {
+      phase = 'result';
+      const got = pts.reduce((n, p) => n + (p || 0), 0), unknown = pts.some((p) => p == null), pct = total() ? got / total() : 0, np = notenpunkte(pct);
+      card.innerHTML = `<div class="ls-xtop"><div class="ls-segs"></div></div><div class="ls-end ls-xres"><div class="ls-ring" style="--p:0"><b>0</b><small>Notenpunkte</small></div>
+        <p><b>${noteWord(np)}</b> · ${Math.round(pct * 100)} % der Punkte${unknown ? ' (ohne nicht bewertete Aufgaben)' : ''}</p>
+        <div class="ls-row"><button type="button" class="ls-pill ghost" data-review>Aufgaben ansehen</button><button type="button" class="ls-pill" data-redo>Neu schreiben</button></div></div>`;
+      card.querySelector('.ls-segs').addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) show(+b.dataset.i); });
+      card.querySelector('[data-review]').addEventListener('click', () => show(0));
+      card.querySelector('[data-redo]').addEventListener('click', () => { stop(); intro(); });
+      if (ui.sub) ui.sub.textContent = `${np} Notenpunkte`;
+      chrome();
+      const ring = card.querySelector('.ls-ring'), b = ring.querySelector('b'), t0 = performance.now(), D = reduced() ? 1 : 900;
+      const step = (t) => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); ring.style.setProperty('--p', (np / 15 * 100 * e).toFixed(1)); b.textContent = String(Math.round(np * e)); if (k < 1) requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    }
+    intro();
   }
 
   /* ---------- Erstellen-Fenster ----------

@@ -10030,3 +10030,76 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .tk-mi.tk-tag-add svg, .tk-sheet-rows .tk-box .tk-mi.tk-tag-add svg { display: block; flex: none; color: var(--text-4); }
 .tk-mi.tk-tag-add b { color: var(--text); font-weight: 500; }
 .ls .ls-in, .ls-k-quiz .ls-in { padding: 0 16px; }
+
+/* ===== 01.11.2026 (7) – Karteikarten und Probeklausur ohne äußeren Kasten (Titel steht frei darüber), Hauptfläche im Börse-Ton; Übersicht
+   „gewusst/unsicher/nicht gewusst“ über den Info-Knopf; Klausur als Karte mit Aufgabe für Aufgabe, Zeit und Notenpunkten; Quiz „Überspringen“;
+   falsche Antworten sauber gesetzt; Datei-Icons der Präsentation ===== */
+.ls.ls-k-karten, .ls.ls-k-klausur { padding: 0; border: 0; background: none; }
+.ls.ls-k-karten .ls-top, .ls.ls-k-klausur .ls-top { padding: 0 0 6px 2px; min-height: 36px; }
+.ls.ls-k-karten .ls-in, .ls.ls-k-klausur .ls-in { padding: 0; }
+.ls-side, .ls-side.back, .ls-card.r0 .ls-side, .ls-card.r1 .ls-side, .ls-card.r2 .ls-side { background: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+.ls-side, .ls-side.back { border-color: rgba(255,255,255,.065); }
+.ls-peek { background: color-mix(in srgb, var(--main-bg) 99.2%, #ffffff); border-color: rgba(255,255,255,.045); }
+/* Kopf-Knöpfe nur als Icon (Info, Mischen) */
+.ls-hicon { display: grid; place-items: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-3); cursor: pointer; transition: color 140ms ease; }
+.ls-hicon:hover { color: var(--text); }
+.ls-hicon:disabled { opacity: .35; cursor: default; }
+.ls-head-r { gap: 2px; }
+/* Übersicht der Karten */
+.ls-stats { display: flex; flex-direction: column; align-items: stretch; gap: 14px; width: min(320px, 100%); }
+.ls-sbar { display: flex; gap: 3px; height: 6px; }
+.ls-sbar i { border-radius: 3px; animation: ls-grow 620ms var(--spring) both; transform-origin: left; }
+.ls-sbar .g, .ls-srow .g { background: #4fcf8a; } .ls-sbar .o, .ls-srow .o { background: #f0913a; } .ls-sbar .r, .ls-srow .r { background: #f07a6e; } .ls-sbar .x, .ls-srow .x { background: rgba(255,255,255,.12); }
+@keyframes ls-grow { from { transform: scaleX(0); } to { transform: none; } }
+.ls-srows { display: grid; gap: 7px; }
+.ls-srow { display: flex; align-items: center; gap: 9px; color: var(--text-3); font-size: 13px; text-align: left; }
+.ls-srow i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.ls-srow b { margin-left: auto; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.ls-stats .ls-end-b { margin-top: 4px; }
+.ls-stage.end .ls-side.front { padding: 18px 22px; }
+/* Quiz: Überspringen unten links */
+.ls-skip { padding: 0; border: 0; background: none; color: var(--text-4); font: inherit; font-size: 12.5px; cursor: pointer; transition: color 140ms ease; }
+.ls-skip:hover { color: var(--text-2); }
+.ls-skip[hidden] { display: none; }
+/* Falsche Antworten: Chips mit Luft, Lücken sauber im Fließtext */
+.ls-wi { gap: 8px; padding: 14px 0; }
+.ls-wi .qa-q { color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+.ls-wi .qa-a { display: flex; flex-wrap: wrap; gap: 6px; }
+.ls-wi .qa-pick { display: inline-flex; align-items: center; height: auto; min-height: 26px; max-width: 100%; padding: 4px 10px; border-radius: 8px; line-height: 18px; white-space: normal; animation: none; }
+.ls-wi .qa-label { display: block; }
+.ls-wtext { margin: 0; color: var(--text-2); font-size: 13.5px; line-height: 2.1; }
+.ls-wi .ls-inl { display: inline; min-height: 0; margin: 0 1px; padding: 3px 7px; border-radius: 6px; line-height: 1; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.qa-a.ls-col { flex-direction: column; align-items: flex-start; }
+/* Offene Antwort: wie das Eingabefeld – nur Umrandung, keine graue Fläche */
+.ls-answer, .ls-answer:focus { border: 1px solid var(--field-border, rgba(255,255,255,.09)); background: transparent; }
+/* Probeklausur: eine Hauptfläche im Börse-Ton */
+.ls-xcard { padding: 16px 18px; border: 1px solid rgba(255,255,255,.065); border-radius: 14px; background: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+.ls-full .ls-xcard { max-width: 760px; padding: 20px 24px; }
+.ls-xintro { display: grid; gap: 14px; justify-items: start; }
+.ls-xintro .ls-pv-paper { justify-self: stretch; }
+.ls-xmeta { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--text-3); font-size: 12.5px; }
+.ls-xmeta span { display: inline-flex; align-items: center; gap: 6px; }
+.ls-xmeta svg { color: var(--text-4); }
+.ls-xtop { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+.ls-xtop .ls-segs { flex: 1; margin: 0; }
+.ls-xtop .ls-timer { font-size: 13px; font-weight: 500; color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ls-segs button.fill i { background: rgba(255,255,255,.28); }
+.ls-segs button.part i { background: #f0913a; }
+.ls-xcard .ls-q { padding-top: 8px; }
+.ls-xcard .ls-q-t { font-size: 15px; color: var(--text); }
+.ls-back { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--text-3); font: inherit; font-size: 13px; cursor: pointer; }
+.ls-back svg { transform: rotate(180deg); }
+.ls-back:disabled { opacity: 0; pointer-events: none; }
+.ls-xst { flex: 1; text-align: right; color: var(--text-4); font-size: 12px; }
+.ls-xres { margin: 10px 0 4px; }
+.ls-xres .ls-ring b { display: block; font-size: 28px; line-height: 1; }
+.ls-xres .ls-ring small { position: relative; display: block; margin-top: 4px; color: var(--text-4); font-size: 10.5px; }
+.ls-xres .ls-ring { display: grid; place-content: center; text-align: center; }
+.ls-xres > p b { color: var(--text); font-weight: 600; }
+.ls-xcard .ls-res { margin-top: 14px; }
+/* Präsentation: eigene Datei-Icons statt Text-Abzeichen */
+.pz-badge, .pz-badge.pptx, .pz-badge.key, .pz-badge.pdf { width: 30px; height: 30px; border-radius: 0; background: none; }
+.ls.ls-k-karten:not(.ls-waiting):not(.ls-fail), .ls.ls-k-klausur:not(.ls-waiting):not(.ls-fail) { padding: 0; border: 0; border-radius: 0; background: none; }
+.ls-prev { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--text-3); font: inherit; font-size: 13px; cursor: pointer; transform: none; }
+.ls-prev svg { transform: rotate(180deg); }
+.ls-prev:disabled { opacity: 0; pointer-events: none; }
