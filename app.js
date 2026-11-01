@@ -367,20 +367,8 @@ async function mentionText(m) {
   const hist = tab ? historyOf(tab) : [];
   return hist.map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${String(h.text || '').replace(/```[\s\S]*?```/g, '[Block]')}`).join('\n\n').slice(-40000);
 }
-input.addEventListener('input', () => {
-  if (!window.Lernset) return;
-  const before = input.value.slice(0, input.selectionStart);
-  const at = /(^|\s)@([^\s@]{0,30})$/.exec(before);
-  if (!at) return;
-  Lernset.pickMention(composer, mentionItems(), (m) => {
-    const start = before.length - at[2].length - 1;
-    input.value = input.value.slice(0, start) + input.value.slice(before.length);
-    input.setSelectionRange(start, start);
-    if (!attachments.some((a) => a.mention?.id === m.id)) attachments.push({ mention: m });
-    renderAttachments();
-    input.focus();
-  }, { query: at[2] });
-});
+// „@“ im Eingabefeld: gleiche Liste wie die Skills (skills.js) – Chats und Dokumente als Quelle anhängen
+window.Skills?.setMentions(mentionItems, (m) => { if (!attachments.some((a) => a.mention?.id === m.id)) attachments.push({ mention: m }); renderAttachments(); });
 
 /* iPad: Antippen sicher machen. Ist die Tastatur offen, schließt sie sich beim Tippen auf einen Knopf und das Fenster verschiebt sich –
    der Klick landet dann manchmal daneben (Auswahl/Senden „geht nicht“). Bei Touch löst deshalb schon das Loslassen auf dem Knopf aus
@@ -408,6 +396,18 @@ input.addEventListener('input', () => {
   }, true);
 }
 
+/* iPad-Tastatur: Die App ist so hoch wie der sichtbare Bereich (visualViewport) – iOS schiebt sonst die ganze Seite nach oben,
+   oben wird etwas abgeschnitten und Scrollen hakt. Verschiebt iOS trotzdem, wird es zurückgenommen. */
+if (window.visualViewport) {
+  const vv = window.visualViewport;
+  const fitKeyboard = () => {
+    const open = window.innerHeight - vv.height > 120;
+    document.documentElement.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
+    document.documentElement.classList.toggle('kb-open', open);
+    if (open && (window.scrollY || document.scrollingElement?.scrollTop)) window.scrollTo(0, 0);
+  };
+  vv.addEventListener('resize', fitKeyboard); vv.addEventListener('scroll', fitKeyboard); fitKeyboard();
+}
 /* Fotos hinzufügen (+), oder Einfügen mit Strg/⌘+V */
 /* Plus: öffnet direkt die normale Dateiauswahl (Lernsets entstehen im Chat per Wunsch – „mach mir Karteikarten …“) */
 $('attachBtn')?.addEventListener('click', () => fileInput.click());
@@ -669,9 +669,10 @@ const LONG_MSG_CHARS = 500, LONG_MSG_LINES = 8;
 function userBubble(text, cls) {
   const bubble = el('div', cls);
   const long = text.length > LONG_MSG_CHARS || text.split('\n').length > LONG_MSG_LINES;
-  if (!long) { bubble.innerHTML = escapeHtml(text); return bubble; }
+  const fmt = window.Skills?.html || escapeHtml; // Skills im gesendeten Text getönt (wie im Eingabefeld)
+  if (!long) { bubble.innerHTML = fmt(text); return bubble; }
   bubble.classList.add('ub-long', 'ub-clamped');
-  const body = el('div', 'ub-text', escapeHtml(text));
+  const body = el('div', 'ub-text', fmt(text));
   const more = el('button', 'ub-more', 'Mehr anzeigen');
   more.type = 'button';
   more.addEventListener('click', (e) => {

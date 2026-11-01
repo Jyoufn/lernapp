@@ -55,9 +55,15 @@ const Skills = (() => {
     return out;
   }
   const active = (text) => detect(text).map((d) => d.id);
+  const escHtml = (x) => String(x).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  // Bereiche ohne Überschneidung, nach Position
+  const marks = (text) => { const r = detect(text).flatMap((d) => d.ranges.map(([a, b]) => ({ a, b, c: byId[d.id].c }))).sort((x, y) => x.a - y.a || y.b - x.b); const keep = []; let end = -1; for (const x of r) if (x.a >= end) { keep.push(x); end = x.b; } return keep; };
+  // Text als HTML mit getönten Skill-Wörtern (Nachricht im Chat nach dem Senden)
+  function html(text) { const t = String(text || ''); let out = '', at = 0; for (const r of marks(t)) { out += escHtml(t.slice(at, r.a)) + `<mark class="sk-mark" style="--c:${r.c}">${escHtml(t.slice(r.a, r.b))}</mark>`; at = r.b; } return out + escHtml(t.slice(at)); }
   const list = (q = '') => { const k = String(q).toLowerCase(); return SKILLS.filter((s) => !k || s.name.startsWith(k) || s.title.toLowerCase().includes(k) || s.desc.toLowerCase().includes(k)); };
 
   /* ---------- Eingabefeld (nur im Browser) ---------- */
+  let mentionSrc = null; // „@“: Chats und Dokumente (app.js → Skills.setMentions)
   function attach(input, host) {
     if (!input || !host || input._skills) return;
     input._skills = true;
@@ -73,10 +79,7 @@ const Skills = (() => {
       mirror.scrollTop = input.scrollTop;
     };
     const paint = () => {
-      const text = input.value, found = detect(text);
-      const ranges = found.flatMap((d) => d.ranges.map(([a, b]) => ({ a, b, c: byId[d.id].c }))).sort((x, y) => x.a - y.a || y.b - x.b);
-      const keep = []; let end = -1;
-      for (const r of ranges) if (r.a >= end) { keep.push(r); end = r.b; }
+      const text = input.value, keep = marks(text);
       input.classList.toggle('sk-on', keep.length > 0);
       mirror.hidden = !keep.length;
       if (!keep.length) return;
@@ -90,33 +93,53 @@ const Skills = (() => {
     pop.className = 'sk-pop'; pop.hidden = true; pop.setAttribute('role', 'listbox'); pop.setAttribute('aria-label', 'Skills');
     host.append(pop);
     let items = [], sel = 0, slash = null;
-    const query = () => { const before = input.value.slice(0, input.selectionStart); const m = /(^|\s)\/([\p{L}\p{N}-]{0,24})$/u.exec(before); return m ? { q: m[2], start: before.length - m[2].length - 1 } : null; };
+    const query = () => { const before = input.value.slice(0, input.selectionStart); const m = /(^|\s)([/@])([^\s/@]{0,30})$/u.exec(before); return m && (m[2] === '/' || mentionSrc) ? { q: m[3], at: m[2], start: before.length - m[3].length - 1 } : null; };
     const close = () => { pop.hidden = true; slash = null; };
     const draw = () => {
-      pop.innerHTML = items.map((s, i) => `<button type="button" class="sk-row${i === sel ? ' on' : ''}" data-i="${i}" role="option"><b style="--c:${s.c}">/${s.name}</b><span>${esc(s.desc)}</span></button>`).join('');
+      pop.innerHTML = items.map((s, i) => (s.mention
+        ? `<button type="button" class="sk-row${i === sel ? ' on' : ''}" data-i="${i}" role="option"><b style="--c:#6aa8ff">${esc(s.title)}</b><span>${s.kind === 'chat' ? 'Chat' : 'Dokument'}</span></button>`
+        : `<button type="button" class="sk-row${i === sel ? ' on' : ''}" data-i="${i}" role="option"><b style="--c:${s.c}">/${s.name}</b><span>${esc(s.desc)}</span></button>`)).join('');
       pop.querySelector('.on')?.scrollIntoView({ block: 'nearest' });
     };
     const update = () => {
       slash = query();
-      items = slash ? list(slash.q) : [];
+      if (slash?.at === '@') { const q = slash.q.toLowerCase(); items = (mentionSrc.items() || []).filter((m) => !q || String(m.title).toLowerCase().includes(q)).slice(0, 30).map((m) => ({ ...m, mention: true })); }
+      else items = slash ? list(slash.q) : [];
       if (!items.length) return close();
       sel = Math.min(sel, items.length - 1);
       const opening = pop.hidden;
-      pop.hidden = false; draw();
+      pop.hidden = false;
+      const vv = window.visualViewport, top = host.getBoundingClientRect().top - (vv ? vv.offsetTop : 0);
+      pop.style.maxHeight = `${Math.max(120, Math.min(320, top - 16))}px`;
+      draw();
       if (opening && !matchMedia('(prefers-reduced-motion: reduce)').matches) pop.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.16,1,.3,1)' });
     };
     const choose = (i) => {
       const s = items[i]; if (!s || !slash) return;
-      const end = input.selectionStart, ins = `/${s.name} `;
+      if (s.mention) { // „@…“ verschwindet aus dem Text, der Chat/das Dokument hängt als Quelle an
+        const end = input.selectionStart; input.value = input.value.slice(0, slash.start) + input.value.slice(end);
+        input.setSelectionRange(slash.start, slash.start); close(); input.focus();
+        const { kind, id, title } = s; mentionSrc.pick({ kind, id, title }); input.dispatchEvent(new Event('input', { bubbles: true })); return;
+      }
+      const end = input.selectionStart, ins = `${s.title} `;
       input.value = input.value.slice(0, slash.start) + ins + input.value.slice(end);
       const pos = slash.start + ins.length; input.setSelectionRange(pos, pos);
       close(); input.focus();
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
-    input.addEventListener('input', () => { sel = 0; update(); paint(); });
+    // „/mindmap “ fertig getippt → „Mindmap “ (ohne Schrägstrich)
+    const unslash = () => {
+      const pos = input.selectionStart, v = input.value;
+      const m = /(^|\s)\/([\p{L}\p{N}-]+)(\s)$/u.exec(v.slice(0, pos)); if (!m) return;
+      const s = SKILLS.find((x) => x.name === m[2].toLowerCase()); if (!s) return;
+      const a = pos - m[2].length - 2, rep = `${s.title}${m[3]}`;
+      input.value = v.slice(0, a) + rep + v.slice(pos);
+      const np = a + rep.length; input.setSelectionRange(np, np);
+    };
+    input.addEventListener('input', () => { unslash(); sel = 0; update(); paint(); });
     input.addEventListener('click', update);
     input.addEventListener('scroll', () => { mirror.scrollTop = input.scrollTop; });
-    input.addEventListener('blur', () => setTimeout(() => { if (!pop.matches(':hover')) close(); }, 150));
+    input.addEventListener('blur', () => setTimeout(() => { if (!touching && !pop.matches(':hover')) close(); }, 150));
     // vor dem Abschicken mit Enter: Liste hat Vorrang
     input.addEventListener('keydown', (e) => {
       if (pop.hidden) return;
@@ -124,8 +147,11 @@ const Skills = (() => {
       else if ((e.key === 'Enter' && !e.shiftKey) || e.key === 'Tab') { e.preventDefault(); e.stopImmediatePropagation(); choose(sel); }
       else if (e.key === 'Escape') { e.preventDefault(); e.stopImmediatePropagation(); close(); }
     }, true);
-    pop.addEventListener('pointerdown', (e) => e.preventDefault()); // Fokus bleibt im Feld
-    pop.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) choose(+b.dataset.i); });
+    let touching = false;
+    pop.addEventListener('mousedown', (e) => e.preventDefault()); // Maus: Fokus bleibt im Feld
+    pop.addEventListener('touchstart', () => { touching = true; }, { passive: true }); // Finger: scrollen erlaubt, Liste bleibt offen
+    pop.addEventListener('touchend', () => setTimeout(() => { touching = false; }, 400), { passive: true });
+    pop.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) { touching = false; choose(+b.dataset.i); } });
     new ResizeObserver(() => { if (!mirror.hidden) place(); }).observe(input);
     // Wert wird auch von außen gesetzt (Abschicken leert das Feld, Diktat) → regelmäßig abgleichen
     let last = '';
@@ -133,7 +159,7 @@ const Skills = (() => {
     paint();
   }
 
-  return { SKILLS, detect, active, list, attach };
+  return { SKILLS, detect, active, list, attach, html, setMentions: (items, pick) => { mentionSrc = { items, pick }; } };
 })();
 if (typeof window !== 'undefined') {
   window.Skills = Skills;

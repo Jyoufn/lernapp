@@ -10120,3 +10120,10 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .sk-row span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .sk-row.on, .sk-row:hover { background: var(--menu-hover, #2b2b2b); }
 .sk-row.on b { color: color-mix(in srgb, var(--c) 75%, #fff); }
+/* iPad-Tastatur offen: App nur so hoch wie der sichtbare Bereich, Eingabefeld auf der Startseite unten (Platz für die Skill-Liste) */
+html.kb-open .app { height: var(--vvh, 100dvh); }
+html.kb-open, html.kb-open body { overscroll-behavior: none; }
+html.kb-open .panel.home .composer-area { transform: none; }
+.sk-pop { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+/* Skills in der gesendeten Nachricht: gleiche Tönung wie im Eingabefeld */
+.sk-mark { border-radius: 4px; background: color-mix(in srgb, var(--c) 16%, transparent); color: color-mix(in srgb, var(--c) 75%, #fff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 16%, transparent); }
