@@ -405,6 +405,7 @@ if (window.visualViewport) {
     document.documentElement.style.setProperty('--vvh', `${Math.round(vv.height)}px`);
     document.documentElement.classList.toggle('kb-open', open);
     if (open && (window.scrollY || document.scrollingElement?.scrollTop)) window.scrollTo(0, 0);
+    window.dispatchEvent(new Event('resize')); // Startseite: Eingabefeld im sichtbaren Bereich neu mittig setzen
   };
   vv.addEventListener('resize', fitKeyboard); vv.addEventListener('scroll', fitKeyboard); fitKeyboard();
 }

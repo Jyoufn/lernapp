@@ -9,6 +9,7 @@
   // Logos: #b-… in index.html (offizielle Marken)
   const PROVIDERS = [
     { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true },
+    { id: 'MISTRAL_API_KEY', name: 'Mistral (NVIDIA)', logo: 'mistral', where: 'build.nvidia.com', multi: true },
     { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true },
     { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
@@ -223,7 +224,10 @@
       body = lookPage();
     } else {
       const modes = window.PixelDogs?.MODES || [];
-      body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
+      const order = deviceKeys.AI_ORDER === 'mistral' ? 'mistral' : 'gemini';
+      body = `<h2>Haupt-KI</h2><div class="st-card"><div class="st-row"><span class="st-name">Zuerst nutzen</span><span class="grow"></span>${seg('data-ai-order', [['Gemini', 'gemini'], ['Mistral', 'mistral']], order)}</div>
+          <p class="st-ws-note st-order-note">Ist ihr Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p></div>`
+        + `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.map(agentRow).join('')}</div>` : '');
     }
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
@@ -279,6 +283,8 @@
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
+    const ao = e.target.closest('[data-ai-order]');
+    if (ao) { if (ao.dataset.aiOrder === 'mistral') deviceKeys.AI_ORDER = 'mistral'; else delete deviceKeys.AI_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     if (wsClick(e)) return;

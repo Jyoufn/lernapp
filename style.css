@@ -10123,7 +10123,13 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 /* iPad-Tastatur offen: App nur so hoch wie der sichtbare Bereich, Eingabefeld auf der Startseite unten (Platz für die Skill-Liste) */
 html.kb-open .app { height: var(--vvh, 100dvh); }
 html.kb-open, html.kb-open body { overscroll-behavior: none; }
-html.kb-open .panel.home .composer-area { transform: none; }
+/* Tastatur offen: Seite selbst scrollt nicht (kein „Runterscrollen“ ins Leere) – gescrollt wird nur im Chat */
+html.kb-open { height: var(--vvh, 100dvh); overflow: hidden; }
+html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dvh); overflow: hidden; }
 .sk-pop { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
 /* Skills in der gesendeten Nachricht: gleiche Tönung wie im Eingabefeld */
 .sk-mark { border-radius: 4px; background: color-mix(in srgb, var(--c) 16%, transparent); color: color-mix(in srgb, var(--c) 75%, #fff); box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 16%, transparent); }
+/* Skills wie Framer-Tokens: getönte Fläche mit feinem Rand rundherum (Fläche/Rand nur über box-shadow → Text verschiebt sich nicht), ohne Schrägstrich */
+.sk-mirror mark, .sk-mark { border-radius: 5px; background: color-mix(in srgb, var(--c) 17%, transparent); color: color-mix(in srgb, var(--c) 80%, #fff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 17%, transparent), 0 0 0 4px color-mix(in srgb, var(--c) 34%, transparent); }
+.sk-mark { margin: 0 2px; }

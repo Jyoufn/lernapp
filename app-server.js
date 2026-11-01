@@ -46,7 +46,7 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['GEMINI_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['GEMINI_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
 // mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
 const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
@@ -57,6 +57,7 @@ function deviceKeysOf(req) {
     const obj = JSON.parse(Buffer.from(String(raw), 'base64').toString('utf8'));
     const out = {};
     for (const k of DEVICE_KEYS) { const v = cleanKeys(obj[k]); if (v) out[k] = v; }
+    if (obj.AI_ORDER === 'mistral') out.AI_ORDER = 'mistral'; // Einstellungen → Haupt-KI
     return out;
   } catch { return {}; }
 }
