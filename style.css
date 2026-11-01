@@ -10103,3 +10103,20 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .ls-prev { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--text-3); font: inherit; font-size: 13px; cursor: pointer; transform: none; }
 .ls-prev svg { transform: rotate(180deg); }
 .ls-prev:disabled { opacity: 0; pointer-events: none; }
+
+/* ===== 01.11.2026 (9) – Skills im Eingabefeld (skills.js): „/“ öffnet nach oben eine Liste „/name  Beschreibung“; erkannte Skills und
+   „/skill“ werden im Text getönt hinterlegt (Fläche 16 %, Schrift ~75 % + Weiß, leicht abgerundet) ===== */
+.composer textarea.sk-on { color: transparent; caret-color: var(--text); }
+.composer textarea.sk-on::selection { color: transparent; background: rgba(106,168,255,.28); }
+.sk-mirror { position: absolute; z-index: 0; box-sizing: border-box; overflow: hidden; margin: 0; border: 0; color: var(--text); white-space: pre-wrap; overflow-wrap: break-word; word-break: normal; pointer-events: none; }
+.sk-mirror[hidden] { display: none; }
+.composer textarea { position: relative; z-index: 1; }
+.sk-mirror mark { border-radius: 4px; background: color-mix(in srgb, var(--c) 16%, transparent); color: color-mix(in srgb, var(--c) 75%, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 16%, transparent); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.sk-pop { position: absolute; left: 0; right: 0; bottom: calc(100% + 8px); z-index: 40; max-height: 300px; overflow-y: auto; padding: 4px; border: 1px solid var(--menu-border, #343434); border-radius: 12px; background: var(--menu-bg, #202020); }
+.sk-pop[hidden] { display: none; }
+.sk-row { display: flex; align-items: baseline; gap: 12px; width: 100%; min-height: 32px; padding: 7px 10px; border: 0; border-radius: 7px; background: none; color: var(--text-4); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.sk-row b { flex: none; color: var(--text); font-weight: 600; font-size: 12.5px; }
+.sk-row span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.sk-row.on, .sk-row:hover { background: var(--menu-hover, #2b2b2b); }
+.sk-row.on b { color: color-mix(in srgb, var(--c) 75%, #fff); }

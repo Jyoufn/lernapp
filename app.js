@@ -346,7 +346,7 @@ composer.addEventListener('submit', (e) => {
   input.focus();
   // @Chat/@Dokument: der Inhalt geht als Text-Quelle mit (die KI sieht ihn wie eine angehängte Datei)
   Promise.all(mentioned.map(async (m) => ({ name: `${m.kind === 'chat' ? 'Chat' : 'Dokument'}: ${m.title}`, text: await mentionText(m).catch(() => '') })))
-    .then((texts) => sendMessage(text, images, { texts: texts.filter((t) => t.text).map((t) => ({ mime: 'text/plain', name: t.name, text: t.text })), chips: mentioned.map((m) => ({ name: m.title, pdf: true })) }));
+    .then((texts) => sendMessage(text, images, { texts: texts.filter((t) => t.text).map((t) => ({ mime: 'text/plain', name: t.name, text: t.text })), chips: mentioned.map((m) => ({ name: m.title, pdf: true })), skills: window.Skills?.active(text) || [] }));
 });
 
 /* @-Erwähnungen: Chats und Dokumente als Quelle (im Eingabefeld „@“ tippen oder im Lernset-Fenster) */
@@ -3625,7 +3625,7 @@ async function sendMessage(text, images, extra = {}) {
   try {
     const inline = (await Promise.all(images.map((i) => fileToInline(i.file).catch(() => null)))).flat(); // gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
-    hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}) });
+    hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}), ...(extra.skills?.length ? { skills: extra.skills } : {}) });
     markDrafts();
     msgEl._historyAt = hist.length; // hier landet die Antwort – für „Neu erzeugen“
 
