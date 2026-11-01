@@ -9979,3 +9979,54 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .ls-dd-menu { padding: 5px; border-radius: 12px; border-color: #2e2e2e; background: #232323; }
 .ls-dd-i { min-height: 32px; padding: 6px 9px; font-size: 13px; }
 .ls-dd-i:hover { background: #2b2b2b; }
+
+/* ===== 01.11.2026 (5) – Lernsets im Börse-Kartenstil (wie „Mein Depot“/Empfehlungen): Kasten mit Titel oben, weniger rund; Karteikarten grau,
+   nur einen Hauch heller; graue Art-Icons, neues Misch-Icon, gezeichneter Haken; falsche Antworten: Lücken im Text, Zuordnung untereinander ===== */
+.ls:not(.ls-waiting):not(.ls-fail) { max-width: 600px; padding: 0 0 16px; border: 1px solid rgba(255,255,255,.065); border-radius: 14px; background: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+.ls-top { min-height: 52px; margin: 0; padding: 8px 10px 8px 16px; gap: 10px; }
+.ls-top-t { gap: 9px; }
+.ls-top-t b { color: var(--text); font-size: 15px; font-weight: 600; }
+.ls-top-t .ls-kicon, .ls-head-t .ls-kicon { color: var(--text-3); }
+.ls-kicon .ls-kc { stroke: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+.ls-kicon .ls-kd { fill: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+.tk-mi-ic .ls-kicon, .tk-si .ls-kicon { color: var(--text-3); }
+.ls-exp { border-radius: 7px; }
+.ls-in { padding: 0 16px; }
+/* Quiz: im Kasten ohne zweiten Kasten */
+.ls .ls-qcard { padding: 0; border: 0; border-radius: 0; background: none; }
+.ls-full .ls-qcard { padding: 20px 22px; border: 1px solid rgba(255,255,255,.065); border-radius: 14px; background: color-mix(in srgb, var(--main-bg) 98.5%, #ffffff); }
+/* Karteikarten: grau, nur einen Hauch heller als der Kasten, weniger rund */
+.ls-side, .ls-side.back, .ls-card.r0 .ls-side, .ls-card.r1 .ls-side, .ls-card.r2 .ls-side { border-radius: 16px; background: color-mix(in srgb, var(--main-bg) 96.5%, #ffffff); }
+.ls-side, .ls-side.back { border-color: rgba(255,255,255,.07); }
+.ls-peek { border-radius: 16px; background: color-mix(in srgb, var(--main-bg) 97.5%, #ffffff); border-color: rgba(255,255,255,.05); }
+.ls-card.r2 .ls-side { border-color: rgba(79,207,138,.5); }
+.ls-card.r1 .ls-side { border-color: rgba(240,145,58,.5); }
+.ls-card.r0 .ls-side { border-color: rgba(240,122,110,.55); }
+/* Knöpfe weniger rund: Pfeile, ×, Mischen */
+.ls-nav { border-radius: 8px; background: var(--main-bg); }
+.ls-x { border-radius: 8px; }
+.ls-hbtn { border-radius: 8px; gap: 7px; }
+.ls-head-t b { font-size: 15px; font-weight: 600; color: var(--text); }
+/* Haken: Feld füllt sich blau, der Haken zeichnet sich */
+.ls-ck .ls-cks { transform: none; opacity: 1; }
+.ls-ck .ls-cks path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 300ms cubic-bezier(.65,0,.35,1) 70ms; }
+.ls-opt.on .ls-cks path, .ls-opt.right .ls-cks path { stroke-dashoffset: 0; }
+.ls-opt.on .ls-ck { animation: ls-ck-in 340ms var(--spring) both; }
+@keyframes ls-ck-in { from { transform: scale(.82); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ls-opt.on .ls-ck { animation: none; } .ls-ck .ls-cks path { transition: none; } }
+/* Falsche Antworten: Lücken direkt im Text eingetragen, Zuordnung untereinander (ohne Nummern) */
+.ls-wtext { margin: 0; color: var(--text-2); font-size: 13px; line-height: 2; }
+.ls-inl { display: inline-flex; vertical-align: baseline; min-height: 22px; margin: 0 2px; padding: 1px 8px; animation: none; }
+.qa-a.ls-col { flex-direction: column; align-items: flex-start; }
+
+/* ===== 01.11.2026 (6) – Dokument: Projekt anlegen wie Tags („„X“ hinzufügen“ → Farbe → Icon, Icons grau), Projekt in der Infos-Tabelle,
+   keine Linie unter dem Titel beim Scrollen ===== */
+.dc-pj-icons.dc-pj-pick { color: var(--text-3); }
+.dc-pj-pick .dc-pj-ic:hover { color: var(--text); }
+.dc-title-in.stuck { box-shadow: none; }
+.dc-mval .dc-mbtn .dc-pj-pic { display: inline-grid; place-items: center; margin-right: 6px; }
+/* „X hinzufügen“ (Tags, Projekte): Name weiß, „hinzufügen“ grau, Plus grau – überall gleich */
+.tk-mi.tk-tag-add, .tk-sheet-rows .tk-box .tk-mi.tk-tag-add { display: flex; align-items: center; gap: 8px; color: var(--text-4); }
+.tk-mi.tk-tag-add svg, .tk-sheet-rows .tk-box .tk-mi.tk-tag-add svg { display: block; flex: none; color: var(--text-4); }
+.tk-mi.tk-tag-add b { color: var(--text); font-weight: 500; }
+.ls .ls-in, .ls-k-quiz .ls-in { padding: 0 16px; }

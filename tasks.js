@@ -654,7 +654,7 @@ const Tasks = (() => {
       const found = tags.filter((g) => g.name.toLowerCase().includes(q.toLowerCase()));
       tagList.innerHTML = found.map((g) => `<div class="tk-mi tag${t.tags.includes(g.id) ? ' on' : ''}${editing === g.id ? ' editing' : ''}" data-tag="${g.id}" role="button" tabindex="0"><i style="background:${g.c}"></i><span>${esc(g.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-tag-edit="${g.id}" aria-label="Tag bearbeiten" title="Bearbeiten">${fi('pencil', 11)}</button></div>`).join('')
         + (!found.length && !q ? '<div class="tk-ml">Noch keine Tags</div>' : '');
-      if (q && !exact) tagList.insertAdjacentHTML('afterbegin', `<div class="tk-mi tk-tag-add" data-tag-plus role="button" tabindex="0">${fi('plus', 12)}<span>„${esc(q)}“ hinzufügen</span></div>`);
+      if (q && !exact) tagList.insertAdjacentHTML('afterbegin', `<div class="tk-mi tk-tag-add" data-tag-plus role="button" tabindex="0">${fi('plus', 12)}<span><b>${esc(q)}</b> hinzufügen</span></div>`);
     };
     const createTag = (c) => {
       const g = { id: newId('g'), name: tagIn.value.trim(), c };

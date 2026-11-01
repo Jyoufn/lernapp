@@ -409,26 +409,8 @@ input.addEventListener('input', () => {
 }
 
 /* Fotos hinzufügen (+), oder Einfügen mit Strg/⌘+V */
-/* Plus: kleines Menü – Dateien hinzufügen oder ein Lernset (Karteikarten, Quiz, Probeklausur) erstellen */
-let plusMenu = null;
-const closePlusMenu = () => { plusMenu?.remove(); plusMenu = null; document.removeEventListener('pointerdown', onPlusOutside, true); };
-const onPlusOutside = (e) => { if (!plusMenu?.contains(e.target) && !e.target.closest?.('#attachBtn')) closePlusMenu(); };
-$('attachBtn')?.addEventListener('click', () => {
-  if (plusMenu) { closePlusMenu(); return; }
-  if (!window.Lernset) { fileInput.click(); return; }
-  plusMenu = el('div', 'plus-menu', `<button type="button" data-pm="files">${FadeIcons.svg('image', 14)}<span>Fotos und Dateien</span></button>
-    <button type="button" data-pm="lernset">${FadeIcons.svg('stack', 14)}<span>Lernset erstellen</span><small>Karteikarten · Quiz · Probeklausur</small></button>`);
-  document.body.append(plusMenu);
-  const r = $('attachBtn').getBoundingClientRect();
-  plusMenu.style.left = `${Math.max(8, r.left - 4)}px`;
-  plusMenu.style.bottom = `${innerHeight - r.top + 8}px`;
-  plusMenu.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-pm]'); if (!b) return;
-    closePlusMenu();
-    if (b.dataset.pm === 'files') fileInput.click(); else openLernsetDialog();
-  });
-  document.addEventListener('pointerdown', onPlusOutside, true);
-});
+/* Plus: öffnet direkt die normale Dateiauswahl (Lernsets entstehen im Chat per Wunsch – „mach mir Karteikarten …“) */
+$('attachBtn')?.addEventListener('click', () => fileInput.click());
 // Lernset aus dem Chat: das Fenster sammelt Art, Thema, Quellen und Einstellungen → normale Chat-Nachricht (mit Zeitleiste und Gedanken)
 function openLernsetDialog(kind) {
   Lernset.dialog({

@@ -20,14 +20,18 @@ const Lernset = (() => {
     klausur: { name: 'Probeklausur', icon: 'book-open', verb: 'Klausur schreiben', unit: ['Aufgabe', 'Aufgaben'] },
   };
   // Eigene zweifarbige Icons je Art (Karteikarten wie die Vorlage: blaue Karte vorn, zwei graue dahinter aufgefächert)
+  // Eigene Icons je Art – nur Grau: drei aufgefächerte Karten (Karteikarten), Karte mit Fragezeichen (Quiz), Blatt mit Zeilen (Probeklausur)
   const KICON = (kind, n = 14) => {
-    const card = (r, c, o = 1) => `<rect x="2.6" y="3.2" width="7.2" height="10.2" rx="1.5" transform="rotate(${r} 4.6 13.4)" fill="${c}" opacity="${o}" stroke="#171717" stroke-width=".9"/>`;
-    const back = (r, c, o) => card(r, c, o), front = (c) => card(-7, c);
-    const inner = kind === 'karten' ? `${back(38, '#9a9a9a', '.7')}${back(17, '#c9c9c9', '.9')}${front('#5ec2da')}`
-      : kind === 'quiz' ? `${back(20, '#9a9a9a', '.75')}${front('#6aa8ff')}<g transform="rotate(-7 4.6 13.4)"><path d="M4.7 6.6a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.8.7-.8 1.2" fill="none" stroke="#0f2340" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.1" cy="10.9" r=".8" fill="#0f2340"/></g>`
-      : `${back(20, '#9a9a9a', '.75')}${front('#f0b37a')}<path d="M4.3 6h3.8M4.3 8.2h3.8M4.3 10.4h2.4" transform="rotate(-7 4.6 13.4)" stroke="#3a2410" stroke-width="1.1" stroke-linecap="round"/>`;
+    const card = (r, o) => `<rect x="2.6" y="3.2" width="7.2" height="10.2" rx="1.5" transform="rotate(${r} 4.6 13.4)" fill="currentColor" fill-opacity="${o}"/>`;
+    const front = card(-7, 1);
+    const inner = kind === 'karten' ? `${card(38, .38)}${card(17, .62)}${front}`
+      : kind === 'quiz' ? `${card(20, .5)}${front}<g transform="rotate(-7 4.6 13.4)"><path class="ls-kc" d="M4.7 6.6a1.5 1.5 0 1 1 2.2 1.3c-.5.3-.8.7-.8 1.2" fill="none" stroke-width="1.3" stroke-linecap="round"/><circle class="ls-kd" cx="6.1" cy="10.9" r=".8"/></g>`
+      : `${card(20, .5)}${front}<path class="ls-kc" d="M4.3 6h3.8M4.3 8.2h3.8M4.3 10.4h2.4" transform="rotate(-7 4.6 13.4)" stroke-width="1.1" stroke-linecap="round"/>`;
     return `<svg class="ls-kicon" width="${n}" height="${n}" viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
   };
+  const SHUFFLE = '<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5h2.2c1.4 0 2.3.6 3 1.7l1.6 3.6c.7 1.1 1.6 1.7 3 1.7H14"/><path d="M2 11.5h2.2c1.2 0 2-.4 2.7-1.2M9.1 5.7c.7-.8 1.5-1.2 2.7-1.2H14"/><path d="M12 2.6l2 1.9-2 1.9M12 9.6l2 1.9-2 1.9"/></g></svg>';
+  // Haken, der sich beim Auswählen „zeichnet“
+  const CHECK = '<svg class="ls-cks" width="12" height="12" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.4 8.6l3 3 6.2-7" pathLength="1" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ALIAS = { karten: 'karten', karteikarten: 'karten', lernkarten: 'karten', flashcards: 'karten', quiz: 'quiz', test: 'quiz', klausur: 'klausur', probeklausur: 'klausur', exam: 'klausur' };
   const TYPE_NAMES = { mc: 'Multiple Choice', wf: 'Wahr/Falsch', luecke: 'Lückentext', zuordnen: 'Zuordnung', offen: 'Offene Fragen' };
   const GAP = /_{3,}|\[\s*…?\s*\]|\[\.\.\.\]/g; // Lücke im Lückentext
@@ -316,7 +320,7 @@ const Lernset = (() => {
 
   // Vollbild: derselbe Stapel, größer – oben rechts „Mischen“ (erst, wenn alle Karten da sind)
   function flashcards(set, ui) {
-    ui.right.innerHTML = `<button type="button" class="ls-hbtn" data-shuffle aria-label="Mischen">${fi('refresh', 13)}<span>Mischen</span></button>`;
+    ui.right.innerHTML = `<button type="button" class="ls-hbtn" data-shuffle aria-label="Mischen">${SHUFFLE}<span>Mischen</span></button>`;
     const sh = ui.right.querySelector('[data-shuffle]');
     const lock = () => { sh.disabled = !!set.loading; };
     lock(); if (set.subs) { set.subs.add(lock); ui.cleanup.push(() => set.subs.delete(lock)); }
@@ -379,7 +383,7 @@ const Lernset = (() => {
       const opts = x.type === 'wf' ? ['Wahr', 'Falsch'] : x.options;
       const multi = x.type === 'mc' && x.right.length > 1;
       w.innerHTML = `${head}${mat}<p class="ls-q-t">${rich(x.q)}${multi ? ' <span class="ls-hint">mehrere richtig</span>' : ''}</p>
-        <div class="ls-opts">${opts.map((o, i) => `<button type="button" class="ls-opt" data-o="${i}"><span class="ls-ck"><b>${'ABCDEF'[i]}</b>${fi('check', 11)}</span><span>${rich(o)}</span></button>`).join('')}</div>`;
+        <div class="ls-opts">${opts.map((o, i) => `<button type="button" class="ls-opt" data-o="${i}"><span class="ls-ck"><b>${'ABCDEF'[i]}</b>${CHECK}</span><span>${rich(o)}</span></button>`).join('')}</div>`;
       w.querySelectorAll('.ls-opt').forEach((b) => b.addEventListener('click', () => {
         if (w.classList.contains('done')) return;
         if (!multi) w.querySelectorAll('.ls-opt.on').forEach((o) => o !== b && o.classList.remove('on'));
@@ -439,12 +443,12 @@ const Lernset = (() => {
   }
   // Richtige Antwort kurz als blaue Chips (wie die gewählten Antworten in der Zeitleiste); Reihenfolgen mit Nummern
   function chips(x) {
-    const pill = (t, n) => `<span class="qa-pick">${n != null ? `<span class="qa-num">${n}</span>` : ''}<span class="qa-label">${rich(t)}</span></span>`;
-    if (x.type === 'mc') return x.right.map((i) => pill(x.options[i])).join('');
-    if (x.type === 'wf') return pill(x.right ? 'Wahr' : 'Falsch');
-    if (x.type === 'luecke') return x.sol.map((s, k) => pill(s.split('/')[0], k + 1)).join('');
-    if (x.type === 'zuordnen') return x.pairs.map((p, k) => pill(`${p[0]} → ${p[1]}`, k + 1)).join('');
-    return pill(x.expect.length > 110 ? `${x.expect.slice(0, 107).trim()} …` : x.expect);
+    const pill = (t) => `<span class="qa-pick"><span class="qa-label">${rich(t)}</span></span>`;
+    if (x.type === 'mc') return `<div class="qa-a">${x.right.map((i) => pill(x.options[i])).join('')}</div>`;
+    if (x.type === 'wf') return `<div class="qa-a">${pill(x.right ? 'Wahr' : 'Falsch')}</div>`;
+    if (x.type === 'luecke') { let k = 0; return `<p class="ls-wtext">${esc(x.text).replace(GAP, () => `<span class="qa-pick ls-inl">${esc(String(x.sol[k++] || '').split('/')[0])}</span>`)}</p>`; }
+    if (x.type === 'zuordnen') return `<div class="qa-a ls-col">${x.pairs.map((p) => pill(`${p[0]} → ${p[1]}`)).join('')}</div>`;
+    return `<div class="qa-a">${pill(x.expect.length > 110 ? `${x.expect.slice(0, 107).trim()} …` : x.expect)}</div>`;
   }
   const whyOf = (x) => `${x.type === 'offen' && x.expect.length > 110 ? `<p>${rich(x.expect)}</p>` : ''}${x.why ? `<p>${rich(x.why)}</p>` : ''}`;
 
@@ -550,7 +554,7 @@ const Lernset = (() => {
         ${wrong.length ? `<button type="button" class="ls-wt" aria-expanded="false">${wrong.length === 1 ? '1 falsche Antwort ansehen' : `${wrong.length} falsche Antworten ansehen`}${fi('chevron-down', 10)}</button><div class="ls-fold ls-wl"></div>` : ''}
         <div class="ls-row">${wrong.length ? '<button type="button" class="ls-pill ghost" data-wrong>Falsche wiederholen</button>' : ''}<button type="button" class="ls-pill" data-all>Neu starten</button></div>`;
       const wl = node.querySelector('.ls-wl');
-      node.querySelector('.ls-wt')?.addEventListener('click', (e) => fold(e.currentTarget, wl, () => wrong.map((x, k) => `<div class="ls-wi"><div class="qa-q">${rich(x.type === 'luecke' ? x.text.replace(GAP, '___') : x.q)}</div><div class="qa-a">${chips(x)}</div>
+      node.querySelector('.ls-wt')?.addEventListener('click', (e) => fold(e.currentTarget, wl, () => wrong.map((x, k) => `<div class="ls-wi">${x.type === 'luecke' ? '' : `<div class="qa-q">${rich(x.q)}</div>`}${chips(x)}
         ${whyOf(x) ? `<button type="button" class="ls-wx" aria-expanded="false" data-i="${k}">Erklärung${fi('chevron-down', 10)}</button><div class="ls-fold"></div>` : ''}</div>`).join('')));
       wl?.addEventListener('click', (e) => {
         const b = e.target.closest('.ls-wx'); if (!b) return;

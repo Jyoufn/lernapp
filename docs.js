@@ -1721,6 +1721,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
             <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Suchen" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></span></span>`;
       box.innerHTML = `<div class="dc-tagline">${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
         + row('clock', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
+        + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic" style="color:${esc(pr.c)}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
         + row('file', 'Umfang', `${words.toLocaleString('de-DE')} Wörter`)
@@ -1743,7 +1744,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         return;
       }
       const exact = tags.some((g) => g.name.toLowerCase() === q);
-      list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-madd role="button" tabindex="0">${fi('plus', 12)}<span>„${esc(inp.value.trim())}“ hinzufügen</span></span>` : '')
+      list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-madd role="button" tabindex="0">${fi('plus', 12)}<span><b>${esc(inp.value.trim())}</b> hinzufügen</span></span>` : '')
         + found.map((g) => `<span class="tk-mi tag${have.includes(g.id) ? ' on' : ''}" data-mtag="${g.id}" role="button" tabindex="0"><i style="background:${g.c}"></i><span>${esc(g.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-medit="${g.id}" aria-label="Tag bearbeiten" title="Bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml">Noch keine Tags</span>' : '');
     }
@@ -1766,15 +1767,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         return;
       }
       if (projNew) {
-        list.innerHTML = `<span class="tk-tag-new-l">Icon für „${esc(projNew)}“ – antippen legt das Projekt an</span>
-          <span class="dc-pj-icons" style="color:${esc(projColor)}">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`;
+        list.innerHTML = `<span class="tk-tag-new-l">Icon für „${esc(projNew)}“</span>
+          <span class="dc-pj-icons dc-pj-pick">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`;
         list.querySelector('.dc-pj-icons')?.animate([{ opacity: 0, transform: 'translateX(10px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
         return;
       }
       const q = inp.value.trim(), ql = q.toLowerCase();
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
-      list.innerHTML = (q && !exact ? `<span class="tk-mi dc-pj-add" data-mproj-new role="button" tabindex="0"><span>„${esc(q)}“ anlegen</span></span>` : '')
+      list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span><b>${esc(q)}</b> hinzufügen</span></span>` : '')
         + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-pjedit="${p.id}" aria-label="Projekt bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
@@ -1787,6 +1788,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14)}</span>` : '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
       b.innerHTML = `${ic}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
       view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
+      drawMeta(); // Projekt steht auch in der Infos-Tabelle
     }
     const setProj = (id) => { doc.projectId = doc.projectId === id ? '' : id; touch(doc); changed(); drawProj(); view.querySelector('.dc-ppop')?.classList.remove('open'); };
     function wireProj() {
@@ -1851,6 +1853,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           if (open && op.dataset.mopen === 'tags') { const inp = pop.querySelector('.tk-tag-in'); inp.value = ''; drawMetaTags(); setTimeout(() => inp.focus(), 30); }
           return;
         }
+        if (e.target.closest('[data-projrow]')) { e.stopPropagation(); const chip = view.querySelector('.dc-pchip'); chip?.closest('.dc-adds')?.classList.add('show'); chip?.click(); return; }
         const pr = e.target.closest('[data-prio]');
         if (pr) { if (pr.dataset.prio === 'none') delete doc.priority; else doc.priority = pr.dataset.prio; touch(doc); changed(); drawMeta(); return; }
         // Tags anlegen (Farbe wählen) und bearbeiten
