@@ -85,7 +85,6 @@ const VIEW_TABS = {
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
   docs: { title: 'Bibliothek', icon: 'f-file', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
-  uidesign: { title: 'UI-Design', icon: 'f-palette', view: () => window.UIDesign }, // Vorschau eines neuen Stils (ui-design.js)
 };
 function openViewTab(kind) {
   if (!VIEW_TABS[kind]) return; // z. B. ein gemerkter Tab einer Ansicht, die es nicht mehr gibt (Inbox)
