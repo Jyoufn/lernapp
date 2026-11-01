@@ -10103,3 +10103,103 @@ html.ls-open, html.ls-open body { overflow: hidden; }
 .ls-prev { display: inline-flex; align-items: center; gap: 5px; padding: 0; border: 0; background: none; color: var(--text-3); font: inherit; font-size: 13px; cursor: pointer; transform: none; }
 .ls-prev svg { transform: rotate(180deg); }
 .ls-prev:disabled { opacity: 0; pointer-events: none; }
+
+/* ===== 01.11.2026 (8) – UI-Design: Vorschau eines neuen Stils (Sidebar „UI-Design“, ui-design.js) – nur Ansicht, noch nicht in der App.
+   Aus der Vorlage übernommen: Größenverhältnisse, Farben, Rundungen. Rahmen-Karte (#1a1a1a) mit Kopfzeile, darin dunklere Innenflächen
+   (#151515) mit 3 px Abstand, Radius 10 außen / 7 innen, sehr feine Ränder, leicht gerasterter Grund. Schrift bleibt Inter. ===== */
+.panel.view-uid .content, .panel.view-uid .composer-area, .panel.view-uid .chat-bar { visibility: hidden; }
+.panel.view-uid .prompt-nav, .panel.view-uid .pn-card, .panel.view-uid > .dog-modes, .panel.view-uid > .create-switch { display: none; }
+.uid-view { --u-bg: #121212; --u-frame: #1a1a1a; --u-in: #151515; --u-line: rgba(255,255,255,.06); --u-line2: rgba(255,255,255,.035);
+  position: absolute; inset: 0; z-index: 20; overflow: auto; background-color: var(--u-bg);
+  background-image: radial-gradient(rgba(255,255,255,.028) .6px, transparent .8px); background-size: 3px 3px; animation: cal-in 420ms var(--spring) both; }
+.uid-page { max-width: 1040px; margin: 0 auto; padding: 56px 24px 72px; }
+.uid-intro { display: grid; justify-items: center; gap: 8px; margin-bottom: 40px; text-align: center; }
+.uid-eye, .uid-mono { color: var(--text-4); font-size: 11px; font-weight: 500; letter-spacing: .01em; }
+.uid-intro h1 { margin: 0; color: #dcdcdc; font-size: 28px; font-weight: 500; letter-spacing: -.02em; line-height: 1.2; }
+.uid-intro p { max-width: 460px; margin: 0; color: var(--text-3); font-size: 13px; line-height: 1.55; }
+.uid-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; align-items: start; }
+/* Rahmen-Karte: Kopfzeile + Innenflächen */
+.uid-card { position: relative; display: grid; gap: 3px; padding: 0 3px 3px; border: 1px solid var(--u-line); border-radius: 10px; background: var(--u-frame); animation: card-in 520ms var(--spring) both; }
+.uid-card:nth-child(2) { animation-delay: 40ms; } .uid-card:nth-child(3) { animation-delay: 80ms; } .uid-card:nth-child(4) { animation-delay: 120ms; } .uid-card:nth-child(5) { animation-delay: 160ms; } .uid-card:nth-child(6) { animation-delay: 200ms; }
+.uid-ch { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 38px; padding: 0 11px 0 13px; }
+.uid-ch b { color: #e6e6e6; font-size: 12.5px; font-weight: 600; }
+.uid-ch span { display: flex; gap: 12px; }
+.uid-ch i { font-style: normal; color: var(--text-4); font-size: 11px; }
+.uid-in { padding: 14px 16px; border: 1px solid var(--u-line2); border-radius: 7px; background: var(--u-in); }
+.uid-row, .uid-brow, .uid-foot { display: flex; align-items: center; gap: 8px; }
+.uid-foot { justify-content: space-between; padding-top: 10px; padding-bottom: 10px; }
+/* Knöpfe */
+.uid-btn, .uid-btn2 { height: 30px; padding: 0 13px; border-radius: 7px; font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: opacity 140ms ease; }
+.uid-btn { border: 0; background: var(--accent); color: #fff; }
+.uid-btn:disabled { opacity: .35; cursor: default; }
+.uid-btn2 { border: 1px solid var(--u-line); background: none; color: var(--text-2); }
+.uid-ib { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--u-line); border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; }
+.uid-ib[data-fc="-1"] svg { transform: rotate(180deg); }
+/* Karteikarte */
+.uid-fc { display: grid; gap: 12px; }
+.uid-flash { position: relative; display: grid; place-items: center; min-height: 128px; padding: 22px 16px; border: 1px solid var(--u-line); border-radius: 7px; background: var(--u-frame); cursor: pointer; outline: none; transition: border-color 220ms ease; }
+.uid-flash p { margin: 0; color: #e6e6e6; font-size: 17px; font-weight: 500; text-align: center; letter-spacing: -.01em; }
+.uid-flash.back p { color: var(--text-2); font-size: 14px; font-weight: 400; line-height: 1.5; }
+.uid-fc-k { position: absolute; top: 9px; left: 11px; }
+.uid-flash[data-r="2"] { border-color: rgba(79,207,138,.5); } .uid-flash[data-r="1"] { border-color: rgba(240,145,58,.5); } .uid-flash[data-r="0"] { border-color: rgba(240,122,110,.55); }
+.uid-fc .uid-row { justify-content: space-between; }
+.uid-rate { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+.uid-rate button { height: 30px; border: 0; border-radius: 5px; background: none; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; }
+.uid-rate button:hover { color: var(--text); }
+/* Quiz */
+.uid-q { margin: 0 0 12px; color: #e6e6e6; font-size: 14px; line-height: 1.45; }
+.uid-opts { display: grid; gap: 4px; }
+.uid-opt { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; border: 1px solid var(--u-line); border-radius: 7px; background: var(--u-frame); color: var(--text-2); font: inherit; font-size: 13px; text-align: left; cursor: pointer; transition: opacity 260ms ease, background-color 260ms ease; }
+.uid-k { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: rgba(255,255,255,.06); color: var(--text-3); font-size: 10.5px; font-weight: 600; transition: background-color 200ms ease, color 200ms ease; }
+.uid-opt.on .uid-k { background: var(--accent); color: #fff; }
+.uid-opt.right { background: color-mix(in srgb, #4fcf8a 9%, var(--u-frame)); } .uid-opt.right .uid-k { background: #4fcf8a; color: #10251a; }
+.uid-opt.wrong { background: color-mix(in srgb, #f07a6e 9%, var(--u-frame)); } .uid-opt.wrong .uid-k { background: #f07a6e; color: #2a1210; }
+.uid-opt.dim { opacity: .4; }
+.uid-st.ok { color: #4fcf8a; } .uid-st.no { color: #f07a6e; }
+/* Präsentation */
+.uid-slide { display: grid; gap: 4px; align-content: end; min-height: 128px; background: linear-gradient(160deg, #1d1d1d, var(--u-in) 70%); }
+.uid-slide b { color: #ededed; font-size: 22px; font-weight: 500; letter-spacing: -.02em; }
+.uid-slide small { color: var(--text-3); font-size: 12px; }
+.uid-outs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; padding: 3px; }
+.uid-out { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 9px 8px; border: 0; border-radius: 5px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.uid-out:hover { background: rgba(255,255,255,.03); }
+.uid-out span { display: grid; min-width: 0; }
+.uid-out b { color: var(--text-2); font-size: 12px; font-weight: 500; }
+.uid-out small { color: var(--text-4); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Probeklausur */
+.uid-exam { display: grid; gap: 8px; }
+.uid-exam p { margin: 0; color: #e6e6e6; font-size: 13.5px; line-height: 1.5; }
+.uid-exam textarea, .uid-field { width: 100%; padding: 9px 11px; border: 1px solid var(--u-line); border-radius: 7px; background: transparent; color: var(--text); font: inherit; font-size: 13px; line-height: 1.5; resize: none; outline: none; }
+.uid-exam textarea::placeholder, .uid-field::placeholder, .uid-search::placeholder { color: var(--text-4); }
+.uid-timer { font-size: 12.5px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+/* Auswahlmenü */
+.uid-sel { position: relative; }
+.uid-selb { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 4px 10px 4px 6px; border: 1px solid var(--u-line); border-radius: 7px; background: var(--u-frame); color: var(--text-4); font: inherit; cursor: pointer; }
+.uid-selb > svg { margin-left: auto; transition: transform 240ms var(--spring); }
+.uid-selb.open > svg { transform: rotate(180deg); }
+.uid-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.uid-ph { padding-left: 4px; font-size: 12.5px; }
+.uid-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 5px; background: color-mix(in srgb, var(--c) 13%, transparent); color: color-mix(in srgb, var(--c) 72%, #fff); font-size: 12px; font-weight: 500; }
+.uid-menu { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5; padding: 3px; border: 1px solid var(--u-line); border-radius: 9px; background: var(--u-frame); animation: tk-tagpop-in 180ms var(--spring) both; }
+.uid-search { width: 100%; height: 30px; margin-bottom: 3px; padding: 0 9px; border: 1px solid var(--u-line2); border-radius: 6px; background: var(--u-in); color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
+.uid-list { display: grid; gap: 1px; }
+.uid-mi { display: flex; align-items: center; gap: 9px; height: 28px; padding: 0 8px; border: 0; border-radius: 5px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
+.uid-mi:hover { background: rgba(255,255,255,.04); }
+.uid-mi i { width: 7px; height: 7px; border-radius: 50%; }
+.uid-mi span { flex: 1; }
+.uid-mi svg { color: var(--accent); opacity: 0; }
+.uid-mi.on svg { opacity: 1; }
+.uid-add { color: var(--text-4); } .uid-add b { color: var(--text); font-weight: 500; }
+.uid-lab { display: block; padding: 6px 8px 4px; }
+.uid-colors { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 8px 8px; }
+.uid-colors button { width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: var(--c); cursor: pointer; }
+.uid-hint { margin: 10px 0 0; }
+/* Basis */
+.uid-basics { display: grid; gap: 12px; }
+.uid-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--u-line); border-radius: 7px; background: var(--u-frame); }
+.uid-seg button { height: 24px; padding: 0 10px; border: 0; border-radius: 5px; background: none; color: var(--text-4); font: inherit; font-size: 12px; cursor: pointer; }
+.uid-seg button.on { background: rgba(255,255,255,.07); color: var(--text); }
+.uid-sw { position: relative; width: 30px; height: 18px; margin-left: auto; padding: 0; border: 0; border-radius: 9px; background: #333; cursor: pointer; transition: background-color 200ms ease; }
+.uid-sw i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 240ms var(--spring); }
+.uid-sw.on { background: var(--accent); } .uid-sw.on i { transform: translateX(12px); }
+@media (prefers-reduced-motion: reduce) { .uid-view, .uid-card { animation: none; } }
