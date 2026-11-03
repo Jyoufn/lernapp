@@ -968,15 +968,22 @@ test('PDF mit Handschrift: Gemini bekommt das PDF selbst und den Hinweis, die Se
   assert.ok(!d.parts.some((p) => /handschriftlich/.test(p.text || '')));
 });
 
-test('Dateien an der Frage: keine Einschätzung (spart Zeit), Lesen/Zusammenfassen denkt kurz, Aufgaben lösen dynamisch', async () => {
+test('Dateien an der Frage: keine Einschätzung (spart Zeit), schnelle Nachschau denkt kurz, Lernvorbereitung und Aufgaben gründlich', async () => {
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Zusammenfassung …'])) },
   ]);
   const pdf = { mime: 'application/pdf', data: 'JVBERi0x', name: 'Mitschrift.pdf', hand: '1–17', text: '…' };
-  await run({ messages: [{ role: 'user', text: 'Mach mir einen Lernzettel aus meiner Mitschrift', images: [pdf] }], agent: 'learn', effort: 'auto' });
+  await run({ messages: [{ role: 'user', text: 'Was steht kurz auf Seite 3?', images: [pdf] }], agent: 'learn', effort: 'auto' });
   assert.ok(!fx.calls.some(M.is.route), 'keine Einschätzung mit Dateien');
   const low = fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig;
-  assert.ok(low.thinkingBudget === 2048 || low.thinkingLevel === 'low', 'Lernzettel aus Material: kurz denken');
+  assert.ok(low.thinkingBudget === 2048 || low.thinkingLevel === 'low', 'schnelle Nachschau: kurz denken');
+  fx = M.installFetch([
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Lernzettel …'])) },
+  ]);
+  await run({ messages: [{ role: 'user', text: 'Mach mir einen Lernzettel aus meiner Mitschrift', images: [pdf] }], agent: 'learn', effort: 'auto' });
+  const prep = fx.calls.find(M.is.geminiStream).body.generationConfig;
+  assert.ok(prep.thinkingConfig.thinkingBudget === -1 || prep.thinkingConfig.thinkingLevel === undefined, 'Lernzettel: Gemini denkt so viel wie nötig');
+  assert.equal(prep.maxOutputTokens, 65536, 'Lernvorbereitung: kein Längenlimit');
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Lösung …'])) },
   ]);
