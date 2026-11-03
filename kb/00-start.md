@@ -16,7 +16,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 - Lern-App „Agenten“ des Nutzers (Julian, Schüler, nutzt sie vor allem auf dem **iPad**), Repo `Jyoufn/lernapp`, läuft auf **Vercel**.
 - Reines HTML/CSS/JS ohne Framework, Node-Server `app-server.js` (auf Vercel über `api/index.js`), Speicher Upstash Redis.
 - KI-Chat mit 5 Agenten (Pixel-Hunde): Allgemein, Lernen, Research, Coden (Mini-Apps), Börse (Bär) + eigene Agenten. Mini-Apps (```widget), animierter Chat-Hintergrund. Dazu Dokumente (Notion-artig), Aufgaben, Kalender, Workspaces.
-- Modelle: automatisch – erst nur Gemini (beste Modelle zuerst, mehrere Schlüssel), dann MiniMax M3.1 Flash (NVIDIA; Einstellung „Haupt-KI“ dreht das um, Coden nimmt MiniMax zuerst), dann Groq, dann OpenRouter (gratis). KEIN Nemotron. Schlüssel pro Konto in den Einstellungen (mehrere je Anbieter). Details `ki.md` → „Modelle“.
+- Modelle: automatisch – erst nur Gemini (beste Modelle zuerst, mehrere Schlüssel), dann MiniMax M3.1 Flash (NVIDIA); die Haupt-KI wählt man je Anbieter unter Einstellungen → Verbindung (gilt für alles, auch Coden), andere Anbieter lassen sich als Ersatz abschalten, dann Groq, dann OpenRouter (gratis). KEIN Nemotron. Schlüssel pro Konto in den Einstellungen (mehrere je Anbieter). Details `ki.md` → „Modelle“.
 - WICHTIGSTE REGELN (`ki.md`): Aufwand ist verbindlich (Max = Maximum) · Denken nur bei Bedarf, Gedanken deutsch und inhaltlich · Lernen nur mit deutschen Fachquellen · Kontingent schonen (ein Aufruf statt vieler).
 - **Oberfläche komplett auf Deutsch** (keine englischen Beschriftungen, auch nicht in der Denk-Zeitleiste).
 

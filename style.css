@@ -10763,3 +10763,24 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .pv-count { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 5px 11px; border-radius: 999px; background: rgba(20, 20, 20, 0.86); border: 1px solid var(--menu-border); color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
 @media (max-width: 640px) { .pv { padding: 0; } .pv-sheet { height: 100%; border-radius: 0; border: 0; } .pv-body { padding: 4px 10px 56px; } }
 @media (prefers-reduced-motion: reduce) { .pv-sheet, .pv-backdrop { transition: none; } .pv-page:not(.ready) { animation: none; } }
+
+/* ===== 03.11.2026 (12): Rolle je Anbieter (Einstellungen → Verbindung): Haupt-KI / Als Ersatz / Bild-KI ===== */
+.st-main-tag { margin-left: 8px; padding: 2px 7px; border-radius: 6px; background: color-mix(in srgb, var(--accent) 14%, transparent); color: color-mix(in srgb, var(--accent) 72%, #fff); font-size: 11px; font-weight: 500; }
+.st-role { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 8px 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.st-role:first-of-type { margin-top: 6px; }
+.st-role-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.st-role-t b { color: var(--text); font-size: 13px; font-weight: 500; }
+.st-role-t span { color: var(--text-4); font-size: 12px; line-height: 16px; }
+.st-role .st-btn { flex: none; white-space: nowrap; }
+.st-role .st-seg { flex: none; }
+@media (max-width: 520px) { .st-role { flex-wrap: wrap; } }
+
+/* ===== 03.11.2026 (13): Vorschaubilder der KI-Hintergründe (Einstellungen → Aussehen) ===== */
+.cbg-tile .cbg-prev img.cbg-px { image-rendering: pixelated; image-rendering: crisp-edges; }
+.cbg-std.cbg-wait { animation: cbg-wait 1.4s ease-in-out infinite; }
+@keyframes cbg-wait { 50% { opacity: 0.45; } }
+.cbg-shooter { position: fixed; right: 0; bottom: 0; width: 320px; height: 180px; opacity: 0.01; pointer-events: none; z-index: -1; overflow: hidden; }
+.cbg-shooter iframe { width: 100%; height: 100%; border: 0; }
+@media (prefers-reduced-motion: reduce) { .cbg-std.cbg-wait { animation: none; } }
+/* Vorschau im Chat füllt die ganze Kartenbreite (aspect-ratio + max-height machte sie sonst schmaler – grauer Streifen rechts) */
+.cbg-fig .cbg-stage { width: 100%; }

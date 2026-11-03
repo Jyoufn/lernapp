@@ -984,3 +984,11 @@ test('Dateien an der Frage: keine Einschätzung (spart Zeit), Lesen/Zusammenfass
   const deep = fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig;
   assert.ok(deep.thinkingBudget === -1 || deep.thinkingLevel === undefined, 'Aufgabe lösen: Gemini denkt dynamisch');
 });
+
+test('Haupt-KI je Anbieter: gewählte zuerst, abgeschaltete Ersatz-Anbieter fallen weg', () => {
+  const P = require('../lib/providers');
+  assert.deepEqual(P.familiesFor({}), ['gemini', 'minimax', 'groq', 'openrouter']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'groq' }), ['groq', 'gemini', 'minimax', 'openrouter']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'groq', 'openrouter']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,groq' }), ['minimax', 'gemini', 'openrouter'], 'die Haupt-KI lässt sich nicht abschalten');
+});

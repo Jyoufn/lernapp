@@ -5,7 +5,7 @@
 |---|---|
 | `index.html` | Gerüst, Linien-Icons der Sidebar (`#o-…`), alte Icons (`#i-…`), Sidebar-Einträge `data-nav` |
 | `auth.js` | Anmeldung (Vorschau links, Formular rechts), lädt Browser-Speicher aus dem Konto, startet App-Skripte |
-| `settings.js` | Einstellungen in der Sidebar: Tabs `general` (Allgemein, Workspaces), `look` (Aussehen), `agents` (Haupt-KI-Karten, Verbindung/API-Keys), `saved` (Gespeichert). Erweiterbar über `window.SettingsHooks` ({page, order, html, click, input, change}); `Settings.open('agents')`, `Settings.redraw()` |
+| `settings.js` | Einstellungen in der Sidebar: Tabs `general` (Allgemein, Workspaces), `look` (Aussehen), `agents` (Verbindung: API-Keys + Rolle je Anbieter „Haupt-KI“/„Als Ersatz“/„Bild-KI“), `saved` (Gespeichert). Erweiterbar über `window.SettingsHooks` ({page, order, html, click, input, change}); `Settings.open('agents')`, `Settings.redraw()` |
 | `icons.js` | `FadeIcons` (gefüllt, `#f-…`) und `DocIcons` (`#d-…`, nur Dokument-Icons) |
 | `app.js` (~5500 Z.) | Tabs (`createTab`, `activateTab`, `isDraft`, `openViewTab`, `openDocTab`), Sidebar (`renderSideChats`), Chat-Stream (`sendMessage` → SSE), Zeitleiste (`createWork`, `stepLine`, `startStage`/`endStage`, `phase`), Funde (`linksFigure`), Quellen (`siteIcon`, `sourceChip`, `fillChips`, `mainSources`, `placeSourceStack`, `openSourcesModal`), Rückfragen (`showAskPanel`, `parseAskBlock`), Karten (`keyCard`, `errorCard`, `resumeCard`, `agentSuggestCard`), Visuals (`chartFigure`, `mindmapFigure`, `timelineFigure`), Chatverlauf (`chatsView`), Umschalter „Erstellen“ (`createSwitch`), `AppActions` (Sprach-Agent) |
 | `thinking.js` | Hauptstatus/Unterpunkte der Zeitleiste je Agent (`FLOWS`) und je Format (`FORMATS`), `formatOf`, `blockFormat`, `statsOf` |

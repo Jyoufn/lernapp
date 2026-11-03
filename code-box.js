@@ -123,7 +123,7 @@ var imgs={},n=0;
 function icons(root){(root||document).querySelectorAll('i[data-icon]').forEach(function(el){var nm=el.getAttribute('data-icon'),s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('class','ic'+(el.className?' '+el.className:''));s.setAttribute('aria-hidden','true');var u=document.createElementNS('http://www.w3.org/2000/svg','use');u.setAttribute('href','#f-'+nm);s.appendChild(u);el.replaceWith(s)})}
 function pics(root){(root||document).querySelectorAll('img[data-bild]:not([data-cbx])').forEach(function(el){var k='i'+(++n);el.setAttribute('data-cbx',k);imgs[k]=el;if(!el.getAttribute('src'))el.style.background='rgba(255,255,255,.05)';send({img:{k:k,desc:el.getAttribute('data-bild'),q:el.getAttribute('data-suche')||''}})})}
 window.CBX={icon:function(name,cls){return '<svg class="ic'+(cls?' '+cls:'')+'" aria-hidden="true"><use href="#f-'+name+'"/></svg>'},refresh:function(r){icons(r);pics(r)}};
-window.addEventListener('message',function(e){var d=e.data||{};if(d.cbxCmd==='pause')paused=true;else if(d.cbxCmd==='resume'){paused=false;var l=q;q=[];l.forEach(function(cb){rAF(cb)})}else if(d.cbxCmd==='theme'){var s=document.getElementById('cbx-theme');if(s)s.textContent=d.css}else if(d.cbxCmd==='img'&&imgs[d.k]){if(d.url)imgs[d.k].src=d.url;imgs[d.k].style.background=''}});
+window.addEventListener('message',function(e){var d=e.data||{};if(d.cbxCmd==='pause')paused=true;else if(d.cbxCmd==='resume'){paused=false;var l=q;q=[];l.forEach(function(cb){rAF(cb)})}else if(d.cbxCmd==='theme'){var s=document.getElementById('cbx-theme');if(s)s.textContent=d.css}else if(d.cbxCmd==='img'&&imgs[d.k]){if(d.url)imgs[d.k].src=d.url;imgs[d.k].style.background=''}else if(d.cbxCmd==='shot'){var url='';try{var cs=[].slice.call(document.querySelectorAll('canvas')).sort(function(a,b){return b.width*b.height-a.width*a.height})[0];if(cs&&cs.width){if(cs.width<=480)url=cs.toDataURL('image/png');else{var k=320/cs.width,c=document.createElement('canvas');c.width=320;c.height=Math.max(1,Math.round(cs.height*k));var g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(cs,0,0,c.width,c.height);url=c.toDataURL('image/png')}}}catch(e){}send({shot:url})}});
 var errs=0;window.addEventListener('error',function(e){if(e.target&&e.target!==window&&e.target.tagName==='SCRIPT'){send({err:'Skript konnte nicht geladen werden: '+(e.target.src||'')});return}if(++errs>5)return;send({err:String(e.message||'Fehler').slice(0,400),line:e.lineno||0,stack:String(e.error&&e.error.stack||'').slice(0,600)})},true);
 window.addEventListener('unhandledrejection',function(e){if(++errs>5)return;send({err:String((e.reason&&e.reason.message)||e.reason||'Fehler').slice(0,400)})});
 sI(function(){send({beat:1})},1000);
@@ -137,11 +137,11 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     spriteHtml = sym?.parentElement ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${[...sym.parentElement.querySelectorAll('symbol[id^="f-"]')].map((x) => x.outerHTML).join('')}</svg>` : '';
     return spriteHtml;
   };
-  function srcdoc(code, id, extraCss = '') {
+  function srcdoc(code, id, extraCss = '', extraJs = '') {
     const font = FONTS[design.font] || FONTS.inter;
     const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${CSP}">`
       + `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${font.link}&display=swap">`
-      + `<style id="cbx-theme">${themeVars()}</style><style>${BASE_CSS}${extraCss}</style><script>${RUNTIME(id)}<\/script>`;
+      + `<style id="cbx-theme">${themeVars()}</style><style>${BASE_CSS}${extraCss}</style><script>${RUNTIME(id)}<\/script>${extraJs ? `<script>${extraJs}<\/script>` : ''}`;
     // externe Skripte mit crossorigin laden → echte Fehlermeldungen statt „Script error.“
     const src = String(code || '').replace(/<script(?![^>]*\bcrossorigin\b)([^>]*\bsrc=["']https:)/gi, '<script crossorigin="anonymous"$1');
     const icons = sprite();
@@ -169,7 +169,12 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     f.beat = Date.now();
     if (d.img && d.img.desc) imageFor(String(d.img.desc).slice(0, 300), String(d.img.q || '').slice(0, 90)).then((url) => post(f, { cmd: 'img', k: d.img.k, url }));
     if (d.err) f.onError?.(d.err, d.line, d.stack);
+    if (typeof d.shot === 'string') { const cb = f.onShot; f.onShot = null; cb?.(d.shot); }
   });
+  // Momentaufnahme der Leinwand (Vorschau eines Hintergrunds): cb(dataUrl | '')
+  function shot(host, cb) { const f = frames.get(host?._cbx); if (!f) { cb(''); return; } f.onShot = cb; post(f, { cmd: 'shot' }); setTimeout(() => { if (f.onShot === cb) { f.onShot = null; cb(''); } }, 2500); }
+  // Hintergründe: Leinwand füllt immer die ganze Fläche, pixelig (nie weichgezeichnet), kein Rand/Abstand
+  const BG_CSS = 'html,body{margin:0!important;padding:0!important;height:100%;overflow:hidden;background:#000}canvas{position:fixed!important;left:0!important;top:0!important;width:100vw!important;height:100vh!important;object-fit:cover;image-rendering:pixelated;image-rendering:crisp-edges}';
   function start(host, code, opts = {}) {
     stop(host);
     const id = `cbx${++seq}`;
@@ -179,7 +184,7 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     iframe.setAttribute('referrerpolicy', 'no-referrer');
     iframe.setAttribute('allow', 'fullscreen; clipboard-write; accelerometer; gyroscope');
     iframe.title = opts.title || 'Mini-App';
-    iframe.srcdoc = srcdoc(code, id);
+    iframe.srcdoc = opts.bg ? srcdoc(code, id, BG_CSS, window.PixelKit || '') : srcdoc(code, id);
     host.replaceChildren(iframe);
     const f = { id, iframe, host, beat: Date.now(), seen: Date.now(), visible: true, onError: opts.onError };
     frames.set(id, f); host._cbx = id;
@@ -599,6 +604,6 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
   // Design-Vorgaben gehen mit jeder Chat-Anfrage an den Server (Prompt „Stilwünsche“)
   const look = () => ({ accent: design.accent, corners: design.corners, font: design.font, surface: design.surface, wish: design.wish });
 
-  return { parse, figure, render, save, saved, unsave, openFull, closeFull, look, design: () => ({ ...design }), setDesign, srcdoc, start, stop, toast, applySetting };
+  return { parse, figure, render, save, saved, unsave, openFull, closeFull, look, design: () => ({ ...design }), setDesign, srcdoc, start, stop, shot, toast, applySetting };
 })();
 window.CodeBox = CodeBox;

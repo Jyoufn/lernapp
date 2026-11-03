@@ -57,8 +57,11 @@ function deviceKeysOf(req) {
     const obj = JSON.parse(Buffer.from(String(raw), 'base64').toString('utf8'));
     const out = {};
     for (const k of DEVICE_KEYS) { const v = cleanKeys(obj[k]); if (v) out[k] = v; }
-    if (obj.AI_ORDER === 'minimax' || obj.AI_ORDER === 'mistral') out.AI_ORDER = 'minimax'; // Einstellungen → Haupt-KI (früher „Mistral“)
-    if (obj.CODE_ORDER === 'gemini') out.CODE_ORDER = 'gemini'; // Einstellungen → Coden mit (Standard: MiniMax zuerst)
+    // Einstellungen → Verbindung: Haupt-KI je Anbieter (früher „Mistral“ = MiniMax) und abgeschaltete Ersatz-Anbieter
+    const main = obj.AI_ORDER === 'mistral' ? 'minimax' : obj.AI_ORDER;
+    if (P.FAMILIES.includes(main)) out.AI_ORDER = main;
+    const off = String(obj.AI_OFF || '').split(',').filter((f) => P.FAMILIES.includes(f) && f !== out.AI_ORDER);
+    if (off.length) out.AI_OFF = off.join(',');
     return out;
   } catch { return {}; }
 }
@@ -1165,11 +1168,10 @@ const WIDGET_FIX_SYSTEM = `Du reparierst eine Mini-App (HTML/CSS/JS, läuft in e
 - Behalte Aufbau, Design, Texte und Funktionen bei. Ändere nur, was nötig ist.
 - Antworte NUR mit dem vollständigen korrigierten Inhalt des Blocks (gleiche Kopfzeilen, alle Ansichten, nichts ausgelassen) – OHNE \`\`\` und ohne Erklärung.`;
 async function handleWidgetFix(req, res) {
-  let env = readEnv();
+  const env = readEnv();
   const b = await readBody(req, 400000);
   const raw = String(b.raw || '').slice(0, 120000), err = String(b.error || '').slice(0, 2000);
   if (raw.length < 20) return sendJson(res, 400, { error: 'Kein Code' });
-  if (env.CODE_ORDER !== 'gemini') env = { ...env, AI_ORDER: 'minimax' };
   try {
     let out = String(await P.textTask(env, { system: WIDGET_FIX_SYSTEM, user: `FEHLER:\n${err || 'unbekannt'}\n\nCODE:\n${raw}`, maxTokens: 32000, timeoutMs: 240000, strong: true }) || '').trim();
     out = out.replace(/^```(?:widget)?[^\n]*\n/, '').replace(/\n?```\s*$/, '').trim();

@@ -8,12 +8,13 @@
   const KEYS_KEY = 'settings.keys.v1', NAME_KEY = 'settings.name.v1', PAGE_KEY = 'settings.page.v1';
   // Logos: #b-… in index.html (offizielle Marken)
   const PROVIDERS = [
-    { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true },
-    { id: 'MINIMAX_API_KEY', name: 'MiniMax (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true },
-    { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true },
-    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true },
+    // fam = Text-Anbieter (Haupt-KI wählbar); image = malt Bilder
+    { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true, fam: 'gemini' },
+    { id: 'MINIMAX_API_KEY', name: 'MiniMax (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'minimax' },
+    { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true, fam: 'groq' },
+    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true, fam: 'openrouter' },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
-    { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true },
+    { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true, image: true },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
   ];
 
@@ -94,13 +95,28 @@
     const keys = keyList(p.id), open = editing === p.id, what = p.label || 'API-Key';
     const status = keys.length ? `<span class="st-ok">${fi('check', 12)}${p.multi ? `${keys.length} ${keys.length === 1 ? 'Schlüssel' : 'Schlüssel'}` : 'Verbunden'}</span>`
       : fileKeys[p.id] ? `<span class="st-ok">${fi('check', 12)}Verbunden</span>` : '<span class="st-muted">Verbinden</span>';
-    const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span><span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
+    const isMain = p.fam && mainFam() === p.fam;
+    const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span>${isMain ? '<span class="st-main-tag">Haupt-KI</span>' : ''}<span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
     if (!open) return head;
     return head + `<div class="st-keys"><div class="st-keys-in">
         ${keys.map((k, i) => `<div class="st-key"><span class="st-key-dots">••••${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
         ${fileKeys[p.id] && !keys.length ? '<p class="st-ws-note">Ein Schlüssel ist auf dem Server hinterlegt.</p>' : ''}
         ${p.multi || !keys.length ? `<form class="st-key-add" data-key="${p.id}" autocomplete="off"><input class="st-field st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="st-btn light">Hinzufügen</button></form>` : ''}
+        ${rolesHtml(p, keys.length || fileKeys[p.id])}
       </div></div>`;
+  }
+  /* Rolle des Anbieters (unter seinen Schlüsseln): Haupt-KI – wird für ALLES zuerst genutzt (auch Coden, Agenten, Hintergründe);
+     Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
+  const FAMS = ['gemini', 'minimax', 'groq', 'openrouter'];
+  const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
+  const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
+  function rolesHtml(p, has) {
+    if (p.image) return `<div class="st-role"><span class="st-role-t"><b>Bild-KI</b><span>Malt Bilder, Cover und Profilbilder.</span></span><span class="grow"></span>${has ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>` : '<span class="st-muted">Kein Schlüssel</span>'}</div>`;
+    if (!p.fam) return '';
+    const main = mainFam() === p.fam, off = offFams().includes(p.fam);
+    return `<div class="st-role"><span class="st-role-t"><b>Haupt-KI</b><span>${main ? 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.' : 'Für alles zuerst diese KI nutzen.'}${main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : ''}</span></span><span class="grow"></span>`
+      + (main ? `<span class="st-ok">${fi('check', 12)}Haupt-KI</span>` : `<button type="button" class="st-btn dark" data-main-ai="${p.fam}">Als Haupt-KI verwenden</button>`) + '</div>'
+      + (main ? '' : `<div class="st-role"><span class="st-role-t"><b>Als Ersatz</b><span>Springt nur ein, wenn die Haupt-KI gerade nicht kann (z. B. Kontingent aufgebraucht).</span></span><span class="grow"></span>${seg('data-ai-backup', [['An', `${p.fam}:on`], ['Aus', `${p.fam}:off`]], `${p.fam}:${off ? 'off' : 'on'}`)}</div>`);
   }
 
 
@@ -133,24 +149,6 @@
       <h2>Neuer Chat</h2><div class="st-card">
         <div class="st-row"><span class="st-name">Kacheln</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`
       + hooksHtml('look');
-  }
-
-  /* Haupt-KI: zwei Karten (Logo, Name, wofür sie gut ist) – gewählt = blauer Haken + hellerer Rand; darunter „Coden mit“ */
-  const AIS = [
-    { id: 'gemini', name: 'Google Gemini', logo: 'gemini', model: 'Gemini 3.x Flash', text: 'Denkt sichtbar mit, liest Fotos und PDFs, Google-Suche' },
-    { id: 'minimax', name: 'MiniMax', logo: 'nvidia', model: 'MiniMax M3.1 Flash · NVIDIA', text: 'Denkt mit, schnell und stark beim Programmieren' },
-  ];
-  function mainAiHtml() {
-    const order = deviceKeys.AI_ORDER === 'minimax' ? 'minimax' : 'gemini';
-    const code = deviceKeys.CODE_ORDER === 'gemini' ? 'gemini' : 'minimax';
-    const has = (id) => (id === 'gemini' ? keyList('GEMINI_API_KEY').length || fileKeys.GEMINI_API_KEY : keyList('MINIMAX_API_KEY').length || keyList('MISTRAL_API_KEY').length || keyList('FLUX3_API_KEY').length || fileKeys.MINIMAX_API_KEY);
-    const cards = AIS.map((a) => `<button type="button" class="st-ai${a.id === order ? ' on' : ''}" data-ai-order="${a.id}" role="radio" aria-checked="${a.id === order}">
-        <span class="st-ai-top"><svg class="st-logo" width="22" height="22" aria-hidden="true"><use href="#b-${a.logo}"/></svg><span class="st-ai-check">${fi('check', 11)}</span></span>
-        <span class="st-ai-name">${esc(a.name)}</span><span class="st-ai-model">${esc(a.model)}</span><span class="st-ai-text">${esc(a.text)}</span>
-        ${has(a.id) ? '' : '<span class="st-ai-miss">Noch kein Schlüssel</span>'}</button>`).join('');
-    return `<h2>Haupt-KI</h2><div class="st-ai-grid" role="radiogroup" aria-label="Zuerst nutzen">${cards}</div>
-      <p class="st-ai-note">Wird zuerst genutzt. Ist das Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p>
-      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coding-Agent mit</span><span class="grow"></span>${seg('data-code-order', [['MiniMax', 'minimax'], ['Gemini', 'gemini']], code)}</div></div>`;
   }
 
   /* ---------- Workspaces: Zeile antippen klappt sie auf (Symbol, Name, Öffnen, Personen einladen, Löschen) ---------- */
@@ -252,8 +250,8 @@
       body = hooksHtml('saved') || '<h2>Gespeichert</h2><div class="st-card"><div class="st-row"><span class="st-muted">Noch nichts gespeichert.</span></div></div>';
     } else {
       const modes = window.PixelDogs?.MODES || [];
-      body = mainAiHtml()
-        + `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
+      body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
+        + '<p class="st-ai-note">Anbieter antippen: Schlüssel hinzufügen und festlegen, welche KI die Haupt-KI ist. Ist ihr Kontingent aufgebraucht, springen die anderen als Ersatz ein.</p>'
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}</div>` : '')
         + hooksHtml('agents');
     }
@@ -311,6 +309,10 @@
   view.addEventListener('click', (e) => {
     const rm = e.target.closest('[data-key-rm]');
     if (rm && editing) { const ks = keyList(editing); ks.splice(+rm.dataset.keyRm, 1); if (ks.length) deviceKeys[editing] = ks.join('\n'); else delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    const mn = e.target.closest('[data-main-ai]');
+    if (mn) { const f = mn.dataset.mainAi; if (f === 'gemini') delete deviceKeys.AI_ORDER; else deviceKeys.AI_ORDER = f; const off = offFams().filter((x) => x !== f); if (off.length) deviceKeys.AI_OFF = off.join(','); else delete deviceKeys.AI_OFF; delete deviceKeys.CODE_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    const bk = e.target.closest('[data-ai-backup]');
+    if (bk) { const [f, v] = bk.dataset.aiBackup.split(':'); const off = new Set(offFams()); if (v === 'off') off.add(f); else off.delete(f); if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF; write(KEYS_KEY, deviceKeys); drawView(); return; }
     if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');
     if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); return; }
@@ -324,11 +326,7 @@
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
-    const co = e.target.closest('[data-code-order]');
-    if (co) { if (co.dataset.codeOrder === 'gemini') deviceKeys.CODE_ORDER = 'gemini'; else delete deviceKeys.CODE_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
-    const ao = e.target.closest('[data-ai-order]');
-    if (ao) { if (ao.dataset.aiOrder === 'minimax') deviceKeys.AI_ORDER = 'minimax'; else delete deviceKeys.AI_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     if (wsClick(e)) return;
