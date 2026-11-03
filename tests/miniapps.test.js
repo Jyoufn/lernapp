@@ -12,7 +12,11 @@ test('Mini-Apps im Chat sind aus: keine Mini-App-Anleitung mehr (programmiert wi
 
 test('Eigener Agent: Anweisung wird geprüft und an den System-Prompt gehängt', async () => {
   assert.equal(W.cleanCustom({ name: '', prompt: 'x' }), null);
-  assert.deepEqual(W.cleanCustom({ name: ' Mathe  Coach ', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'lernen' }), { name: 'Mathe Coach', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'learn', tools: [], vorlage: '' });
+  assert.deepEqual(W.cleanCustom({ name: ' Mathe  Coach ', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'lernen' }), { name: 'Mathe Coach', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'learn', tools: [], vorlage: '', wissen: [] });
+  // Wissen (eigene Dateien): als Material im Prompt, begrenzt
+  const kw = W.cleanCustom({ name: 'Bio', prompt: 'Du hilfst bei Bio.', wissen: [{ name: 'Skript.pdf', text: 'Die Zellatmung besteht aus Glykolyse, Citratzyklus und Atmungskette.' }, { name: 'leer', text: 'x' }] });
+  assert.equal(kw.wissen.length, 1);
+  assert.equal(W.extrasPrompt({ custom: kw, text: '' }).includes('<wissen datei="Skript.pdf">'), true);
   const fx = M.installFetch([{ match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Okay!'])) }]);
   try {
     const c = M.collect();

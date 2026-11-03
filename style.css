@@ -10791,3 +10791,28 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .st-role-seg button:disabled { opacity: 0.35; cursor: default; }
 .st-role-why { margin: 2px 0 0; color: var(--text-4); font-size: 12px; line-height: 16px; }
 .st-main-tag.soft { background: rgba(255, 255, 255, 0.06); color: var(--text-3); }
+
+/* ===== 03.11.2026 (15): Agent konfigurieren (Gesprächsstarter, Fähigkeiten, Wissen) + Starter im leeren Chat ===== */
+.agp-cfg { display: flex; flex-direction: column; gap: 12px; padding: 4px 16px 6px; }
+.agp-sec { display: flex; flex-direction: column; gap: 7px; }
+.agp-sec-h { color: var(--text-3); font-size: 12px; font-weight: 500; }
+.agp-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.agp-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 4px 0 10px; border: 1px solid var(--field-border, #272727); border-radius: 8px; background: var(--field-bg, #1c1c1c); color: var(--text-2); font-size: 12.5px; }
+.agp-chip em { color: var(--text-4); font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums; }
+.agp-chip button { display: grid; place-items: center; width: 20px; height: 20px; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
+.agp-chip button:hover { color: var(--text); background: var(--menu-hover); }
+.agp-file svg:first-child { color: var(--text-4); }
+.agp-tog { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 10px; border: 1px solid var(--field-border, #272727); border-radius: 8px; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, border-color 120ms ease; }
+.agp-tog:hover { color: var(--text-2); }
+.agp-tog.on { color: color-mix(in srgb, var(--accent) 60%, #fff); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.agp-add input { width: 170px; height: 28px; padding: 0 10px; border: 1px dashed var(--field-border, #2c2c2c); border-radius: 8px; background: none; color: var(--text); font: inherit; font-size: 12.5px; outline: none; }
+.agp-add input::placeholder { color: var(--text-4); }
+.agp-hint { margin: 0; color: var(--text-4); font-size: 11.5px; line-height: 16px; }
+.ag-starters { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 760px; margin: 12px auto 0; padding: 0 12px; }
+.ag-starter { height: 34px; padding: 0 14px; border: 1px solid var(--field-border, #272727); border-radius: 18px; background: var(--field-bg, #1c1c1c); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, border-color 120ms ease; animation: ag-starter-in 420ms var(--spring) both; }
+.ag-starter:hover { color: var(--text); border-color: #3a3a3a; }
+.ag-starter:nth-child(2) { animation-delay: 50ms; } .ag-starter:nth-child(3) { animation-delay: 100ms; } .ag-starter:nth-child(4) { animation-delay: 150ms; }
+@keyframes ag-starter-in { from { opacity: 0; transform: translateY(6px); } }
+.panel:not(.home) .ag-starters { display: none; }
+@media (prefers-reduced-motion: reduce) { .ag-starter { animation: none; } }
+.composer-area .ag-starters { pointer-events: auto; position: relative; margin-bottom: 4px; } /* die Fläche um das Feld lässt Klicks durch – die Starter nicht */

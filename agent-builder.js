@@ -60,7 +60,8 @@ const AgentBuilder = (() => {
     const tools = String(Array.isArray(h.werkzeuge) ? h.werkzeuge.join(',') : h.werkzeuge || '').toLowerCase().split(/[\s,;]+/).filter((t) => TOOL_NAMES[t]);
     return { name, prompt, figur: normFig(h.figur), farbe: normFur(h.farbe), aktion: normAct(h.aktion), beschreibungBild: String(h.beschreibung_bild || '').slice(0, 300),
       beschreibung: String(h.beschreibung || '').trim().slice(0, 160), begruessung: String(h.begruessung || '').trim().slice(0, 90),
-      verhalten, tools, vorlage: /^(ja|yes|true)$/i.test(String(h.vorlage || '').trim()) };
+      verhalten, tools, vorlage: /^(ja|yes|true)$/i.test(String(h.vorlage || '').trim()),
+      starters: String(Array.isArray(h.starter) ? h.starter.join('|') : h.starter || '').split('|').map((x) => x.replace(/\s+/g, ' ').trim().slice(0, 80)).filter((x) => x.length > 3).slice(0, 4) };
   }
 
   /* ---------- Eigenes Bild: Pixel-Brustbild aus dem gemalten Bild rastern (32/24/20 je für sich, wie die festen Agenten) ---------- */
@@ -522,18 +523,56 @@ const AgentBuilder = (() => {
     const av = finalAvatar(p), words = p.prompt.split(/\s+/).filter(Boolean).length;
     p._av = av;
     const secs = sectionsOf(p.prompt).length;
+    if (!p._init) { p._init = true; if (existing) { if (!p.starters?.length) p.starters = existing.starters || []; p.wissen = existing.wissen || []; } p.wissen ||= []; p.starters ||= []; }
     fig.innerHTML = `<div class="agp-top"><div class="agp-art"><div class="agp-head">${window.PixelDogs?.previewArt?.(av.figur, av.farbe, 96, av.raster) || ''}</div></div><div class="agp-main">
         <div class="agp-name">${esc(p.name)}</div>
         <p class="agp-desc">${esc(p.beschreibung || 'Eigener Agent')}</p>
         <div class="agp-tags"><span>${esc(MODE_NAMES[MODES[p.verhalten]])}</span>${p.tools.filter((t) => t !== 'miniapps').map((t) => `<span>${esc(TOOL_NAMES[t])}</span>`).join('')}</div>
       </div></div>
+      <div class="agp-cfg"></div>
       <div class="agp-acts"><button type="button" class="agp-btn agp-open" data-agp="prompt">${fi('file', 13)}Anweisung ansehen<em>${words.toLocaleString('de-DE')} Wörter${secs ? ` · ${secs} Abschnitte` : ''}</em></button><span class="ags-grow"></span><button type="button" class="agp-btn primary" data-agp="save">${existing ? 'Änderungen übernehmen' : 'Agent erstellen'}</button></div>`;
+    /* Konfigurieren (wie GPT-Builder „Configure“, Gemini Gems, Copilot Agent Builder): was die KI vorgeschlagen hat, direkt hier ändern –
+       Gesprächsstarter, Fähigkeiten, Wissen (eigene Dateien als Grundlage) */
+    const cfgEl = fig.querySelector('.agp-cfg');
+    const drawCfg = () => {
+      const tools = Object.keys(TOOL_NAMES).filter((t) => t !== 'miniapps');
+      cfgEl.innerHTML = `<div class="agp-sec"><span class="agp-sec-h">Gesprächsstarter</span><div class="agp-chips">${p.starters.map((t, i) => `<span class="agp-chip">${esc(t)}<button type="button" data-agp="st-rm" data-i="${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`).join('')}${p.starters.length < 4 ? `<form class="agp-add" data-agp-form="st"><input maxlength="80" placeholder="Eigener Starter …" aria-label="Gesprächsstarter hinzufügen" /></form>` : ''}</div></div>
+        <div class="agp-sec"><span class="agp-sec-h">Fähigkeiten</span><div class="agp-chips">${tools.map((t) => `<button type="button" class="agp-tog${p.tools.includes(t) ? ' on' : ''}" data-agp="tool" data-t="${t}" aria-pressed="${p.tools.includes(t)}">${p.tools.includes(t) ? fi('check', 10) : ''}${esc(TOOL_NAMES[t])}</button>`).join('')}</div></div>
+        <div class="agp-sec"><span class="agp-sec-h">Wissen</span><div class="agp-chips">${p.wissen.map((w, i) => `<span class="agp-chip agp-file">${fi('file', 11)}${esc(w.name)}<em>${Math.max(1, Math.round(w.text.length / 1000))}k</em><button type="button" data-agp="wi-rm" data-i="${i}" aria-label="Entfernen">${fi('x', 9)}</button></span>`).join('')}<label class="agp-tog agp-up">${fi('upload', 11)}Datei hinzufügen<input type="file" accept="application/pdf,.pdf,.txt,.md,text/plain,text/markdown" multiple hidden data-agp-file /></label></div>
+        <p class="agp-hint">${p.wissen.length ? 'Der Agent stützt sich auf diese Dateien.' : 'Skript, Mitschrift oder Vokabelliste – der Agent nutzt sie als Grundlage.'}</p></div>`;
+    };
+    drawCfg();
+    const addKnowledge = async (files) => {
+      for (const f of files) {
+        let text = '';
+        try {
+          if (/pdf$/i.test(f.type) || /\.pdf$/i.test(f.name)) { const r = await fileToInline(f, 1600, null, { defer: true }); text = String([r].flat()[0]?.text || '').replace(/\(Handschrift\/Scan[^)]*\)/g, '').trim(); }
+          else text = await f.text();
+        } catch {}
+        if (text.replace(/\s/g, '').length < 40) { window.CodeBox?.toast?.(`„${f.name}“: kein lesbarer Text (gescannte Seiten bitte im Chat schicken)`); continue; }
+        p.wissen = p.wissen.filter((w) => w.name !== f.name.slice(0, 80)); // gleiche Datei nochmal → ersetzen
+        const used = p.wissen.reduce((n, w) => n + w.text.length, 0);
+        if (used >= 80000) { window.CodeBox?.toast?.('Wissen ist voll (höchstens ~80 000 Zeichen)'); break; }
+        p.wissen.push({ name: f.name.slice(0, 80), text: text.slice(0, 80000 - used) });
+      }
+      drawCfg();
+    };
+    fig.addEventListener('change', (e) => { if (e.target.matches('[data-agp-file]')) { addKnowledge([...e.target.files]); e.target.value = ''; } });
+    fig.addEventListener('submit', (e) => {
+      const f = e.target.closest('[data-agp-form="st"]'); if (!f) return;
+      e.preventDefault();
+      const v = f.querySelector('input').value.replace(/\s+/g, ' ').trim();
+      if (v.length > 3 && p.starters.length < 4) { p.starters.push(v.slice(0, 80)); drawCfg(); cfgEl.querySelector('.agp-add input')?.focus(); }
+    });
     fig.addEventListener('click', (e) => {
       const b = e.target.closest('[data-agp]'); if (!b) return;
+      if (b.dataset.agp === 'st-rm') { p.starters.splice(+b.dataset.i, 1); drawCfg(); return; }
+      if (b.dataset.agp === 'wi-rm') { p.wissen.splice(+b.dataset.i, 1); drawCfg(); return; }
+      if (b.dataset.agp === 'tool') { const t = b.dataset.t; p.tools = p.tools.includes(t) ? p.tools.filter((x) => x !== t) : [...p.tools, t]; drawCfg(); fig.querySelector('.agp-tags').innerHTML = `<span>${esc(MODE_NAMES[MODES[p.verhalten]])}</span>${p.tools.filter((x) => x !== 'miniapps').map((x) => `<span>${esc(TOOL_NAMES[x])}</span>`).join('')}`; return; }
       if (b.dataset.agp === 'prompt') { openPrompt(p, { onSave: () => { const w = fig.querySelector('.agp-open em'); if (w) w.textContent = `${p.prompt.split(/\s+/).filter(Boolean).length.toLocaleString('de-DE')} Wörter`; } }); return; }
       if (b.dataset.agp === 'save') {
         const l = list(), id = existing?.id || `u-${Date.now().toString(36)}`;
-        const item = { id, name: p.name, beschreibung: p.beschreibung, begruessung: '', verhalten: p.verhalten, prompt: p.prompt, tools: p.tools, vorlage: '', ...av, aktion: '', at: Date.now() };
+        const item = { id, name: p.name, beschreibung: p.beschreibung, begruessung: '', verhalten: p.verhalten, prompt: p.prompt, tools: p.tools, vorlage: '', starters: p.starters.slice(0, 4), wissen: p.wissen, ...av, aktion: '', at: Date.now() };
         const i = l.findIndex((a) => a.id === id);
         if (i >= 0) l[i] = item; else l.unshift(item);
         store(l);
@@ -587,12 +626,37 @@ const AgentBuilder = (() => {
       const c = chatData(tab), base = byId(c?.setupBase);
       return { agent: 'general', setup: 'agent', ...(c?.setupWish ? { setupWish: c.setupWish } : {}),
         ...(c?.setupName ? { setupInfo: { name: c.setupName, aussehen: c.setupAvatar?.beschreibung || '', umbenannt: !!c.setupRenamed, bild: !!c.setupAvatar?.raster } } : {}),
-        ...(base ? { setupBase: { name: base.name, beschreibung: base.beschreibung, figur: base.figur, farbe: base.farbe, aktion: base.aktion, verhalten: base.verhalten, werkzeuge: base.tools, begruessung: base.begruessung, anweisung: base.prompt } } : {}), ...extra };
+        ...(base ? { setupBase: { name: base.name, beschreibung: base.beschreibung, figur: base.figur, farbe: base.farbe, aktion: base.aktion, verhalten: base.verhalten, werkzeuge: base.tools, starter: (base.starters || []).join(' | '), wissen: (base.wissen || []).map((w) => w.name), begruessung: base.begruessung, anweisung: base.prompt } } : {}), ...extra };
     }
     const a = byId(id);
-    if (a) return { agent: MODES[a.verhalten] || 'general', custom: { name: a.name, prompt: a.prompt, mode: a.verhalten, tools: a.tools || [], vorlage: a.vorlage || '' }, ...extra };
+    if (a) return { agent: MODES[a.verhalten] || 'general', custom: { name: a.name, prompt: a.prompt, mode: a.verhalten, tools: a.tools || [], vorlage: a.vorlage || '', wissen: a.wissen || [] }, ...extra };
     return { agent: id, ...extra };
   };
+
+  /* ---------- Gesprächsstarter im leeren Chat eines eigenen Agenten (wie bei GPTs, Gems, Copilot): ein Tipp schickt ihn ab ---------- */
+  const starterRow = document.createElement('div');
+  starterRow.className = 'ag-starters';
+  starterRow.hidden = true;
+  document.getElementById('composer')?.after(starterRow);
+  function drawStarters() {
+    const a = byId(window.PixelDogs?.mode);
+    const show = !!(app?.querySelector('.panel')?.classList.contains('home') && a?.starters?.length && !isSetup(tabNow()));
+    starterRow.hidden = !show;
+    if (!show) return;
+    const html = a.starters.map((t) => `<button type="button" class="ag-starter">${esc(t)}</button>`).join('');
+    if (starterRow.innerHTML !== html) starterRow.innerHTML = html;
+  }
+  starterRow.addEventListener('click', (e) => {
+    const b = e.target.closest('.ag-starter'); if (!b) return;
+    const inp = document.getElementById('input'); if (!inp) return;
+    inp.value = b.textContent; inp.dispatchEvent(new Event('input'));
+    document.getElementById('composer')?.requestSubmit();
+  });
+  document.addEventListener('dogmodechange', () => setTimeout(drawStarters, 0));
+  document.addEventListener('customagentschange', () => setTimeout(drawStarters, 0));
+  window.addEventListener('chat-tab-switched', () => setTimeout(drawStarters, 0));
+  { const pnl = document.querySelector('.panel'); if (pnl) new MutationObserver(drawStarters).observe(pnl, { attributes: true, attributeFilter: ['class'] }); }
+  setTimeout(drawStarters, 400);
 
   /* ---------- Einstellungen → Agenten: eigene Agenten ---------- */
   let delArm = null;
