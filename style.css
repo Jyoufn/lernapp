@@ -10674,40 +10674,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .up-wait { padding: 4px 0; color: var(--text-3); font-size: 13px; }
 @media (prefers-reduced-motion: reduce) { .loading .up-ring { animation-duration: 2.4s; } }
 
-/* KI-Test (Einstellungen → Haupt-KI): Testfragen, Prüfpunkte, Antwort neben der Musterantwort */
-.kt .kt-head { align-items: flex-start; gap: 14px; padding-top: 14px; padding-bottom: 14px; }
-.kt-intro { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
-.kt-intro b { color: var(--text); font-size: 13.5px; font-weight: 600; }
-.kt-intro > span { color: var(--text-3); font-size: 12.5px; line-height: 18px; }
-.kt-intro .kt-sum { margin-top: 4px; color: var(--text-3); }
-.kt-intro .kt-sum b { font-size: 12.5px; }
-.kt-row { cursor: pointer; gap: 10px; }
-.kt-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #3a3a3a; }
-.kt-dot.ok { background: #4cc38a; } .kt-dot.mid { background: #e8b94a; } .kt-dot.bad { background: #e5705f; }
-.kt-dot.run { background: var(--accent); animation: kt-pulse 1.1s ease-in-out infinite; }
-@keyframes kt-pulse { 50% { opacity: 0.3; } }
-.kt-t { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
-.kt-t b { color: var(--text); font-size: 13px; font-weight: 500; }
-.kt-t span { overflow: hidden; color: var(--text-4); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
-.kt-score { flex: none; color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.kt-chev { display: grid; place-items: center; color: var(--text-4); transition: transform 240ms var(--spring, ease); }
-.kt-item.open .kt-chev { transform: rotate(90deg); }
-.kt-detail { padding: 2px 14px 16px; animation: cbx-in 300ms var(--spring, ease) both; }
-.kt-checks { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
-.kt-checks li { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 7px; font-size: 12px; }
-.kt-checks li.ok { background: rgba(76, 195, 138, 0.12); color: #7fd8ab; }
-.kt-checks li.no { background: rgba(229, 112, 95, 0.12); color: #f0978a; }
-.kt-meta { margin-bottom: 10px; color: var(--text-4); font-size: 12px; }
-.kt-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.kt-col { min-width: 0; padding: 12px 14px; border-radius: 11px; background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
-.kt-h { margin-bottom: 6px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
-.kt-ans { max-height: 340px; overflow-y: auto; color: var(--text-2); font-size: 13px; line-height: 1.6; overscroll-behavior: contain; }
-.kt-ans table { font-size: 12px; }
-.kt-err { color: #f0978a; }
-@media (max-width: 700px) { .kt-cols { grid-template-columns: 1fr; } }
-.kt .kt-head { height: auto; min-height: 0; }
-.kt-row { height: auto; min-height: 54px; padding-top: 8px; padding-bottom: 8px; }
-.kt-item { border-top: 1px solid rgba(255, 255, 255, 0.06); }
 
 /* Bild aus einer frei lizenzierten Quelle (```quellbild) */
 .md .src-img { max-width: min(100%, 520px); margin: 14px 0 16px; }
@@ -10717,19 +10683,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .src-img figcaption { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 7px; color: var(--text-3); font-size: 12.5px; line-height: 17px; }
 .src-img-l { color: var(--text-4); }
 
-/* Lehrplan (Einstellungen → Agenten): Stufe, Fächer als Chips, Stand je Fach */
-.lp .lp-fach-row { height: auto; align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
-.lp-chips { display: flex; flex: 1; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.lp-chip { height: 28px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 999px; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
-.lp-chip:hover { color: var(--text); }
-.lp-chip.on { border-color: transparent; background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 55%, #fff); }
-.lp-info { min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; }
-.lp-ok { display: inline-flex; align-items: center; gap: 5px; color: var(--text-3); }
-.lp-ok svg { color: var(--accent); }
-.lp-fail { color: #e5857a; }
-.lp label.ags-ib, .lp a.ags-ib { display: grid; place-items: center; cursor: pointer; }
-.lp .lp-note { height: auto; padding-top: 12px; padding-bottom: 12px; }
-.lp .lp-note .st-muted { font-size: 12.5px; line-height: 18px; }
 
 /* ===================================================================
    03.11.2026 (9) – Neuer Agent: Startfläche statt Schritt-für-Schritt, KI schlägt Namen und Aussehen vor (Entwurfs-Karte), flüssige Nachrichten
@@ -10781,7 +10734,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .msg-actions .msg-model { margin-left: auto; padding: 0 4px; color: var(--text-4); font-size: 11.5px; white-space: nowrap; opacity: 0; transition: opacity 200ms ease; }
 .msg-ai:hover .msg-model, .msg-actions:focus-within .msg-model { opacity: 1; }
 @media (hover: none) { .msg-actions .msg-model { opacity: 0.8; } }
-.lp .lp-note .st-muted { white-space: normal; overflow: visible; }
 
 /* ===== 03.11.2026 (10): Senden gesperrt, solange Dateien gelesen werden · Schritt „Handschrift lesen“ ===== */
 #composer.uploading .send-btn:not(.running) { opacity: .35; cursor: progress; }

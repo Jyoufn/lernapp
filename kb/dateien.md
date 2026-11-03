@@ -26,8 +26,6 @@
 | `code-box.js` | Mini-Apps (```widget): `parse`, `figure` (Kasten, Dashboard-Kacheln, Code-Ansicht), `srcdoc` (Sandbox + Grundstile + Laufzeit), `start/stop` (iframes, Wächter, Pause), Gespeichert (`codebox.saved.v1`), Design (`codebox.design.v1`), ```einstellung (`applySetting`), `render` (Haken aus `renderMarkdown`) |
 | `chat-bg.js` | Animierter Chat-Hintergrund (`chatbg.v1`): Leinwand-Szenen, eigener Code (```hintergrund) im iframe, Einstellungs-Abschnitt |
 | `agent-builder.js` | Eigene Agenten (`agents.custom.v1`): Fenster „Neuer Agent“ (Einrichtungs-Chat), Profil-Karte (```agentprofil), `window.agentPayload` (agent/custom/setup/look an jede Anfrage), Liste in Einstellungen → Agenten |
-| `ki-test.js` | KI-Test in Einstellungen → Agenten: feste Testfragen an `/api/chat`, automatische Prüfpunkte, Musterantwort (Claude) daneben (`kitest.v1`) |
-| `lehrplan.js` | Lehrplan (Lern-Agent): Kerncurricula Niedersachsen finden/hochladen, lesen (pdf.js), Abschnitte in IndexedDB, `Lehrplan.payload(frage)` (BM25) → `lehrplan` an `/api/chat`; Einstellungen → Agenten |
 | `style.css` (~8900 Z.) | Alle Stile; ältere Schichten oben, **gültig ist das Ende** |
 
 ## Server

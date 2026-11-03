@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'ki-test.js', 'lehrplan.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -1154,89 +1154,6 @@ async function handleAgentAvatar(req, res) {
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
 }
 
-/* ---------- /api/transcribe: Seiten ohne Text (Handschrift, Scans, Fotos von Heftseiten) wörtlich abschreiben ----------
-   Beim Antworten schickt der Browser die Seiten ohne Textschicht in kleinen Paketen (je ≤ 3 Seiten, mehrere parallel) – zurück kommt die
-   Abschrift je Seite. So geht der Inhalt ALLER Seiten in die Anfrage (die Bilder selbst würden das Größenlimit von ~4,5 MB sprengen).
-   Zeitlich begrenzt: ein Modell bekommt höchstens 50 s, die ganze Anfrage höchstens ~90 s – nie „lädt ewig“. Kein langes Nachdenken
-   (Abschreiben braucht keins, kostet nur Zeit). */
-const TRANSCRIBE_SYSTEM = `Du schreibst Seiten (Scans, Fotos, handschriftliche Notizen und Mitschriften, Arbeitsblätter) WORTGETREU und VOLLSTÄNDIG ab –
-nichts zusammenfassen, nichts weglassen, nichts ergänzen, nichts deuten. Jede Seite beginnt mit "=== Seite N ===" (N steht im Dateinamen), dann der Text in Lesereihenfolge.
-- Handschrift Wort für Wort entziffern, auch krakelige; ein unsicheres Wort mit [?] markieren, wirklich Unlesbares als [unleserlich] – nie raten oder überspringen.
-- Überschriften, Unterstreichungen und Markierungen als Überschrift bzw. **fett**; Aufzählungen als Liste; Tabellen als Markdown-Tabelle; Formeln, Reaktionsgleichungen und
-  Rechnungen in LaTeX ($…$), jede Zeile einer Rechnung einzeln; Pfeile und Skizzen kurz in eckigen Klammern beschreiben ([Skizze: …], [Pfeil von A nach B]).
-- Randnotizen und Ergänzungen an der passenden Stelle in eckigen Klammern ([Randnotiz: …]).
-Nur die Abschrift, kein Kommentar davor oder danach.`;
-async function handleTranscribe(req, res) {
-  const b = await readBody(req, 6 * 1024 * 1024);
-  const pages = (Array.isArray(b.pages) ? b.pages : []).filter((p) => /^image\/(jpeg|png|webp)$/.test(p?.mime) && typeof p.data === 'string' && p.data.length > 100).slice(0, 12);
-  if (!pages.length) return sendJson(res, 400, { error: 'Keine Seiten' });
-  const env = readEnv();
-  if (!P.keysOf(env, 'GEMINI_API_KEY').length) return sendJson(res, 400, { error: 'Für das Abschreiben fehlt ein Gemini-Key.' });
-  // Handschrift lesen die großen Flash-Modelle deutlich besser als die Lite-Modelle → zuerst sie, dann die Lite-Leiter
-  const models = [...new Set([...(await P.ladder(env, 'text')).filter((m) => !/lite|^gemini-2\./.test(m)).slice(0, 3), ...(await P.ladder(env, 'lite')).filter((m) => !/^gemini-2\./.test(m))])].slice(0, 6);
-  const files = pages.map((p) => ({ mime: p.mime, data: p.data, name: String(p.name || '').slice(0, 80) }));
-  const until = Date.now() + 90000;
-  let lastErr = null;
-  for (const model of models) {
-    const left = until - Date.now();
-    if (left < 12000) break;
-    const key = P.geminiKey(env, model);
-    try {
-      const text = await P.geminiOnce({ key, model, system: TRANSCRIBE_SYSTEM, user: `Schreib alle ${files.length} Seiten vollständig ab.`, files, maxTokens: Math.min(20000, 3500 * files.length), thinking: { level: 'low', budget: 0 }, signal: AbortSignal.timeout(Math.min(50000, left)) });
-      if (String(text).trim().length > 10) return sendJson(res, 200, { text: String(text).slice(0, 200000), model });
-    } catch (err) { lastErr = err; if (err?.name !== 'TimeoutError' && err?.name !== 'AbortError') P.markLimited(model, err, key); }
-  }
-  sendJson(res, 502, { error: lastErr?.status === 429 ? 'Das Kontingent zum Abschreiben ist gerade erschöpft.' : 'Die Seiten konnten gerade nicht abgeschrieben werden.' });
-}
-
-/* ---------- /api/lehrplan: Kerncurricula Niedersachsen finden und als PDF durchreichen ----------
-   Der Browser liest das PDF selbst (pdf.js, wie bei Anhängen) und hält die Abschnitte; der Server sucht nur das offizielle Dokument
-   (CuVo-Datenbank des NLQ) und reicht es durch – NUR von offiziellen Adressen (nibis.de, bildungsportal-niedersachsen.de, mk.niedersachsen.de). */
-const KC_HOSTS = /(^|\.)(nibis\.de|bildungsportal-niedersachsen\.de|mk\.niedersachsen\.de)$/i;
-async function handleLehrplanFind(req, res) {
-  const b = await readBody(req, 4000);
-  const fach = String(b.fach || '').replace(/[^\p{L}\s-]/gu, '').trim().slice(0, 40), stufe = Number(b.stufe) === 1 ? 1 : 2;
-  if (!fach) return sendJson(res, 400, { error: 'Fach fehlt' });
-  const env = readEnv();
-  const qs = stufe === 2
-    ? [`Kerncurriculum ${fach} gymnasiale Oberstufe Niedersachsen cuvo nibis`, `Kerncurriculum für das Gymnasium gymnasiale Oberstufe ${fach} Niedersächsisches Kultusministerium`]
-    : [`Kerncurriculum ${fach} Gymnasium Schuljahrgänge 5-10 Niedersachsen cuvo nibis`, `Kerncurriculum für das Gymnasium Schuljahrgänge 5-10 ${fach} Niedersächsisches Kultusministerium`];
-  const out = [], seen = new Set(), health = new Map();
-  const key = fach.toLowerCase().split(/[\s-]+/)[0];
-  for (const q of qs) {
-    let list = [];
-    try { list = await WEB.searchWeb(q, { env, min: 6, health }); } catch {}
-    for (const r of list) {
-      let host = r.host || '';
-      try { host ||= new URL(r.url).hostname; } catch { continue; }
-      host = host.replace(/^www\./, '');
-      if (!KC_HOSTS.test(host) || seen.has(r.url)) continue;
-      seen.add(r.url);
-      const t = `${r.title || ''} ${r.snippet || ''}`.toLowerCase();
-      const score = (t.includes(key) ? 2 : 0) + (/kerncurricul/.test(t) ? 1 : 0) + (/download|\.pdf/.test(r.url) ? 1 : 0) + (/oberstufe|sekundarbereich ii/.test(t) === (stufe === 2) ? 1 : 0);
-      out.push({ url: r.url, title: String(r.title || host).slice(0, 160), score });
-    }
-    if (out.filter((x) => x.score >= 3).length >= 2) break;
-  }
-  out.sort((a, b2) => b2.score - a.score);
-  sendJson(res, 200, { candidates: out.slice(0, 5) });
-}
-async function handleLehrplanPdf(req, res) {
-  const b = await readBody(req, 4000);
-  let start;
-  try { start = new URL(String(b.url || '')); } catch { return sendJson(res, 400, { error: 'Ungültige Adresse' }); }
-  if (!KC_HOSTS.test(start.hostname) && !/(^|\.)vertexaisearch\.cloud\.google\.com$/.test(start.hostname)) return sendJson(res, 400, { error: 'Nur offizielle Lehrplan-Seiten' });
-  try {
-    const r = await WEB.fetchPublic(start.href, { timeoutMs: 25000, accept: 'application/pdf,*/*;q=0.5', maxBytes: 4300000, binary: true });
-    if (!KC_HOSTS.test(new URL(r.url).hostname)) return sendJson(res, 400, { error: 'Nur offizielle Lehrplan-Seiten' });
-    if (!(r.body[0] === 0x25 && r.body[1] === 0x50 && r.body[2] === 0x44 && r.body[3] === 0x46)) return sendJson(res, 415, { error: 'Kein PDF' });
-    res.writeHead(200, { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, max-age=86400', 'X-Lehrplan-Url': encodeURI(r.url) });
-    res.end(r.body);
-  } catch (err) {
-    sendJson(res, 502, { error: /zu groß/.test(err.message) ? 'Das PDF ist zu groß zum Durchreichen – bitte selbst herunterladen und hochladen.' : `Nicht erreichbar (${err.message})` });
-  }
-}
-
 /* ---------- /api/widget-fix: Mini-App reparieren (Fehler aus dem Kasten) ----------
    Gibt den vollständigen, korrigierten Inhalt des ```widget-Blocks zurück; die App ersetzt die Mini-App an derselben Stelle (keine neue Nachricht).
    Läuft beim Coding-Anbieter (MiniMax zuerst, außer „Coden mit: Gemini“) mit dem stärksten Modell. */
@@ -1601,9 +1518,6 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
-    if (req.method === 'POST' && urlPath === '/api/transcribe') return await handleTranscribe(req, res);
-    if (req.method === 'POST' && urlPath === '/api/lehrplan/find') return await handleLehrplanFind(req, res);
-    if (req.method === 'POST' && urlPath === '/api/lehrplan/pdf') return await handleLehrplanPdf(req, res);
     if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);

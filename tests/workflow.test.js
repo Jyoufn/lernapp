@@ -958,29 +958,6 @@ test('Modell von Google abgeschaltet („no longer available to new users“): n
   P.resetLimits();
 });
 
-test('Lehrplan (Lern-Agent): Auszüge des Kerncurriculums als Rahmen im Prompt und als Quelle; andere Agenten ignorieren ihn', async () => {
-  fx = M.installFetch([
-    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'medium', sources: 'none', queries: [], why: 'Erklärung' }) },
-    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Laut Kerncurriculum gehört dazu die Lichtreaktion [1].'])) },
-  ]);
-  const lehrplan = { land: 'Niedersachsen', schulform: 'Gymnasium', stufe: 'Klasse 11–13', fach: 'Biologie', title: 'Kerncurriculum Biologie – gymnasiale Oberstufe (Niedersachsen)',
-    url: 'https://cuvo.nibis.de/index.php?p=download&upload=999', auszuege: [{ seite: 24, text: 'FW 4 Stoff- und Energieumwandlung: erklären die Umwandlung von Lichtenergie in chemische Energie bei der Fotosynthese (Primär- und Sekundärreaktion, chemiosmotisches Modell der ATP-Bildung).' }] };
-  const r = await run({ ...msg('Erkläre mir die Fotosynthese'), agent: 'learn', effort: 'auto', lehrplan });
-  assert.equal(r.result.status, 'completed');
-  const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
-  assert.match(sys, /LEHRPLAN NIEDERSACHSEN – Kerncurriculum Biologie/);
-  assert.match(sys, /<lehrplan seite="24">[\s\S]*chemiosmotisches Modell/);
-  assert.match(sys, /Passt keiner der Auszüge wirklich zur Frage: ignoriere ihn/);
-  const src = r.events.filter((e) => e.event === 'research' && e.data.status === 'done').pop();
-  assert.equal(src.data.sources.at(-1).type, 'lehrplan');
-  assert.equal(src.data.sources.at(-1).url, lehrplan.url);
-  fx.calls.length = 0;
-  await run({ ...msg('Erkläre mir die Fotosynthese'), agent: 'general', effort: 'auto', lehrplan });
-  assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LEHRPLAN/, 'nur der Lern-Agent');
-  assert.equal(W.cleanLehrplan({ ...lehrplan, url: 'https://evil.example/x.pdf' }).url, '', 'nur offizielle Adressen');
-  assert.equal(W.cleanLehrplan({ auszuege: [] }), null);
-});
-
 test('PDF mit Handschrift: Gemini bekommt das PDF selbst und den Hinweis, die Seiten direkt darin zu lesen', () => {
   const P = require('../lib/providers');
   const [c] = P.toGeminiContents([{ role: 'user', text: 'Was steht drin?', images: [{ mime: 'application/pdf', name: 'Mitschrift.pdf', data: 'JVBERi0x', hand: '1–17', text: '…' }] }]);

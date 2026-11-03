@@ -451,7 +451,7 @@ function addFiles(files) {
 function prepareAttachment(a) {
   a.status = 'loading'; a.progress = 0;
   const t0 = performance.now();
-  // nur lesen, was schnell geht (Text, Fotos verkleinern) – Handschrift liest erst die Antwort (Schritt „Handschrift lesen“)
+  // nur lesen, was schnell geht (Text, Fotos verkleinern) – Seitenbilder großer PDFs entstehen danach im Hintergrund
   a.prep = fileToInline(a.file, 1600, (p, label) => { a.progress = p; a.label = label || ''; updateAttachment(a); }, { defer: true })
     .then(async (r) => {
       const wait = 500 - (performance.now() - t0); // die Animation ist immer kurz zu sehen (nicht nur ein Flackern)
@@ -481,7 +481,7 @@ function updateAttachment(a) {
   node.classList.toggle('loading', a.status === 'loading');
   node.classList.toggle('failed', a.status === 'error');
   const meta = node.querySelector('.pdf-meta');
-  if (meta) meta.textContent = a.status === 'loading' ? (a.label && /Handschrift/.test(a.label) ? a.label : `Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}`) : a.meta || 'PDF';
+  if (meta) meta.textContent = a.status === 'loading' ? (`Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}`) : a.meta || 'PDF';
   node.querySelector('.pdf-meta')?.classList.toggle('shimmer', a.status === 'loading');
 }
 
@@ -734,8 +734,9 @@ function addUserMessage(text, images) {
     images.forEach((img, i) => {
       const tile = el('div', 'oi');
       const image = document.createElement('img');
-      image.src = img.url;
+      if (img.url) image.src = img.url;
       image.alt = img.name;
+      if (img.fileId) fileStore.get(img.fileId).then((b) => { if (b) image.src = URL.createObjectURL(b); }); // ganzes Foto aus dem Gerät (statt Vorschaubild)
       tile.append(image);
       if (overflow && i === moreIndex) tile.append(el('div', 'oi-more', `+${images.length - moreIndex}`));
       if (overflow && i > moreIndex) tile.classList.add('is-hidden'); // bleibt für die Großansicht im DOM
@@ -1648,9 +1649,10 @@ const REDUCE_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').ma
 /* Weicher Schreib-Saum: Die zuletzt hinzugekommenen Zeichen (je Schritt ein Stück) werden nach jedem Neuzeichnen in Spans mit negativer
    Animations-Verzögerung gelegt – so blendet jedes Stück über ~0,5 s ein, auch wenn der Text bei jedem Schritt neu gerendert wird.
    Formeln, Code, Tabellen, Grafiken und Bausteine bleiben unberührt. */
-const INK_SKIP = 'pre, code, .katex, svg, figure, table, .ask-panel, .chip, .cite, sup, a.cite, [data-blk]';
+const INK_SKIP = 'pre, code, .katex, svg, figure, table, .ask-panel, .chip, .cite, sup, a.cite, [data-blk], button, [class*="cbx"], [class*="cbg"]';
+const INK_TEXT = 'p, li, h1, h2, h3, h4, h5, h6, blockquote, dd, dt'; // nur Fließtext – nie Text in Karten/Knöpfen (sonst zerreißt z. B. „Eingestellt“)
 function inkTail(root, steps, now) {
-  const nodes = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement?.closest(INK_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  const nodes = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement?.closest(INK_SKIP) || !n.parentElement?.closest(INK_TEXT) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   let total = 0;
   for (let n = walker.nextNode(); n; n = walker.nextNode()) { nodes.push({ n, from: total }); total += n.nodeValue.length; }
   if (!steps.length || steps[steps.length - 1].len !== total) steps.push({ t: now, len: total });
@@ -1752,43 +1754,9 @@ const loadPdfJs = () => (pdfLib ||= new Promise((ok, fail) => {
   s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`; ok(window.pdfjsLib); };
   s.onerror = fail; document.head.append(s);
 }));
-async function pdfText(bytes, maxChars = 300000, onProgress = null) {
-  try {
-    const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
-    let out = '', read = 0;
-    for (let p = 1; p <= doc.numPages && out.length < maxChars; p++) {
-      const c = await (await doc.getPage(p)).getTextContent();
-      out += `\n[Seite ${p}]\n${c.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('')}`;
-      read = p;
-      if (p % 4 === 0) onProgress?.(p / doc.numPages);
-    }
-    return { text: out.replace(/[ \t]+/g, ' ').slice(0, maxChars).trim(), pages: doc.numPages, read };
-  } catch { pdfLib = null; return { text: '', pages: 0, read: 0 }; }
-}
-/* Gescanntes PDF (Handschrift, abfotografierte Seiten) hat keinen Text – als PDF sieht Gemini es nur grob, und passt es nicht in die
-   Anfrage, kam bisher gar nichts an. Darum werden seine Seiten im Gerät zu Bildern (je Seite eine Datei; Lupe und Lese-Helfer greifen dann). */
-const PDF_PAGE_MAX = 16;
-async function pdfPagesAsImages(bytes, name, max = 1600, onProgress = null) {
-  const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
-  const out = [];
-  if (doc.numPages > 6) max = Math.min(max, 1350); // viele Seiten: etwas kleiner, damit mehr davon in die Anfrage passen
-  for (let p = 1; p <= Math.min(doc.numPages, PDF_PAGE_MAX); p++) {
-    onProgress?.(0.5 + 0.5 * (p - 1) / Math.min(doc.numPages, PDF_PAGE_MAX));
-    const page = await doc.getPage(p);
-    const base = page.getViewport({ scale: 1 });
-    const vp = page.getViewport({ scale: Math.min(3, max / Math.max(base.width, base.height)) });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    await page.render({ canvasContext: ctx, viewport: vp }).promise;
-    out.push({ mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', doc.numPages > 6 ? 0.74 : 0.82).split(',')[1], name: `${name} · S. ${p}${p === PDF_PAGE_MAX && doc.numPages > p ? ` (von ${doc.numPages})` : ''}` });
-  }
-  return out;
-}
 /* GoodNotes (.goodnotes) ist ein ZIP: eingebettete PDFs (z. B. das importierte Arbeitsblatt) und Bilder lassen sich lesen; die eigene
    Handschrift liegt in einem GoodNotes-eigenen Format und ist darin nicht lesbar → Hinweis an die KI, die dann den PDF-Export empfiehlt
-   (ein exportiertes PDF mit Handschrift wird als Scan erkannt und als Seitenbilder gelesen). Entpacken ohne Bibliothek (DecompressionStream). */
+   (ein exportiertes PDF mit Handschrift liest Gemini selbst). Entpacken ohne Bibliothek (DecompressionStream). */
 const isGoodnotes = (f) => /\.goodnotes$/i.test(f?.name || '');
 async function unzip(buf) {
   const v = new DataView(buf), u8 = new Uint8Array(buf), dec = new TextDecoder();
@@ -1834,22 +1802,22 @@ async function goodnotesToInline(file, opts = {}) {
   return out;
 }
 // Liefert eine Datei – oder bei gescannten PDFs/GoodNotes eine Liste (Aufrufer glätten mit .flat())
-/* PDF lesen wie große KI-Plattformen: JEDE Seite einzeln – Seiten mit Text liefern ihren Text, Seiten OHNE Text (Handschrift, Scans,
-   abfotografierte Heftseiten) werden als Bild gerendert und wortgetreu abgeschrieben (/api/transcribe, mehrere kleine Pakete parallel).
-   Beim Anhängen (defer) wird NUR der Text gelesen – das geht schnell; die Handschrift liest erst die Antwort selbst, als Schritt
-   „Handschrift lesen · 3/17“ in der Zeitleiste (readScans in runChat). Ohne defer (Dokumente-KI) passiert beides sofort.
-   Das PDF selbst geht zusätzlich mit, wenn es in die Anfrage passt (Gemini sieht dann auch Skizzen und Tabellen). */
-const SCAN_TEXT_MIN = 80;         // weniger Zeichen auf einer Seite → als Scan/Handschrift behandeln
-const TRANSCRIBE_BATCH = 2400000; // Base64-Zeichen je Abschreib-Paket (Anfrage ≤ 4,5 MB)
-const TRANSCRIBE_PAGES = 3;       // Seiten je Paket – kleine Pakete sind schneller fertig und laufen parallel
-const TRANSCRIBE_PARALLEL = 3;    // so viele Pakete gleichzeitig
-const TRANSCRIBE_TIMEOUT = 100000; // ein Paket darf nie ewig hängen – danach gehen die Seiten als Bild mit
-const scanJobs = new WeakMap();   // PDF-Eintrag → Seiten, die noch abgeschrieben werden müssen
+/* PDFs wie große KI-Plattformen: Gemini VERSTEHT das Dokument selbst – nichts wird abgeschrieben.
+   - Passt das PDF in die Anfrage (≤ 2,3 MB), geht es als Datei mit: Gemini sieht Text, Handschrift, Skizzen, Tabellen (Hinweis `hand` auf Handschrift-Seiten).
+   - Größer: der Text jeder Seite (pdf.js, exakt) + die Seiten, die man SEHEN muss, als kompakte Bilder: Handschrift/Scans (kein Text) und
+     Seiten mit wenig Text (Folien, Skizzen, Diagramme). Größe/Qualität passen sich an, damit möglichst ALLE diese Seiten in die Anfrage passen.
+   Beim Anhängen wird nur der Text gelesen (schnell, danach ist Senden frei); die Seitenbilder entstehen gleich danach im Hintergrund.
+   Ist das beim Senden noch nicht fertig, läuft es im Schritt „Dokumente analysieren · 5/18“ der Zeitleiste weiter (prepareDocs in runChat). */
+const SCAN_TEXT_MIN = 80;        // weniger Zeichen auf einer Seite → Handschrift/Scan
+const VISUAL_TEXT_MAX = 450;     // große PDFs: Seiten mit so wenig Text sind meist Folien/Skizzen/Diagramme → zusätzlich als Bild
+const PAGE_IMG_BUDGET = 2500000; // Base64-Zeichen für Seitenbilder (Anfrage ≤ 4,5 MB, MATERIAL_BUDGET 3,3 MB)
+const PAGE_TIERS = [[1500, 0.62], [1300, 0.56], [1150, 0.5], [1000, 0.46], [850, 0.42]]; // längste Seite in px, JPEG-Qualität
+const pageJobs = new WeakMap();  // PDF-Eintrag → Seitenbilder, die (im Hintergrund) entstehen
 // [1,2,3,5,7,8] → „1–3, 5, 7–8“
 const pageRanges = (list) => list.reduce((out, p) => { const last = out[out.length - 1]; if (last && p === last[1] + 1) last[1] = p; else out.push([p, p]); return out; }, [])
   .map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(', ');
-/* Angehängte PDFs bleiben im Gerät (IndexedDB, die letzten 40): so lassen sie sich auch nach dem Neuladen öffnen, und große PDFs gehen
-   bei Folgefragen wieder als Datei an Gemini, obwohl auf dem Server nur ihr Text liegt. */
+/* Angehängte Dateien (PDFs, Fotos, PDF-Seitenbilder) bleiben im Gerät (IndexedDB, die letzten 400): so lassen sie sich nach dem Neuladen
+   öffnen und gehen bei Folgefragen wieder als Datei an Gemini – auf dem Server liegt nur Text, Name und ein kleines Vorschaubild. */
 const fileStore = (() => {
   let dbp = null;
   const open = () => (dbp ||= new Promise((res, rej) => {
@@ -1859,11 +1827,12 @@ const fileStore = (() => {
   return {
     put: (id, blob) => tx('readwrite', (st) => st.put(blob, id))
       .then(() => tx('readonly', (st) => st.getAllKeys()))
-      .then((keys) => { const old = (keys || []).map(String).sort().slice(0, -40); if (old.length) return tx('readwrite', (st) => old.forEach((k) => st.delete(k))); })
+      .then((keys) => { const old = (keys || []).map(String).sort().slice(0, -400); if (old.length) return tx('readwrite', (st) => old.forEach((k) => st.delete(k))); })
       .catch(() => {}),
     get: (id) => tx('readonly', (st) => st.get(id)).catch(() => null),
   };
 })();
+try { indexedDB.deleteDatabase('lehrplan'); } catch {} // früherer Lehrplan-Speicher (entfernt 03.11.) – Platz freigeben
 const keepFile = (file) => { const id = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; fileStore.put(id, file); return id; }; // Zeit vorn → sortiert = älteste zuerst
 const b64Bytes = (b64) => { const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8; };
 async function pdfBytes(src) {
@@ -1880,7 +1849,12 @@ async function withFiles(messages) {
     out[i] = { ...out[i], images: await Promise.all(out[i].images.map(async (img) => {
       if (!(img.cut && img.fileId && !img.data)) return img;
       const blob = await fileStore.get(img.fileId);
-      if (!blob || blob.size > PDF_RAW_MAX) return img;
+      if (!blob) return img;
+      if (/^image\//.test(img.mime) && !img.page) { // Foto: wie beim Anhängen verkleinern
+        const r = await fileToInline(new File([blob], img.name || 'Foto.jpg', { type: blob.type || 'image/jpeg' }), 1600, null, { keep: false }).catch(() => null);
+        return r?.data ? { ...img, data: r.data } : img;
+      }
+      if (blob.size > PDF_RAW_MAX) return img;
       const u8 = new Uint8Array(await blob.arrayBuffer());
       let bin = ''; for (let k = 0; k < u8.length; k += 0x8000) bin += String.fromCharCode(...u8.subarray(k, k + 0x8000));
       return { ...img, data: btoa(bin) };
@@ -2001,25 +1975,15 @@ async function renderPdfPage(doc, p, max, quality) {
   return data;
 }
 const abortError = () => new DOMException('Abgebrochen', 'AbortError');
-async function transcribePages(list, signal) { // list: [{ p, data }] → Map(Seite → Text)
-  const timeout = AbortSignal.timeout?.(TRANSCRIBE_TIMEOUT);
-  const sig = signal && timeout && AbortSignal.any ? AbortSignal.any([signal, timeout]) : signal || timeout;
-  const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: sig, body: JSON.stringify({ pages: list.map((x) => ({ mime: 'image/jpeg', data: x.data, name: `Seite ${x.p}` })) }) });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.text) throw new Error(j.error || 'Abschreiben fehlgeschlagen');
-  const out = new Map();
-  const parts = String(j.text).split(/^\s*=+\s*Seite\s+(\d+)\s*=+\s*$/m);
-  for (let i = 1; i < parts.length; i += 2) out.set(Number(parts[i]), parts[i + 1].trim());
-  if (!out.size && list.length === 1) out.set(list[0].p, String(j.text).trim());
-  return out;
-}
-// Text des ganzen PDFs, Seite für Seite; done = Abschriften (null = noch nicht gelesen), pics = Seiten, die als Bild mitgehen
-function pdfPagesText(texts, scans, done, pics = new Set(), inPdf = false) {
+// Text des ganzen PDFs, Seite für Seite; pics = Seiten, die als Bild mitgehen; left = Seiten, die nicht mehr in die Anfrage passten
+function pdfPagesText(texts, scans, { inPdf = false, pics = null, left = null } = {}) {
   const body = (p) => {
-    if (!scans.includes(p)) return texts[p - 1];
-    if (done?.has(p)) return `(Handschrift/Scan – abgeschrieben)\n${done.get(p)}`;
-    if (pics?.has(p)) return '(Seite ohne Text – als Bild beigefügt)';
-    return inPdf ? '(Handschrift/Scan – steht nur im PDF selbst)' : '(Handschrift/Scan – nicht abgeschrieben)';
+    const t = texts[p - 1];
+    if (!scans.includes(p)) return pics?.has(p) ? `${t}\n(Seite zusätzlich als Bild beigefügt – Skizzen/Abbildungen dort ansehen)` : t;
+    if (inPdf) return '(Handschrift/Scan – im PDF selbst lesen)';
+    if (pics?.has(p)) return '(Handschrift/Scan – als Bild beigefügt, dort lesen)';
+    if (left?.has(p)) return '(Handschrift/Scan – nicht mitgeschickt, das Dokument ist zu groß)';
+    return '(Handschrift/Scan – Seite wird noch vorbereitet)';
   };
   return Array.from({ length: texts.length }, (_, i) => `[Seite ${i + 1}]\n${body(i + 1)}`).join('\n\n').slice(0, 400000);
 }
@@ -2033,84 +1997,55 @@ async function pdfToInline(file, onProgress, { defer = false } = {}) {
     texts.push(t); total += t.length;
     if (p % 3 === 0) onProgress?.(0.9 * p / n, 'Wird gelesen');
   }
-  const scans = texts.map((t, i) => (t.replace(/\s/g, '').length < SCAN_TEXT_MIN ? i + 1 : 0)).filter(Boolean).slice(0, 60);
+  doc.destroy?.();
+  const plain = (t) => t.replace(/\s/g, '').length;
+  const scans = texts.map((t, i) => (plain(t) < SCAN_TEXT_MIN ? i + 1 : 0)).filter(Boolean);
   let bin = '';
   if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: pdfPagesText(texts, scans, null, null, !!bin), fileId: keepFile(file) };
-  if (!scans.length) { doc.destroy?.(); return [item]; }
-  item.scans = scans.length;
-  item.hand = pageRanges(scans); // Hinweis an Gemini: diese Seiten direkt im PDF lesen
-  // Passt das PDF selbst in die Anfrage, liest Gemini die Handschrift direkt darin (wie in der Gemini-App) – kein eigener Abschreib-Schritt.
-  // Nur wenn es zu groß ist, werden die Seiten ohne Text abgeschrieben.
-  if (bin) { doc.destroy?.(); return [item]; }
-  scanJobs.set(item, { file, texts, scans });
-  if (defer) { doc.destroy?.(); return [item]; } // Handschrift erst beim Antworten lesen
-  try { return [item, ...await readScanJob(item, (k, all) => onProgress?.(0.9, `Handschrift wird gelesen · ${k}/${all}`), null, doc)]; } finally { doc.destroy?.(); }
+  const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: '', fileId: keepFile(file) };
+  if (scans.length) { item.scans = scans.length; item.hand = pageRanges(scans); }
+  if (bin) { item.text = pdfPagesText(texts, scans, { inPdf: true }); return [item]; } // Gemini liest das PDF selbst
+  // zu groß für die Anfrage: Seiten zum Ansehen – zuerst Handschrift/Scans, dann Seiten mit wenig Text (Folien, Skizzen)
+  const visual = texts.map((t, i) => (plain(t) >= SCAN_TEXT_MIN && plain(t) < VISUAL_TEXT_MAX ? i + 1 : 0)).filter(Boolean);
+  const list = [...scans, ...visual];
+  item.text = pdfPagesText(texts, scans);
+  if (!list.length) return [item];
+  const job = { file, texts, scans, list, k: 0, imgs: null, listeners: [] };
+  pageJobs.set(item, job);
+  job.run = renderPages(item, job).catch(() => { job.imgs = []; item.text = pdfPagesText(texts, scans, { left: new Set(scans) }); return []; });
+  if (defer) return [item]; // Seitenbilder entstehen im Hintergrund (Senden ist schon frei)
+  const imgs = await job.run;
+  pageJobs.delete(item);
+  return [item, ...imgs];
 }
-/* Handschrift eines PDF-Eintrags abschreiben: Seiten rendern, in kleinen Paketen PARALLEL abschreiben lassen (deutlich schneller als
-   nacheinander). Was nicht klappt (Kontingent, Zeitlimit), geht als kleineres Bild mit. Ergebnis: der Eintrag hat danach den vollen Text;
-   zurück kommen die Bild-Seiten (für die Anfrage). onPage(fertig, alle) meldet den Fortschritt. */
-/* Handschrift eines großen PDFs (passt nicht selbst in die Anfrage) für Gemini aufbereiten – schnellster Weg zuerst:
-   1) Seiten als kompakte Bilder DIREKT in die Anfrage (Gemini liest die Handschrift selbst, im selben Aufruf – kein Extra-Aufruf, kein Kontingent),
-      so viele, wie in die Anfrage passen (PAGE_IMG_BUDGET);
-   2) nur was dann noch übrig ist, in kleinen Paketen parallel abschreiben lassen (/api/transcribe); scheitert das, als kleines Bild.
-   Ergebnis: der Eintrag hat danach den vollen Text, zurück kommen die Seitenbilder. onPage(fertig, alle, art) meldet den Fortschritt. */
-const PAGE_IMG_BUDGET = 2500000; // Base64-Zeichen für Seitenbilder (Anfrage ≤ 4,5 MB, MATERIAL_BUDGET 3,3 MB)
-function readScanJob(item, onPage, signal, openDoc = null) {
-  const job = scanJobs.get(item);
-  if (!job) return Promise.resolve([]);
-  if (job.run) { job.listeners.push(onPage); return job.run; }
-  job.listeners = [onPage];
-  let mode = 'bild';
-  const tell = (k) => job.listeners.forEach((f) => f?.(k, job.scans.length, mode));
-  job.run = (async () => {
-    const doc = openDoc || await (await loadPdfJs()).getDocument({ data: new Uint8Array(await job.file.arrayBuffer()) }).promise;
-    const base = item.name.replace(/\.pdf$/i, '');
-    const done = new Map(), failed = [], running = new Set(), imgs = [], rest = [];
-    let read = 0, batch = [], size = 0, used = 0;
-    tell(0);
-    try {
-      for (const p of job.scans) {
-        if (signal?.aborted) throw abortError();
-        if (rest.length) { rest.push(p); continue; }
-        const data = await renderPdfPage(doc, p, 1250, 0.55);
-        if (used + data.length > PAGE_IMG_BUDGET) { rest.push(p); continue; }
-        used += data.length;
-        imgs.push({ mime: 'image/jpeg', data, name: `${base} · S. ${p}`, page: p });
-        tell(++read);
-      }
-      if (rest.length) {
-        mode = 'text';
-        const send = (part) => {
-          const run = transcribePages(part, signal)
-            .then((m) => { m.forEach((v, k) => done.set(k, v)); part.filter((x) => !m.has(x.p)).forEach((x) => failed.push(x.p)); })
-            .catch(() => { if (!signal?.aborted) failed.push(...part.map((x) => x.p)); })
-            .finally(() => { running.delete(run); read += part.length; tell(read); });
-          running.add(run);
-        };
-        for (const p of rest) {
-          if (signal?.aborted) throw abortError();
-          const data = await renderPdfPage(doc, p, 1600, 0.8);
-          if (batch.length && (size + data.length > TRANSCRIBE_BATCH || batch.length >= TRANSCRIBE_PAGES)) {
-            send(batch); batch = []; size = 0;
-            while (running.size >= TRANSCRIBE_PARALLEL) await Promise.race(running); // höchstens 3 Pakete gleichzeitig
-          }
-          batch.push({ p, data }); size += data.length;
-        }
-        if (batch.length) send(batch);
-        while (running.size) await Promise.race(running);
-      }
-      if (signal?.aborted) throw abortError();
-      for (const p of failed.sort((a, b) => a - b).slice(0, 8)) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, p, 1100, 0.5), name: `${base} · S. ${p}`, page: p });
-      item.text = pdfPagesText(job.texts, job.scans, done, new Set(imgs.map((x) => x.page)));
-      item.transcribed = done.size;
-      item.asImages = imgs.length;
-      scanJobs.delete(item);
-      return imgs;
-    } finally { if (!openDoc) doc.destroy?.(); }
-  })();
-  job.run.catch(() => { job.run = null; }); // gestoppt → beim nächsten Senden bzw. „Neu erzeugen“ noch einmal
-  return job.run;
+/* Seitenbilder eines großen PDFs: erst eine Probeseite, daraus die Stufe (Größe/Qualität), mit der alle Seiten ins Budget passen;
+   passen selbst in der kleinsten Stufe nicht alle, gehen Handschrift/Scans vor, der Rest wird im Text als „nicht mitgeschickt“ markiert. */
+async function renderPages(item, job) {
+  const doc = await (await loadPdfJs()).getDocument({ data: new Uint8Array(await job.file.arrayBuffer()) }).promise;
+  const base = item.name.replace(/\.pdf$/i, '');
+  const tell = () => job.listeners.forEach((f) => f?.(job.k, job.list.length));
+  try {
+    const probe = await renderPdfPage(doc, job.list[0], PAGE_TIERS[0][0], PAGE_TIERS[0][1]);
+    const est = (t) => probe.length * (PAGE_TIERS[t][0] / PAGE_TIERS[0][0]) ** 2 * (PAGE_TIERS[t][1] / PAGE_TIERS[0][1]) * job.list.length;
+    let tier = PAGE_TIERS.findIndex((_, t) => est(t) <= PAGE_IMG_BUDGET * 0.9);
+    if (tier < 0) tier = PAGE_TIERS.length - 1;
+    const [px, q] = PAGE_TIERS[tier];
+    const imgs = [], pics = new Set(), left = new Set();
+    let used = 0;
+    for (const [i, p] of job.list.entries()) {
+      const data = p === job.list[0] && tier === 0 ? probe : await renderPdfPage(doc, p, px, q);
+      if (used + data.length > PAGE_IMG_BUDGET) { job.list.slice(i).forEach((x) => left.add(x)); job.k = job.list.length; tell(); break; } // voll → Rest nur als Text
+      used += data.length; pics.add(p);
+      imgs.push({ mime: 'image/jpeg', data, name: `${base} · S. ${p}`, page: p, fileId: keepFile(new Blob([b64Bytes(data)], { type: 'image/jpeg' })) });
+      job.k++; tell();
+      await new Promise((ok) => setTimeout(ok, 0)); // Oberfläche bleibt flüssig
+    }
+    imgs.sort((a, b) => a.page - b.page);
+    item.text = pdfPagesText(job.texts, job.scans, { pics, left });
+    item.asImages = imgs.length;
+    job.imgs = imgs;
+    return imgs;
+  } finally { doc.destroy?.(); }
 }
 async function fileToInline(file, max = 1600, onProgress = null, opts = {}) {
   if (isGoodnotes(file)) return goodnotesToInline(file, opts);
@@ -2124,7 +2059,15 @@ async function fileToInline(file, max = 1600, onProgress = null, opts = {}) {
   ctx.fillStyle = '#fff'; // transparente PNGs bekommen weißen Hintergrund
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return { mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.85).split(',')[1], name: file.name };
+  const data = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  // kleines Vorschaubild für den gespeicherten Chat (auf dem Server liegt nur das; das ganze Foto bleibt im Gerät → fileId)
+  const t = Math.min(1, 240 / Math.max(canvas.width, canvas.height));
+  const small = document.createElement('canvas');
+  small.width = Math.max(1, Math.round(canvas.width * t)); small.height = Math.max(1, Math.round(canvas.height * t));
+  small.getContext('2d').drawImage(canvas, 0, 0, small.width, small.height);
+  const thumb = small.toDataURL('image/jpeg', 0.6).split(',')[1];
+  canvas.width = canvas.height = small.width = small.height = 0;
+  return { mime: 'image/jpeg', data, name: file.name, thumb, ...(opts.keep === false ? {} : { fileId: keepFile(file) }) };
 }
 
 /* Verlauf für die Anfrage: alle Anhänge des Chats (Material), die neuesten zuerst – bis zur Obergrenze; ältere darüber hinaus bleiben weg */
@@ -3087,6 +3030,14 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       stages[s.stage] = { step: el('div'), from: Date.now(), serverFrom: Date.parse(s.ts) || null, deep: true };
       return;
     }
+    if (s.stage === 'material' && prepStep && !prepStep.closed && !prepStep.adopted) { // Vorbereitung im Browser → derselbe Schritt läuft weiter
+      prepStep.adopted = true;
+      prepStep.step.querySelector('.step-line').innerHTML = live('material', prepStep.from);
+      stages.material = { step: prepStep.step, from: prepStep.from, serverFrom: null, key: 'material' };
+      queueMicrotask(() => phase('material'));
+      return;
+    }
+    closePrep();
     const from = Date.now();
     const news = s.stage === 'browsing' && s.meta?.news; // Börsen-Agent: liest nur Nachrichten seriöser Finanzseiten
     const key = s.stage === 'market' && s.meta?.first ? s.meta.first : stageKey(s.stage, news); // Börse: erster Schritt passend zur Frage
@@ -3320,53 +3271,45 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     thought.steps.forEach(finishThoughtStep);
   };
   const pendingAskStep = () => false; // Rückfragen laufen über die Zeitleiste selbst
-  /* Handschrift in angehängten PDFs: erst JETZT abschreiben (beim Anhängen wurde nur der Text gelesen) – als erster Schritt der
-     Zeitleiste „Handschrift lesen · 3/17“, Hauptstatus „Verstehen“. Danach geht die Anfrage mit dem vollen Text an die KI. */
-  const readScans = async () => {
-    const items = historyOf(tab).filter((h) => h.role === 'user').flatMap((h) => (h.images || []).map((img) => ({ h, img }))).filter(({ img }) => scanJobs.has(img));
+  /* Große PDFs: die Seitenbilder (Handschrift, Scans, Folien) entstehen nach dem Anhängen im Hintergrund. Sind sie beim Senden noch nicht
+     fertig, wartet die Antwort darauf – sichtbar als Schritt „Dokumente analysieren · 5/18“; die Server-Stufe „Dokumente analysieren“
+     übernimmt danach genau diesen Schritt (eine Zeile, kein „Handschrift …“). Fertige Bilder gehen hinter dem PDF in die Nachricht. */
+  let prepStep = null;
+  const prepareDocs = async () => {
+    const items = historyOf(tab).filter((h) => h.role === 'user').flatMap((h) => (h.images || []).map((img) => ({ h, img }))).filter(({ img }) => pageJobs.has(img));
     if (!items.length) return;
-    const total = items.reduce((n, { img }) => n + scanJobs.get(img).scans.length, 0);
+    const put = ({ h, img }, imgs) => { pageJobs.delete(img); if (imgs?.length) h.images.splice(h.images.indexOf(img) + 1, 0, ...imgs); };
+    const open = items.filter(({ img }) => !pageJobs.get(img).imgs);
+    items.filter(({ img }) => pageJobs.get(img).imgs).forEach((x) => put(x, pageJobs.get(x.img).imgs)); // schon fertig → sofort
+    if (!open.length) return;
+    const jobs = open.map(({ img }) => pageJobs.get(img));
+    const total = jobs.reduce((n, j) => n + j.list.length, 0);
     ensureWork(); phase('material');
     const from = Date.now();
-    const step = stepLine('spin', `<span class="shimmer scan-l">Handschrift vorbereiten</span> <span class="ph-x scan-n">· 0/${total} ${total === 1 ? 'Seite' : 'Seiten'}</span><span class="t live" data-from="${from}">1s</span>`);
-    step.classList.add('scan-step');
+    const step = stepLine('spin', `<span class="shimmer">${P('material').sub}</span> <span class="ph-x scan-n">· 0/${total} Seiten</span><span class="t live" data-from="${from}">1s</span>`);
     work.steps.append(step);
+    prepStep = { step, from, total };
     scrollToBottom();
-    const count = step.querySelector('.scan-n'), label = step.querySelector('.scan-l');
-    const seen = new Map();
-    const tick = (img) => (k, all, mode) => {
-      seen.set(img, k);
-      const sum = [...seen.values()].reduce((a, b) => a + b, 0);
-      count.textContent = `· ${Math.min(sum, total)}/${total} ${total === 1 ? 'Seite' : 'Seiten'}`;
-      if (mode === 'text' && label.textContent !== 'Handschrift lesen') label.textContent = 'Handschrift lesen'; // Rest wird abgeschrieben
-    };
-    let ok = 0, pics = 0;
-    try {
-      for (const { h, img } of items) {
-        const extra = await readScanJob(img, tick(img), signal);
-        ok += img.transcribed || 0;
-        pics += extra.length;
-        if (extra.length) { const at = h.images.indexOf(img); h.images.splice(at + 1, 0, ...extra); } // nicht lesbare Seiten als Bild dahinter
-      }
-    } catch (err) {
-      if (signal.aborted || err.name === 'AbortError') { finishStep(step, `Handschrift lesen <span class="ph-x">– gestoppt</span>`); throw err.name === 'AbortError' ? err : abortError(); }
-      finishStep(step, `Handschrift lesen <span class="ph-x">· nicht verfügbar</span> <span class="t">${secs(from)}</span>`); // z. B. pdf.js nicht ladbar → die KI bekommt, was schon da ist
-      return;
-    }
-    const pages = (k) => `${k} ${k === 1 ? 'Seite' : 'Seiten'}`;
-    const what = ok && pics ? `${pics} als Bild, ${ok} abgeschrieben` : ok ? `${pages(ok)} abgeschrieben` : pics ? `${pages(pics)} für Gemini` : 'nicht lesbar';
-    finishStep(step, `Handschrift vorbereitet <span class="ph-x">· ${what}</span> <span class="t">${secs(from)}</span>`);
+    const count = step.querySelector('.scan-n');
+    const paint = () => { count.textContent = `· ${Math.min(total, jobs.reduce((n, j) => n + j.k, 0))}/${total} Seiten`; };
+    jobs.forEach((j) => j.listeners.push(paint));
+    paint();
+    const stop = new Promise((_, no) => signal.addEventListener('abort', () => no(abortError()), { once: true }));
+    for (const [i, x] of open.entries()) put(x, await Promise.race([jobs[i].run, stop]));
+    count.textContent = `· ${total} Seiten`;
+  };
+  // Vorbereitungs-Schritt beenden, falls keine Server-Stufe „Dokumente analysieren“ kommt (z. B. Coden, Börse)
+  const closePrep = (note = '') => {
+    if (!prepStep || prepStep.adopted || prepStep.closed) return;
+    prepStep.closed = true;
+    finishStep(prepStep.step, `${P('material').sub} <span class="ph-x">· ${note || `${prepStep.total} Seiten`}</span> <span class="t">${secs(prepStep.from)}</span>`);
   };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
   let idleTimer = null, idleHit = false;
 
   try {
-    await readScans();
-    // Lern-Agent: passende Abschnitte des Kerncurriculums (Einstellungen → Lehrplan) gehen mit – passt nichts, nichts
+    await prepareDocs();
     const agentBody = window.agentPayload?.(window.PixelDogs?.mode, tab) || { agent: window.PixelDogs?.mode };
-    const lastAsk = [...historyOf(tab)].reverse().find((h) => h.role === 'user')?.text || '';
-    let lehrplan = null;
-    try { lehrplan = agentBody.agent === 'learn' && window.Lehrplan ? Lehrplan.payload(lastAsk) : null; } catch {}
     // Wächter: kommt 150 s lang gar nichts mehr vom Server (keine Stufe, kein Gedanke, kein Text), wird abgebrochen und gesagt – nie endlos „laden“
     const idle = window.AbortSignal?.any ? new AbortController() : null;
     const poke = () => { clearTimeout(idleTimer); if (idle) idleTimer = setTimeout(() => { idleHit = true; idle.abort(); }, IDLE_MS); };
@@ -3374,7 +3317,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: await withTiles(historyForRequest(await withFiles(historyOf(tab)))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(lehrplan ? { lehrplan } : {}), ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(await withFiles(historyOf(tab)))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(prefix ? { partial: prefix } : {}) }),
       signal: idle ? AbortSignal.any([signal, idle.signal]) : signal,
     });
     if (!response.ok || !response.body) throw new Error(response.status === 413 ? 'Die Anfrage ist zu groß (zu viele oder zu große Dateien). Bitte weniger anhängen.' : `Server antwortet nicht (HTTP ${response.status}).`);
@@ -3457,6 +3400,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     else if (err.name !== 'AbortError') { errorText = err.message || 'Verbindung unterbrochen'; msgEl.append(errorCard(msgEl, errorText, null)); scrollToBottom(); } // gestoppt: kein Hinweis – unten erscheint „Neu starten“
   } finally {
     clearTimeout(idleTimer);
+    closePrep(signal.aborted ? 'gestoppt' : '');
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
     [...deep.subs.values(), ...[...deep.queries.values()].map((q) => q.row)].forEach((row) => { if (row.dataset.state === 'active') row.dataset.state = 'todo'; }); // ohne eigene Quelle: offen, kein vorgetäuschter Haken
     clearInterval(timer);
@@ -5592,9 +5536,10 @@ function chatItems(withImages) {
     };
   });
 }
-/* Für den Server schlank machen: Vercel nimmt/liefert höchstens ~4,5 MB je Anfrage. Je Chat gehen Datei-Daten bis ~1,5 MB mit (neueste zuerst);
-   große PDFs, die im Gerät liegen (fileId), nur mit Text und Namen – geöffnet und an die KI geschickt werden sie aus dem Gerätespeicher. */
-const CHAT_DATA_BUDGET = 1500000, SAVE_BODY_MAX = 3300000;
+/* Für den Server schlank machen: Vercel nimmt/liefert höchstens ~4,5 MB je Anfrage, und jedes Laden holt ALLE Chats. Dateien, die im Gerät
+   liegen (fileId), gehen nur mit Name, Text und Vorschaubild; sonst je Chat bis ~600 KB (neueste zuerst). Geöffnet und an die KI geschickt
+   werden sie aus dem Gerätespeicher (withFiles). */
+const CHAT_DATA_BUDGET = 600000, SAVE_BODY_MAX = 3300000;
 function slimChat(c, budget = CHAT_DATA_BUDGET) {
   let used = 0, changed = false;
   const history = c.history.slice().reverse().map((h) => {
@@ -5602,8 +5547,8 @@ function slimChat(c, budget = CHAT_DATA_BUDGET) {
     const images = h.images.map((img) => {
       const n = (img.data || '').length;
       if (!n) return img;
-      const pdfLocal = img.mime === 'application/pdf' && img.fileId && n > 400000;
-      if (!pdfLocal && used + n <= budget) { used += n; return img; }
+      const local = img.fileId && n > 60000; // liegt im Gerät → auf dem Server nur Name, Text, Vorschaubild
+      if (!local && used + n <= budget) { used += n; return img; }
       changed = true;
       const { data, tiles, ...rest } = img;
       return { ...rest, cut: true };
@@ -5696,11 +5641,14 @@ function savedThoughts(h) {
   return w.work;
 }
 function renderSavedHistory(list) {
-  list.forEach((h, i) => {
+  list.forEach((h, i) => { try { renderSavedItem(h, i); } catch (err) { console.error('Nachricht konnte nicht gezeigt werden', err); } }); // eine kaputte Nachricht blockiert nie den Rest
+}
+function renderSavedItem(h, i) {
+  {
     if (h.role === 'user') {
-      addUserMessage(h.text || '', (h.images || []).filter((img) => img.data || img.mime === 'application/pdf').map((img) => (img.mime === 'application/pdf'
+      addUserMessage(h.text || '', (h.images || []).filter((img) => !img.page && (img.data || img.thumb || img.fileId || img.mime === 'application/pdf')).map((img) => (img.mime === 'application/pdf'
         ? { name: img.name || 'PDF', mime: img.mime, pdf: true, data: img.data, fileId: img.fileId }
-        : { url: `data:${img.mime};base64,${img.data}`, name: img.name || 'Bild', mime: img.mime })));
+        : { url: img.data ? `data:${img.mime};base64,${img.data}` : img.thumb ? `data:image/jpeg;base64,${img.thumb}` : '', name: img.name || 'Bild', mime: img.mime, fileId: img.data ? null : img.fileId })));
       return;
     }
     const msgEl = el('div', 'msg-ai');
@@ -5718,16 +5666,20 @@ function renderSavedHistory(list) {
       void hydrateIllustrations(answer); // Bilder der gespeicherten Antwort nachladen (kommen aus dem Speicher des Servers)
       msgEl.append(messageFooter(msgEl, text));
     } else { chat.append(msgEl); msgEl.append(restartBar(msgEl)); }
-  });
+  }
 }
 restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere Start die Dateien überschreiben)
 (async function restoreChats() {
   // Nur vom Server laden; ist er kurz weg, weiter versuchen (bis dahin wird nichts gespeichert – restoring bleibt an).
   // Nie einen alten Stand aus dem Browser übernehmen: der würde beim nächsten Speichern den Server überschreiben.
+  // Klappt das Laden länger nicht (z. B. Server kurz weg), geht die App trotzdem normal weiter und SPEICHERT – das ist sicher, der Server
+  // löscht nie still und hängt fehlende Chats an. Im Hintergrund wird weiter geladen und Fehlendes als Tab ergänzt (mergeSavedChats).
   let saved = null;
   for (let i = 0; !saved; i++) {
     try { const r = await fetch('/api/chats'); if (r.ok) saved = await r.json(); } catch {}
-    if (!saved) await new Promise((res) => setTimeout(res, Math.min(5000, 600 + i * 400)));
+    if (saved) break;
+    if (i >= 6) { restoring = false; renderBookmarks(); restoreLayout(); showHint('Deine Chats laden gerade nicht – neue Chats werden trotzdem gespeichert'); retrySavedChats(); return; }
+    await new Promise((res) => setTimeout(res, Math.min(5000, 600 + i * 400)));
   }
   // Rettung: Chats, die nur noch im Browser-Speicher stehen, erst nach wiederherstellung/ sichern
   try {
@@ -5737,9 +5689,11 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     if (missing.length) await fetch('/api/recovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: `Browser-Speicher ${location.origin}`, chats: missing }) });
   } catch {}
   if (!saved?.chats?.length) { restoring = false; renderBookmarks(); restoreLayout(); return; }
+  try {
   const first = tabsEl.querySelector('.tab:not(.uil-tab):not([data-view])');
   let activeEl = null;
   saved.chats.forEach((s, i) => {
+    try {
     const tab = i === 0 && first ? first : createTab(s.title);
     if (i === 0) activateTab(tab);
     tab.dataset.cid = s.id;
@@ -5751,18 +5705,42 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     history.push(...(s.history || []));
     renderSavedHistory(s.history || []);
     if (s.id === saved.active) activeEl = tab;
+    } catch (err) { console.error('Chat konnte nicht geladen werden', s?.id, err); } // ein kaputter Chat blockiert nie das Speichern
   });
   activateTab(activeEl || first);
   // geschlossene Chats: Tab bleibt zu (der aktive bleibt immer offen)
   saved.chats.forEach((s) => { if (!s.closed) return; const t = tabsEl.querySelector(`.tab[data-cid="${s.id}"]`); if (t && !t.classList.contains('active')) t.hidden = true; });
   snapToPixels(tabsEl.querySelectorAll('.tab'));
-  restoring = false;
-  markChatsSent(); // so steht es schon auf dem Server
-  writeChats.active = saved.active;
+  } catch (err) { console.error('Chats laden', err); }
+  finally {
+    restoring = false; // IMMER – sonst speichert die App gar nichts mehr
+    try { markChatsSent(); } catch {} // so steht es schon auf dem Server
+    writeChats.active = saved.active;
+  }
   renderBookmarks();
   chatScroll.scrollTop = chatScroll.scrollHeight;
   restoreLayout();
 })();
+// Laden war beim Start nicht möglich: weiter versuchen und die Chats vom Server als Tabs ergänzen (der offene Chat bleibt)
+function retrySavedChats(n = 0) {
+  setTimeout(async () => {
+    let data = null;
+    try { const r = await fetch('/api/chats', { cache: 'no-store' }); if (r.ok) data = await r.json(); } catch {}
+    if (!data) { if (n < 40) retrySavedChats(n + 1); return; }
+    for (const s of data.chats || []) {
+      if (tabsEl.querySelector(`.tab[data-cid="${s.id}"]`) || deletedChats.has(s.id)) continue;
+      try {
+        const tab = createTab(s.title, '', {}, { background: true });
+        tab.dataset.cid = s.id; tab.hidden = true;
+        tab._chat = chatFields(s);
+        tab.querySelector('.tab-title').textContent = s.title;
+        tabChats.set(tab, renderDetached(s.history || []));
+        sentChats.set(s.id, JSON.stringify(serverChat(chatItems(true).find((c) => c.id === s.id) || s)));
+      } catch (err) { console.error('Chat konnte nicht ergänzt werden', s?.id, err); }
+    }
+    markDrafts(); renderBookmarks(); window.renderSideChats?.();
+  }, Math.min(15000, 3000 + n * 1000));
+}
 
 /* Chat öffnen, der auf dem Server entstanden ist (z. B. Ergebnis einer Agenten-Aufgabe): schon als Tab da → aktivieren,
    sonst aus dem Konto laden und als Tab anlegen */
