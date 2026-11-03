@@ -257,7 +257,11 @@
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}</div>` : '')
         + hooksHtml('agents');
     }
+    // gleiche Seite neu gezeichnet (z. B. Hintergrund gewählt) → Scroll-Position behalten, nicht nach oben springen
+    const keepTop = drawView.page === page ? view.querySelector('.st-scroll')?.scrollTop || 0 : 0;
+    drawView.page = page;
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
+    if (keepTop) view.querySelector('.st-scroll').scrollTop = keepTop;
     drawSide();
   }
 
@@ -277,6 +281,7 @@
     loadStatus();
   }
   function close() {
+    drawView.page = null;
     app.classList.remove('settings-open');
     editing = null;
   }

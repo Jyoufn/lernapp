@@ -1,243 +1,167 @@
 /* =====================================================================
-   Chat-Hintergrund (Einstellungen → Aussehen → Chat-Hintergrund, oder per Chat: ```einstellung {"hintergrund":"sterne"})
-   - Animierte Vorlagen auf EINER Leinwand hinter dem Chat: Punkte, Sterne, Wellen, Linien, Raster, Regen, Nebel – ruhig, dunkel, einfarbig.
-   - „Eigener“: von der KI geschriebener Code (```hintergrund) läuft abgeschottet im iframe (wie Mini-Apps), ohne Klicks.
-   - Schonend: höchstens 30 Bilder/s, Pixeldichte begrenzt, steht still, wenn der Tab/Chat nicht sichtbar ist; „Bewegung reduzieren“ → Standbild.
+   Chat-Hintergrund (Einstellungen → Aussehen → Chat-Hintergrund, oder per Chat)
+   - „Standard“ = die Kacheln im leeren Chat wie bisher. Sonst EIGENE Hintergründe – keine fertigen Vorlagen mehr:
+     • von der KI gebaut (```hintergrund, Pixel-Art-Stil, läuft abgeschottet im iframe wie Mini-Apps)
+     • eigenes Bild (verkleinert, geht ins Konto) oder eigenes Video (animiert, bleibt auf diesem Gerät, IndexedDB)
+   - Gespeicherte Hintergründe stehen als Kacheln in den Einstellungen (auswählen, löschen, hochladen).
+   - Füllt den ganzen Hauptteil bis nach unten (nur das Eingabefeld selbst bleibt deckend); steht still, wenn Tab/Chat nicht sichtbar ist.
    ===================================================================== */
 const ChatBg = (() => {
-  const KEY = 'chatbg.v1';
-  const KINDS = { aus: 'Aus', punkte: 'Punkte', sterne: 'Sterne', wellen: 'Wellen', linien: 'Linien', raster: 'Raster', regen: 'Regen', nebel: 'Nebel' };
-  const COLORS = ['#ffffff', '#6aa8ff', '#2dd4bf', '#4fcf8a', '#facc15', '#f0913a', '#f472b6'];
-  const DEF = { kind: 'aus', strength: 50, speed: 50, color: '#ffffff', custom: '' };
+  const KEY = 'chatbg.v2', DB = 'chatbg-videos', MAX_SAVED = 16;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fi = (n, s = 14) => (window.FadeIcons ? FadeIcons.svg(n, s) : '');
+  const DEF = { active: '', strength: 70, saved: [] };
   let cfg = { ...DEF };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {} };
-  const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  const rgb = (hex) => { const n = parseInt(String(hex).slice(1), 16) || 0xffffff; return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+  // alter Stand (v1): eigener KI-Hintergrund übernehmen
+  try { const old = JSON.parse(localStorage.getItem('chatbg.v1') || 'null'); if (old?.custom && !cfg.saved.length) { cfg.saved = [{ id: 'b1', type: 'code', name: 'Eigener Hintergrund', code: old.custom, at: Date.now() }]; if (old.kind === 'eigener') cfg.active = 'b1'; } } catch {}
+  if (!Array.isArray(cfg.saved)) cfg.saved = [];
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch { window.CodeBox?.toast?.('Speicher voll – lösch einen Hintergrund.'); } };
+  const byId = (id) => cfg.saved.find((x) => x.id === id);
 
-  /* ---------- Szenen: init(w, h) → Zustand, draw(ctx, st, t, dt, w, h, c) ---------- */
-  const rnd = (a, b) => a + Math.random() * (b - a);
-  const SCENES = {
-    punkte: {
-      init: (w, h) => ({ p: Array.from({ length: Math.round(Math.min(140, w * h / 11000)) }, () => ({ x: rnd(0, w), y: rnd(0, h), r: rnd(0.6, 1.9), vx: rnd(-6, 6), vy: rnd(-8, -2), a: rnd(0.25, 1) })) }),
-      draw(ctx, st, t, dt, w, h, c) {
-        for (const p of st.p) {
-          p.x += p.vx * dt; p.y += p.vy * dt;
-          if (p.y < -4) { p.y = h + 4; p.x = rnd(0, w); } if (p.x < -4) p.x = w + 4; if (p.x > w + 4) p.x = -4;
-          ctx.globalAlpha = p.a * 0.55; ctx.fillStyle = c; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
-        }
-      },
-    },
-    sterne: {
-      init: (w, h) => ({ p: Array.from({ length: Math.round(Math.min(220, w * h / 6500)) }, () => ({ x: rnd(0, w), y: rnd(0, h), z: rnd(0.2, 1), ph: rnd(0, 6.28), f: rnd(0.4, 1.4) })) }),
-      draw(ctx, st, t, dt, w, h, c) {
-        ctx.fillStyle = c;
-        for (const s of st.p) {
-          s.x -= s.z * 4 * dt; if (s.x < -2) { s.x = w + 2; s.y = rnd(0, h); }
-          const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * s.f + s.ph));
-          ctx.globalAlpha = tw * s.z * 0.9; const r = s.z * 1.35;
-          ctx.fillRect(s.x - r / 2, s.y - r / 2, r, r);
-        }
-      },
-    },
-    wellen: {
-      init: () => ({}),
-      draw(ctx, st, t, dt, w, h, c) {
-        ctx.strokeStyle = c; ctx.lineWidth = 1;
-        const n = 9;
-        for (let i = 0; i < n; i++) {
-          const y0 = h * (0.25 + 0.55 * (i / (n - 1))), amp = 14 + i * 3, k = 0.0045 + i * 0.0004, sp = 0.35 + i * 0.05;
-          ctx.globalAlpha = 0.16 + 0.32 * Math.sin((i / (n - 1)) * Math.PI);
-          ctx.beginPath();
-          for (let x = 0; x <= w; x += 14) { const y = y0 + Math.sin(x * k + t * sp + i) * amp + Math.sin(x * k * 0.47 - t * sp * 0.6) * amp * 0.6; x ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
-          ctx.stroke();
-        }
-      },
-    },
-    linien: {
-      init: (w, h) => ({ p: Array.from({ length: 70 }, () => ({ x: rnd(0, w), y: rnd(0, h), l: rnd(40, 140), v: rnd(10, 30), a: rnd(0.2, 0.8) })) }),
-      draw(ctx, st, t, dt, w, h, c) {
-        ctx.strokeStyle = c; ctx.lineWidth = 1;
-        for (const p of st.p) {
-          p.x += p.v * dt; p.y -= p.v * 0.45 * dt;
-          if (p.x - p.l > w || p.y + p.l < 0) { p.x = rnd(-w * 0.4, w * 0.6); p.y = h + rnd(0, h * 0.4); }
-          ctx.globalAlpha = p.a * 0.45;
-          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.l, p.y + p.l * 0.45); ctx.stroke();
-        }
-      },
-    },
-    raster: { // dieselben abgerundeten Kacheln wie beim Bild-Erzeugen, eine weiche Welle zieht durch
-      init: () => ({}),
-      draw(ctx, st, t, dt, w, h, c) {
-        const S = 22, G = 10, step = S + G, cols = Math.ceil(w / step) + 1, rows = Math.ceil(h / step) + 1;
-        ctx.fillStyle = c;
-        for (let r = 0; r < rows; r++) for (let q = 0; q < cols; q++) {
-          const d = q * 0.16 + r * 0.07 - t * 0.9, wave = Math.max(0, Math.sin(d)) ** 6;
-          ctx.globalAlpha = 0.06 + wave * 0.5;
-          const x = q * step + 4, y = r * step + 4;
-          ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, S, S, 5) : ctx.rect(x, y, S, S); ctx.fill();
-        }
-      },
-    },
-    regen: {
-      init: (w, h) => ({ p: Array.from({ length: Math.round(Math.min(160, w / 9)) }, () => ({ x: rnd(0, w), y: rnd(0, h), l: rnd(8, 22), v: rnd(140, 260), a: rnd(0.2, 0.7) })) }),
-      draw(ctx, st, t, dt, w, h, c) {
-        ctx.strokeStyle = c; ctx.lineWidth = 1;
-        for (const p of st.p) {
-          p.y += p.v * dt; p.x -= p.v * 0.08 * dt;
-          if (p.y - p.l > h) { p.y = -rnd(0, 60); p.x = rnd(0, w + 40); }
-          ctx.globalAlpha = p.a * 0.5;
-          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.l * 0.08, p.y - p.l); ctx.stroke();
-        }
-      },
-    },
-    nebel: {
-      init: (w, h) => ({ p: Array.from({ length: 5 }, (_, i) => ({ x: rnd(0, w), y: rnd(0, h), r: rnd(0.35, 0.6) * Math.max(w, h), ph: i * 1.7, s: rnd(0.04, 0.09) })) }),
-      draw(ctx, st, t, dt, w, h, c, col) {
-        for (const b of st.p) {
-          const x = b.x + Math.sin(t * b.s + b.ph) * w * 0.18, y = b.y + Math.cos(t * b.s * 0.8 + b.ph) * h * 0.14;
-          const g = ctx.createRadialGradient(x, y, 0, x, y, b.r);
-          g.addColorStop(0, `rgba(${col[0]},${col[1]},${col[2]},0.10)`); g.addColorStop(1, `rgba(${col[0]},${col[1]},${col[2]},0)`);
-          ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-        }
-      },
-    },
-  };
+  /* ---------- Videos: groß → nur auf diesem Gerät (IndexedDB) ---------- */
+  const idb = () => new Promise((ok, bad) => { const r = indexedDB.open(DB, 1); r.onupgradeneeded = () => r.result.createObjectStore('v'); r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error); });
+  const putVideo = async (id, blob) => { const d = await idb(); return new Promise((ok, bad) => { const t = d.transaction('v', 'readwrite'); t.objectStore('v').put(blob, id); t.oncomplete = ok; t.onerror = () => bad(t.error); }); };
+  const getVideo = async (id) => { const d = await idb(); return new Promise((ok) => { const r = d.transaction('v').objectStore('v').get(id); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); }); };
+  const delVideo = async (id) => { try { const d = await idb(); d.transaction('v', 'readwrite').objectStore('v').delete(id); } catch {} };
+  const videoUrls = new Map();
+  const videoUrl = async (id) => { if (videoUrls.has(id)) return videoUrls.get(id); const b = await getVideo(id); if (!b) return ''; const u = URL.createObjectURL(b); videoUrls.set(id, u); return u; };
 
-  /* ---------- Leinwand hinter dem Chat ---------- */
+  /* ---------- Ebene hinter dem Chat ---------- */
   const panel = document.querySelector('.panel');
   const layer = document.createElement('div');
   layer.className = 'chat-bg'; layer.setAttribute('aria-hidden', 'true');
-  const canvas = document.createElement('canvas');
-  layer.append(canvas);
   panel?.prepend(layer);
-  const ctx = canvas.getContext('2d');
-  let W = 0, H = 0, st = null, raf = 0, last = 0, t = 0, shown = false, frame = null;
-  function size() {
-    const r = layer.getBoundingClientRect(), dpr = Math.min(1.5, window.devicePixelRatio || 1);
-    W = Math.max(1, Math.round(r.width)); H = Math.max(1, Math.round(r.height));
-    canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    st = SCENES[cfg.kind]?.init(W, H) || null;
-  }
-  function paint(dt) {
-    const sc = SCENES[cfg.kind]; if (!sc) return;
-    ctx.clearRect(0, 0, W, H);
-    sc.draw(ctx, st, t, dt, W, H, cfg.color, rgb(cfg.color));
-    ctx.globalAlpha = 1;
-  }
-  function loop(now) {
-    raf = requestAnimationFrame(loop);
-    if (now - last < 33) return; // ~30 Bilder/s
-    const dt = Math.min(0.1, (now - last) / 1000) * (0.25 + (cfg.speed / 100) * 1.75);
-    last = now; t += dt;
-    paint(dt);
-  }
+  let shownId = null, frame = null;
   const wanted = () => {
-    if (cfg.kind === 'aus' || !panel) return false;
+    if (!cfg.active || !byId(cfg.active) || !panel) return false;
     if (document.getElementById('app')?.classList.contains('settings-open')) return false;
     const tab = typeof activeTab === 'function' ? activeTab() : null;
     return !!tab && !tab.dataset.view;
   };
-  function update() {
-    const on = wanted() && !document.hidden;
-    panel?.classList.toggle('has-cbg', cfg.kind !== 'aus');
-    layer.style.setProperty('--cbg', String(Math.max(0, Math.min(100, cfg.strength)) / 100));
-    layer.classList.toggle('on', wanted());
-    const custom = cfg.kind === 'eigener';
-    canvas.hidden = custom;
-    // eigener Code: iframe (abgeschottet) – nur solange sichtbar
-    if (custom && on && cfg.custom && window.CodeBox) {
-      if (!frame) { const host = document.createElement('div'); host.className = 'chat-bg-frame'; layer.append(host); frame = host; CodeBox.start(host, cfg.custom, { fill: true, title: 'Hintergrund' }); }
-    } else if (frame) { CodeBox.stop(frame); frame.remove(); frame = null; }
-    if (on && !custom && SCENES[cfg.kind]) {
-      if (!st || canvas.width < 2) size();
-      if (reduced()) { cancelAnimationFrame(raf); raf = 0; t = 4; paint(0); return; }
-      if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); }
-    } else { cancelAnimationFrame(raf); raf = 0; }
-    shown = on;
+  async function mountBg(item) {
+    if (frame) { window.CodeBox?.stop(frame); frame = null; }
+    layer.replaceChildren();
+    shownId = item?.id || null;
+    if (!item) return;
+    if (item.type === 'code' && window.CodeBox) { const host = document.createElement('div'); host.className = 'chat-bg-frame'; layer.append(host); frame = host; CodeBox.start(host, item.code, { fill: true, title: 'Hintergrund' }); }
+    else if (item.type === 'image') { const d = document.createElement('div'); d.className = 'chat-bg-img'; d.style.backgroundImage = `url("${item.src}")`; layer.append(d); }
+    else if (item.type === 'video') {
+      const v = document.createElement('video'); v.className = 'chat-bg-video'; v.muted = true; v.loop = true; v.playsInline = true; v.autoplay = true; v.setAttribute('playsinline', '');
+      layer.append(v); const u = await videoUrl(item.id); if (u && shownId === item.id) { v.src = u; v.play().catch(() => {}); }
+    }
   }
-  window.addEventListener('resize', () => { if (shown) { size(); if (reduced()) paint(0); } });
+  function update() {
+    const item = byId(cfg.active), on = wanted();
+    panel?.classList.toggle('has-cbg', !!item);
+    layer.style.setProperty('--cbg', String(Math.max(10, Math.min(100, cfg.strength)) / 100));
+    layer.classList.toggle('on', on);
+    if (on && !document.hidden) { if (shownId !== item.id) mountBg(item); else layer.querySelector('video')?.play().catch(() => {}); }
+    else { layer.querySelector('video')?.pause(); if (frame && document.hidden) { window.CodeBox?.stop(frame); frame = null; shownId = null; } }
+  }
   window.addEventListener('chat-tab-switched', () => setTimeout(update, 0));
   document.addEventListener('visibilitychange', update);
   const appEl = document.getElementById('app');
   if (appEl) new MutationObserver(update).observe(appEl, { attributes: true, attributeFilter: ['class'] });
   setTimeout(update, 0);
 
-  function set(patch, quiet) {
-    const kindChanged = patch.kind && patch.kind !== cfg.kind;
+  function set(patch) {
     cfg = { ...cfg, ...patch };
-    if (cfg.kind === 'eigener' && !cfg.custom) cfg.kind = 'aus';
-    if (typeof cfg.custom === 'string' && cfg.custom.length > 80000) cfg.custom = cfg.custom.slice(0, 80000);
-    save();
-    if (kindChanged || patch.custom) { st = null; if (frame) { CodeBox.stop(frame); frame.remove(); frame = null; } }
-    update();
-    if (!quiet || window.Settings) window.Settings?.redraw?.();
+    if (cfg.active && !byId(cfg.active)) cfg.active = '';
+    save(); shownId = shownId === cfg.active ? shownId : null; update();
+    window.Settings?.redraw?.();
+  }
+  function add(item, activate = true) {
+    const id = `b${Date.now().toString(36)}`;
+    cfg.saved = [{ id, at: Date.now(), ...item }, ...cfg.saved].slice(0, MAX_SAVED);
+    set(activate ? { active: id } : {});
+    return id;
+  }
+  async function remove(id) {
+    const it = byId(id); if (!it) return;
+    if (it.type === 'video') { delVideo(id); const u = videoUrls.get(id); if (u) URL.revokeObjectURL(u); videoUrls.delete(id); }
+    cfg.saved = cfg.saved.filter((x) => x.id !== id);
+    set({ active: cfg.active === id ? '' : cfg.active });
+  }
+  // KI-Hintergrund (Code) übernehmen: schon gespeichert → nur auswählen
+  function useCode(code, name = 'KI-Hintergrund') {
+    const c = String(code || '').replace(/^\s*(titel|title)\s*:.*\n/i, '').slice(0, 80000);
+    const hit = cfg.saved.find((x) => x.type === 'code' && x.code === c);
+    if (hit) { set({ active: hit.id }); return hit.id; }
+    return add({ type: 'code', name: String(name).slice(0, 40), code: c });
   }
 
-  /* ---------- Vorschau-Kacheln (Einstellungen) ---------- */
-  function thumb(kind) {
-    const c = document.createElement('canvas'), w = 120, h = 72, dpr = 2;
-    c.width = w * dpr; c.height = h * dpr;
-    const x = c.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const sc = SCENES[kind];
-    if (sc) { const s = sc.init(w * 2, h * 2); x.scale(0.5, 0.5); sc.draw(x, s, 3.2, 0, w * 2, h * 2, cfg.color, rgb(cfg.color)); }
-    return c.toDataURL('image/png');
+  /* ---------- Hochladen: Bild (verkleinert, ins Konto) oder Video (bleibt auf dem Gerät) ---------- */
+  async function upload(file) {
+    if (!file) return;
+    if (/^video\//.test(file.type)) {
+      if (file.size > 60 * 1024 * 1024) { window.CodeBox?.toast?.('Video ist zu groß (höchstens 60 MB).'); return; }
+      const id = `b${Date.now().toString(36)}`;
+      try { await putVideo(id, file); } catch { window.CodeBox?.toast?.('Video konnte nicht gespeichert werden.'); return; }
+      cfg.saved = [{ id, type: 'video', name: file.name.replace(/\.\w+$/, '').slice(0, 40) || 'Video', at: Date.now() }, ...cfg.saved].slice(0, MAX_SAVED);
+      set({ active: id });
+      return;
+    }
+    if (!/^image\//.test(file.type)) return;
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = bad; i.src = url; }).catch(() => null);
+    URL.revokeObjectURL(url);
+    if (!img) return;
+    const k = Math.min(1, 1920 / Math.max(img.width, img.height));
+    const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    add({ type: 'image', name: file.name.replace(/\.\w+$/, '').slice(0, 40) || 'Bild', src: c.toDataURL('image/jpeg', 0.82) });
   }
-  const thumbs = {};
+
+  /* ---------- Einstellungen: Standard · gespeicherte · Hochladen ---------- */
   const seg = (attr, items, on) => `<span class="st-seg" role="radiogroup">${items.map(([l, v]) => `<button type="button" role="radio" aria-checked="${v === on}" class="${v === on ? 'on' : ''}" ${attr}="${v}">${esc(l)}</button>`).join('')}</span>`;
   const near = (v, list) => list.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
+  let armDel = null;
   function html() {
-    const key = cfg.color;
-    if (thumbs._c !== key) { Object.keys(SCENES).forEach((k) => { thumbs[k] = thumb(k); }); thumbs._c = key; }
-    const kinds = Object.entries(KINDS).concat(cfg.custom ? [['eigener', 'Eigener']] : []);
-    const tiles = kinds.map(([k, label]) => `<button type="button" class="cbg-tile${cfg.kind === k ? ' on' : ''}" data-cbg-kind="${k}"><span class="cbg-prev${k === 'aus' ? ' none' : ''}"${thumbs[k] ? ` style="background-image:url(${thumbs[k]})"` : ''}>${k === 'eigener' ? fi('codewin', 16) : ''}</span><span class="cbg-name">${label}</span></button>`).join('');
-    const off = cfg.kind === 'aus';
+    const tile = (id, label, prev, extra = '') => `<div class="cbg-tile${(cfg.active || '') === id ? ' on' : ''}" data-cbg-pick="${id}" role="button" tabindex="0"><span class="cbg-prev">${prev}</span><span class="cbg-name">${esc(label)}</span>${extra}</div>`;
+    const tiles = [tile('', 'Standard', `<span class="cbg-std">${fi('dashboard', 16)}</span>`)]
+      .concat(cfg.saved.map((x) => tile(x.id, x.name, x.type === 'image' ? `<img src="${esc(x.src)}" alt="">` : `<span class="cbg-std">${fi(x.type === 'video' ? 'video' : 'codewin', 16)}</span>`,
+        `<button type="button" class="cbg-del${armDel === x.id ? ' sure' : ''}" data-cbg-del="${x.id}" aria-label="Löschen">${armDel === x.id ? 'Löschen?' : fi('x', 10)}</button>`)))
+      .concat(`<label class="cbg-tile cbg-up"><span class="cbg-prev"><span class="cbg-std">${fi('plus', 16)}</span></span><span class="cbg-name">Hochladen</span><input type="file" accept="image/*,video/*" data-cbg-file hidden></label>`);
+    const cur = byId(cfg.active);
     return `<h2>Chat-Hintergrund</h2><div class="st-card">
-      <div class="st-row st-modes-row"><span class="st-name">Animation</span><div class="cbg-tiles">${tiles}</div></div>
-      ${off ? '' : `<div class="st-row"><span class="st-name">Stärke</span><span class="grow"></span>${seg('data-cbg-str', [['Leicht', '25'], ['Mittel', '50'], ['Stark', '85']], String(near(cfg.strength, [25, 50, 85])))}</div>
-      ${cfg.kind === 'eigener' ? '' : `<div class="st-row"><span class="st-name">Tempo</span><span class="grow"></span>${seg('data-cbg-spd', [['Langsam', '20'], ['Normal', '50'], ['Schnell', '85']], String(near(cfg.speed, [20, 50, 85])))}</div>
-      <div class="st-row"><span class="st-name">Farbe</span><span class="grow"></span><span class="st-swatches">${COLORS.map((c) => `<button type="button" class="st-sw${c === cfg.color ? ' on' : ''}" style="--sw:${c}" data-cbg-col="${c}" aria-label="Farbe ${c}"></button>`).join('')}</span></div>`}`}
-      ${cfg.custom ? `<div class="st-row"><span class="st-name">Eigener Hintergrund</span><span class="grow"></span><button type="button" class="st-btn dark" data-cbg-rm>Entfernen</button></div>` : ''}
-      <p class="st-ws-note cbg-note">Eigene Hintergründe erstellt die KI: z. B. „Mach mir einen animierten Hintergrund mit langsam ziehenden Wolken“.</p>
+      <div class="st-row st-modes-row"><span class="st-name">Hintergrund</span><div class="cbg-tiles">${tiles.join('')}</div></div>
+      ${cur ? `<div class="st-row"><span class="st-name">Deckkraft</span><span class="grow"></span>${seg('data-cbg-str', [['Leicht', '35'], ['Mittel', '70'], ['Voll', '100']], String(near(cfg.strength, [35, 70, 100])))}</div>` : ''}
+      <p class="st-ws-note cbg-note">Eigene Hintergründe: Bild oder Video hochladen – oder die KI bitten, z. B. „Mach mir einen animierten Pixel-Hintergrund mit Sternenhimmel“. Videos bleiben auf diesem Gerät.</p>
     </div>`;
   }
   function click(e) {
-    const k = e.target.closest('[data-cbg-kind]'); if (k) { set({ kind: k.dataset.cbgKind }); return true; }
+    const d = e.target.closest('[data-cbg-del]');
+    if (d) { e.preventDefault(); const id = d.dataset.cbgDel; if (armDel !== id) { armDel = id; window.Settings?.redraw?.(); setTimeout(() => { if (armDel === id) { armDel = null; window.Settings?.redraw?.(); } }, 3000); } else { armDel = null; remove(id); } return true; }
+    const k = e.target.closest('[data-cbg-pick]'); if (k) { set({ active: k.dataset.cbgPick }); return true; }
     const s = e.target.closest('[data-cbg-str]'); if (s) { set({ strength: +s.dataset.cbgStr }); return true; }
-    const p = e.target.closest('[data-cbg-spd]'); if (p) { set({ speed: +p.dataset.cbgSpd }); return true; }
-    const c = e.target.closest('[data-cbg-col]'); if (c) { set({ color: c.dataset.cbgCol }); return true; }
-    if (e.target.closest('[data-cbg-rm]')) { set({ custom: '', kind: cfg.kind === 'eigener' ? 'aus' : cfg.kind }); return true; }
     return false;
   }
-  (window.SettingsHooks ||= []).push({ page: 'look', order: 1, html, click });
+  function change(e) { if (e.target.matches('[data-cbg-file]')) { upload(e.target.files?.[0]); return true; } return false; }
+  (window.SettingsHooks ||= []).push({ page: 'look', order: 1, html, click, change });
 
-  /* ---------- ```hintergrund im Chat: Vorschau + „Als Hintergrund verwenden“ ---------- */
+  /* ---------- ```hintergrund im Chat: Vorschau + „Als Hintergrund verwenden“ (wird gespeichert) ---------- */
   function figure(raw) {
     const fig = document.createElement('figure');
     fig.className = 'cbx cbg-fig';
     const code = String(raw || '').replace(/^\s*(titel|title)\s*:.*\n/i, '');
-    const title = (String(raw).match(/^\s*(?:titel|title)\s*:\s*(.+)$/im) || [])[1] || 'Eigener Hintergrund';
-    const active = () => cfg.kind === 'eigener' && cfg.custom === code;
-    const draw = () => {
-      fig.querySelector('.cbx-head').innerHTML = `<span class="cbx-ic">${fi('image', 14)}</span><span class="cbx-title">${esc(title.slice(0, 60))}</span><span class="cbx-grow"></span>`
-        + (active() ? `<span class="cbg-on">${fi('check', 12)}Aktiv</span>` : '<button type="button" class="cbg-use" data-use>Als Hintergrund verwenden</button>');
-    };
-    fig.innerHTML = '<div class="cbx-head"></div><div class="cbx-body"><div class="cbg-stage"></div></div>';
+    const title = ((String(raw).match(/^\s*(?:titel|title)\s*:\s*(.+)$/im) || [])[1] || 'KI-Hintergrund').slice(0, 40);
+    const active = () => byId(cfg.active)?.code === code;
+    fig.innerHTML = '<div class="cbx-body"><div class="cbg-stage"></div></div><div class="cbx-bar"><span class="cbx-bar-l"></span><span class="cbx-grow"></span></div>';
+    const draw = () => { fig.querySelector('.cbx-bar-l').innerHTML = `<span class="cbx-status">${fi('image', 12)}${esc(title)}</span>`;
+      fig.querySelector('.cbx-bar .cbg-act')?.remove();
+      fig.querySelector('.cbx-bar').insertAdjacentHTML('beforeend', active() ? `<span class="cbg-act cbg-on">${fi('check', 12)}Aktiv</span>` : '<button type="button" class="cbg-act cbg-use" data-use>Als Hintergrund verwenden</button>'); };
     draw();
     const stage = fig.querySelector('.cbg-stage');
-    // Vorschau erst starten, wenn sichtbar
     const io = new IntersectionObserver((list) => list.forEach((en) => {
       if (en.isIntersecting && !stage._cbx && window.CodeBox) CodeBox.start(stage, code, { fill: true, title: 'Hintergrund-Vorschau' });
       else if (!en.isIntersecting && stage._cbx) CodeBox.stop(stage);
     }));
     io.observe(stage);
-    fig.addEventListener('click', (e) => { if (e.target.closest('[data-use]')) { set({ custom: code, kind: 'eigener' }); draw(); window.CodeBox?.toast('Hintergrund übernommen'); } });
+    fig.addEventListener('click', (e) => { if (e.target.closest('[data-use]')) { useCode(code, title); draw(); window.CodeBox?.toast('Hintergrund gespeichert und aktiv'); } });
     return fig;
   }
 
-  return { get: () => ({ ...cfg }), set, figure, KINDS };
+  return { get: () => ({ ...cfg }), set, figure, useCode, upload };
 })();
 window.ChatBg = ChatBg;

@@ -10560,3 +10560,28 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 /* Rückfragen: eigene Antwort ohne Icon links */
 :is(#composer, #vaAsk) .ask-panel .ask-own-row { padding-left: 12px; }
 :is(#composer, #vaAsk) .ask-panel .ask-own-row:empty, .ask-own-row > .ask-key:empty { display: none; }
+
+/* ===================================================================
+   03.11.2026 (6) – Chat-Hintergrund: nur Standard + eigene (KI, Bild, Video), über den ganzen Hauptteil bis unten
+   =================================================================== */
+.panel.has-cbg .composer-area::before { display: none; } /* bis nach unten – nur das Eingabefeld selbst bleibt deckend */
+.chat-bg { transition: opacity 500ms ease; }
+.chat-bg-img { position: absolute; inset: 0; background: center / cover no-repeat; }
+.chat-bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cbg-tiles { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.cbg-tile { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; color: var(--text-3); font-size: 12px; -webkit-tap-highlight-color: transparent; }
+.cbg-tile .cbg-prev { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 9px; background: #121212; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); }
+.cbg-tile .cbg-prev img { width: 100%; height: 100%; object-fit: cover; border-radius: 0; }
+.cbg-std { display: grid; place-items: center; color: var(--text-4); }
+.cbg-name { max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cbg-tile.on .cbg-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 2px var(--main-bg), 0 0 0 3.5px var(--accent); }
+.cbg-tile.on .cbg-name { color: var(--text); }
+.cbg-del { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border: 0; border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55); color: #fff; font: inherit; font-size: 11px; cursor: pointer; opacity: 0; transition: opacity 140ms ease; }
+.cbg-tile:hover .cbg-del, .cbg-del.sure { opacity: 1; }
+@media (hover: none) { .cbg-del { opacity: 1; } }
+.cbg-del.sure { background: #e5705f; }
+.cbg-up .cbg-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); background: none; }
+.cbg-fig .cbg-stage { aspect-ratio: 16 / 9; max-height: 380px; }
+.cbg-act { flex: none; }
+.cbg-use { height: 28px; margin-right: 4px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }

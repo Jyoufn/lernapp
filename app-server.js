@@ -1124,6 +1124,9 @@ Antworte NUR mit JSON: {"desc":"englische Beschreibung der Figur, 10–40 Wörte
 - Nur die Figur selbst: was für ein Wesen/Charakter, Farben von Fell/Haut/Kleidung, markante Merkmale (Zubehör NUR, wenn ausdrücklich gewünscht).
 - Keine Stil- oder Hintergrundwörter (die kommen automatisch), keine Namen, keine Schrift.
 - Bei einer Änderung: die bisherige Beschreibung übernehmen und NUR das Gewünschte ändern.`;
+const AVATAR_PICK = `Du wählst aus mehreren Entwürfen das beste Pixel-Profilbild für eine Lern-App. Die festen Profilbilder der App sind: NUR der Kopf (mit kurzem Hals),
+frontal und symmetrisch, der Kopf füllt die Bildbreite, grobe sichtbare Pixel, klarer schwarzer Umriss, ruhige natürliche Farben, kleine dunkle Augen mit Lichtpunkt, einfarbiger Hintergrund.
+Bewerte jeden Entwurf danach und ob er die gewünschte Figur klar zeigt. Antworte NUR mit JSON: {"best": Nummer des besten Bildes}`;
 async function handleAgentAvatar(req, res) {
   const env = readEnv();
   const b = await readBody(req, 20000);
@@ -1133,7 +1136,15 @@ async function handleAgentAvatar(req, res) {
   try { desc = String(P.parseJsonLoose(await P.textTask(env, { system: AVATAR_SYSTEM, user: `${before ? `Bisherige Beschreibung: ${before}\nÄnderung: ` : 'Wunsch: '}${wish}`, maxTokens: 400, timeoutMs: 20000, json: true }))?.desc || '').trim(); } catch {}
   if (desc.length < 5) desc = before ? `${before}, ${wish}` : wish;
   if (!imageKeys(env).length) return sendJson(res, 400, { error: 'Für eigene Profilbilder fehlt ein NVIDIA-Schlüssel (Einstellungen → Agenten → FLUX (Bilder) oder MiniMax).' });
-  let out = await paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`).catch(() => null); // mit Umformulieren, falls der Inhaltsfilter anschlägt
+  // mehrere Entwürfe (verschiedene Startwerte) – dann wählt ein Bildmodell den, der den Regeln am besten folgt (nur Kopf, frontal, Umriss, Pixel, passt zur Beschreibung)
+  const tries = await Promise.all([0, 1, 2].map((k) => paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`, undefined, Math.floor(Math.random() * 1e6) + k).catch(() => null)));
+  const ok = tries.filter(Boolean);
+  let out = ok[0] || null;
+  if (ok.length > 1) {
+    const pick = await visionJson(env, AVATAR_PICK, `Gewünschte Figur: ${desc}\nEs folgen ${ok.length} Entwürfe (Bild 1 bis ${ok.length}).`, ok.map((x) => ({ mime: x.mime, data: x.data })), 512).catch(() => null);
+    const n = Number(pick?.best);
+    if (n >= 1 && n <= ok.length) out = ok[n - 1];
+  }
   if (!out) out = await paint(env, `cute friendly ${desc.slice(0, 200)}, pixel art head portrait only, front view, black outline, plain flat magenta background`).catch(() => null); // kürzerer Auftrag als zweiter Versuch
   if (!out) return sendJson(res, 502, { error: lastImageFiltered ? 'Der Bild-Filter hat die Beschreibung abgelehnt – beschreib die Figur etwas anders.' : 'Das Bild konnte gerade nicht gezeichnet werden (Bildmodell nicht erreichbar) – gleich noch einmal versuchen.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });

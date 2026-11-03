@@ -428,26 +428,24 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     setTimeout(() => { t.classList.remove('in'); setTimeout(() => t.remove(), 300); }, 2600);
   }
   /* ---------- ```einstellung: die KI stellt etwas ein ---------- */
-  const BG_NAMES = { aus: 'Aus', punkte: 'Punkte', sterne: 'Sterne', wellen: 'Wellen', linien: 'Linien', raster: 'Raster', regen: 'Regen', nebel: 'Nebel', eigener: 'Eigener' };
   function applySetting(obj, customBg) {
     const before = { design: { ...design }, bg: window.ChatBg?.get?.() };
     const said = [];
-    const bgPatch = {};
-    if (typeof obj.hintergrund === 'string' && BG_NAMES[obj.hintergrund]) { bgPatch.kind = obj.hintergrund; said.push(`Hintergrund: ${BG_NAMES[obj.hintergrund]}`); }
-    if (obj.hintergrund === 'eigener' && customBg) bgPatch.custom = String(customBg).replace(/^\s*(titel|title)\s*:.*\n/i, '');
-    if (obj.hintergrund === 'eigener' && !customBg && !window.ChatBg?.get?.().custom) { delete bgPatch.kind; said.pop(); } // kein eigener Code da
-    if (Number.isFinite(+obj.staerke) && obj.staerke !== '') { bgPatch.strength = Math.max(0, Math.min(100, +obj.staerke)); said.push(`Stärke ${bgPatch.strength} %`); }
-    if (Number.isFinite(+obj.tempo) && obj.tempo !== '') { bgPatch.speed = Math.max(0, Math.min(100, +obj.tempo)); said.push(`Tempo ${bgPatch.speed} %`); }
-    if (/^#[0-9a-f]{6}$/i.test(obj.farbe || '')) { bgPatch.color = obj.farbe; said.push('Hintergrundfarbe'); }
+    const B = window.ChatBg;
+    if (B) {
+      const h = String(obj.hintergrund || '').toLowerCase();
+      if (h === 'eigener' && customBg) { B.useCode(customBg); said.push('Eigener Hintergrund gespeichert und aktiv'); }
+      else if (h === 'aus' || h === 'standard') { B.set({ active: '' }); said.push('Hintergrund: Standard'); }
+      if (Number.isFinite(+obj.staerke) && obj.staerke !== '' && obj.staerke != null) { B.set({ strength: Math.max(10, Math.min(100, +obj.staerke)) }); said.push(`Deckkraft ${Math.round(+obj.staerke)} %`); }
+    }
     const d = {};
     if (typeof obj.codeAkzent === 'string' && (obj.codeAkzent === '' || /^#[0-9a-f]{6}$/i.test(obj.codeAkzent))) { d.accent = obj.codeAkzent; said.push('Akzent der Mini-Apps'); }
     if (RADIUS[obj.codeEcken]) { d.corners = obj.codeEcken; said.push(`Ecken: ${obj.codeEcken}`); }
     if (FONTS[obj.codeSchrift]) { d.font = obj.codeSchrift; said.push('Schrift der Mini-Apps'); }
     if (['karte', 'transparent'].includes(obj.codeFlaeche)) { d.surface = obj.codeFlaeche; said.push('Fläche der Mini-Apps'); }
     if (typeof obj.codeWunsch === 'string') { d.wish = obj.codeWunsch.slice(0, 600); said.push(d.wish ? 'Stilwunsch gemerkt' : 'Stilwunsch gelöscht'); }
-    if (Object.keys(bgPatch).length) window.ChatBg?.set?.(bgPatch);
     if (Object.keys(d).length) setDesign(d);
-    return { said, undo: () => { if (before.bg) window.ChatBg?.set?.(before.bg, true); setDesign(before.design, true); } };
+    return { said, undo: () => { if (before.bg) window.ChatBg?.set?.({ active: before.bg.active, strength: before.bg.strength }); setDesign(before.design, true); } };
   }
   function settingChip(raw, live, customBg) {
     let obj = null;
