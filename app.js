@@ -521,6 +521,7 @@ function setMicUI(active) {
   micBtn.title = label;
 }
 
+let dictFrom = null; // Feldinhalt vor dem Diktat → danach wird nur das Diktierte geglättet
 function startListening() {
   if (!SpeechRecognition) {
     showHint('Spracheingabe: Chrome, Edge oder Safari nutzen');
@@ -528,6 +529,7 @@ function startListening() {
   }
   listening = true;
   baseText = written = input.value;
+  dictFrom = input.value;
   finalText = ''; consumed = 0; seen = 0;
 
   recognition = new SpeechRecognition();
@@ -581,6 +583,26 @@ function stopListening(hard = false) {
   }
   setMicUI(false);
   hideListening();
+  const from = dictFrom; dictFrom = null;
+  if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten
+}
+/* Nach dem Diktat: Satzzeichen und Rechtschreibung NUR im diktierten Teil (beim normalen Tippen gibt es keine Korrektur).
+   Hat man inzwischen weitergetippt, bleibt alles, wie es ist. */
+async function polishDictation(from) {
+  const now = input.value;
+  if (!now.startsWith(from)) return;
+  const said = now.slice(from.length);
+  if (said.trim().split(/\s+/).length < 2) return;
+  showListening('Satzzeichen setzen');
+  try {
+    const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim() }) });
+    const { text } = await r.json();
+    if (input.value !== now || !text) return; // weitergeschrieben/abgeschickt → nichts überschreiben
+    const lead = said.match(/^\s*/)[0];
+    input.value = from + lead + text + (/\s$/.test(said) ? ' ' : '');
+    input.dispatchEvent(new Event('dictation'));
+    autoGrow();
+  } catch {} finally { hideListening(); }
 }
 
 micBtn.addEventListener('click', () => (listening ? stopListening() : startListening()));

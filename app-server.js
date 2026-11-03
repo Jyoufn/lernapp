@@ -46,7 +46,7 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['GEMINI_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
 // mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
 const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
@@ -57,8 +57,8 @@ function deviceKeysOf(req) {
     const obj = JSON.parse(Buffer.from(String(raw), 'base64').toString('utf8'));
     const out = {};
     for (const k of DEVICE_KEYS) { const v = cleanKeys(obj[k]); if (v) out[k] = v; }
-    if (obj.AI_ORDER === 'mistral') out.AI_ORDER = 'mistral'; // Einstellungen → Haupt-KI
-    if (obj.CODE_ORDER === 'gemini') out.CODE_ORDER = 'gemini'; // Einstellungen → Coden mit (Standard: Mistral zuerst)
+    if (obj.AI_ORDER === 'minimax' || obj.AI_ORDER === 'mistral') out.AI_ORDER = 'minimax'; // Einstellungen → Haupt-KI (früher „Mistral“)
+    if (obj.CODE_ORDER === 'gemini') out.CODE_ORDER = 'gemini'; // Einstellungen → Coden mit (Standard: MiniMax zuerst)
     return out;
   } catch { return {}; }
 }
@@ -1110,6 +1110,24 @@ const TITLE_SYSTEM = `Du gibst einem Lern-Chat einen kurzen, treffenden Titel �
 Regeln: 2 bis 5 Wörter, Sprache der Anfrage (meist Deutsch), Thema statt Frageform, kein Punkt, keine Anführungszeichen, keine Emojis,
 keine Füllwörter wie „Frage zu“ oder „Hilfe bei“. Beispiele: „Photosynthese einfach erklärt“, „Quadratische Gleichungen lösen“, „Ursachen des Ersten Weltkriegs“.
 Antworte NUR mit dem Titel.`;
+/* ---------- /api/polish: diktierten Text glätten (nur nach der Spracheingabe) ----------
+   Satzzeichen, Groß-/Kleinschreibung und offensichtliche Erkennungsfehler – keine Umformulierung. Ein kleiner Aufruf beim Anbieter der Anfrage. */
+const POLISH_SYSTEM = `Du bekommst Text aus einer Spracherkennung (meist Deutsch, gesprochen, ohne Satzzeichen).
+Setze Punkte, Kommas, Fragezeichen und Ausrufezeichen, korrigiere Groß- und Kleinschreibung und offensichtliche Rechtschreib- oder Erkennungsfehler.
+Ändere KEINE Wörter, keine Reihenfolge, keinen Stil, nichts ergänzen, nichts weglassen, nicht zusammenfassen. Englische Wörter bleiben, wie sie sind.
+Antworte NUR mit dem korrigierten Text – ohne Anführungszeichen, ohne Kommentar.`;
+async function handlePolish(req, res) {
+  const env = readEnv();
+  const text = String((await readBody(req, 40000)).text || '').trim().slice(0, 6000);
+  if (text.length < 3) return sendJson(res, 200, { text });
+  try {
+    const out = String(await P.textTask(env, { system: POLISH_SYSTEM, user: text, maxTokens: 3000, timeoutMs: 15000 }) || '').trim().replace(/^["„“]|["“”]$/g, '');
+    // Sicherheitsnetz: deutlich andere Länge = umformuliert → Original behalten
+    const words = (t) => t.split(/\s+/).filter(Boolean).length;
+    if (!out || Math.abs(words(out) - words(text)) > Math.max(3, words(text) * 0.15)) return sendJson(res, 200, { text });
+    return sendJson(res, 200, { text: out });
+  } catch { return sendJson(res, 200, { text }); }
+}
 async function handleTitle(req, res) {
   const body = await readBody(req, 50000);
   const env = readEnv();
@@ -1429,6 +1447,7 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
+    if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
     if (req.method === 'POST' && urlPath === '/api/lernset/grade') return sendJson(res, 200, await LSET.grade(readEnv(), await readBody(req, 400000)));

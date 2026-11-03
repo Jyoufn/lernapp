@@ -13,14 +13,14 @@ test('Skills: „/skill“, ein starkes Stichwort oder zwei passende Wörter akt
   assert.match(SK.prompt(SK.of({ text: 'x', skills: ['designer', 'unbekannt'] })), /DESIGNER-MODUS/);
 });
 
-test('Mistral (NVIDIA): eigener Schlüssel, Reihenfolge laut Einstellung – Gemini zuerst oder Mistral zuerst', () => {
+test('MiniMax (NVIDIA): eigener Schlüssel, Reihenfolge laut Einstellung – Gemini zuerst oder MiniMax zuerst', () => {
   const P = require('../lib/providers');
   const W = require('../lib/workflow');
-  const env = { GEMINI_API_KEY: 'gem-key-12345', MISTRAL_API_KEY: 'nvapi-mistral-123' };
-  assert.deepEqual(P.familiesFor(env).slice(0, 2), ['gemini', 'mistral']);
-  assert.deepEqual(P.familiesFor({ ...env, AI_ORDER: 'mistral' }).slice(0, 2), ['mistral', 'gemini']);
-  const a = W.providerAttempts({ ...env, AI_ORDER: 'mistral', __family: 'mistral' }, 'x', ['gemini-2.5-flash']);
-  assert.equal(a[0].provider, 'mistral');
-  assert.equal(a[0].model, 'mistralai/mistral-large-3-675b-instruct-2512');
+  const env = { GEMINI_API_KEY: 'gem-key-12345', MINIMAX_API_KEY: 'nvapi-minimax-123' };
+  assert.deepEqual(P.familiesFor(env).slice(0, 2), ['gemini', 'minimax']);
+  assert.deepEqual(P.familiesFor({ ...env, AI_ORDER: 'minimax' }).slice(0, 2), ['minimax', 'gemini']);
+  const a = W.providerAttempts({ ...env, AI_ORDER: 'minimax', __family: 'minimax' }, 'x', ['gemini-2.5-flash']);
+  assert.equal(a[0].provider, 'minimax');
+  assert.equal(a[0].model, 'minimaxai/minimax-m3.1-flash');
   assert.ok(a.some((x) => x.kind === 'gemini'), 'danach Gemini');
 });

@@ -2,7 +2,8 @@
    Skills im Chat-Eingabefeld
    - „/“ öffnet nach oben eine Liste aller Skills („/name  Beschreibung“), Tippen filtert, ↑/↓ + Enter/Tab oder Antippen wählt
    - Skills werden auch automatisch erkannt: ein starkes Stichwort („Präsentation“, „Karteikarten“) reicht, sonst zwei passende
-     Wörter aus dem Umfeld („Design“ + „Farben“). Erkannte Wörter und „/skill“ werden farbig hinterlegt (getönte Fläche, getönte Schrift).
+     Wörter aus dem Umfeld („Design“ + „Farben“). Seit 03.11. OHNE farbige Markierung (Wunsch des Nutzers; der Spiegel hinter dem
+     Textfeld verschob teils die Schreibmarke) – gewählt wird über „/“, das Wort steht dann normal im Text.
    - Beim Senden gehen die aktiven Skills als `skills: [id]` an den Server (lib/skills.js hängt die Spezial-Anweisungen an).
    Browser und Node (Tests) nutzen dieselbe Liste und dieselbe Erkennung.
    =================================================================== */
@@ -59,7 +60,8 @@ const Skills = (() => {
   // Bereiche ohne Überschneidung, nach Position
   const marks = (text) => { const r = detect(text).flatMap((d) => d.ranges.map(([a, b]) => ({ a, b, c: byId[d.id].c }))).sort((x, y) => x.a - y.a || y.b - x.b); const keep = []; let end = -1; for (const x of r) if (x.a >= end) { keep.push(x); end = x.b; } return keep; };
   // Text als HTML mit getönten Skill-Wörtern (Nachricht im Chat nach dem Senden)
-  function html(text) { const t = String(text || ''); let out = '', at = 0; for (const r of marks(t)) { out += escHtml(t.slice(at, r.a)) + `<mark class="sk-mark" style="--c:${r.c}">${escHtml(t.slice(r.a, r.b))}</mark>`; at = r.b; } return out + escHtml(t.slice(at)); }
+  function html(text) { return escHtml(String(text || '')); }
+  function htmlMarked(text) { const t = String(text || ''); let out = '', at = 0; for (const r of marks(t)) { out += escHtml(t.slice(at, r.a)) + `<mark class="sk-mark" style="--c:${r.c}">${escHtml(t.slice(r.a, r.b))}</mark>`; at = r.b; } return out + escHtml(t.slice(at)); }
   const list = (q = '') => { const k = String(q).toLowerCase(); return SKILLS.filter((s) => !k || s.name.startsWith(k) || s.title.toLowerCase().includes(k) || s.desc.toLowerCase().includes(k)); };
 
   /* ---------- Eingabefeld (nur im Browser) ---------- */
@@ -69,9 +71,8 @@ const Skills = (() => {
     input._skills = true;
     const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
     // farbige Markierung: Spiegel hinter dem Textfeld (gleiche Schrift, gleiche Umbrüche), Textfeld-Schrift dann transparent
-    const mirror = document.createElement('div');
-    mirror.className = 'sk-mirror'; mirror.setAttribute('aria-hidden', 'true');
-    input.before(mirror);
+    const mirror = document.createElement('div'); // bleibt ungenutzt (keine Markierung mehr), nicht im Dokument
+    mirror.className = 'sk-mirror'; mirror.hidden = true;
     const place = () => {
       const cs = getComputedStyle(input);
       Object.assign(mirror.style, { left: `${input.offsetLeft}px`, top: `${input.offsetTop}px`, width: `${input.clientWidth}px`, height: `${input.clientHeight}px`,
@@ -79,6 +80,8 @@ const Skills = (() => {
       mirror.scrollTop = input.scrollTop;
     };
     const paint = () => {
+      input.classList.remove('sk-on'); return; // keine farbige Markierung mehr
+      // eslint-disable-next-line no-unreachable
       const text = input.value, keep = marks(text);
       input.classList.toggle('sk-on', keep.length > 0);
       mirror.hidden = !keep.length;

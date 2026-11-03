@@ -9,7 +9,7 @@
   // Logos: #b-… in index.html (offizielle Marken)
   const PROVIDERS = [
     { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true },
-    { id: 'MISTRAL_API_KEY', name: 'Mistral (NVIDIA)', logo: 'mistral', where: 'build.nvidia.com', multi: true },
+    { id: 'MINIMAX_API_KEY', name: 'MiniMax (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true },
     { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true },
     { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
@@ -24,6 +24,9 @@
 
   /* ---------- Schlüssel vom Gerät an jede /api-Anfrage hängen ---------- */
   let deviceKeys = read(KEYS_KEY, {});
+  // Mistral ist raus (03.11.): „Mistral zuerst“ → MiniMax zuerst; ein dort eingetragener NVIDIA-Schlüssel gilt für MiniMax
+  if (deviceKeys.AI_ORDER === 'mistral') deviceKeys.AI_ORDER = 'minimax';
+  if (deviceKeys.MISTRAL_API_KEY && !deviceKeys.MINIMAX_API_KEY) { deviceKeys.MINIMAX_API_KEY = deviceKeys.MISTRAL_API_KEY; delete deviceKeys.MISTRAL_API_KEY; write(KEYS_KEY, deviceKeys); }
   const keyHeader = () => {
     const list = Object.entries(deviceKeys).filter(([, v]) => v);
     return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
@@ -135,19 +138,19 @@
   /* Haupt-KI: zwei Karten (Logo, Name, wofür sie gut ist) – gewählt = blauer Haken + hellerer Rand; darunter „Coden mit“ */
   const AIS = [
     { id: 'gemini', name: 'Google Gemini', logo: 'gemini', model: 'Gemini 3.x Flash', text: 'Denkt sichtbar mit, liest Fotos und PDFs, Google-Suche' },
-    { id: 'mistral', name: 'Mistral', logo: 'mistral', model: 'Mistral Large 3 · NVIDIA', text: 'Sehr großes Modell, stark beim Programmieren und Schreiben' },
+    { id: 'minimax', name: 'MiniMax', logo: 'nvidia', model: 'MiniMax M3.1 Flash · NVIDIA', text: 'Denkt mit, schnell und stark beim Programmieren' },
   ];
   function mainAiHtml() {
-    const order = deviceKeys.AI_ORDER === 'mistral' ? 'mistral' : 'gemini';
-    const code = deviceKeys.CODE_ORDER === 'gemini' ? 'gemini' : 'mistral';
-    const has = (id) => (id === 'gemini' ? keyList('GEMINI_API_KEY').length || fileKeys.GEMINI_API_KEY : keyList('MISTRAL_API_KEY').length || keyList('FLUX3_API_KEY').length || fileKeys.MISTRAL_API_KEY);
+    const order = deviceKeys.AI_ORDER === 'minimax' ? 'minimax' : 'gemini';
+    const code = deviceKeys.CODE_ORDER === 'gemini' ? 'gemini' : 'minimax';
+    const has = (id) => (id === 'gemini' ? keyList('GEMINI_API_KEY').length || fileKeys.GEMINI_API_KEY : keyList('MINIMAX_API_KEY').length || keyList('MISTRAL_API_KEY').length || keyList('FLUX3_API_KEY').length || fileKeys.MINIMAX_API_KEY);
     const cards = AIS.map((a) => `<button type="button" class="st-ai${a.id === order ? ' on' : ''}" data-ai-order="${a.id}" role="radio" aria-checked="${a.id === order}">
         <span class="st-ai-top"><svg class="st-logo" width="22" height="22" aria-hidden="true"><use href="#b-${a.logo}"/></svg><span class="st-ai-check">${fi('check', 11)}</span></span>
         <span class="st-ai-name">${esc(a.name)}</span><span class="st-ai-model">${esc(a.model)}</span><span class="st-ai-text">${esc(a.text)}</span>
         ${has(a.id) ? '' : '<span class="st-ai-miss">Noch kein Schlüssel</span>'}</button>`).join('');
     return `<h2>Haupt-KI</h2><div class="st-ai-grid" role="radiogroup" aria-label="Zuerst nutzen">${cards}</div>
       <p class="st-ai-note">Wird zuerst genutzt. Ist das Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p>
-      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coden und Mini-Apps mit</span><span class="grow"></span>${seg('data-code-order', [['Mistral', 'mistral'], ['Gemini', 'gemini']], code)}</div></div>`;
+      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coden und Mini-Apps mit</span><span class="grow"></span>${seg('data-code-order', [['MiniMax', 'minimax'], ['Gemini', 'gemini']], code)}</div></div>`;
   }
 
   /* ---------- Workspaces: Zeile antippen klappt sie auf (Symbol, Name, Öffnen, Personen einladen, Löschen) ---------- */
@@ -311,7 +314,7 @@
     if (co) { if (co.dataset.codeOrder === 'gemini') deviceKeys.CODE_ORDER = 'gemini'; else delete deviceKeys.CODE_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
     const ao = e.target.closest('[data-ai-order]');
-    if (ao) { if (ao.dataset.aiOrder === 'mistral') deviceKeys.AI_ORDER = 'mistral'; else delete deviceKeys.AI_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    if (ao) { if (ao.dataset.aiOrder === 'minimax') deviceKeys.AI_ORDER = 'minimax'; else delete deviceKeys.AI_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     if (wsClick(e)) return;

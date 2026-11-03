@@ -832,7 +832,7 @@ const PixelDogs = (() => {
     { id: 'code', name: 'Coden' },
     { id: 'boerse', name: 'Börse' },
   ];
-  // nicht verfügbare Agenten (ausgegraut) – Coden ist wieder frei (Mini-Apps, Mistral Large zuerst)
+  // nicht verfügbare Agenten (ausgegraut) – Coden ist wieder frei (Mini-Apps, MiniMax zuerst)
   const UNAVAILABLE = new Set();
 
   /* ---------- Eigene Agenten (agent-builder.js): Figur der festen Agenten, nur umgefärbt – exakt derselbe Pixel-Stil ----------
