@@ -150,7 +150,7 @@
         ${has(a.id) ? '' : '<span class="st-ai-miss">Noch kein Schlüssel</span>'}</button>`).join('');
     return `<h2>Haupt-KI</h2><div class="st-ai-grid" role="radiogroup" aria-label="Zuerst nutzen">${cards}</div>
       <p class="st-ai-note">Wird zuerst genutzt. Ist das Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p>
-      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coden und Mini-Apps mit</span><span class="grow"></span>${seg('data-code-order', [['MiniMax', 'minimax'], ['Gemini', 'gemini']], code)}</div></div>`;
+      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coding-Agent mit</span><span class="grow"></span>${seg('data-code-order', [['MiniMax', 'minimax'], ['Gemini', 'gemini']], code)}</div></div>`;
   }
 
   /* ---------- Workspaces: Zeile antippen klappt sie auf (Symbol, Name, Öffnen, Personen einladen, Löschen) ---------- */

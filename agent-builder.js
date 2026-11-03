@@ -170,7 +170,7 @@ const AgentBuilder = (() => {
     out.innerHTML = `<div class="out-bubble"><span class="ags-fk">${fi('lock', 10)}${esc(label)}</span><span class="ags-fv">${esc(value)}</span></div>`;
     flowOf()?.append(out); scroll();
   }
-  const ask = (q, opts) => { if (typeof showAskPanel === 'function') showAskPanel([q], { noSkip: true, ...opts }); };
+  const ask = (q, opts) => { if (typeof showAskPanel === 'function') showAskPanel([q], { noSkip: true, nextLabel: 'Weiter', ...opts }); };
   const answerOf = (qa) => (qa?.[0]?.picked || []).map((p) => p.text).join(', ').trim();
 
   async function stepName() {
@@ -245,7 +245,8 @@ const AgentBuilder = (() => {
   }
   async function startWizard() {
     const w = wiz(); if (!w) return;
-    if (w.step === 'intro') { await say(INTRO); stepName(); return; }
+    if (w.step === 'intro') { w.step = 'greeting'; await say(INTRO); stepName(); return; } // nur einmal (Tab-Wechsel und Öffnen kommen fast gleichzeitig)
+    if (w.step === 'greeting') return;
     resumeStep();
   }
   // nach Neuladen/Tab-Wechsel: festgelegte Zeilen wieder zeigen und beim offenen Schritt weitermachen
@@ -280,7 +281,7 @@ const AgentBuilder = (() => {
     if (edit) {
       say(`Was möchtest du an **${edit.name}** ändern? Name, Aussehen, Aufgabe, Arbeitsweise, Ton oder Grenzen – sag es einfach.`);
       setTimeout(() => document.getElementById('input')?.focus(), 160);
-    } else setTimeout(startWizard, 120);
+    } // der Ablauf startet über „chat-tab-switched“ (createTab), sobald der neue Chat aktiv ist
   }
   function close(selectId = null) {
     const tab = tabNow();
@@ -315,7 +316,7 @@ const AgentBuilder = (() => {
   window.addEventListener('chat-tab-switched', () => setTimeout(() => {
     sync();
     const tab = tabNow();
-    if (isSetup(tab) && !chatData(tab)?.setupBase) { const w = wiz(); if (w.step === 'intro') startWizard(); else { replay(); setTimeout(resumeStep, 150); } }
+    if (isSetup(tab) && !chatData(tab)?.setupBase) { const w = wiz(); if (w.step === 'intro') startWizard(); else if (w.step === 'greeting') { w.step = 'name'; replay(); setTimeout(resumeStep, 150); } else { replay(); setTimeout(resumeStep, 150); } }
   }, 0));
   document.addEventListener('dogmodechange', () => setTimeout(greet, 0));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && app?.classList.contains('agent-setup') && !document.querySelector('.agent-picker.open, .cbx-overlay, #composer.asking') && !e.target.closest?.('textarea, input')) close(); });

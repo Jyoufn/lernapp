@@ -4,13 +4,9 @@ const assert = require('node:assert');
 const M = require('./mock');
 const W = require('../lib/workflow');
 
-test('Mini-App-Anleitung: beim Coding-Agenten immer, sonst nur bei passenden Wörtern; Stilwünsche gehen mit', () => {
-  const code = W.extrasPrompt({ agent: 'code', text: 'Hallo', recent: '', look: { accent: '#4fcf8a', corners: 'rund', wish: 'Pastell' } });
-  assert.match(code, /MINI-APPS/);
-  assert.match(code, /#4fcf8a/);
-  assert.match(code, /Pastell/);
-  assert.doesNotMatch(W.extrasPrompt({ agent: 'general', text: 'Was ist Photosynthese?', recent: '' }), /MINI-APPS/);
-  assert.match(W.extrasPrompt({ agent: 'general', text: 'Veranschauliche mir das mit einer Simulation', recent: '' }), /MINI-APPS/);
+test('Mini-Apps im Chat sind aus: keine Mini-App-Anleitung mehr (programmiert wird nur im Coding-Agenten), Einstellungen per Chat bleiben', () => {
+  assert.doesNotMatch(W.extrasPrompt({ agent: 'code', text: 'Bau mir ein Spiel', recent: '' }), /MINI-APPS/);
+  assert.doesNotMatch(W.extrasPrompt({ agent: 'general', text: 'Veranschauliche mir das mit einer Simulation', recent: '' }), /MINI-APPS/);
   assert.match(W.extrasPrompt({ agent: 'general', text: 'Mach meinen Chat-Hintergrund zu Sternen', recent: '' }), /```einstellung/);
 });
 

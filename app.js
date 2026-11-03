@@ -3104,6 +3104,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       setTimeout(() => { const c = msgEl.querySelector('.agent-suggest.resume'); if (c && !runOf()) { c.classList.add('chosen'); continueAnswer(msgEl); } }, 900);
     }
   }
+  // Coding-Agent: Zeitlimit des Servers (Vercel 300 s) erreicht → Zwischenstand steht im Chat, automatisch „weiter“ (bis zu 10-mal am Stück)
+  if (answerR && !signal.aborted && /<!--weiter-->/.test(answerR.text)) {
+    if ((tab._codeCont = (tab._codeCont || 0) + 1) <= 10) setTimeout(() => { if (tab === activeTab() && !runOf()) sendMessage('weiter', []); }, 1200);
+  } else if (answerR) tab._codeCont = 0;
   // Der Agent passt nicht zur Aufgabe → Karte zum Wechseln (z. B. „Zu Coden wechseln“)
   const suggested = answerR && !signal.aborted ? parseAgentBlock(answerR.text) : null;
   if (suggested) msgEl.insertBefore(agentSuggestCard(msgEl, suggested), msgEl.querySelector('.msg-actions'));

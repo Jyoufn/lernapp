@@ -302,7 +302,7 @@ const CodeAgent = (() => {
     win.querySelector('.cw-reload').addEventListener('click', () => { ui.sent = ''; preview(true); });
     win.querySelector('.cw-openext').addEventListener('click', async () => {
       if (typeof runOf === 'function' && runOf(activeTab())) { showHint('Der Agent programmiert noch – gleich fertig'); return; }
-      if (await sync()) window.open(previewUrl(), '_blank', 'noopener');
+      openExternal();
     });
     win.querySelector('.cw-err-x').addEventListener('click', () => { win.querySelector('.cw-err').hidden = true; });
     win.querySelector('.cw-err-fix').addEventListener('click', fixRuntimeError);
@@ -428,48 +428,82 @@ const CodeAgent = (() => {
   }
   const entryOf = (files) => (files.has('index.html') ? 'index.html' : [...files.keys()].find((p) => /\.html?$/i.test(p)));
 
-  /* ---------- Vorschau: Dateien an den Server (nur Speicher), dann im Rahmen bzw. im Browser ---------- */
-  // Vorschau läuft auf eigenem Port (App-Port + 1) – eigene Herkunft, getrennt von den Daten der App
-  const previewUrl = () => `${location.protocol}//${location.hostname}:${ui.port || (Number(location.port || 80) + 1)}/vorschau/${chatId(activeTab())}/`;
-  async function sync() {
-    const files = projectFiles();
-    if (!files.size) return false;
-    const body = JSON.stringify({ id: chatId(activeTab()), files: Object.fromEntries(files) });
-    if (body === ui.sent) return true;
-    try {
-      const r = await fetch('/api/vorschau', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body });
-      if (!r.ok) throw new Error();
-      ui.port = (await r.json()).port || ui.port;
-      ui.sent = body;
-      return true;
-    } catch { showHint('Vorschau konnte nicht vorbereitet werden'); return false; }
+  /* ---------- Vorschau: komplett im Browser (auch auf Vercel) ----------
+     Die Projektdateien werden zu EINER Seite gebündelt: CSS-Dateien als <style>, klassische Skripte inline, ES-Module über eine Import-Map
+     (relative Importe → virtuelle Adressen → data:-URLs), fetch() relativer Pfade liefert die Projektdateien. Läuft im abgeschotteten iframe
+     (sandbox ohne same-origin: kein Zugriff auf die App); localStorage gibt es als Ersatz im Speicher. Fehler → Leiste unten „Beheben“. */
+  const VBASE = 'https://vorschau.app/';
+  const dirOf = (p) => p.split('/').slice(0, -1).join('/');
+  const resolveRel = (from, rel) => { const parts = [...(dirOf(from) ? dirOf(from).split('/') : []), ...rel.split('/')]; const out = []; parts.forEach((x) => { if (x === '..') out.pop(); else if (x && x !== '.') out.push(x); }); return out.join('/'); };
+  const isRel = (u) => !!u && !/^(?:[a-z]+:|\/\/|#|data:|blob:)/i.test(u);
+  const b64 = (t) => btoa(unescape(encodeURIComponent(t)));
+  function bundle(files, entry) {
+    const mods = {};
+    // Module: relative Importe auf virtuelle Adressen umschreiben
+    const rewriteJs = (path, code) => code.replace(/(\bimport\s*(?:[^'"()]*?\bfrom\s*)?|\bexport\s+[^'"()]*?\bfrom\s*|\bimport\s*\(\s*)(['"])(\.{1,2}\/[^'"]+)\2/g, (m, a, q, rel) => `${a}${q}${VBASE}${resolveRel(path, rel)}${q}`);
+    for (const [p, c] of files) if (/\.m?js$/i.test(p)) mods[`${VBASE}${p}`] = `data:text/javascript;base64,${b64(rewriteJs(p, c))}`;
+    let html = files.get(entry) || '';
+    html = html.replace(/<link\b[^>]*rel=["']?stylesheet["']?[^>]*>/gi, (tag) => {
+      const href = (tag.match(/href=["']([^"']+)["']/i) || [])[1];
+      return isRel(href) && files.has(resolveRel(entry, href)) ? `<style data-file="${href}">\n${files.get(resolveRel(entry, href))}\n</style>` : tag;
+    });
+    html = html.replace(/<script\b([^>]*)\bsrc=["']([^"']+)["']([^>]*)>\s*<\/script>/gi, (tag, a, src, b) => {
+      if (!isRel(src)) return tag;
+      const p = resolveRel(entry, src);
+      if (!files.has(p)) return tag;
+      const attrs = `${a}${b}`.replace(/\s+/g, ' ');
+      if (/type=["']module["']/i.test(attrs)) return `<script type="module">import ${JSON.stringify(VBASE + p)};</script>`; // src läuft nicht über die Import-Map, ein import schon
+      return `<script${attrs.replace(/\b(defer|async)\b/g, '')} data-file="${p}">\n${files.get(p).replace(/<\/script/gi, '<\\/script')}\n</script>`;
+    });
+    // Module im HTML selbst: relative Importe ebenfalls umschreiben
+    html = html.replace(/(<script\b[^>]*type=["']module["'][^>]*>)([\s\S]*?)(<\/script>)/gi, (m, a, code, c) => `${a}${rewriteJs(entry, code)}${c}`);
+    const fileMap = Object.fromEntries([...files].filter(([p]) => !/\.(m?js|css|html?)$/i.test(p) || /\.json$/i.test(p)));
+    const boot = `<base href="${VBASE}${dirOf(entry) ? `${dirOf(entry)}/` : ''}"><script type="importmap">${JSON.stringify({ imports: mods })}<\/script><script>(function(){
+var mem={},S={getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}},key:function(i){return Object.keys(mem)[i]||null}};
+try{window.localStorage.getItem('x')}catch(e){try{Object.defineProperty(window,'localStorage',{value:S,configurable:true});Object.defineProperty(window,'sessionStorage',{value:S,configurable:true})}catch(e2){}}
+var F=${JSON.stringify(fileMap).replace(/</g, '\\u003c')},B=${JSON.stringify(VBASE)},of=window.fetch&&window.fetch.bind(window);
+window.fetch=function(u,o){var s=typeof u==='string'?u:(u&&u.url)||'';var k=s.indexOf(B)===0?s.slice(B.length):(!/^[a-z]+:|^\\/\\//i.test(s)?s.replace(/^\\.\\//,''):null);if(k!=null&&k in F){return Promise.resolve(new Response(F[k],{status:200,headers:{'Content-Type':/\\.json$/i.test(k)?'application/json':'text/plain'}}))}return of?of(u,o):Promise.reject(new Error('fetch'))};
+var send=function(m,f,l){try{parent.postMessage({type:'ca-error',message:String(m||'Fehler').slice(0,300),file:f||'',line:l||0},'*')}catch(e){}};
+window.addEventListener('error',function(e){var f=String(e.filename||'');f=f.indexOf(B)===0?f.slice(B.length):'';send(e.message,f,e.lineno)});
+window.addEventListener('unhandledrejection',function(e){send((e.reason&&e.reason.message)||e.reason)});
+var ce=console.error;console.error=function(){try{send([].slice.call(arguments).join(' '))}catch(e){}ce&&ce.apply(console,arguments)};})();<\/script>`;
+    if (/<head[^>]*>/i.test(html)) return html.replace(/<head[^>]*>/i, (m) => `${m}${boot}`);
+    if (/<html[^>]*>/i.test(html)) return html.replace(/<html[^>]*>/i, (m) => `${m}<head>${boot}</head>`);
+    return `<!doctype html><html><head><meta charset="utf-8">${boot}</head><body>${html}</body></html>`;
   }
   async function preview(force = false) {
     if (!win) return;
     const stage = win.querySelector('.cw-pvstage');
     const files = projectFiles();
     const entry = entryOf(files);
-    win.querySelector('.cw-url span').textContent = previewUrl().replace(/^https?:\/\//, '') + (entry && entry !== 'index.html' ? entry : '');
+    win.querySelector('.cw-url span').textContent = `Vorschau · ${entry || 'keine HTML-Datei'}`;
     if (!entry) { stage.innerHTML = '<div class="cw-noprev">Keine HTML-Datei – für dieses Projekt gibt es keine Vorschau.</div>'; return; }
     // Agent arbeitet noch → Vorschau wartet (halbfertiger Code würde nur Fehler zeigen); endRun in app.js stößt sie danach an
     if (typeof runOf === 'function' && runOf(activeTab())) {
       if (!stage.querySelector('.cw-wait')) stage.innerHTML = '<div class="cw-noprev cw-wait"><i class="ca-spin"></i>Der Agent programmiert noch – die Vorschau startet, sobald er fertig ist.</div>';
       return;
     }
-    if (stage.querySelector('.cw-wait')) force = true;
-    const before = ui.sent;
-    if (!(await sync())) return;
-    if (!ui.open || ui.view !== 'preview') return; // inzwischen zugeklappt oder auf „Code“ gewechselt → nicht starten
-    if (!force && before === ui.sent && stage.querySelector('iframe')) return; // nichts geändert
+    if (!ui.open || ui.view !== 'preview') return;
+    const doc = bundle(files, entry);
+    if (!force && doc === ui.sent && stage.querySelector('iframe')) return; // nichts geändert
+    ui.sent = doc;
     const frame = document.createElement('iframe');
     frame.title = 'Vorschau';
-    frame.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups allow-pointer-lock'); // eigene Herkunft (anderer Port) → kein Zugriff auf die App
-    frame.src = `${previewUrl()}${entry === 'index.html' ? '' : entry}?t=${Date.now()}`;
+    frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-pointer-lock'); // ohne same-origin: kein Zugriff auf die App
+    frame.srcdoc = doc;
     win.querySelector('.cw-err').hidden = true;
     ui.errors = [];
     stage.replaceChildren(frame);
   }
-  // Laufzeitfehler aus der Vorschau (Melder vom Server, siehe servePreview) → unten in der Vorschau, „Beheben“ fragt den Agenten
+  // „Im Browser öffnen“: dieselbe gebündelte Seite als eigenes Fenster (Blob)
+  function openExternal() {
+    const files = projectFiles(), entry = entryOf(files);
+    if (!entry) return;
+    const url = URL.createObjectURL(new Blob([bundle(files, entry)], { type: 'text/html' }));
+    window.open(url, '_blank', 'noopener');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+  // Laufzeitfehler aus der Vorschau (Melder in der gebündelten Seite) → unten in der Vorschau, „Beheben“ fragt den Agenten
   function onPreviewMessage(e) {
     const frame = win?.querySelector('.cw-pvstage iframe');
     if (!frame || e.source !== frame.contentWindow || e.data?.type !== 'ca-error') return;
@@ -525,6 +559,6 @@ const CodeAgent = (() => {
     if (t.textContent !== `${text} …`) { t.textContent = `${text} …`; t.classList.remove('in'); void t.offsetWidth; t.classList.add('in'); }
     if (chat.contains(msgEl)) scrollToBottom();
   }
-  return { has, mark, build, refresh: queueRefresh, split, revealTo, status };
+  return { has, mark, build, refresh: queueRefresh, split, revealTo, status, bundle };
 })();
 window.CodeAgent = CodeAgent;

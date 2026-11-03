@@ -590,7 +590,8 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     return false;
   }
   (window.SettingsHooks ||= []).push(
-    { page: 'look', order: 2, html: lookHtml, click: settingsClick, input: settingsInput, change: settingsChange },
+    // Design der Mini-Apps (Aussehen) vorerst ausgeblendet – Mini-Apps im Chat sind aus; alte Mini-Apps bleiben unter „Gespeichert“
+    { page: 'look', order: 2, html: () => '', click: settingsClick, input: settingsInput, change: settingsChange },
     { page: 'saved', order: 1, html: savedHtml, click: settingsClick },
   );
   // Aussehen der App geändert (Akzent, Modus) → laufende Mini-Apps übernehmen es
