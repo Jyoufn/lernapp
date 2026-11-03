@@ -980,3 +980,13 @@ test('Lehrplan (Lern-Agent): Auszüge des Kerncurriculums als Rahmen im Prompt u
   assert.equal(W.cleanLehrplan({ ...lehrplan, url: 'https://evil.example/x.pdf' }).url, '', 'nur offizielle Adressen');
   assert.equal(W.cleanLehrplan({ auszuege: [] }), null);
 });
+
+test('PDF mit Handschrift: Gemini bekommt das PDF selbst und den Hinweis, die Seiten direkt darin zu lesen', () => {
+  const P = require('../lib/providers');
+  const [c] = P.toGeminiContents([{ role: 'user', text: 'Was steht drin?', images: [{ mime: 'application/pdf', name: 'Mitschrift.pdf', data: 'JVBERi0x', hand: '1–17', text: '…' }] }]);
+  const texts = c.parts.filter((p) => p.text).map((p) => p.text).join('\n');
+  assert.ok(c.parts.some((p) => p.inline_data?.mime_type === 'application/pdf'));
+  assert.match(texts, /Seite 1–17 sind handschriftlich/);
+  const [d] = P.toGeminiContents([{ role: 'user', text: 'x', images: [{ mime: 'application/pdf', name: 'a.pdf', data: 'JVBERi0x' }] }]);
+  assert.ok(!d.parts.some((p) => /handschriftlich/.test(p.text || '')));
+});

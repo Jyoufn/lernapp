@@ -474,7 +474,6 @@ const filesLoading = () => attachments.some((a) => a.status === 'loading');
 function syncUploading() {
   const busy = filesLoading();
   composer.classList.toggle('uploading', busy);
-  if (!sendBtn.classList.contains('running')) sendBtn.title = busy ? 'Datei wird noch gelesen …' : 'Senden';
 }
 function updateAttachment(a) {
   syncUploading();
@@ -515,8 +514,10 @@ function renderAttachments() {
       const k = attachments.indexOf(a); if (k >= 0) attachments.splice(k, 1);
       renderAttachments();
     });
-    if (a.pdf) el.append(remove);
-    else el.append(img, el.ownerDocument.createRange().createContextualFragment('<svg class="up-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>'), remove);
+    if (a.pdf) {
+      el.append(remove);
+      if (isPdf(a.file)) { el.classList.add('pv-open'); el.addEventListener('click', (e) => { if (!e.target.closest('button')) openPdfView({ file: a.file, name: a.file.name }); }); }
+    } else el.append(img, el.ownerDocument.createRange().createContextualFragment('<svg class="up-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>'), remove);
     a.el = el;
     updateAttachment(a);
     return el;
@@ -716,7 +717,16 @@ function addUserMessage(text, images) {
   const msg = el('div', 'msg-out');
   const pdfs = images.filter((i) => i.pdf || i.mime === 'application/pdf');
   images = images.filter((i) => !(i.pdf || i.mime === 'application/pdf'));
-  if (pdfs.length) { const row = el('div', 'out-pdfs'); pdfs.forEach((p) => row.append(pdfChip(p.name || 'PDF', 'oi-pdf'))); msg.append(row); }
+  if (pdfs.length) {
+    const row = el('div', 'out-pdfs');
+    pdfs.forEach((p) => {
+      const chip = pdfChip(p.name || 'PDF', 'oi-pdf');
+      const src = { file: p.file && isPdf(p.file) ? p.file : null, data: p.data, fileId: p.fileId, name: p.name || 'PDF' };
+      if (src.file || src.data || src.fileId) { chip.classList.add('pv-open'); chip.addEventListener('click', () => openPdfView(src)); } // Klick öffnet das PDF
+      row.append(chip);
+    });
+    msg.append(row);
+  }
   if (images.length) {
     const row = el('div', 'out-images');
     const overflow = images.length > MAX_VISIBLE_IMAGES;
@@ -1835,6 +1845,147 @@ const TRANSCRIBE_PAGES = 3;       // Seiten je Paket – kleine Pakete sind schn
 const TRANSCRIBE_PARALLEL = 3;    // so viele Pakete gleichzeitig
 const TRANSCRIBE_TIMEOUT = 100000; // ein Paket darf nie ewig hängen – danach gehen die Seiten als Bild mit
 const scanJobs = new WeakMap();   // PDF-Eintrag → Seiten, die noch abgeschrieben werden müssen
+// [1,2,3,5,7,8] → „1–3, 5, 7–8“
+const pageRanges = (list) => list.reduce((out, p) => { const last = out[out.length - 1]; if (last && p === last[1] + 1) last[1] = p; else out.push([p, p]); return out; }, [])
+  .map(([a, b]) => (a === b ? `${a}` : `${a}–${b}`)).join(', ');
+/* Angehängte PDFs bleiben im Gerät (IndexedDB, die letzten 40): so lassen sie sich auch nach dem Neuladen öffnen, und große PDFs gehen
+   bei Folgefragen wieder als Datei an Gemini, obwohl auf dem Server nur ihr Text liegt. */
+const fileStore = (() => {
+  let dbp = null;
+  const open = () => (dbp ||= new Promise((res, rej) => {
+    try { const r = indexedDB.open('lernapp-dateien', 1); r.onupgradeneeded = () => r.result.createObjectStore('f'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); }
+  }));
+  const tx = (mode, fn) => open().then((db) => new Promise((res, rej) => { const t = db.transaction('f', mode); const q = fn(t.objectStore('f')); t.oncomplete = () => res(q?.result); t.onerror = () => rej(t.error); }));
+  return {
+    put: (id, blob) => tx('readwrite', (st) => st.put(blob, id))
+      .then(() => tx('readonly', (st) => st.getAllKeys()))
+      .then((keys) => { const old = (keys || []).map(String).sort().slice(0, -40); if (old.length) return tx('readwrite', (st) => old.forEach((k) => st.delete(k))); })
+      .catch(() => {}),
+    get: (id) => tx('readonly', (st) => st.get(id)).catch(() => null),
+  };
+})();
+const keepFile = (file) => { const id = `f${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; fileStore.put(id, file); return id; }; // Zeit vorn → sortiert = älteste zuerst
+const b64Bytes = (b64) => { const bin = atob(b64); const u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return u8; };
+async function pdfBytes(src) {
+  if (src.file) return new Uint8Array(await src.file.arrayBuffer());
+  if (src.data) return b64Bytes(src.data);
+  if (src.fileId) { const blob = await fileStore.get(src.fileId); if (blob) return new Uint8Array(await blob.arrayBuffer()); }
+  return null;
+}
+// Anfrage: PDFs, deren Daten nur im Gerät liegen (nach dem Neuladen), wieder als Datei mitschicken – solange sie in die Anfrage passen
+async function withFiles(messages) {
+  const out = messages.slice();
+  for (let i = 0; i < out.length; i++) {
+    if (!out[i].images?.some((img) => img.cut && img.fileId && !img.data)) continue;
+    out[i] = { ...out[i], images: await Promise.all(out[i].images.map(async (img) => {
+      if (!(img.cut && img.fileId && !img.data)) return img;
+      const blob = await fileStore.get(img.fileId);
+      if (!blob || blob.size > PDF_RAW_MAX) return img;
+      const u8 = new Uint8Array(await blob.arrayBuffer());
+      let bin = ''; for (let k = 0; k < u8.length; k += 0x8000) bin += String.fromCharCode(...u8.subarray(k, k + 0x8000));
+      return { ...img, data: btoa(bin) };
+    })) };
+  }
+  return out;
+}
+
+/* ---------- PDF ansehen ----------
+   Klick auf eine PDF-Karte (im Eingabefeld oder in der eigenen Nachricht) öffnet das PDF als Fenster: alle Seiten untereinander,
+   hoch und runter scrollen, unten „3 / 18“, oben Vergrößern/Verkleinern. Seiten werden erst gerendert, wenn sie in die Nähe kommen. */
+async function openPdfView(src) {
+  document.querySelector('.pv')?.remove();
+  const box = el('div', 'pv');
+  box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', src.name || 'PDF');
+  box.innerHTML = `<div class="pv-backdrop"></div><div class="pv-sheet"><div class="pv-head"><span class="pv-ico">${FadeIcons.svg('file', 15)}</span>`
+    + `<div class="pv-title"><span class="pv-name">${escapeHtml(src.name || 'PDF')}</span><span class="pv-meta shimmer">Wird geöffnet …</span></div>`
+    + `<button type="button" class="pv-btn pv-out" aria-label="Verkleinern">${FadeIcons.svg('minus', 14)}</button><button type="button" class="pv-btn pv-in" aria-label="Vergrößern">${FadeIcons.svg('plus', 14)}</button>`
+    + `<button type="button" class="pv-btn pv-x" aria-label="Schließen">${FadeIcons.svg('x', 14)}</button></div><div class="pv-body"><div class="pv-pages"></div></div><div class="pv-count" hidden></div></div>`;
+  document.body.append(box);
+  requestAnimationFrame(() => box.classList.add('open'));
+  const body = box.querySelector('.pv-body'), pagesEl = box.querySelector('.pv-pages'), meta = box.querySelector('.pv-meta'), count = box.querySelector('.pv-count');
+  const urls = [];
+  let doc = null, closed = false, zoom = 1, io = null;
+  const close = () => {
+    if (closed) return; closed = true;
+    document.removeEventListener('keydown', onKey, true);
+    box.classList.remove('open');
+    setTimeout(() => { box.remove(); urls.forEach((u) => URL.revokeObjectURL(u)); doc?.destroy?.(); }, 240);
+  };
+  const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+  document.addEventListener('keydown', onKey, true);
+  box.querySelector('.pv-backdrop').addEventListener('click', close);
+  box.querySelector('.pv-x').addEventListener('click', close);
+  try {
+    const bytes = await pdfBytes(src);
+    if (!bytes) throw new Error('nicht im Gerät');
+    doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
+  } catch {
+    meta.classList.remove('shimmer');
+    meta.textContent = src.fileId || src.data ? 'Konnte nicht geöffnet werden' : 'Nur auf dem Gerät verfügbar, auf dem es angehängt wurde';
+    return;
+  }
+  if (closed) { doc.destroy?.(); return; }
+  const n = doc.numPages;
+  meta.classList.remove('shimmer');
+  meta.textContent = `${n} ${n === 1 ? 'Seite' : 'Seiten'}`;
+  const first = (await doc.getPage(1)).getViewport({ scale: 1 });
+  const pages = Array.from({ length: n }, (_, i) => {
+    const pg = el('div', 'pv-page');
+    pg.dataset.p = i + 1;
+    pg.style.aspectRatio = `${first.width} / ${first.height}`;
+    pagesEl.append(pg);
+    return pg;
+  });
+  const render = async (pg) => {
+    const want = Math.round(pagesEl.clientWidth * zoom * Math.min(2, window.devicePixelRatio || 1));
+    if (pg._busy || (pg._w || 0) >= want) return;
+    pg._busy = true;
+    try {
+      const page = await doc.getPage(Number(pg.dataset.p));
+      const base = page.getViewport({ scale: 1 });
+      pg.style.aspectRatio = `${base.width} / ${base.height}`;
+      const vp = page.getViewport({ scale: want / base.width });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      const blob = await new Promise((ok) => canvas.toBlob(ok, 'image/jpeg', 0.9));
+      canvas.width = canvas.height = 0;
+      if (closed || !blob) return;
+      const url = URL.createObjectURL(blob); urls.push(url);
+      const img = pg.querySelector('img') || pg.appendChild(document.createElement('img'));
+      img.alt = `Seite ${pg.dataset.p}`;
+      img.src = url;
+      pg.classList.add('ready');
+      pg._w = want;
+    } catch {} finally { pg._busy = false; }
+  };
+  io = new IntersectionObserver((list) => list.forEach((e) => { if (e.isIntersecting) render(e.target); }), { root: body, rootMargin: '900px 0px' });
+  pages.forEach((pg) => io.observe(pg));
+  // „3 / 18“: die Seite in der Mitte des Fensters
+  const onScroll = () => {
+    const mid = body.getBoundingClientRect().top + body.clientHeight / 2;
+    const cur = pages.find((pg) => pg.getBoundingClientRect().bottom >= mid) || pages[n - 1];
+    count.textContent = `${cur.dataset.p} / ${n}`;
+  };
+  count.hidden = n < 2;
+  body.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+  const setZoom = (z) => {
+    const mid = body.scrollTop / Math.max(1, body.scrollHeight);
+    zoom = Math.max(1, Math.min(2.5, z));
+    box.style.setProperty('--pv-zoom', zoom);
+    box.querySelector('.pv-out').disabled = zoom <= 1;
+    box.querySelector('.pv-in').disabled = zoom >= 2.5;
+    body.scrollTop = mid * body.scrollHeight;
+    pages.forEach((pg) => { const r = pg.getBoundingClientRect(), b = body.getBoundingClientRect(); if (r.bottom > b.top - 900 && r.top < b.bottom + 900) render(pg); });
+  };
+  box.querySelector('.pv-in').addEventListener('click', () => setZoom(zoom + 0.5));
+  box.querySelector('.pv-out').addEventListener('click', () => setZoom(zoom - 0.5));
+  setZoom(1);
+}
+
 async function renderPdfPage(doc, p, max, quality) {
   const page = await doc.getPage(p);
   const base = page.getViewport({ scale: 1 });
@@ -1863,11 +2014,12 @@ async function transcribePages(list, signal) { // list: [{ p, data }] → Map(Se
   return out;
 }
 // Text des ganzen PDFs, Seite für Seite; done = Abschriften (null = noch nicht gelesen), pics = Seiten, die als Bild mitgehen
-function pdfPagesText(texts, scans, done, pics = new Set()) {
+function pdfPagesText(texts, scans, done, pics = new Set(), inPdf = false) {
   const body = (p) => {
     if (!scans.includes(p)) return texts[p - 1];
     if (done?.has(p)) return `(Handschrift/Scan – abgeschrieben)\n${done.get(p)}`;
-    return pics.has(p) ? '(Seite ohne Text – als Bild beigefügt)' : '(Handschrift/Scan – nicht abgeschrieben)';
+    if (pics?.has(p)) return '(Seite ohne Text – als Bild beigefügt)';
+    return inPdf ? '(Handschrift/Scan – steht nur im PDF selbst)' : '(Handschrift/Scan – nicht abgeschrieben)';
   };
   return Array.from({ length: texts.length }, (_, i) => `[Seite ${i + 1}]\n${body(i + 1)}`).join('\n\n').slice(0, 400000);
 }
@@ -1884,9 +2036,13 @@ async function pdfToInline(file, onProgress, { defer = false } = {}) {
   const scans = texts.map((t, i) => (t.replace(/\s/g, '').length < SCAN_TEXT_MIN ? i + 1 : 0)).filter(Boolean).slice(0, 60);
   let bin = '';
   if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: pdfPagesText(texts, scans, null) };
+  const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: pdfPagesText(texts, scans, null, null, !!bin), fileId: keepFile(file) };
   if (!scans.length) { doc.destroy?.(); return [item]; }
   item.scans = scans.length;
+  item.hand = pageRanges(scans); // Hinweis an Gemini: diese Seiten direkt im PDF lesen
+  // Passt das PDF selbst in die Anfrage, liest Gemini die Handschrift direkt darin (wie in der Gemini-App) – kein eigener Abschreib-Schritt.
+  // Nur wenn es zu groß ist, werden die Seiten ohne Text abgeschrieben.
+  if (bin) { doc.destroy?.(); return [item]; }
   scanJobs.set(item, { file, texts, scans });
   if (defer) { doc.destroy?.(); return [item]; } // Handschrift erst beim Antworten lesen
   try { return [item, ...await readScanJob(item, (k, all) => onProgress?.(0.9, `Handschrift wird gelesen · ${k}/${all}`), null, doc)]; } finally { doc.destroy?.(); }
@@ -2144,6 +2300,7 @@ function setRunning(running) {
    - Entwurf / Prüfung nur, wenn sie wirklich stattfinden.
    Der Aufwand (Effort) wird nicht angezeigt. */
 const PENDING_DELAY = 700;    // „Working“-Hinweis, falls noch nichts zu sehen ist
+const IDLE_MS = 150000;       // so lange darf der Server schweigen (er bricht selbst nach spätestens ~280 s mit Meldung ab)
 const THINK_SHOW_DELAY = 900; // Thinking erst zeigen, wenn die Analyse nicht sofort fertig ist
 const THINK_HOLD_MS = 700;    // geschriebenes Vorgehen kurz stehen lassen, dann „Planned the answer“
 const STAGE_TEXT = {
@@ -3178,6 +3335,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       : `Handschrift <span class="ph-x">· ${pics ? `${pages(pics)} als Bild beigefügt` : 'nicht lesbar'}</span> <span class="t">${secs(from)}</span>`);
   };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
+  let idleTimer = null, idleHit = false;
 
   try {
     await readScans();
@@ -3186,15 +3344,20 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const lastAsk = [...historyOf(tab)].reverse().find((h) => h.role === 'user')?.text || '';
     let lehrplan = null;
     try { lehrplan = agentBody.agent === 'learn' && window.Lehrplan ? Lehrplan.payload(lastAsk) : null; } catch {}
+    // Wächter: kommt 150 s lang gar nichts mehr vom Server (keine Stufe, kein Gedanke, kein Text), wird abgebrochen und gesagt – nie endlos „laden“
+    const idle = window.AbortSignal?.any ? new AbortController() : null;
+    const poke = () => { clearTimeout(idleTimer); if (idle) idleTimer = setTimeout(() => { idleHit = true; idle.abort(); }, IDLE_MS); };
+    poke();
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(lehrplan ? { lehrplan } : {}), ...(prefix ? { partial: prefix } : {}) }),
-      signal,
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(await withFiles(historyOf(tab)))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(lehrplan ? { lehrplan } : {}), ...(prefix ? { partial: prefix } : {}) }),
+      signal: idle ? AbortSignal.any([signal, idle.signal]) : signal,
     });
-    if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);
+    if (!response.ok || !response.body) throw new Error(response.status === 413 ? 'Die Anfrage ist zu groß (zu viele oder zu große Dateien). Bitte weniger anhängen.' : `Server antwortet nicht (HTTP ${response.status}).`);
 
     for await (const { event, data } of readSse(response)) {
+      poke();
       if (event === 'status') await onStatus(data);
       else if (event === 'research') onResearch(data);
       else if (event === 'web') onWeb(data);
@@ -3266,9 +3429,11 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
     }
   } catch (err) {
+    if (idleHit && !signal.aborted) err = new Error('Gemini hat zwei Minuten lang nicht geantwortet – die Anfrage wurde abgebrochen. Bitte nochmal senden.');
     if (err.name !== 'AbortError' && answerR?.text.trim()) interrupted = true; // Verbindung mitten in der Antwort weg → weiterschreiben anbieten
     else if (err.name !== 'AbortError') { errorText = err.message || 'Verbindung unterbrochen'; msgEl.append(errorCard(msgEl, errorText, null)); scrollToBottom(); } // gestoppt: kein Hinweis – unten erscheint „Neu starten“
   } finally {
+    clearTimeout(idleTimer);
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
     [...deep.subs.values(), ...[...deep.queries.values()].map((q) => q.row)].forEach((row) => { if (row.dataset.state === 'active') row.dataset.state = 'todo'; }); // ohne eigene Quelle: offen, kein vorgetäuschter Haken
     clearInterval(timer);
@@ -5404,7 +5569,28 @@ function chatItems(withImages) {
     };
   });
 }
-function markChatsSent() { sentChats.clear(); chatItems(true).forEach((c) => sentChats.set(c.id, JSON.stringify(c))); }
+/* Für den Server schlank machen: Vercel nimmt/liefert höchstens ~4,5 MB je Anfrage. Je Chat gehen Datei-Daten bis ~1,5 MB mit (neueste zuerst);
+   große PDFs, die im Gerät liegen (fileId), nur mit Text und Namen – geöffnet und an die KI geschickt werden sie aus dem Gerätespeicher. */
+const CHAT_DATA_BUDGET = 1500000, SAVE_BODY_MAX = 3300000;
+function slimChat(c, budget = CHAT_DATA_BUDGET) {
+  let used = 0, changed = false;
+  const history = c.history.slice().reverse().map((h) => {
+    if (!h.images?.length) return h;
+    const images = h.images.map((img) => {
+      const n = (img.data || '').length;
+      if (!n) return img;
+      const pdfLocal = img.mime === 'application/pdf' && img.fileId && n > 400000;
+      if (!pdfLocal && used + n <= budget) { used += n; return img; }
+      changed = true;
+      const { data, tiles, ...rest } = img;
+      return { ...rest, cut: true };
+    });
+    return { ...h, images };
+  }).reverse();
+  return changed ? { ...c, history } : c;
+}
+const serverChat = (c) => { const a = slimChat(c); return JSON.stringify(a).length > SAVE_BODY_MAX ? slimChat(c, 0) : a; }; // sehr groß → nur Text
+function markChatsSent() { sentChats.clear(); chatItems(true).map(serverChat).forEach((c) => sentChats.set(c.id, JSON.stringify(c))); }
 function writeChats() {
   clearTimeout(saveT);
   if (restoring) return;
@@ -5415,13 +5601,25 @@ function writeChats() {
     const sent = [...deletedChats];
     const active = chatId(act && !act.dataset.view ? act : tabs.find((t) => !t.hidden) || tabs[0]);
     const items = chatItems(true);
-    const strs = new Map(items.map((c) => [c.id, JSON.stringify(c)]));
-    const changed = items.filter((c) => sentChats.get(c.id) !== strs.get(c.id));
-    // Hauptspeicher: das Konto auf dem Server (nur geänderte Chats + Reihenfolge; gelöschte ausdrücklich gemeldet)
+    const slim = items.map(serverChat);
+    const strs = new Map(slim.map((c) => [c.id, JSON.stringify(c)]));
+    const changed = slim.filter((c) => sentChats.get(c.id) !== strs.get(c.id));
+    // Hauptspeicher: das Konto auf dem Server (nur geänderte Chats + Reihenfolge; gelöschte ausdrücklich gemeldet).
+    // In Paketen ≤ 3,3 MB – ein großer Chat blockiert nie das Speichern der anderen.
     if (changed.length || sent.length || active !== writeChats.active) {
-      const body = JSON.stringify({ deleted: sent, active, order: items.map((c) => c.id), chats: changed });
-      fetch('/api/chats', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
-        .then((r) => { if (!r.ok) return; sent.forEach((id) => deletedChats.delete(id)); changed.forEach((c) => sentChats.set(c.id, strs.get(c.id))); writeChats.active = active; }).catch(() => {});
+      const order = items.map((c) => c.id);
+      const packs = [[]];
+      let size = 0;
+      for (const c of changed) {
+        const str = strs.get(c.id);
+        if (size + str.length > SAVE_BODY_MAX && packs[packs.length - 1].length) { packs.push([]); size = 0; }
+        packs[packs.length - 1].push(c); size += str.length;
+      }
+      packs.forEach((list, k) => {
+        const body = `{"deleted":${JSON.stringify(k ? [] : sent)},"active":${JSON.stringify(active)},"order":${JSON.stringify(order)},"chats":[${list.map((c) => strs.get(c.id)).join(',')}]}`;
+        fetch('/api/chats', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
+          .then((r) => { if (!r.ok) return; if (!k) { sent.forEach((id) => deletedChats.delete(id)); writeChats.active = active; } list.forEach((c) => sentChats.set(c.id, strs.get(c.id))); }).catch(() => {});
+      });
     }
     // Ersatz im Browser, falls der Server mal nicht erreichbar ist
     const full = (withImages) => JSON.stringify({ deleted: sent, active, chats: withImages ? items : chatItems(false) });
@@ -5477,7 +5675,9 @@ function savedThoughts(h) {
 function renderSavedHistory(list) {
   list.forEach((h, i) => {
     if (h.role === 'user') {
-      addUserMessage(h.text || '', (h.images || []).filter((img) => img.data).map((img) => ({ url: `data:${img.mime};base64,${img.data}`, name: img.name || (img.mime === 'application/pdf' ? 'PDF' : 'Bild'), mime: img.mime })));
+      addUserMessage(h.text || '', (h.images || []).filter((img) => img.data || img.mime === 'application/pdf').map((img) => (img.mime === 'application/pdf'
+        ? { name: img.name || 'PDF', mime: img.mime, pdf: true, data: img.data, fileId: img.fileId }
+        : { url: `data:${img.mime};base64,${img.data}`, name: img.name || 'Bild', mime: img.mime })));
       return;
     }
     const msgEl = el('div', 'msg-ai');

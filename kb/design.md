@@ -57,4 +57,5 @@ Keine neuen Grautöne erfinden.
 - **Mini-App-Kasten**: wie Inhalts-Kästen (Fläche 98,5 %, Rand .065, Radius 14), Kopf 46 px (Icon grau, Titel 15 px 600, rechts Icon-Knöpfe 30 px Radius 8, aktiv = Akzentfarbe ohne Fläche), Kacheln Radius 12. Warten: Kachel-Welle + „Programmieren · N Zeilen“ (schimmernd).
 - **Haupt-KI**: zwei Karten (Logo, Name, Modell grau, ein Satz), gewählt = hellerer Rand + blauer Haken-Kreis oben rechts, keine Fläche.
 - **Fenster „Neuer Agent“**: der Chat-Hauptteil schwebt als Fenster (Rand Menü-Farbe, Radius 16, Schatten, Hintergrund abgedunkelt), Kopf nur Titel + × ohne Strich/Fläche (weicher Übergang, der Chat reicht nach oben); Ideen als runde Pillen unter dem Feld. Skills im Eingabefeld: keine Färbung mehr.
+- **PDF-Fenster** (`.pv`): Fenster wie „Neuer Agent“ (Menü-Rand, Radius 16, Schatten, Hintergrund abgedunkelt), Kopf 54 px: rot getöntes Datei-Icon, Name 14 px 600 + „18 Seiten“, rechts − / + / × (30 px, Radius 8). Seiten weiß, Radius 6, Abstand 14, Schimmer beim Laden; unten mittig „3 / 18“ als Pille. Auf dem Handy volle Fläche.
 - **Pixel-Hunde** im groben 32er-Raster; Größen nur 32/24/20 (andere Größen gibt es nicht → Fehler).

@@ -141,3 +141,20 @@ test('Löschen ist endgültig: kein Papierkorb, auch aus Rettungs-Kopien entfern
   await ACC.storeChats(store, 'u9', { chats: [{ id: 'cabcde1', title: 'Geheim', history: [], updated: 9 }] }); // altes Gerät schickt ihn noch
   assert.deepEqual((await ACC.loadChats(store, 'u9')).chats.map((c) => c.id), ['cabcde2'], 'gelöscht bleibt gelöscht');
 });
+
+test('Chats laden bleibt unter dem Vercel-Limit: Datei-Daten der ältesten Chats fallen weg, Text bleibt', async () => {
+  const store = memoryStore();
+  const big = 'A'.repeat(1500000);
+  const chat = (id, updated) => ({ id, title: id, updated, history: [{ role: 'user', text: 'Hier mein PDF', images: [{ mime: 'application/pdf', name: 'Mitschrift.pdf', data: big, text: '[Seite 1]\nn = m / M' }] }, { role: 'assistant', text: 'Gelesen.' }] });
+  await A.storeChats(store, 'u5', { active: 'caaaa3', chats: [chat('caaaa1', 1), chat('caaaa2', 2), chat('caaaa3', 3)], order: ['caaaa3', 'caaaa2', 'caaaa1'] });
+  const { chats } = await A.loadChats(store, 'u5');
+  assert.ok(JSON.stringify(chats).length <= 3400000);
+  const byId = Object.fromEntries(chats.map((c) => [c.id, c.history[0].images[0]]));
+  assert.ok(byId.caaaa3.data, 'neuester Chat behält seine Datei');
+  assert.equal(byId.caaaa1.data, undefined);
+  assert.equal(byId.caaaa1.cut, true);
+  assert.match(byId.caaaa1.text, /n = m \/ M/);
+  // gespeichert bleibt alles – gekürzt wird nur die Antwort
+  const raw = JSON.parse((await store.hgetall(A.K('u5', 'chats'))).caaaa1);
+  assert.equal(raw.history[0].images[0].data.length, big.length);
+});

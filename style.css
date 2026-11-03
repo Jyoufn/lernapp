@@ -10786,3 +10786,28 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 /* ===== 03.11.2026 (10): Senden gesperrt, solange Dateien gelesen werden · Schritt „Handschrift lesen“ ===== */
 #composer.uploading .send-btn:not(.running) { opacity: .35; cursor: progress; }
 .scan-step .scan-n { font-variant-numeric: tabular-nums; }
+
+/* ===== 03.11.2026 (11): PDF ansehen (app.js → openPdfView) ===== */
+.pv-open { cursor: pointer; }
+.pv { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; --pv-zoom: 1; }
+.pv-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.62); opacity: 0; transition: opacity 220ms ease; }
+.pv.open .pv-backdrop { opacity: 1; }
+.pv-sheet { position: relative; display: flex; flex-direction: column; width: min(880px, 100%); height: min(100%, 1100px); background: var(--main-bg); border: 1px solid var(--menu-border); border-radius: 16px; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.55); overflow: hidden; opacity: 0; transform: translateY(10px); transition: opacity 260ms ease, transform 420ms var(--spring); }
+.pv.open .pv-sheet { opacity: 1; transform: none; }
+.pv-head { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 10px 0 14px; flex: none; }
+.pv-ico { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: rgba(240, 122, 110, 0.13); color: #f07a6e; flex: none; }
+.pv-title { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.pv-name { font-size: 14px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pv-meta { font-size: 12px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.pv-btn { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, background-color 120ms ease; }
+.pv-btn:hover:not(:disabled) { color: var(--text); background: var(--menu-hover); }
+.pv-btn:disabled { opacity: 0.35; cursor: default; }
+.pv-body { flex: 1; min-height: 0; overflow: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; padding: 4px 16px 56px; }
+.pv-pages { display: flex; flex-direction: column; align-items: center; gap: 14px; width: calc(100% * var(--pv-zoom)); min-width: 100%; }
+.pv-page { position: relative; width: 100%; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 8px 26px rgba(0, 0, 0, 0.35); }
+.pv-page:not(.ready) { background: linear-gradient(100deg, #2a2a2a 30%, #333 50%, #2a2a2a 70%) 0 0 / 300% 100%; animation: pv-wait 1.6s ease-in-out infinite; }
+.pv-page img { display: block; width: 100%; height: 100%; object-fit: contain; }
+@keyframes pv-wait { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+.pv-count { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 5px 11px; border-radius: 999px; background: rgba(20, 20, 20, 0.86); border: 1px solid var(--menu-border); color: var(--text-2); font-size: 12px; font-variant-numeric: tabular-nums; pointer-events: none; }
+@media (max-width: 640px) { .pv { padding: 0; } .pv-sheet { height: 100%; border-radius: 0; border: 0; } .pv-body { padding: 4px 10px 56px; } }
+@media (prefers-reduced-motion: reduce) { .pv-sheet, .pv-backdrop { transition: none; } .pv-page:not(.ready) { animation: none; } }
