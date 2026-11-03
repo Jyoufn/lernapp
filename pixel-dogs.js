@@ -855,8 +855,13 @@ const PixelDogs = (() => {
     const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
     return `#${[r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('')}`;
   };
+  const furTint = (fur) => {
+    if (FURS[fur]) return FURS[fur];
+    if (/^#[0-9a-f]{6}$/i.test(String(fur || ''))) { const [h, sat, l] = hexHsl(String(fur).toLowerCase()); return [h, Math.min(0.85, sat), Math.max(0.22, Math.min(0.88, l))]; } // eigene Farbe
+    return null;
+  };
   function furMap(baseId, fur) {
-    const t = FURS[fur]; const map = {};
+    const t = furTint(fur); const map = {};
     if (!t) return map;
     const cols = new Set();
     Object.values(DOGS[baseId]).forEach((r) => Object.values(r.pal || {}).forEach((c) => cols.add(String(c).toLowerCase())));
@@ -872,14 +877,12 @@ const PixelDogs = (() => {
   function registerCustom(list = readCustom()) {
     // alte eigene Agenten entfernen
     for (let i = MODES.length - 1; i >= 0; i--) if (MODES[i].custom) MODES.splice(i, 1);
-    Object.keys(BASE).forEach((id) => { delete DOGS[id]; delete BASE[id]; delete PALMAP[id]; delete INFO_CUSTOM[id]; });
+    Object.keys(BASE).forEach((id) => { if (id !== '__pv') unregister(id); });
     let css = '';
     list.slice(0, 24).forEach((a) => {
-      const base = FIGURES[a.figur] || 'general', map = furMap(base, a.farbe);
-      BASE[a.id] = base; PALMAP[a.id] = map;
-      DOGS[a.id] = Object.fromEntries(Object.entries(DOGS[base]).map(([sz, r]) => [sz, { ...r, pal: Object.fromEntries(Object.entries(r.pal).map(([k, c]) => [k, map[String(c).toLowerCase()] || c])) }]));
+      if (!registerOne(a)) return;
       MODES.push({ id: a.id, name: String(a.name).slice(0, 24), custom: true });
-      const tintHex = FURS[a.farbe] ? hslHex(FURS[a.farbe][0], FURS[a.farbe][1], 0.6) : '#a3a3a3';
+      const tint = furTint(a.farbe), tintHex = tint ? hslHex(tint[0], tint[1], 0.6) : a.figur === 'eigenes' ? (GEN[a.id]?.fur?.[0] || '#a3a3a3') : '#a3a3a3';
       const n = parseInt(tintHex.slice(1), 16);
       INFO_CUSTOM[a.id] = { icon: 'agent', tint: `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.08)`, text: String(a.beschreibung || 'Eigener Agent').slice(0, 140) };
       if (typeof document !== 'undefined') {
@@ -893,6 +896,43 @@ const PixelDogs = (() => {
     }
   }
   const INFO_CUSTOM = {};
+  const GEN = {}, ACT = {}; // GEN: selbst gezeichnetes Profilbild (eigenes Raster); ACT: gewählte Animation statt der der Vorlage
+  const ACTIONS = { kochen: 'general', lupe: 'research', buch: 'learn', laptop: 'code', tablet: 'boerse' };
+  const unregister = (id) => { delete DOGS[id]; delete BASE[id]; delete PALMAP[id]; delete INFO_CUSTOM[id]; delete GEN[id]; delete ACT[id]; };
+  const okRaster = (r, n) => r && Array.isArray(r.rows) && r.rows.length === n && r.rows.every((x) => typeof x === 'string' && x.length === n) && r.pal && typeof r.pal === 'object'
+    && Object.values(r.pal).every((c) => /^#[0-9a-f]{6}$/i.test(c));
+  // häufigste helle und mittlere Fellfarbe eines eigenen Rasters (für Pfoten an den Gegenständen)
+  function rasterFur(r) {
+    const count = {};
+    r.rows.forEach((row) => [...row].forEach((ch) => { if (ch !== '.' && r.pal[ch]) count[r.pal[ch]] = (count[r.pal[ch]] || 0) + 1; }));
+    const cols = Object.entries(count).filter(([c]) => hexHsl(c.toLowerCase())[2] > 0.16).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+    const two = cols.slice(0, 2).sort((a, b) => hexHsl(b.toLowerCase())[2] - hexHsl(a.toLowerCase())[2]);
+    return [two[0] || '#bdbdbd', two[1] || two[0] || '#8f8f8f'];
+  }
+  function registerOne(a) {
+    unregister(a.id);
+    const act = ACTIONS[a.aktion] ? a.aktion : null;
+    if (a.figur === 'eigenes') {
+      const r = a.raster || {};
+      if (!okRaster(r[32], 32) || !okRaster(r[24], 24) || !okRaster(r[20], 20)) return false;
+      DOGS[a.id] = { 32: r[32], 24: r[24], 20: r[20] };
+      BASE[a.id] = 'general';
+      const fur = rasterFur(r[32]);
+      GEN[a.id] = { action: act && act !== 'laptop' ? act : act === 'laptop' ? 'tablet' : null, fur };
+      // Pfoten an Pfanne, Lupe, Buch, Tablet in den Farben des eigenen Bildes
+      const map = {}; Object.values(FUR).forEach(([c1, c2]) => { map[c1.toLowerCase()] = fur[0]; map[c2.toLowerCase()] = fur[1]; });
+      PALMAP[a.id] = map;
+      return true;
+    }
+    const base = FIGURES[a.figur] || 'general', map = furMap(base, a.farbe);
+    // Pfoten anderer Vorlagen (gewählte Animation) in den Farben dieser Figur
+    const own = (FUR[base] || FUR.general).map((c) => map[c.toLowerCase()] || c);
+    Object.entries(FUR).forEach(([k, [c1, c2]]) => { if (k !== base) { map[c1.toLowerCase()] ||= own[0]; map[c2.toLowerCase()] ||= own[1]; } });
+    BASE[a.id] = base; PALMAP[a.id] = map;
+    if (act && act !== Object.keys(ACTIONS).find((k) => ACTIONS[k] === base) && !(act === 'laptop' && base !== 'code')) ACT[a.id] = act;
+    DOGS[a.id] = Object.fromEntries(Object.entries(DOGS[base]).map(([sz, r]) => [sz, { ...r, pal: Object.fromEntries(Object.entries(r.pal).map(([k, c]) => [k, map[String(c).toLowerCase()] || c])) }]));
+    return true;
+  }
 
   /* ---------- Raster → SVG (gleiche Farbe in einer Zeile wird zu einem Rechteck) ---------- */
   function rects({ rows, pal }, ox = 0, oy = 0) {
@@ -1141,15 +1181,26 @@ const PixelDogs = (() => {
     return [blinkTrack(id), { general: panTrack, research: lensTrack, learn: bookTrack, boerse: tabletTrack }[id]?.() || laptopTrack(), ...(id === 'code' ? [armsTrack()] : []), ...(id === 'boerse' ? [earsTrack()] : [])];
   }
   const partsSvg = (parts) => parts.map((p) => rects(p, p.x, p.y)).join('');
-  function scene(id) {
-    if (BASE[id]) { const s0 = scene(BASE[id]); return { ...s0, html: recolor(s0.html, id) }; } // eigener Agent: Figur der Vorlage, umgefärbt
-    const tracks = sceneTracks(id);
+  const propTrack = (act) => ({ kochen: panTrack, lupe: lensTrack, buch: bookTrack, laptop: laptopTrack, tablet: tabletTrack }[act])?.();
+  const QUIET = { frames: [[]], seq: [[0, 60000]] }; // Platzhalter für die Kopf-Spur (eigene Bilder blinzeln nicht – die Augen liegen woanders)
+  function scene(id, opt = {}) {
+    if (GEN[id]) { // selbst gezeichnet: eigenes Raster, nur die gewählte Gegenstand-Spur
+      const s0 = scene('general', { tracks: [QUIET, ...(GEN[id].action ? [propTrack(GEN[id].action)] : [])], raster: DOGS[id][32], noLook: true });
+      return { ...s0, html: recolor(s0.html, id) };
+    }
+    if (BASE[id]) { // eigener Agent: Figur der Vorlage, umgefärbt; gewählte Animation statt der eigenen
+      const b = BASE[id];
+      const tr = ACT[id] ? [blinkTrack(b), propTrack(ACT[id]), ...(b === 'code' ? [armsTrack()] : []), ...(b === 'boerse' ? [earsTrack()] : [])] : null;
+      const s0 = scene(b, tr ? { tracks: tr, noLook: true } : {});
+      return { ...s0, html: recolor(s0.html, id) };
+    }
+    const tracks = opt.tracks || sceneTracks(id);
     const g = (t, i) => `<g data-track="${i}">${t.frames.map((f, k) => `<g data-f="${k}"${k ? ' style="display:none"' : ''}>${partsSvg(f)}</g>`).join('')}</g>`;
     // Kopf, Blinzeln und Blick atmen gemeinsam; Pfoten und Gegenstände bleiben stehen
-    const look = LOOK[id] ? `<g class="pd-look">${partsSvg(LOOK[id])}</g>` : '';
+    const look = LOOK[id] && !opt.noLook ? `<g class="pd-look">${partsSvg(LOOK[id])}</g>` : '';
     // Oktopus: die Arm-Enden zeichnet die Arm-Spur (sie schwingen) – im Grund-Raster bleiben sie leer
     const blank = (rows, [y0, y1], cols) => rows.map((r, y) => (y >= y0 && y <= y1 ? r.split('').map((ch, x) => ((x >= cols.L[0] && x <= cols.L[1]) || (x >= cols.R[0] && x <= cols.R[1]) ? '.' : ch)).join('') : r));
-    const base = id === 'code' ? { ...DOGS.code[32], rows: blank(DOGS.code[32].rows, ARM_ROWS, ARM_COLS) }
+    const base = opt.raster ? opt.raster : id === 'code' ? { ...DOGS.code[32], rows: blank(DOGS.code[32].rows, ARM_ROWS, ARM_COLS) }
       : id === 'boerse' ? { ...DOGS.boerse[32], rows: blank(DOGS.boerse[32].rows, EAR_ROWS, EAR_COLS) } : DOGS[id][32]; // Bär: Ohrspitzen zeichnet die Ohren-Spur
     const head = tracks.map((t, i) => (i === 0 || t.inHead ? g(t, i) : '')).join('');
     const body = `<g class="pd-breathe">${rects(base, DX, 0)}${look}${head}</g>${tracks.map((t, i) => (i === 0 || t.inHead ? '' : g(t, i))).join('')}`;
@@ -1242,7 +1293,7 @@ const PixelDogs = (() => {
           + `<p class="ap-text">${esc(inf.text)}</p><div class="ap-actions">${off ? '<span class="ap-soon">Nicht verfügbar</span>' : `<button type="button" class="ap-pick" data-mode="${m.id}"></button>`}</div></div>`;
       }).join('')
       // letzte Karte: eigenen Agenten erstellen (großes Fenster mit Einrichtungs-Chat, agent-builder.js)
-      + `<div class="ap-card ap-new" data-new-agent role="button" tabindex="0"><div class="ap-art">${tilesArt}<span class="ap-plus">${ico('plus')}</span><span class="ap-chip">${ico('agent')}Neuer Agent</span></div><p class="ap-text">Eigenen Agenten erstellen – im Gespräch mit der KI, mit eigenem Pixel-Profilbild.</p><div class="ap-actions"><span class="ap-pick ap-create">Erstellen</span></div></div>`;
+      + `<div class="ap-card ap-new" data-new-agent role="button" tabindex="0"><div class="ap-art">${tilesArt}<span class="ap-ghost">${art('general')}<span class="ap-plus">${ico('plus')}</span></span><span class="ap-chip">${ico('agent')}Neuer Agent</span></div><p class="ap-text">Eigenen Agenten erstellen – Schritt für Schritt im Gespräch, mit eigenem Pixel-Profilbild.</p><div class="ap-actions"><span class="ap-pick">Erstellen</span></div></div>`;
     picker.innerHTML = `<div class="ap-inner"><div class="ap-head"><span>Agenten</span><button type="button" class="ap-close" aria-label="Schließen" title="Schließen">${ico('x')}</button></div><div class="ap-grid">${cards()}</div></div>`;
     host.prepend(picker);
     // eigene Agenten geändert → Karten neu
@@ -1728,6 +1779,7 @@ const PixelDogs = (() => {
     };
   };
   function actor(id) {
+    if (GEN[id]) { const a0 = actor('general'); const g = a0.el.querySelector('.pa-dog'); if (g) g.innerHTML = rects(DOGS[id][20], AX, AY); a0.el.innerHTML = recolor(a0.el.innerHTML, id); return a0; } // selbst gezeichnet
     if (BASE[id]) { const a0 = actor(BASE[id]); a0.el.innerHTML = recolor(a0.el.innerHTML, id); return a0; } // eigener Agent
     if (!DOGS[id]?.[20]) id = 'general';
     const anims = ANIMS(id);
@@ -1796,9 +1848,32 @@ const PixelDogs = (() => {
     if (!DOGS[mode]) selectFn ? selectFn('general') : (mode = 'general');
     document.dispatchEvent(new CustomEvent('customagentschange'));
   }
+  /* Vorschau eines noch nicht gespeicherten Aussehens (Karten im Einrichtungs-Chat): Figur mit Animation, läuft für sich.
+     spec: { figur, farbe, aktion, raster }. Gibt stop() zurück. */
+  function preview(spec, host, { size = 4, work = true } = {}) {
+    if (!registerOne({ ...spec, id: '__pv' })) { host.innerHTML = ''; return () => {}; }
+    const sc = scene('__pv');
+    unregister('__pv');
+    host.innerHTML = sc.html.replace('class="pd pd-scene"', `class="pd pd-scene pv-scene" style="width:${SCENE_W * size}px;height:${SCENE_H * size}px"`);
+    const root = host.querySelector('svg');
+    if (!root || reduced()) return () => {};
+    const timers = [];
+    sc.tracks.forEach((t, i) => {
+      const g = root.querySelector(`[data-track="${i}"]`); if (!g) return;
+      const show = (f) => g.querySelectorAll(':scope > [data-f]').forEach((n) => { n.style.display = +n.dataset.f === f ? '' : 'none'; });
+      const run = (seq, then) => { let k = 0; const tick = () => { if (k >= seq.length) { if (then) return then(); k = 0; } const [f, ms] = seq[k++]; show(f); timers[i] = setTimeout(tick, ms); }; tick(); };
+      if (work && t.busy) run(t.busy.enter, () => run(t.busy.loop)); else run(t.seq);
+    });
+    return () => timers.forEach((x) => clearTimeout(x));
+  }
+  // Raster als SVG (für die Größen-Vorschau eines selbst gezeichneten Bildes)
+  const rasterSvg = (r, px) => `<svg class="pd" width="${px}" height="${px}" viewBox="0 0 ${r.rows.length} ${r.rows.length}" shape-rendering="crispEdges" aria-hidden="true">${rects(r)}</svg>`;
   // Vorschau eines noch nicht gespeicherten Agenten (Profil-Karte im Einrichtungs-Chat)
-  const previewArt = (figur, fur, size = 64) => { const base = FIGURES[figur] || 'general', m = furMap(base, fur); return art(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`); };
-  return { actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
+  const previewArt = (figur, fur, size = 64, raster = null) => {
+    if (figur === 'eigenes') return raster && okRaster(raster[32], 32) ? rasterSvg(raster[32], size) : '';
+    const base = FIGURES[figur] || 'general', m = furMap(base, fur); return art(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`);
+  };
+  return { actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, preview, rasterSvg, ACTIONS, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
 })();
 if (typeof window !== 'undefined') window.PixelDogs = PixelDogs;
 if (typeof module !== 'undefined') module.exports = PixelDogs;

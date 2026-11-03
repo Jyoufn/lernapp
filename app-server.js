@@ -1110,6 +1110,31 @@ const TITLE_SYSTEM = `Du gibst einem Lern-Chat einen kurzen, treffenden Titel �
 Regeln: 2 bis 5 Wörter, Sprache der Anfrage (meist Deutsch), Thema statt Frageform, kein Punkt, keine Anführungszeichen, keine Emojis,
 keine Füllwörter wie „Frage zu“ oder „Hilfe bei“. Beispiele: „Photosynthese einfach erklärt“, „Quadratische Gleichungen lösen“, „Ursachen des Ersten Weltkriegs“.
 Antworte NUR mit dem Titel.`;
+/* ---------- /api/agent-avatar: eigenes Profilbild für einen eigenen Agenten ----------
+   Wunsch (Deutsch) → kurze englische Beschreibung → FLUX malt ein Pixel-Brustbild auf Magenta. Die App rastert es danach im Browser
+   selbst auf 32/24/20 Pixel (gleicher grober Stil wie die festen Agenten: 1-px-Umriss, wenige Farben, Brustbild unten angeschnitten). */
+const AVATAR_STYLE = 'pixel art avatar of a single character, bust from the chest up, facing the viewer, centered, the head is big and fills most of the image, shoulders cut off at the bottom edge, '
+  + 'retro 32x32 pixel sprite scaled up with big square pixels, clean black 1-pixel outline around the whole silhouette, soft simple shading with light from the top left, '
+  + 'small round eyes with one white highlight pixel, friendly cute look, limited palette of about 10 colors, no dithering, '
+  + 'plain flat solid magenta #FF00FF background, nothing else in the image, no text, no frame, no border';
+const AVATAR_SYSTEM = `Du bekommst einen Wunsch für ein Pixel-Profilbild (Figur) eines KI-Agenten, eventuell mit der bisherigen Beschreibung, die geändert werden soll.
+Antworte NUR mit JSON: {"desc":"englische Beschreibung der Figur, 10–40 Wörter"}
+- Nur die Figur selbst: was für ein Wesen/Charakter, Farben von Fell/Haut/Kleidung, markante Merkmale (Zubehör NUR, wenn ausdrücklich gewünscht).
+- Keine Stil- oder Hintergrundwörter (die kommen automatisch), keine Namen, keine Schrift.
+- Bei einer Änderung: die bisherige Beschreibung übernehmen und NUR das Gewünschte ändern.`;
+async function handleAgentAvatar(req, res) {
+  const env = readEnv();
+  const b = await readBody(req, 20000);
+  const wish = String(b.wish || '').trim().slice(0, 400), before = String(b.desc || '').trim().slice(0, 400);
+  if (wish.length < 2) return sendJson(res, 400, { error: 'Beschreib kurz, wie dein Agent aussehen soll.' });
+  let desc = '';
+  try { desc = String(P.parseJsonLoose(await P.textTask(env, { system: AVATAR_SYSTEM, user: `${before ? `Bisherige Beschreibung: ${before}\nÄnderung: ` : 'Wunsch: '}${wish}`, maxTokens: 400, timeoutMs: 20000, json: true }))?.desc || '').trim(); } catch {}
+  if (desc.length < 5) desc = before ? `${before}, ${wish}` : wish;
+  const out = await nvcfImage(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`, Math.floor(Math.random() * 1e6));
+  if (!out) return sendJson(res, 502, { error: imageKeys(env).length ? 'Das Bild konnte gerade nicht gezeichnet werden.' : 'Für eigene Profilbilder fehlt der Bild-Schlüssel (Einstellungen → Agenten → FLUX (Bilder)).' });
+  sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
+}
+
 /* ---------- /api/polish: diktierten Text glätten (nur nach der Spracheingabe) ----------
    Satzzeichen, Groß-/Kleinschreibung und offensichtliche Erkennungsfehler – keine Umformulierung. Ein kleiner Aufruf beim Anbieter der Anfrage. */
 const POLISH_SYSTEM = `Du bekommst Text aus einer Spracherkennung (meist Deutsch, gesprochen, ohne Satzzeichen).
@@ -1448,6 +1473,7 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
+    if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
     if (req.method === 'POST' && urlPath === '/api/lernset/grade') return sendJson(res, 200, await LSET.grade(readEnv(), await readBody(req, 400000)));

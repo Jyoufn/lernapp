@@ -10367,3 +10367,60 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 @media (prefers-reduced-motion: reduce) {
   .cbx-reveal, .agp-reveal, .app.agent-setup .panel, .app.agent-setup::after, .cbx-overlay, .cbx-ov-in, .cbx-toast, .chat-bg { animation: none !important; transition: none !important; }
 }
+
+/* ===================================================================
+   03.11.2026 (2) – Fenster „Neuer Agent“ ruhiger, Aussehen-Vorschau (```avatar), Profil-Karte, Karte „Neuer Agent“
+   =================================================================== */
+/* Kopf: nur Titel und ×, kein Strich, keine Fläche – der Chat reicht bis nach oben */
+.app.agent-setup .ags-head { height: 52px; padding: 0 10px 0 22px; border-bottom: 0; background: linear-gradient(var(--main-bg) 55%, transparent); pointer-events: none; }
+.app.agent-setup .ags-head > * { pointer-events: auto; }
+.ags-title { color: var(--text); font-size: 15px; font-weight: 600; letter-spacing: -0.005em; }
+.app.agent-setup .chat-scroll { padding-top: 40px; }
+
+/* Karte „Neuer Agent“ im Agenten-Feld: wie die anderen Karten, grauer Hund als Silhouette mit Plus */
+.ap-card.ap-new { border: 1px solid #2a2a2a; border-style: solid; background: #1a1a1a; }
+.agent-picker .ap-card.ap-new { background: transparent; }
+.ap-card.ap-new .ap-art { align-items: flex-end; justify-content: flex-start; padding-left: 10px; }
+.ap-ghost { position: relative; display: block; }
+.ap-ghost svg.pd { filter: grayscale(1) brightness(0.55); opacity: 0.55; transition: opacity 220ms ease; }
+.ap-card.ap-new:hover .ap-ghost svg.pd { opacity: 0.75; }
+.ap-ghost .ap-plus { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -16px 0 0 -13px; border-radius: 8px; background: #262626; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); color: var(--text); }
+.ap-ghost .ap-plus svg { width: 13px; height: 13px; filter: none; opacity: 1; }
+[data-theme="light"] .ap-ghost .ap-plus svg { filter: none; }
+
+/* Aussehen-Vorschau im Einrichtungs-Chat */
+.agv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; margin: 14px 0; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.065); border-radius: 14px;
+  background: color-mix(in srgb, var(--main-bg) 98.5%, #fff); animation: cbx-in 380ms var(--spring, ease) both; }
+.agv-stage { position: relative; display: grid; place-items: end center; width: 208px; height: 140px; overflow: hidden; border-radius: 12px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.agv-stage.wait { place-items: center; }
+.agv-stage.wait .agv-scene { position: absolute; inset: 0; }
+.agv-stage.wait .ill-frame { width: 100%; height: 100%; }
+.agv-wait { position: relative; color: var(--text-3); font-size: 12.5px; }
+.agv-scene svg.pv-scene { display: block; image-rendering: pixelated; }
+.agv-side { display: flex; flex-direction: column; min-width: 0; gap: 3px; }
+.agv-t { color: var(--text); font-size: 15px; font-weight: 600; }
+.agv-m { color: var(--text-3); font-size: 12.5px; }
+.agv-sizes { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+.agv-sizes > span:first-child { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; background: rgba(255, 255, 255, 0.04); }
+.agv-cap { color: var(--text-4); font-size: 11.5px; }
+.agv-err { margin: 6px 0 0; color: #f07a6e; font-size: 12px; line-height: 16px; }
+.agv-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.agv-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.agv-btn.primary { border-color: transparent; background: var(--accent); color: #fff; }
+.agv-ok { display: inline-flex; align-items: center; gap: 6px; color: var(--text-3); font-size: 12.5px; }
+.agv-ok svg { color: var(--accent); }
+@media (max-width: 560px) { .agv { grid-template-columns: 1fr; } .agv-stage { width: 100%; } }
+
+/* Profil-Karte (überarbeitet): oben Figur mit Animation + Name, darunter Anweisung aufklappbar, unten rechts der Knopf */
+.agp { display: block; padding: 0; overflow: hidden; }
+.agp-top { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: center; padding: 16px 16px 6px; }
+.agp .agp-art { display: grid; place-items: end center; width: 150px; height: 104px; overflow: hidden; border-radius: 12px; }
+.agp-scene svg.pv-scene { display: block; }
+.agp-more { margin: 6px 16px 0; }
+.agp-more em { color: var(--text-4); font-style: normal; font-size: 11.5px; }
+.agp-more em::before { content: '·'; margin: 0 6px 0 2px; }
+.agp-prompt { padding: 0 16px; }
+.agp-acts { margin: 0; padding: 12px 16px 14px; }
+.agp-wait { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 14px 16px; }
+.agp-wait .agp-art { width: 52px; height: 52px; place-items: center; }
+@media (max-width: 560px) { .agp-top { grid-template-columns: 1fr; } .agp .agp-art { width: 100%; } }

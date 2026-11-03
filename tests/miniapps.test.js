@@ -16,7 +16,7 @@ test('Mini-App-Anleitung: beim Coding-Agenten immer, sonst nur bei passenden Wö
 
 test('Eigener Agent: Anweisung wird geprüft und an den System-Prompt gehängt', async () => {
   assert.equal(W.cleanCustom({ name: '', prompt: 'x' }), null);
-  assert.deepEqual(W.cleanCustom({ name: ' Mathe  Coach ', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'lernen' }), { name: 'Mathe Coach', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'learn' });
+  assert.deepEqual(W.cleanCustom({ name: ' Mathe  Coach ', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'lernen' }), { name: 'Mathe Coach', prompt: 'Du bist ein Mathe-Coach und gibst nur Tipps.', mode: 'learn', tools: [], vorlage: '' });
   const fx = M.installFetch([{ match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Okay!'])) }]);
   try {
     const c = M.collect();

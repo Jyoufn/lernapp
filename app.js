@@ -337,6 +337,7 @@ composer.addEventListener('submit', (e) => {
   const text = input.value.trim();
   if (!text && attachments.length === 0) return;
   if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
+  if (!attachments.length && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
   const images = attachments.filter((a) => a.file).map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf })); // URLs bleiben für den Chat erhalten
   const mentioned = attachments.filter((a) => a.mention).map((a) => a.mention);
   input.value = '';
@@ -5098,7 +5099,7 @@ function chatItems(withImages) {
   return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
     const c = chatOf(tab);
     return {
-      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
       history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
     };
   });
@@ -5219,7 +5220,7 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     const tab = i === 0 && first ? first : createTab(s.title);
     if (i === 0) activateTab(tab);
     tab.dataset.cid = s.id;
-    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' };
+    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' };
     tab.querySelector('.tab-title').textContent = s.title;
     tab.classList.toggle('pinned', !!s.pinned);
     chat.replaceChildren();
@@ -5252,7 +5253,7 @@ async function openSavedChat(id) {
     if (!tab) {
       tab = createTab(s.title);
       tab.dataset.cid = s.id;
-      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' };
+      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' };
       tab.querySelector('.tab-title').textContent = s.title;
       chat.replaceChildren();
       history.length = 0;
@@ -5280,7 +5281,7 @@ function renderDetached(hist) {
   chat.append(keep); history.push(...keepH);
   return { nodes, history: h };
 }
-const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, ws: s.ws || 'main' });
+const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' });
 async function syncSharedChats() {
   if (restoring) return;
   const shared = new Set((window.Workspaces?.list() || []).filter((w) => w.shared).map((w) => w.id));
