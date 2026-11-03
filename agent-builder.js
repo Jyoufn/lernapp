@@ -85,57 +85,70 @@ const AgentBuilder = (() => {
     for (let i = 0; i < S * S; i++) if (!bg[i]) { const x = i % S, y = (i / S) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
     if (x1 < 0 || (x1 - x0) * (y1 - y0) < S * S * 0.04) throw new Error('Im Bild war keine Figur zu erkennen.');
     const bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    const luma = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
+    const d3 = (p, e) => Math.hypot(p[0] - e[0], p[1] - e[1], p[2] - e[2]);
+    // Farben EINMAL im Originalbild bündeln (k-means über die Figur) – jede Rasterzelle nimmt danach die häufigste Farbe statt eines
+    // Mittelwerts: scharfe Kanten, keine Mischfarben, Augen und Linien bleiben dunkel (wie bei den festen Agenten)
+    const fgIdx = []; for (let i = 0; i < S * S; i++) if (!bg[i]) fgIdx.push(i);
+    const sample = fgIdx.filter((_, k) => k % 3 === 0).map(px);
+    let cent = [sample[0]];
+    while (cent.length < Math.min(11, sample.length)) {
+      let best = null, bd = -1;
+      for (const c of sample) { let m = Infinity; for (const e of cent) { const dd = d3(c, e); if (dd < m) m = dd; } if (m > bd) { bd = m; best = c; } }
+      if (!best || bd < 20) break; cent.push(best);
+    }
+    const near = (c) => { let bi = 0, bd = Infinity; cent.forEach((e, k) => { const dd = d3(c, e); if (dd < bd) { bd = dd; bi = k; } }); return bi; };
+    for (let it = 0; it < 10; it++) {
+      const acc = cent.map(() => [0, 0, 0, 0]);
+      sample.forEach((c) => { const k = near(c); acc[k][0] += c[0]; acc[k][1] += c[1]; acc[k][2] += c[2]; acc[k][3]++; });
+      cent = cent.map((e, k) => (acc[k][3] ? [acc[k][0] / acc[k][3], acc[k][1] / acc[k][3], acc[k][2] / acc[k][3]] : e));
+    }
+    const lab = new Int16Array(S * S).fill(-1);
+    fgIdx.forEach((i) => { lab[i] = near(px(i)); });
+    const dark = cent.map((c) => luma(c) < 46);
+    const hex = (c) => `#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
+    const calm = (c) => { const g = luma(c); return c.map((v) => g + (v - g) * 0.86); }; // ruhigere Farben wie bei den festen Agenten
     const out = {};
     for (const N of [32, 24, 20]) {
       // wie die festen Agenten: der Kopf füllt die Breite, oben 1 px Luft, was unten übersteht (Hals/Körper) wird abgeschnitten
       const scale = (N - 2) / bw, ox = 1, oy = bh * scale <= N - 1 ? N - bh * scale : 1;
-      const grid = [];
+      const step = 1 / scale, darkW = N >= 32 ? 1.7 : 1.45;
+      const grid = new Int16Array(N * N).fill(-1);
       for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-        const sx0 = x0 + (x - ox) / scale, sy0 = y0 + (y - oy) / scale, step = 1 / scale;
-        let n = 0, fg = 0; const sum = [0, 0, 0];
+        const sx0 = x0 + (x - ox) / scale, sy0 = y0 + (y - oy) / scale;
+        let n = 0, fg = 0; const cnt = new Float32Array(cent.length);
         for (let sy = Math.floor(sy0); sy < Math.ceil(sy0 + step); sy++) for (let sx = Math.floor(sx0); sx < Math.ceil(sx0 + step); sx++) {
-          if (sx < 0 || sy < 0 || sx >= S || sy >= S) { n++; continue; }
-          n++; const i = sy * S + sx; if (bg[i]) continue; fg++; const p = px(i); sum[0] += p[0]; sum[1] += p[1]; sum[2] += p[2];
+          n++; if (sx < 0 || sy < 0 || sx >= S || sy >= S) continue;
+          const k = lab[sy * S + sx]; if (k < 0) continue;
+          fg++; cnt[k] += dark[k] ? darkW : 1;
         }
-        grid.push(fg && fg / Math.max(1, n) >= 0.45 ? sum.map((v) => v / fg) : null);
+        if (!fg || fg / Math.max(1, n) < 0.45) continue;
+        let bk = 0; for (let k = 1; k < cnt.length; k++) if (cnt[k] > cnt[bk]) bk = k;
+        grid[y * N + x] = bk;
       }
+      const at = (x, y) => (x < 0 || y < 0 || x >= N || y >= N ? -1 : grid[y * N + x]);
       // einzelne Pixel ohne Nachbarn weg
-      const at = (x, y) => (x < 0 || y < 0 || x >= N || y >= N ? null : grid[y * N + x]);
-      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (!at(x, y)) continue; let nb = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if ((a || b) && at(x + a, y + b)) nb++; if (nb < 2) grid[y * N + x] = null; }
-      // wenige Farben (k-means), sehr dunkle = Umriss-Schwarz
-      const cols = grid.filter(Boolean), luma = (c) => 0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2];
-      const K = Math.min(9, cols.length);
-      let cent = [cols[0]];
-      while (cent.length < K) { let best = null, bd = -1; for (const c of cols) { const m = Math.min(...cent.map((e) => Math.hypot(c[0] - e[0], c[1] - e[1], c[2] - e[2]))); if (m > bd) { bd = m; best = c; } } if (!best || bd < 18) break; cent.push(best); }
-      for (let it = 0; it < 8; it++) {
-        const acc = cent.map(() => [0, 0, 0, 0]);
-        cols.forEach((c) => { let bi = 0, bd = Infinity; cent.forEach((e, k) => { const dd = Math.hypot(c[0] - e[0], c[1] - e[1], c[2] - e[2]); if (dd < bd) { bd = dd; bi = k; } }); acc[bi][0] += c[0]; acc[bi][1] += c[1]; acc[bi][2] += c[2]; acc[bi][3]++; });
-        cent = cent.map((e, k) => (acc[k][3] ? [acc[k][0] / acc[k][3], acc[k][1] / acc[k][3], acc[k][2] / acc[k][3]] : e));
-      }
-      const hex = (c) => `#${c.map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
-      const order = cent.map((c, k) => ({ c, k })).filter((o) => luma(o.c) >= 42).sort((a, b) => luma(b.c) - luma(a.c));
-      // ruhigere Farben wie bei den festen Agenten (etwas weniger Sättigung)
-      const calm = (c) => { const g = luma(c); return c.map((v) => g + (v - g) * 0.85); };
-      const pal = { a: '#000000' }, letter = {};
-      order.forEach((o, i) => { const ch = 'bcdefghijklmnop'[i]; pal[ch] = hex(calm(o.c)); letter[o.k] = ch; });
-      const chOf = (c) => { let bi = 0, bd = Infinity; cent.forEach((e, k) => { const dd = Math.hypot(c[0] - e[0], c[1] - e[1], c[2] - e[2]); if (dd < bd) { bd = dd; bi = k; } }); return letter[bi] || 'a'; };
-      // einzelne Ausreißer-Pixel glätten: haben 3 von 4 Nachbarn dieselbe andere Farbe, übernimmt der Pixel sie
-      const chs = grid.map((c) => (c ? chOf(c) : null));
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { if (at(x, y) < 0) continue; let nb = 0; for (let a = -1; a <= 1; a++) for (let b = -1; b <= 1; b++) if ((a || b) && at(x + a, y + b) >= 0) nb++; if (nb < 2) grid[y * N + x] = -1; }
+      // Ausreißer glätten: haben 3 von 4 Nachbarn dieselbe andere (helle) Farbe, übernimmt der Pixel sie – dunkle Linien/Augen bleiben
       for (let y = 1; y < N - 1; y++) for (let x = 1; x < N - 1; x++) {
-        const k = y * N + x; if (!chs[k]) continue;
-        const nb = [chs[k - 1], chs[k + 1], chs[k - N], chs[k + N]].filter(Boolean), cnt = {};
-        nb.forEach((c) => { cnt[c] = (cnt[c] || 0) + 1; });
-        const top = Object.entries(cnt).sort((a, b) => b[1] - a[1])[0];
-        if (top && top[0] !== chs[k] && top[1] >= 3) chs[k] = top[0];
+        const k = y * N + x, me = grid[k]; if (me < 0 || dark[me]) continue;
+        const cntN = {}; [grid[k - 1], grid[k + 1], grid[k - N], grid[k + N]].forEach((c) => { if (c >= 0) cntN[c] = (cntN[c] || 0) + 1; });
+        const top = Object.entries(cntN).sort((a, b) => b[1] - a[1])[0];
+        if (top && +top[0] !== me && top[1] >= 3) grid[k] = +top[0];
       }
+      // Palette: dunkle Bündel = Umriss-Schwarz, die übrigen von hell nach dunkel als Buchstaben
+      const used = [...new Set([...grid].filter((k) => k >= 0 && !dark[k]))].sort((a, b) => luma(cent[b]) - luma(cent[a]));
+      const pal = { a: '#000000' }, letter = {};
+      used.forEach((k, i) => { const ch = 'bcdefghijklmnop'[i]; pal[ch] = hex(calm(cent[k])); letter[k] = ch; });
       const rows = [];
       for (let y = 0; y < N; y++) {
         let r = '';
         for (let x = 0; x < N; x++) {
-          const c = at(x, y);
-          if (c) { r += chs[y * N + x] || chOf(c); continue; }
-          // Umriss: 1 px außen herum (unten bleibt offen – Brustbild ist angeschnitten)
-          r += [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([a, b]) => at(x + a, y + b)) ? 'a' : '.';
+          const k = at(x, y);
+          if (k >= 0) { r += dark[k] ? 'a' : letter[k] || 'a'; continue; }
+          // Umriss: 1 px außen herum – aber nicht doppelt: liegt innen schon eine schwarze Linie (vom Bild selbst), bleibt es durchsichtig
+          const nbs = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([a, b]) => at(x + a, y + b)).filter((v) => v >= 0);
+          r += nbs.length && nbs.some((v) => !dark[v]) ? 'a' : '.';
         }
         rows.push(r);
       }
@@ -177,10 +190,10 @@ const AgentBuilder = (() => {
     });
   }
   const userSays = (text) => { if (typeof addUserMessage === 'function') { const before = chatEl()?.lastElementChild; addUserMessage(text, []); const out = chatEl()?.lastElementChild; if (out && out !== before) flowOf()?.append(out); } scroll(); };
-  // Name: kleiner Kasten im Chat – Frage oben, darunter das Feld mit Senden; danach fest (Schloss)
+  // Name: Kasten über die ganze Breite des Chats – Frage oben, darunter das Feld mit Senden; danach steht der Name ruhig darin (ohne Schloss)
   function nameCard(done) {
     const card = document.createElement('div'); card.className = 'ags-qcard';
-    card.innerHTML = `<div class="ags-qq">Wie soll dein Agent heißen?</div><form class="ags-qin"><input type="text" maxlength="24" placeholder="Name eintragen" aria-label="Name" autocomplete="off" spellcheck="false" /><button type="submit" aria-label="Weiter">${fi('arrow-up', 13)}</button></form>`;
+    card.innerHTML = `<div class="ags-qk">Name</div><div class="ags-qq">Wie soll dein Agent heißen?</div><form class="ags-qin"><input type="text" maxlength="24" placeholder="Zum Beispiel Vokabel-Vic" aria-label="Name" autocomplete="off" spellcheck="false" /><button type="submit" aria-label="Weiter">${fi('arrow-up', 14)}</button></form>`;
     const form = card.querySelector('form'), inp = card.querySelector('input');
     inp.addEventListener('input', () => card.classList.toggle('ready', !!inp.value.trim()));
     form.addEventListener('submit', (e) => {
@@ -189,44 +202,111 @@ const AgentBuilder = (() => {
       lockName(card, v); done(v);
     });
     flowOf()?.append(card); scroll();
+    setTimeout(() => inp.focus({ preventScroll: true }), 120);
     return card;
   }
   function lockName(card, v) {
     card.classList.add('done');
-    card.querySelector('.ags-qin').outerHTML = `<div class="ags-qv">${fi('lock', 11)}<span>${esc(v)}</span></div>`;
+    card.querySelector('.ags-qin').outerHTML = `<div class="ags-qv">${esc(v)}</div>`;
   }
   async function stepName() {
     const w = wiz(); w.step = 'name'; keepWiz(); composerShown(false);
     nameCard((v) => { w.name = v; stepLook(); });
   }
+  const placeholder = (t) => { const inp = document.getElementById('input'); if (inp && isSetup(tabNow())) inp.placeholder = t; };
   async function stepLook() {
     const w = wiz(); w.step = 'look'; keepWiz();
     await say(`Schön – **${w.name}** also. Wie soll ${w.name} aussehen? Schreib es unten ins Feld: Tier oder Wesen, Farben, besondere Merkmale. Ich zeichne dann den Kopf im Pixel-Stil der anderen Agenten.`);
-    composerShown(true);
+    composerShown(true); placeholder('Aussehen beschreiben …');
     setTimeout(() => document.getElementById('input')?.focus(), 80);
   }
-  // Aussehen zeichnen = Antwort der Einrichtung (Kopf als Pixel-Bild); Änderung = einfach unten weiterschreiben
+  // Bild entsteht wie im normalen Chat: „Bild erzeugen“ mit Licht-Streifen über einem Rahmen mit der Kachel-Welle (hier quadratisch) –
+  // danach nur das Bild, darunter „Neu generieren“ und „Speichern“
+  let sqWave = '';
+  const squareWave = () => {
+    if (sqWave) return sqWave;
+    const W = 576, N = 17, S = 24, G = 8, SWEEP = 2600, o = (W - N * S - (N - 1) * G) / 2;
+    let t = '';
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) t += `<rect x="${o + c * (S + G)}" y="${o + r * (S + G)}" width="${S}" height="${S}" rx="6" style="animation-delay:${Math.round((c / (N - 1) * 0.85 + r / (N - 1) * 0.15) * SWEEP)}ms"/>`;
+    return (sqWave = `<div class="ill-frame" aria-hidden="true"><svg viewBox="0 0 ${W} ${W}" preserveAspectRatio="xMidYMid meet"><g fill="#fff" fill-opacity="0.09">${t}</g></svg></div>`);
+  };
+  function picCard(desc, { saved = null, onReady, onSave } = {}) {
+    const fig = document.createElement('figure'); fig.className = 'ags-pic';
+    let raster = saved;
+    const art = () => window.PixelDogs?.previewArt?.('eigenes', '', 256, raster) || '';
+    function show(state, err) {
+      if (state === 'wait') {
+        fig.className = 'ags-pic';
+        fig.innerHTML = `<div class="illustration-pending"><span class="shimmer ill-ico"></span><span class="shimmer">Bild erzeugen</span></div>${squareWave()}`;
+        try { if (typeof sweepRow === 'function') sweepRow(fig.querySelector('.illustration-pending')); } catch {}
+        return;
+      }
+      if (state === 'err') {
+        fig.className = 'ags-pic err';
+        fig.innerHTML = `<div class="ags-pic-img empty"><span>${esc(err || 'Das Bild konnte gerade nicht erzeugt werden.')}</span></div><div class="ags-pic-acts"><button type="button" class="agv-btn" data-pic="again">${fi('refresh', 12)}Neu generieren</button></div>`;
+        return;
+      }
+      fig.className = `ags-pic ready${state === 'saved' ? ' saved' : ''}`;
+      fig.innerHTML = `<div class="ags-pic-img">${art()}</div><div class="ags-pic-acts">${state === 'saved' ? `<span class="agv-ok">${fi('check', 12)}Gespeichert</span>`
+        : `<button type="button" class="agv-btn" data-pic="again">${fi('refresh', 12)}Neu generieren</button><button type="button" class="agv-btn primary" data-pic="save">Speichern</button>`}</div>`;
+    }
+    async function paint(fresh) {
+      const ck = hash(`wiz|${desc}`);
+      const hit = !fresh && cache()[ck];
+      if (hit) { raster = hit.raster; show('ok'); onReady?.(raster); return; }
+      show('wait'); scroll();
+      try {
+        const r = await fetch('/api/agent-avatar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: desc || 'freundliches Tier' }) });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || !j.src) throw new Error(j.error || 'Das Bild konnte gerade nicht erzeugt werden.');
+        raster = await pixelate(j.src);
+        keepCache(ck, { raster, desc: j.desc || '' });
+        show('ok'); onReady?.(raster); scroll();
+      } catch (err) { show('err', err.message); scroll(); }
+    }
+    fig.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-pic]'); if (!b) return;
+      if (b.dataset.pic === 'again') paint(true);
+      if (b.dataset.pic === 'save' && raster) { show('saved'); onSave?.(raster); }
+    });
+    if (saved) show('saved'); else paint(false);
+    return fig;
+  }
+  // Aussehen zeichnen = Antwort der Einrichtung; Änderung = einfach unten weiterschreiben (neues Bild darunter)
   function drawLook(desc) {
     const w = wiz(); w.step = 'look-check'; w.lookDesc = desc; w.raster = null; keepWiz();
     const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general';
-    flowOf()?.append(m); scroll();
-    const card = avatarCard({ figur: 'eigenes', beschreibung: desc, aktion: '', farbe: '' }, `wiz|${desc}`, true, {
-      scripted: true,
-      onReady: (cur) => { w.raster = cur.raster; keepWiz(); scroll(); },
-      onTake: (cur) => takeLook(cur, card),
-    });
-    m.append(card); scroll();
+    const a = document.createElement('div'); a.className = 'answer md'; m.append(a);
+    flowOf()?.append(m);
+    a.append(picCard(desc, { onReady: () => placeholder('Etwas ändern? Beschreib es hier …'), onSave: (raster) => takeLook(raster) }));
+    scroll();
   }
-  function takeLook(cur, card) {
+  function takeLook(raster) {
     const w = wiz(); const c = chatData(tabNow());
-    c.setupAvatar = { key: 'wizard', figur: 'eigenes', farbe: '', aktion: '', raster: cur.raster, beschreibung: w.lookDesc };
-    card.classList.add('taken');
+    c.setupAvatar = { key: 'wizard', figur: 'eigenes', farbe: '', aktion: '', raster, beschreibung: w.lookDesc };
+    flowOf()?.querySelectorAll('.ags-pic:not(.saved) [data-pic]').forEach((b) => b.closest('.ags-pic-acts')?.remove()); // ältere Entwürfe ohne Knöpfe
     stepTask();
+  }
+  // Aufgabe: Frage im Eingabefeld mit Auswahl (mehrere möglich) + eigener Antwort; Überspringen = die KI schlägt etwas Passendes vor
+  const TASK_OPTIONS = ['Lernen & Abfragen – z. B. Vokabeln, Formeln, Prüfungsstoff', 'Erklären & Nachhilfe in einem Fach', 'Recherche mit Quellen', 'Schreiben & Überarbeiten von Texten', 'Planen & Organisieren – Lernpläne, Projekte', 'Coden & Projekte bauen'];
+  function askTask() {
+    const w = wiz(); if (!w || typeof showAskPanel !== 'function') return;
+    showAskPanel([{ question: `Wobei soll **${w.name}** dir helfen?`, options: TASK_OPTIONS, multi: true, placeholder: 'Oder genau beschreiben, z. B. „fragt mich Englisch-Vokabeln ab“' }], {
+      kicker: 'Aufgabe', nextLabel: 'Weiter',
+      onDone: (qa) => {
+        const pick = qa[0]?.picked || [];
+        const skipped = pick.some((x) => x.skipped);
+        const text = skipped ? `Entscheide du, wobei ${w.name} am besten helfen kann – schlag mir etwas Passendes zu Name und Aussehen vor.` : `${w.name} soll mir helfen bei: ${pick.map((x) => x.text).join(' · ')}`;
+        w.task = text; w.step = 'ai'; keepWiz();
+        send(text);
+      },
+    });
   }
   async function stepTask() {
     const w = wiz(); w.step = 'task'; keepWiz();
-    await say(`Steht! Jetzt das Wichtigste: **Wobei soll ${w.name} dir helfen?** Beschreib es unten so genau du kannst – danach frage ich gezielt weiter.`);
-    setTimeout(() => document.getElementById('input')?.focus(), 80);
+    await say(`Gespeichert! Jetzt das Wichtigste: **Wobei soll ${w.name} dir helfen?** Wähl unten aus oder beschreib es selbst – danach frage ich gezielt weiter.`);
+    placeholder('Antworte hier …');
+    askTask();
   }
   // Absenden im Einrichtungs-Chat (app.js → intercept): Aussehen lokal zeichnen, Aufgabe geht an die KI
   function onSubmit(text) {
@@ -237,11 +317,17 @@ const AgentBuilder = (() => {
       drawLook((change ? `${w.lookDesc} – Änderung: ${text}` : text).slice(0, 400));
       return true;
     }
-    if (w.step === 'task') { w.task = text; w.step = 'ai'; keepWiz(); return false; } // normal an die KI senden
+    if (w.step === 'task') { if (typeof hideAskPanel === 'function') hideAskPanel(); w.task = text; w.step = 'ai'; keepWiz(); return false; } // normal an die KI senden
     return w.step === 'name' || w.step === 'intro' || w.step === 'greeting';
   }
   async function startWizard() {
-    const tab = tabNow(), w = wiz(); if (!w || tab?._wizStarted) return;
+    const tab = tabNow(), w = wiz(); if (!w) return;
+    if (tab?._wizStarted) { // zurück in den Einrichtungs-Chat: offene Auswahl wieder zeigen, Eingabefeld passend
+      const fresh = typeof historyOf !== 'function' || !historyOf(tab).length;
+      composerShown(!(fresh && ['greeting', 'name'].includes(w.step)));
+      if (fresh && w.step === 'task') setTimeout(() => { if (tabNow() === tab) askTask(); }, 140);
+      return;
+    }
     tab._wizStarted = true;
     if (w.step === 'intro') { w.step = 'greeting'; composerShown(false); await say(INTRO); stepName(); return; }
     replay(); resumeStep();
@@ -252,8 +338,12 @@ const AgentBuilder = (() => {
     const f = flowOf(); if (!f || f.childElementCount) return;
     say(INTRO, { instant: true });
     if (w.name) { const card = nameCard(() => {}); lockName(card, w.name); }
-    const a = chatData(tabNow())?.setupAvatar;
-    if (a?.raster) { const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general'; m.innerHTML = `<figure class="agv agv-static taken"><div class="agv-stage"><div class="agv-head">${window.PixelDogs?.rasterSvg?.(a.raster[32], 128) || ''}</div></div><div class="agv-side"><div class="agv-t">${esc(w.name || '')}</div><div class="agv-m">Aussehen festgelegt</div></div></figure>`; f.append(m); }
+    const av = chatData(tabNow())?.setupAvatar;
+    if (av?.raster) {
+      const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general';
+      const a = document.createElement('div'); a.className = 'answer md'; m.append(a);
+      a.append(picCard(av.beschreibung || '', { saved: av.raster })); f.append(m);
+    }
   }
   function resumeStep() {
     const w = wiz(); if (!w) return;
@@ -261,8 +351,8 @@ const AgentBuilder = (() => {
     if (w.step === 'greeting' || w.step === 'name') { stepName(); return; }
     composerShown(true);
     if (w.step === 'look-check' && !chatData(tabNow())?.setupAvatar) { w.step = 'look'; keepWiz(); }
-    if (w.step === 'look') say(`Wie soll ${w.name} aussehen? Schreib es unten ins Feld.`, { instant: true });
-    if (w.step === 'task') say(`Wobei soll ${w.name} dir helfen? Beschreib es unten so genau du kannst.`, { instant: true });
+    if (w.step === 'look') { say(`Wie soll ${w.name} aussehen? Schreib es unten ins Feld.`, { instant: true }); placeholder('Aussehen beschreiben …'); }
+    if (w.step === 'task') { say(`Wobei soll **${w.name}** dir helfen? Wähl unten aus oder beschreib es selbst.`, { instant: true }); setTimeout(askTask, 120); }
   }
 
   function open(opts = {}) {
@@ -392,21 +482,71 @@ const AgentBuilder = (() => {
     if (a && (a.figur !== 'eigenes' || a.raster)) return { figur: a.figur, farbe: a.farbe, aktion: p.aktion || a.aktion || '', raster: a.raster || null, beschreibungBild: a.beschreibung || '' };
     return { figur: p.figur === 'eigenes' ? 'havaneser' : p.figur, farbe: p.farbe, aktion: p.aktion, raster: null };
   }
-  // Anweisung lesbar machen: Zeilen in GROSSBUCHSTABEN = Abschnitts-Überschriften, Rest als Markdown
-  const promptMd = (t) => String(t || '').split('\n').map((l) => (/^[A-ZÄÖÜ][A-ZÄÖÜ0-9 ,/&()·\-–]{3,60}:?$/.test(l.trim()) ? `#### ${l.trim().replace(/:$/, '')}` : l)).join('\n');
-  // Anweisung im eigenen Fenster: Abschnitte als Liste links (springen), Text rechts – ruhig und gut lesbar
-  function openPrompt(p) {
+  // Anweisung lesbar machen: Zeilen in GROSSBUCHSTABEN = Abschnitts-Überschriften (wie im Dokument: „Rolle und Ziel“), Rest als Markdown
+  const CAPS = /^[A-ZÄÖÜ][A-ZÄÖÜ0-9 ,/&()·\-–]{3,60}:?$/;
+  // „TON UND SPRACHE“ → „Ton und Sprache“: Nomen groß, kleine Bindewörter klein (erstes Wort immer groß)
+  const SMALL = new Set(['und', 'oder', 'mit', 'ohne', 'für', 'bei', 'von', 'vom', 'zu', 'zum', 'zur', 'im', 'in', 'an', 'am', 'auf', 'aus', 'als', 'der', 'die', 'das', 'den', 'dem', 'des', 'ein', 'eine', 'wie', 'was', 'wann', 'er', 'sie', 'es', 'nie', 'nicht', 'tut', 'macht', 'ist', 'sich', 'nach', 'vor', 'über', 'je', 'pro']);
+  const niceHead = (h) => h.trim().replace(/:$/, '').toLowerCase().split(/(\s+|-|\/)/).map((w, i) => (!i || !SMALL.has(w) ? w.charAt(0).toUpperCase() + w.slice(1) : w)).join('');
+  const promptMd = (t) => String(t || '').split('\n').map((l) => (CAPS.test(l.trim()) ? `## ${niceHead(l)}` : l)).join('\n');
+  const sectionsOf = (t) => (promptMd(t).match(/^## .+$/gm) || []).map((h) => h.slice(3));
+  /* Anweisung im eigenen Fenster – sieht aus wie ein Dokument der App (gleiche Schrift, Größen, Abstände). Links die Gliederung:
+     folgt beim Scrollen (aktueller Abschnitt hervorgehoben) und springt beim Antippen. „Bearbeiten“ = Text direkt ändern;
+     bei gespeicherten Agenten führt „Im Chat verbessern“ in die Einrichtung (kein KI-Chat in diesem Fenster). */
+  function openPrompt(p, opts = {}) {
+    const av = p._av || p;
     const ov = document.createElement('div'); ov.className = 'agp-ov';
-    ov.innerHTML = `<div class="agp-sheet" role="dialog" aria-label="Anweisung"><div class="agp-sh-head"><span class="agp-sh-art">${window.PixelDogs?.previewArt?.(p._av.figur, p._av.farbe, 32, p._av.raster) || ''}</span><div><b>${esc(p.name)}</b><span>Anweisung · ${p.prompt.split(/\s+/).length.toLocaleString('de-DE')} Wörter</span></div><span class="ags-grow"></span><button type="button" class="ags-x" data-x aria-label="Schließen">${fi('x', 15)}</button></div>
-      <div class="agp-sh-body"><nav class="agp-sh-nav"></nav><div class="agp-sh-text md"></div></div></div>`;
-    const text = ov.querySelector('.agp-sh-text');
-    if (typeof renderMarkdown === 'function') renderMarkdown(text, promptMd(p.prompt)); else text.textContent = p.prompt;
-    const nav = ov.querySelector('.agp-sh-nav');
-    text.querySelectorAll('h4').forEach((h, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = h.textContent.charAt(0) + h.textContent.slice(1).toLowerCase(); b.addEventListener('click', () => h.scrollIntoView({ behavior: 'smooth', block: 'start' })); nav.append(b); if (!k) b.classList.add('on'); });
-    if (!nav.childElementCount) nav.remove();
-    const shut = () => { ov.classList.remove('in'); setTimeout(() => ov.remove(), 240); document.removeEventListener('keydown', esc1, true); };
+    const words = (t) => String(t || '').split(/\s+/).filter(Boolean).length.toLocaleString('de-DE');
+    ov.innerHTML = `<div class="agp-sheet" role="dialog" aria-label="Anweisung von ${esc(p.name)}"><div class="agp-sh-head"><span class="agp-sh-art">${window.PixelDogs?.previewArt?.(av.figur, av.farbe, 32, av.raster) || ''}</span><div class="agp-sh-ti"><b>${esc(p.name)}</b><span class="agp-sh-wc">Anweisung · ${words(p.prompt)} Wörter</span></div><span class="ags-grow"></span>
+      ${opts.improve ? `<button type="button" class="agp-btn" data-sh="improve">${fi('sparkle', 12)}Im Chat verbessern</button>` : ''}${opts.onSave ? `<button type="button" class="agp-btn" data-sh="edit">${fi('pencil', 12)}Bearbeiten</button>` : ''}
+      <button type="button" class="ags-x" data-x aria-label="Schließen">${fi('x', 15)}</button></div>
+      <div class="agp-sh-body"><nav class="agp-sh-nav" aria-label="Gliederung"></nav><div class="agp-sh-scroll"><article class="agp-doc"><h1 class="agp-doc-t">${esc(p.name)}</h1><p class="agp-doc-s">${esc(p.beschreibung || 'Eigener Agent')}</p><div class="agp-sh-text dc-content"></div></article></div></div></div>`;
+    const sc = ov.querySelector('.agp-sh-scroll'), text = ov.querySelector('.agp-sh-text'), nav = ov.querySelector('.agp-sh-nav');
+    let heads = [], editing = false;
+    function draw() {
+      if (typeof renderMarkdown === 'function') renderMarkdown(text, promptMd(p.prompt)); else text.textContent = p.prompt;
+      heads = [...text.querySelectorAll('h2')];
+      nav.replaceChildren(...heads.map((h, k) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = h.textContent; b.dataset.k = k; return b; }));
+      nav.hidden = !heads.length;
+      spy();
+    }
+    // Scrollspy: der Abschnitt, dessen Überschrift zuletzt oben angekommen ist; ganz unten = letzter
+    function spy() {
+      if (!heads.length || editing) return;
+      const top = sc.scrollTop + 72, end = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4;
+      let on = 0; heads.forEach((h, k) => { if (h.offsetTop <= top) on = k; });
+      if (end) on = heads.length - 1;
+      nav.querySelectorAll('button').forEach((b, k) => b.classList.toggle('on', k === on));
+      const cur = nav.children[on]; if (cur && (cur.offsetTop < nav.scrollTop || cur.offsetTop > nav.scrollTop + nav.clientHeight - 30)) nav.scrollTop = cur.offsetTop - 40;
+    }
+    let raf = 0; sc.addEventListener('scroll', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(spy); }, { passive: true });
+    nav.addEventListener('click', (e) => { const b = e.target.closest('button[data-k]'); if (!b) return; const h = heads[+b.dataset.k]; if (h) sc.scrollTo({ top: Math.max(0, h.offsetTop - 24), behavior: 'smooth' }); });
+    function edit(on) {
+      editing = on; ov.classList.toggle('editing', on);
+      const btn = ov.querySelector('[data-sh="edit"]');
+      if (on) {
+        const ta = document.createElement('textarea'); ta.className = 'agp-edit'; ta.value = p.prompt; ta.spellcheck = false;
+        text.replaceChildren(ta); nav.hidden = true;
+        const fit = () => { ta.style.height = 'auto'; ta.style.height = `${ta.scrollHeight + 4}px`; };
+        ta.addEventListener('input', fit); requestAnimationFrame(() => { fit(); ta.focus({ preventScroll: true }); });
+        if (btn) btn.innerHTML = `${fi('check', 12)}Speichern`;
+        btn?.classList.add('primary');
+      } else {
+        const v = text.querySelector('textarea')?.value;
+        if (v != null && v.trim() && v !== p.prompt) { p.prompt = v.trim(); opts.onSave?.(p.prompt); ov.querySelector('.agp-sh-wc').textContent = `Anweisung · ${words(p.prompt)} Wörter`; }
+        if (btn) btn.innerHTML = `${fi('pencil', 12)}Bearbeiten`;
+        btn?.classList.remove('primary');
+        draw();
+      }
+    }
+    draw();
+    const shut = () => { if (editing) edit(false); ov.classList.remove('in'); setTimeout(() => ov.remove(), 240); document.removeEventListener('keydown', esc1, true); };
     const esc1 = (e) => { if (e.key === 'Escape') { e.stopPropagation(); shut(); } };
-    ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('[data-x]')) shut(); });
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov || e.target.closest('[data-x]')) { shut(); return; }
+      const b = e.target.closest('[data-sh]'); if (!b) return;
+      if (b.dataset.sh === 'edit') edit(!editing);
+      if (b.dataset.sh === 'improve') { shut(); opts.improve(); }
+    });
     document.addEventListener('keydown', esc1, true);
     document.body.append(ov); requestAnimationFrame(() => ov.classList.add('in'));
   }
@@ -430,27 +570,25 @@ const AgentBuilder = (() => {
     const tab = tabNow(), editId = chatData(tab)?.setupBase || null;
     if (chatData(tab)?.wizard?.name && !editId) p.name = chatData(tab).wizard.name; // Name ist im ersten Schritt festgelegt
     const existing = list().find((a) => a.id === editId) || list().find((a) => a.name.toLowerCase() === p.name.toLowerCase());
-    const av = finalAvatar(p), words = p.prompt.split(/\s+/).length;
+    const av = finalAvatar(p), words = p.prompt.split(/\s+/).filter(Boolean).length;
     p._av = av;
-    const sections = (promptMd(p.prompt).match(/^#### .+$/gm) || []).map((h) => h.slice(5)).slice(0, 8);
+    const secs = sectionsOf(p.prompt).length;
     fig.innerHTML = `<div class="agp-top"><div class="agp-art"><div class="agp-head">${window.PixelDogs?.previewArt?.(av.figur, av.farbe, 96, av.raster) || ''}</div></div><div class="agp-main">
         <div class="agp-name">${esc(p.name)}</div>
         <p class="agp-desc">${esc(p.beschreibung || 'Eigener Agent')}</p>
-        <div class="agp-tags"><span>${esc(MODE_NAMES[MODES[p.verhalten]])}</span>${p.tools.map((t) => `<span>${esc(TOOL_NAMES[t])}</span>`).join('')}</div>
+        <div class="agp-tags"><span>${esc(MODE_NAMES[MODES[p.verhalten]])}</span>${p.tools.filter((t) => t !== 'miniapps').map((t) => `<span>${esc(TOOL_NAMES[t])}</span>`).join('')}</div>
       </div></div>
-      <button type="button" class="agp-instr" data-agp="prompt"><span class="agp-instr-t">${fi('file', 13)}<b>Anweisung</b><em>${words.toLocaleString('de-DE')} Wörter</em></span>
-        <span class="agp-instr-s">${sections.map((x) => `<i>${esc(x.charAt(0) + x.slice(1).toLowerCase())}</i>`).join('')}</span>${fi('chevron-right', 11)}</button>
-      <div class="agp-acts"><button type="button" class="agp-btn primary" data-agp="save">${existing ? 'Änderungen übernehmen' : 'Agent erstellen'}</button></div>`;
+      <div class="agp-acts"><button type="button" class="agp-btn agp-open" data-agp="prompt">${fi('file', 13)}Anweisung ansehen<em>${words.toLocaleString('de-DE')} Wörter${secs ? ` · ${secs} Abschnitte` : ''}</em></button><span class="ags-grow"></span><button type="button" class="agp-btn primary" data-agp="save">${existing ? 'Änderungen übernehmen' : 'Agent erstellen'}</button></div>`;
     fig.addEventListener('click', (e) => {
       const b = e.target.closest('[data-agp]'); if (!b) return;
-      if (b.dataset.agp === 'prompt') { openPrompt(p); return; }
+      if (b.dataset.agp === 'prompt') { openPrompt(p, { onSave: () => { const w = fig.querySelector('.agp-open em'); if (w) w.textContent = `${p.prompt.split(/\s+/).filter(Boolean).length.toLocaleString('de-DE')} Wörter`; } }); return; }
       if (b.dataset.agp === 'save') {
         const l = list(), id = existing?.id || `u-${Date.now().toString(36)}`;
         const item = { id, name: p.name, beschreibung: p.beschreibung, begruessung: '', verhalten: p.verhalten, prompt: p.prompt, tools: p.tools, vorlage: '', ...av, aktion: '', at: Date.now() };
         const i = l.findIndex((a) => a.id === id);
         if (i >= 0) l[i] = item; else l.unshift(item);
         store(l);
-        fig.querySelector('.agp-acts').innerHTML = `<span class="agp-ok">${fi('check', 12)}${i >= 0 ? 'Übernommen' : 'Erstellt'}</span><button type="button" class="agp-btn primary" data-agp="start" data-id="${esc(id)}">Chat starten</button>`;
+        fig.querySelector('[data-agp="save"]').outerHTML = `<span class="agp-ok">${fi('check', 12)}${i >= 0 ? 'Übernommen' : 'Erstellt'}</span><button type="button" class="agp-btn primary" data-agp="start" data-id="${esc(id)}">Chat starten</button>`;
         celebrate(item, i < 0);
       } else if (b.dataset.agp === 'start') close(b.dataset.id);
     });
@@ -504,14 +642,23 @@ const AgentBuilder = (() => {
     const l = list();
     const rows = l.map((a) => `<div class="st-row ags-row"><span class="st-dog">${window.PixelDogs?.svg(a.id, 24) || ''}</span><span class="st-name">${esc(a.name)}</span><span class="st-muted ags-meta">${esc(MODE_NAMES[MODES[a.verhalten]] || 'Allgemein')}</span><span class="grow"></span>`
       + `${window.PixelDogs?.mode === a.id ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>` : `<button type="button" class="st-btn dark" data-ags-use="${esc(a.id)}">Auswählen</button>`}`
-      + `<button type="button" class="ags-ib" data-ags-edit="${esc(a.id)}" aria-label="Bearbeiten">${fi('pencil', 13)}</button><button type="button" class="ags-ib del${delArm === a.id ? ' sure' : ''}" data-ags-del="${esc(a.id)}" aria-label="Löschen">${delArm === a.id ? 'Wirklich?' : fi('trash', 13)}</button></div>`).join('');
+      + `<button type="button" class="ags-ib" data-ags-doc="${esc(a.id)}" aria-label="Anweisung ansehen" title="Anweisung ansehen">${fi('file', 13)}</button><button type="button" class="ags-ib" data-ags-edit="${esc(a.id)}" aria-label="Im Chat bearbeiten" title="Im Chat bearbeiten">${fi('pencil', 13)}</button><button type="button" class="ags-ib del${delArm === a.id ? ' sure' : ''}" data-ags-del="${esc(a.id)}" aria-label="Löschen">${delArm === a.id ? 'Wirklich?' : fi('trash', 13)}</button></div>`).join('');
     return `<h2>Eigene Agenten</h2><div class="st-card">${rows}<div class="st-row ags-new" data-ags-new role="button" tabindex="0"><span class="ags-plus">${fi('plus', 13)}</span><span class="st-name">Neuen Agenten erstellen</span><span class="grow"></span><span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div></div>`;
+  }
+  // gespeicherter Agent: Anweisung ansehen, direkt ändern (wird gespeichert) oder im Einrichtungs-Chat verbessern
+  function showSaved(a) {
+    const p = { ...a, _av: a };
+    openPrompt(p, {
+      onSave: (prompt) => { const l = list(), i = l.findIndex((x) => x.id === a.id); if (i >= 0) { l[i] = { ...l[i], prompt, at: Date.now() }; store(l); } },
+      improve: () => { const cur = byId(a.id); if (cur) open({ edit: cur }); },
+    });
   }
   function settingsClick(e, redraw) {
     const t = e.target;
     if (t.closest('[data-ags-new]')) { open(); return true; }
     const u = t.closest('[data-ags-use]'); if (u) { window.PixelDogs?.select(u.dataset.agsUse); setTimeout(redraw, 60); return true; }
     const ed = t.closest('[data-ags-edit]'); if (ed) { const a = byId(ed.dataset.agsEdit); if (a) open({ edit: a }); return true; }
+    const dc = t.closest('[data-ags-doc]'); if (dc) { const a = byId(dc.dataset.agsDoc); if (a) showSaved(a); return true; }
     const d = t.closest('[data-ags-del]');
     if (d) {
       const id = d.dataset.agsDel;
@@ -523,6 +670,6 @@ const AgentBuilder = (() => {
   }
   (window.SettingsHooks ||= []).push({ page: 'agents', order: 1, html: settingsHtml, click: settingsClick }, { page: 'saved', order: 0, html: settingsHtml, click: settingsClick });
 
-  return { open: (o) => open(o && typeof o === 'object' && !o.id ? o : o ? { edit: o } : {}), close, render, list, parseProfile, parseAvatar, intercept, pixelate };
+  return { open: (o) => open(o && typeof o === 'object' && !o.id ? o : o ? { edit: o } : {}), close, render, list, parseProfile, parseAvatar, intercept, pixelate, showSaved, promptMd };
 })();
 window.AgentBuilder = AgentBuilder;

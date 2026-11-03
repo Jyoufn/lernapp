@@ -3150,7 +3150,7 @@ function renderInline(target, text) {
 // opts.onDone(qa): eigene Abfrage (z. B. Einrichtung eines Agenten) statt Antwort an die KI · opts.kicker: Text oben links statt „Rückfrage“
 function showAskPanel(questions, opts = {}) {
   askPanel.tabIndex = -1;
-  ask = { questions, index: 0, answers: questions.map(() => ({ picked: new Set(), own: '' })), onDone: opts.onDone || null, kicker: opts.kicker || '', noSkip: !!opts.noSkip, nextLabel: opts.nextLabel || '' };
+  ask = { questions, index: 0, answers: questions.map(() => ({ picked: new Set(), own: '', skipped: false })), onDone: opts.onDone || null, kicker: opts.kicker || '', noSkip: !!opts.noSkip, nextLabel: opts.nextLabel || '' };
   composer.classList.add('asking');
   renderAsk();
   scrollToBottom(true);
@@ -3176,6 +3176,21 @@ function skipAsk() {
   w.head.querySelector('.t').hidden = false;
   pa.msgEl.querySelector('.answer')?.remove();
   if (!pa.msgEl.querySelector('.msg-actions')) pa.msgEl.append(restartBar(pa.msgEl));
+}
+/* „Überspringen“ unten = nur diese Frage: die KI entscheidet den Punkt selbst; bei der letzten Frage geht es direkt weiter.
+   (× oben bricht wie bisher ab – in eigenen Abfragen wie „Agent einrichten“ überspringt es alle offenen Fragen.) */
+const SKIP_TEXT = 'Übersprungen – entscheide selbst';
+function skipOne() {
+  if (!ask) return;
+  const a = ask.answers[ask.index];
+  a.picked.clear(); a.own = ''; a.skipped = true;
+  if (ask.index < ask.questions.length - 1) { ask.index++; renderAsk(1); return; }
+  finishAsk();
+}
+function skipAll() {
+  if (!ask) return;
+  ask.answers.forEach((a, k) => { if (!answerText(k)) a.skipped = true; });
+  finishAsk();
 }
 function hideAskPanel() {
   ask = null;
@@ -3208,7 +3223,7 @@ function renderAsk(dir = 0) {
   close.type = 'button';
   close.setAttribute('aria-label', 'Überspringen');
   close.title = 'Überspringen';
-  close.addEventListener('click', skipAsk);
+  close.addEventListener('click', () => (ask.onDone ? skipAll() : skipAsk()));
   if (!ask.noSkip) top.append(close);
   const qEl = el('div', 'ask-q md');
   renderInline(qEl, q.question);
@@ -3255,7 +3270,7 @@ function renderAsk(dir = 0) {
   });
   own.addEventListener('blur', markOwn);
   own.addEventListener('input', () => {
-    a.own = own.value;
+    a.own = own.value; a.skipped = false;
     if (!q.multi && own.value.trim()) a.picked.clear(); // eigene Antwort ersetzt die Auswahl
     updateAskButtons();
     markOwn();
@@ -3274,7 +3289,8 @@ function renderAsk(dir = 0) {
   const foot = el('div', 'ask-foot');
   const skip = el('button', 'ask-btn ghost ask-skip', 'Überspringen');
   skip.type = 'button';
-  skip.addEventListener('click', skipAsk);
+  skip.title = 'Die KI entscheidet diesen Punkt selbst';
+  skip.addEventListener('click', skipOne);
   if (!ask.noSkip) foot.append(skip);
   if (ask.index > 0) {
     const back = el('button', 'ask-btn ghost ask-back', `${icon('i-back', 14)}Zurück`);
@@ -3341,6 +3357,7 @@ function dictateInto(field, btn) {
 function pickOption(i) {
   const q = ask.questions[ask.index];
   const a = ask.answers[ask.index];
+  a.skipped = false;
   if (q.multi) { a.picked.has(i) ? a.picked.delete(i) : a.picked.add(i); }
   else { a.picked = new Set(a.picked.has(i) ? [] : [i]); a.own = ''; }
   // nur Zustände umschalten (kein Neuaufbau) – so blendet die Auswahl weich um
@@ -3358,7 +3375,7 @@ function answerText(i) {
   const a = ask.answers[i];
   const parts = [...a.picked].sort().map((k) => q.options[k]);
   if (a.own.trim()) parts.push(a.own.trim());
-  return parts.join(', ');
+  return parts.join(', ') || (a.skipped ? SKIP_TEXT : '');
 }
 
 // Weiter nur mit Antwort; Senden (letzte Frage) erst, wenn ALLE Fragen beantwortet sind – sonst wegklicken (×/Überspringen)
@@ -3372,10 +3389,15 @@ function askNext() {
   if (!ask || !answerText(ask.index)) return;
   if (ask.index < ask.questions.length - 1) { ask.index++; renderAsk(1); return; }
   if (!allAnswered()) return;
+  finishAsk();
+}
+function finishAsk() {
+  if (!ask) return;
   const qa = ask.questions.map((q, k) => {
     const a = ask.answers[k];
     const picked = [...a.picked].sort((x, y) => x - y).map((n) => ({ num: n + 1, text: q.options[n] }));
     if (a.own.trim()) picked.push({ num: null, text: a.own.trim() });
+    if (!picked.length) picked.push({ num: null, text: SKIP_TEXT, skipped: true });
     return { question: q.question, picked };
   });
   const done = ask.onDone;
@@ -3412,6 +3434,7 @@ async function continueAfterAsk(qa) {
     renderInline(q, question);
     const a = el('div', 'qa-a');
     picked.forEach((p) => {
+      if (p.skipped) { a.append(el('span', 'qa-none', 'Übersprungen – KI entscheidet')); return; }
       const pill = el('span', 'qa-pick');
       const label = el('span', 'qa-label md');
       renderInline(label, p.text);

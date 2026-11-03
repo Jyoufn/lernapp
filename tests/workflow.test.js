@@ -678,7 +678,8 @@ test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokum
   const sys = gen.body.systemInstruction.parts[0].text;
   assert.match(sys, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);
   assert.match(sys, /SCHULBUCH-AUFBAU[\s\S]*zum Material\s+DARÜBER/, 'Aufgaben gehören zum Material darüber');
-  assert.match(sys, /AUFWAND HIGH/, 'Aufgaben aus Fotos: mindestens gründlich');
+  assert.match(sys, /Du entscheidest selbst, wie du eine Anfrage angehst/, 'schlanker Prompt: die KI entscheidet selbst');
+  assert.doesNotMatch(sys, /GEWÄHLTER AUFWAND/, 'Auto: keine Vorgabe zum Aufwand');
   const parts = gen.body.contents.at(-1).parts;
   assert.equal(parts[0].text, '[Datei 1: s34.jpg]');
   assert.equal(parts[1].inline_data.mime_type, 'image/jpeg');
@@ -827,7 +828,7 @@ test('Bilder heraussuchen statt erzeugen: Research sucht Funde (keine Tiefen-Rec
   } finally { WEB.findVisuals = realFind; }
 });
 
-test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte Stufe mit dynamischem Denken; Max = Quellen + Selbstkontrolle', async () => {
+test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte Stufe mit dynamischem Denken; Max = Quellen, EIN Aufruf mit vollem Denken', async () => {
   let level = 'high';
   fx = M.installFetch([
     { match: M.is.route, respond: () => M.nvidiaJson({ level, sources: 'none', queries: [], why: 'Erklärung' }) },
@@ -844,16 +845,24 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst, wie lange es denkt');
   const sys = M.systemOf(gen);
   assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
-  assert.match(sys, /AUFWAND HIGH/);
-  assert.match(sys, /Operatoren/);
+  assert.match(sys, /Du entscheidest selbst, wie du eine Anfrage angehst/, 'schlanker Prompt');
+  assert.doesNotMatch(sys, /GEWÄHLTER AUFWAND|SCHULAUFGABEN – WIE|FACHREGELN/, 'Auto: keine Vorgaben zu Aufwand, Gliederung oder Fachregeln');
+  assert.match(sys, /Nutze pro Zahlenreihe genau einen Block/, 'Bausteine der App (Diagramme …) kennt die KI weiter');
+  assert.match(sys, /```ask|\\`\\`\\`ask|RÜCKFRAGEN/, 'Rückfragen-Format');
   assert.ok(!gen.body.tools, 'keine Suche, wenn die Einschätzung keine Quellen braucht');
   fx.calls.length = 0;
   level = 'max';
   const m = await run({ ...msg('Wie funktioniert die Photosynthese?'), agent: 'general', effort: 'max' });
   const streams = fx.calls.filter(M.is.geminiStream);
-  assert.equal(streams.length, 2, 'Max: Entwurf + Endfassung');
+  assert.equal(streams.length, 1, 'Max: ein Aufruf – die KI denkt selbst (keine Zusatz-Runde)');
   assert.ok(JSON.stringify(streams[0].body.tools || []).includes('google_search'), 'Max: immer Quellen – hier über Google im Modell');
-  assert.match(streams[1].body.contents.at(-1).parts[0].text, /ENTWURF[\s\S]*Endfassung/, 'zweiter Aufruf prüft den Entwurf');
-  assert.ok(m.stages().includes('verifying:active'), 'Zeitleiste zeigt die Prüfung');
-  assert.equal(m.text(), 'Antwort.', 'sichtbar ist nur die Endfassung');
+  assert.match(M.systemOf(streams[0]), /GEWÄHLTER AUFWAND: Maximum/, 'gewählter Aufwand gilt');
+  assert.ok(!m.stages().includes('verifying:active'), 'keine Prüf-Runde');
+  assert.equal(m.text(), 'Antwort.');
+  // „kurz zusammenfassen“ geht auch bei Max vor
+  fx.calls.length = 0;
+  await run({ ...msg('Fass mir die Photosynthese kurz zusammen'), agent: 'general', effort: 'max' });
+  const sysK = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+  assert.match(sysK.slice(-900), /ausdrücklich KURZ/, 'Kurz-Wunsch steht ganz am Ende');
+  assert.doesNotMatch(sysK, /ANTWORT NACH DER RECHERCHE/, 'kein „ausführlich“ gegen den Wunsch');
 });

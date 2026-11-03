@@ -50,7 +50,7 @@ test('Tiefen-Recherche: plant Teilfragen, sucht und liest viele Quellen (ohne Fo
   const block = DEEP.comparisonBlock(r);
   assert.match(block, /\[ÜBEREINSTIMMEND\] CO2 ist Hauptursache \(Quellen \[1\] \[2\]\)/);
   assert.match(block, /\[WIDERSPRÜCHLICH\] Meeresspiegel steigt/);
-  assert.match(block, /Was die Quellen sagen/);
+  assert.match(block, /Widersprüche nennst du offen/); assert.doesNotMatch(block, /Was die Quellen sagen/); // kein fester Aufbau mehr – die KI gliedert selbst
 });
 
 test('Tiefen-Recherche: ohne Plan-Modell trotzdem Suche aus der Frage; ohne Quellen Status „failed“', async () => {

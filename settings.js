@@ -257,11 +257,20 @@
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}</div>` : '')
         + hooksHtml('agents');
     }
-    // gleiche Seite neu gezeichnet (z. B. Hintergrund gewählt) → Scroll-Position behalten, nicht nach oben springen
-    const keepTop = drawView.page === page ? view.querySelector('.st-scroll')?.scrollTop || 0 : 0;
-    drawView.page = page;
+    // gleiche Seite neu gezeichnet (z. B. Hintergrund gewählt) → Scroll-Position behalten, nicht nach oben springen. Die neue Seite behält kurz
+    // mindestens die alte Höhe (Teile, die erst danach laden – Vorschaubilder, Listen –, ließen die Position sonst nach oben klemmen)
+    const sc0 = view.querySelector('.st-scroll'), same = drawView.page === page;
+    const keepTop = same ? Math.max(sc0?.scrollTop || 0, drawView.top || 0) : 0, keepH = same ? sc0?.querySelector('.st-page')?.offsetHeight || 0 : 0;
+    drawView.page = page; drawView.top = keepTop;
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
-    if (keepTop) view.querySelector('.st-scroll').scrollTop = keepTop;
+    const sc = view.querySelector('.st-scroll'), pg = sc.querySelector('.st-page');
+    if (keepTop) {
+      if (keepH) pg.style.minHeight = `${keepH}px`;
+      sc.scrollTop = keepTop;
+      requestAnimationFrame(() => { if (sc.isConnected && Math.abs(sc.scrollTop - keepTop) > 2) sc.scrollTop = keepTop; });
+      clearTimeout(drawView.t); drawView.t = setTimeout(() => { pg.style.minHeight = ''; }, 1500);
+    }
+    sc.addEventListener('scroll', () => { drawView.top = sc.scrollTop; }, { passive: true });
     drawSide();
   }
 
@@ -293,7 +302,7 @@
     const a = e.target.closest('[data-st]');
     if (!a) return;
     e.preventDefault();
-    page = a.dataset.st; write(PAGE_KEY, page); editing = null; drawView();
+    page = a.dataset.st; write(PAGE_KEY, page); editing = null; drawView.top = 0; drawView();
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && app.classList.contains('settings-open') && !e.target.closest?.('input')) close();
