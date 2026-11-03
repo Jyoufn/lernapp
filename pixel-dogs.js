@@ -884,7 +884,7 @@ const PixelDogs = (() => {
       MODES.push({ id: a.id, name: String(a.name).slice(0, 24), custom: true });
       const tint = furTint(a.farbe), tintHex = tint ? hslHex(tint[0], tint[1], 0.6) : a.figur === 'eigenes' ? (GEN[a.id]?.fur?.[0] || '#a3a3a3') : '#a3a3a3';
       const n = parseInt(tintHex.slice(1), 16);
-      INFO_CUSTOM[a.id] = { icon: 'agent', tint: `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.08)`, text: String(a.beschreibung || 'Eigener Agent').slice(0, 140) };
+      INFO_CUSTOM[a.id] = { icon: 'user', tint: `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.08)`, text: String(a.beschreibung || 'Eigener Agent').slice(0, 140) };
       if (typeof document !== 'undefined') {
         document.documentElement.style.setProperty(`--dog-${a.id}`, iconUrl(a.id));
         css += `#chat[data-dog="${a.id}"] .msg-ai:not([data-dog])::before,#chat .msg-ai[data-dog="${a.id}"]::before,.dcc-a[data-dog="${a.id}"]::before{background-image:var(--dog-${a.id})}`;

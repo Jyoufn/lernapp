@@ -10487,3 +10487,76 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .ags-fv { color: var(--text); }
 .ags-say .answer { animation: cbx-in 360ms var(--spring, ease) both; }
 .agv { border-color: rgba(255, 255, 255, 0.055); }
+
+/* ===================================================================
+   03.11.2026 (5) – Neuer Agent: Name im Kasten direkt im Chat, Eingabefeld erst danach, gezeichneter Kopf ohne Animation,
+   Anweisung im eigenen Fenster, ruhiger Abschluss; Rückfragen ohne Stift-Icon
+   =================================================================== */
+.app.agent-setup.ags-noinput .composer-area { opacity: 0; pointer-events: none; transform: translateY(8px) !important; }
+.app.agent-setup .composer-area { transition: opacity 320ms ease, transform 420ms var(--spring, ease) !important; }
+/* Denken in der Einrichtung: nur die ruhige Kopfzeile, keine Gedanken-Liste */
+.app.agent-setup .msg-ai .work-body { display: none !important; }
+/* Name: kleiner Kasten – Frage, darunter das Feld mit Senden */
+.ags-qcard { width: min(420px, 100%); margin: 12px 0 18px 0; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 14px;
+  background: color-mix(in srgb, var(--main-bg) 98.5%, #fff); animation: cbx-in 380ms var(--spring, ease) both; }
+.ags-qq { margin: 2px 2px 10px; color: var(--text); font-size: 14px; font-weight: 600; }
+.ags-qin { display: flex; align-items: center; gap: 6px; height: 40px; padding: 0 5px 0 12px; border: 1px solid var(--field-border, #272727); border-radius: 10px; background: var(--field-bg, #1c1c1c); }
+.ags-qin input { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-size: 14px; outline: none; }
+.ags-qin input::placeholder { color: var(--text-4); }
+.ags-qin button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: #2a2a2a; color: var(--text-3); cursor: pointer; transition: background 160ms ease, color 160ms ease; }
+.ags-qcard.ready .ags-qin button { background: var(--accent); color: #fff; }
+.ags-qv { display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 12px; border-radius: 10px; background: rgba(255, 255, 255, 0.035); color: var(--text); font-size: 14px; }
+.ags-qv svg { width: 11px; height: 11px; color: var(--text-4); }
+/* gezeichneter Kopf: ruhig, ohne Animation, scharfe Pixel */
+.agv-head { display: grid; place-items: center; width: 100%; height: 100%; }
+.agv-head svg { width: 128px; height: 128px; image-rendering: pixelated; animation: cbx-in 420ms var(--spring, ease) both; }
+.agv-stage:not(.wait) { place-items: center; }
+.agv-hint { margin: 10px 0 0; color: var(--text-4); font-size: 12px; }
+.agv.taken .agv-hint { display: none; }
+/* Profil-Karte: Kopf statt Figur mit Animation, Anweisung als saubere Zeile mit Abschnitten */
+.agp .agp-art { width: 112px; height: 112px; place-items: center; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.agp-head svg { width: 96px; height: 96px; image-rendering: pixelated; }
+.agp-tags span { background: rgba(255, 255, 255, 0.05); }
+.agp-instr { display: flex; align-items: center; gap: 12px; width: calc(100% - 32px); margin: 10px 16px 0; padding: 11px 12px; border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px;
+  background: none; color: var(--text-3); font: inherit; text-align: left; cursor: pointer; transition: border-color 160ms ease; }
+.agp-instr:hover { border-color: rgba(255, 255, 255, 0.12); }
+.agp-instr-t { display: flex; align-items: center; gap: 7px; flex: none; }
+.agp-instr-t b { color: var(--text); font-size: 13px; font-weight: 600; }
+.agp-instr-t em { color: var(--text-4); font-size: 12px; font-style: normal; }
+.agp-instr-s { display: flex; flex: 1; min-width: 0; gap: 4px; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+.agp-instr-s i { flex: none; height: 22px; padding: 0 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.045); color: var(--text-3); font-size: 11.5px; font-style: normal; line-height: 22px; }
+.agp-instr > svg { flex: none; color: var(--text-4); }
+/* Anweisung im eigenen Fenster */
+.agp-ov { position: fixed; inset: 0; z-index: 1250; display: grid; place-items: center; padding: 18px; background: rgba(0, 0, 0, 0.55); opacity: 0; transition: opacity 220ms ease; }
+.agp-ov.in { opacity: 1; }
+.agp-sheet { display: flex; flex-direction: column; width: min(860px, 100%); height: min(760px, 100%); overflow: hidden; border: 1px solid var(--menu-border); border-radius: 16px; background: var(--main-bg);
+  transform: translateY(10px) scale(0.99); transition: transform 420ms var(--spring, ease); }
+.agp-ov.in .agp-sheet { transform: none; }
+.agp-sh-head { display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 10px 0 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.agp-sh-art svg { display: block; width: 32px; height: 32px; image-rendering: pixelated; }
+.agp-sh-head b { display: block; color: var(--text); font-size: 15px; font-weight: 600; }
+.agp-sh-head span { color: var(--text-4); font-size: 12px; }
+.agp-sh-body { display: flex; flex: 1; min-height: 0; }
+.agp-sh-nav { display: flex; flex-direction: column; gap: 2px; flex: none; width: 190px; padding: 14px 10px; overflow-y: auto; border-right: 1px solid rgba(255, 255, 255, 0.05); }
+.agp-sh-nav button { height: 30px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.agp-sh-nav button:hover { color: var(--text); }
+.agp-sh-text { flex: 1; min-width: 0; padding: 18px 24px 40px; overflow-y: auto; color: var(--text-2); font-size: 13.5px; line-height: 1.65; }
+.agp-sh-text h4 { margin: 22px 0 6px; color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.agp-sh-text h4:first-child { margin-top: 0; }
+@media (max-width: 640px) { .agp-sh-nav { display: none; } }
+/* Abschluss: Agent ist bereit */
+.agp-done { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; background: color-mix(in srgb, var(--main-bg) 92%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  opacity: 0; transition: opacity 320ms ease; }
+.agp-done.in { opacity: 1; }
+.agp-done-in { display: flex; flex-direction: column; align-items: center; gap: 8px; max-width: 360px; padding: 24px; text-align: center; transform: translateY(10px) scale(0.98); transition: transform 520ms var(--spring, ease); }
+.agp-done.in .agp-done-in { transform: none; }
+.agp-done-art svg { display: block; width: 128px; height: 128px; image-rendering: pixelated; }
+.agp-done-check { display: grid; place-items: center; width: 26px; height: 26px; margin-top: -18px; border: 3px solid var(--main-bg); border-radius: 50%; background: var(--accent); color: #fff;
+  transform: scale(0); transition: transform 420ms var(--spring, ease) 220ms; }
+.agp-done.in .agp-done-check { transform: scale(1); }
+.agp-done b { margin-top: 6px; color: var(--text); font-size: 18px; font-weight: 600; }
+.agp-done span { color: var(--text-3); font-size: 13px; line-height: 18px; }
+.agp-done-acts { display: flex; gap: 8px; margin-top: 14px; }
+/* Rückfragen: eigene Antwort ohne Icon links */
+:is(#composer, #vaAsk) .ask-panel .ask-own-row { padding-left: 12px; }
+:is(#composer, #vaAsk) .ask-panel .ask-own-row:empty, .ask-own-row > .ask-key:empty { display: none; }

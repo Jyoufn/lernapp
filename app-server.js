@@ -1114,10 +1114,11 @@ Antworte NUR mit dem Titel.`;
 /* ---------- /api/agent-avatar: eigenes Profilbild für einen eigenen Agenten ----------
    Wunsch (Deutsch) → kurze englische Beschreibung → FLUX malt ein Pixel-Brustbild auf Magenta. Die App rastert es danach im Browser
    selbst auf 32/24/20 Pixel (gleicher grober Stil wie die festen Agenten: 1-px-Umriss, wenige Farben, Brustbild unten angeschnitten). */
-const AVATAR_STYLE = 'pixel art avatar of a single character, bust from the chest up, facing the viewer, centered, the head is big and fills most of the image, shoulders cut off at the bottom edge, '
-  + 'retro 32x32 pixel sprite scaled up with big square pixels, clean black 1-pixel outline around the whole silhouette, soft simple shading with light from the top left, '
-  + 'small round eyes with one white highlight pixel, friendly cute look, limited palette of about 10 colors, no dithering, '
-  + 'plain flat solid magenta #FF00FF background, nothing else in the image, no text, no frame, no border';
+const AVATAR_STYLE = 'pixel art head portrait, ONLY the head and a short piece of neck, facing straight forward, symmetrical, the head fills the whole width of the image, '
+  + 'no body, no wings, no arms, no hands, no props, no accessories unless described, cute friendly face, '
+  + 'retro low resolution 32x32 sprite scaled up with big square pixels, thick clean black 1-pixel outline around the whole head, '
+  + 'soft simple shading with light from the top left, slightly muted natural colors, small round dark eyes each with one white highlight pixel, '
+  + 'limited palette of about 8 colors, no dithering, no gradients, plain flat solid magenta #FF00FF background, nothing else in the image, no text, no frame';
 const AVATAR_SYSTEM = `Du bekommst einen Wunsch für ein Pixel-Profilbild (Figur) eines KI-Agenten, eventuell mit der bisherigen Beschreibung, die geändert werden soll.
 Antworte NUR mit JSON: {"desc":"englische Beschreibung der Figur, 10–40 Wörter"}
 - Nur die Figur selbst: was für ein Wesen/Charakter, Farben von Fell/Haut/Kleidung, markante Merkmale (Zubehör NUR, wenn ausdrücklich gewünscht).
@@ -1133,7 +1134,7 @@ async function handleAgentAvatar(req, res) {
   if (desc.length < 5) desc = before ? `${before}, ${wish}` : wish;
   if (!imageKeys(env).length) return sendJson(res, 400, { error: 'Für eigene Profilbilder fehlt ein NVIDIA-Schlüssel (Einstellungen → Agenten → FLUX (Bilder) oder MiniMax).' });
   let out = await paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`).catch(() => null); // mit Umformulieren, falls der Inhaltsfilter anschlägt
-  if (!out) out = await paint(env, `cute friendly ${desc.slice(0, 200)}, pixel art bust portrait, plain flat magenta background`).catch(() => null); // kürzerer Auftrag als zweiter Versuch
+  if (!out) out = await paint(env, `cute friendly ${desc.slice(0, 200)}, pixel art head portrait only, front view, black outline, plain flat magenta background`).catch(() => null); // kürzerer Auftrag als zweiter Versuch
   if (!out) return sendJson(res, 502, { error: lastImageFiltered ? 'Der Bild-Filter hat die Beschreibung abgelehnt – beschreib die Figur etwas anders.' : 'Das Bild konnte gerade nicht gezeichnet werden (Bildmodell nicht erreichbar) – gleich noch einmal versuchen.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
 }

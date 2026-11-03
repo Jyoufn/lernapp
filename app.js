@@ -3230,7 +3230,7 @@ function renderAsk(dir = 0) {
 
   // „Eigene Antwort“: Zeile mit Stift – man tippt direkt hinein oder spricht über das Mikro rechts
   const ownRow = el('label', `ask-opt ask-own-row${a.own.trim() ? ' selected' : ''}`);
-  ownRow.innerHTML = '<span class="ask-key ask-pen"><svg width="14" height="14"><use href="#f-pencil"/></svg></span>';
+  ownRow.innerHTML = ''; // kein Stift-Icon links (Wunsch 03.11.)
   const own = document.createElement('input');
   own.className = 'ask-own-in';
   own.type = 'text';
@@ -4251,7 +4251,7 @@ function vaRenderAsk(dir = '') {
   });
 
   const ownRow = el('label', `ask-opt ask-own-row${a.own.trim() ? ' selected' : ''}`);
-  ownRow.innerHTML = '<span class="ask-key ask-pen"><svg width="14" height="14"><use href="#f-pencil"/></svg></span>';
+  ownRow.innerHTML = '';
   const own = document.createElement('input');
   own.className = 'ask-own-in';
   own.type = 'text';
