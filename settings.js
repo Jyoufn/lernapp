@@ -96,7 +96,7 @@
     const status = keys.length ? `<span class="st-ok">${fi('check', 12)}${p.multi ? `${keys.length} ${keys.length === 1 ? 'Schlüssel' : 'Schlüssel'}` : 'Verbunden'}</span>`
       : fileKeys[p.id] ? `<span class="st-ok">${fi('check', 12)}Verbunden</span>` : '<span class="st-muted">Verbinden</span>';
     const isMain = p.fam && mainFam() === p.fam;
-    const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span>${isMain ? '<span class="st-main-tag">Haupt-KI</span>' : ''}<span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
+    const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span>${isMain ? '<span class="st-main-tag">Haupt-KI</span>' : p.image && (keys.length || fileKeys[p.id]) ? '<span class="st-main-tag soft">Bild-KI</span>' : ''}<span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
     if (!open) return head;
     return head + `<div class="st-keys"><div class="st-keys-in">
         ${keys.map((k, i) => `<div class="st-key"><span class="st-key-dots">••••${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
@@ -111,13 +111,15 @@
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
   const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
   function rolesHtml(p, has) {
-    if (p.image) return `<div class="st-role"><span class="st-role-t"><b>Bild-KI</b><span>Malt Bilder, Cover und Profilbilder.</span></span><span class="grow"></span>${has ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>` : '<span class="st-muted">Kein Schlüssel</span>'}</div>`;
     if (!p.fam) return '';
-    const main = mainFam() === p.fam, off = offFams().includes(p.fam);
-    return `<div class="st-role"><span class="st-role-t"><b>Haupt-KI</b><span>${main ? 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.' : 'Für alles zuerst diese KI nutzen.'}${main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : ''}</span></span><span class="grow"></span>`
-      + (main ? `<span class="st-ok">${fi('check', 12)}Haupt-KI</span>` : `<button type="button" class="st-btn dark" data-main-ai="${p.fam}">Als Haupt-KI verwenden</button>`) + '</div>'
-      + (main ? '' : `<div class="st-role"><span class="st-role-t"><b>Als Ersatz</b><span>Springt nur ein, wenn die Haupt-KI gerade nicht kann (z. B. Kontingent aufgebraucht).</span></span><span class="grow"></span>${seg('data-ai-backup', [['An', `${p.fam}:on`], ['Aus', `${p.fam}:off`]], `${p.fam}:${off ? 'off' : 'on'}`)}</div>`);
+    const main = mainFam() === p.fam, role = main ? 'main' : offFams().includes(p.fam) ? 'off' : 'backup';
+    const why = { main: 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.', backup: 'Springt nur ein, wenn die Haupt-KI gerade nicht kann.', off: 'Wird nie genutzt.' }[role]
+      + (main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : '');
+    const opt = (v, label) => `<button type="button" role="radio" aria-checked="${role === v}" class="${role === v ? 'on' : ''}" data-ai-role="${p.fam}:${v}"${main && v !== 'main' ? ' disabled' : ''}>${label}</button>`;
+    return `<div class="st-role"><span class="st-role-n">Rolle</span><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>
+      <p class="st-role-why">${esc(why)}</p>`;
   }
+
 
 
 
@@ -309,10 +311,15 @@
   view.addEventListener('click', (e) => {
     const rm = e.target.closest('[data-key-rm]');
     if (rm && editing) { const ks = keyList(editing); ks.splice(+rm.dataset.keyRm, 1); if (ks.length) deviceKeys[editing] = ks.join('\n'); else delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); drawView(); return; }
-    const mn = e.target.closest('[data-main-ai]');
-    if (mn) { const f = mn.dataset.mainAi; if (f === 'gemini') delete deviceKeys.AI_ORDER; else deviceKeys.AI_ORDER = f; const off = offFams().filter((x) => x !== f); if (off.length) deviceKeys.AI_OFF = off.join(','); else delete deviceKeys.AI_OFF; delete deviceKeys.CODE_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
-    const bk = e.target.closest('[data-ai-backup]');
-    if (bk) { const [f, v] = bk.dataset.aiBackup.split(':'); const off = new Set(offFams()); if (v === 'off') off.add(f); else off.delete(f); if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    const ro = e.target.closest('[data-ai-role]');
+    if (ro && !ro.disabled) {
+      const [f, v] = ro.dataset.aiRole.split(':');
+      const off = new Set(offFams());
+      if (v === 'main') { if (f === 'gemini') delete deviceKeys.AI_ORDER; else deviceKeys.AI_ORDER = f; off.delete(f); delete deviceKeys.CODE_ORDER; }
+      else if (v === 'off') off.add(f); else off.delete(f);
+      if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF;
+      write(KEYS_KEY, deviceKeys); drawView(); return;
+    }
     if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');
     if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); return; }

@@ -992,3 +992,72 @@ test('Haupt-KI je Anbieter: gewählte zuerst, abgeschaltete Ersatz-Anbieter fall
   assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'groq', 'openrouter']);
   assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,groq' }), ['minimax', 'gemini', 'openrouter'], 'die Haupt-KI lässt sich nicht abschalten');
 });
+
+test('Bild zur Erklärung: Einschätzung sagt „bild“ → echtes Bild (geprüft) kommt nach dem ersten Absatz als ```webbild in die Antwort', async () => {
+  const WEB = require('../lib/web');
+  const keep = { t: WEB.teachingImages, f: WEB.fetchPublic };
+  let asked = null;
+  WEB.teachingImages = async (q, o) => { asked = { q, en: o.en }; return [
+    { src: 'https://studyflix.de/epa.png', url: 'https://studyflix.de/chemie/epa-modell', site: 'studyflix.de', page: 'EPA-Modell', alt: 'EPA-Modell Übersicht Molekülgeometrie mit Bindungswinkeln', license: 'Bild: studyflix.de' },
+    { src: 'https://studyflix.de/logo.png', url: 'https://studyflix.de/chemie/epa-modell', site: 'studyflix.de', page: 'EPA-Modell', alt: 'Studyflix Team', license: 'Bild: studyflix.de' },
+  ]; };
+  WEB.fetchPublic = async (u) => ({ url: u, type: 'image/png', body: Buffer.alloc(5000, 1) });
+  try {
+    fx = M.installFetch([
+      { match: M.is.route, respond: () => M.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ level: 'medium', sources: 'none', think: 'auto', lern: true, queries: [], images: [], photos: false, bild: { de: 'EPA-Modell Molekülgeometrie Übersicht Bindungswinkel', en: 'VSEPR geometry chart' }, why: 'Formen sehen' }) }] } }] }) },
+      { match: (c) => /Du wählst für eine Lern-App das EINE Bild/.test(M.systemOf(c)), respond: () => M.json({ candidates: [{ content: { parts: [{ text: '{"pick":1,"text":"Molekülformen nach dem EPA-Modell mit Bindungswinkeln"}' }] } }] }) },
+      { match: M.is.geminiStream, respond: async () => { await new Promise((ok) => setTimeout(ok, 50)); return M.sseResponse(M.geminiChunks(['Das **EPA-Modell** sagt die räumliche Form von Molekülen voraus: Elektronenpaare stoßen sich ab und ordnen sich so weit wie möglich voneinander entfernt an.\n\n', '## Die Formen\n\n- linear (180°)\n- tetraedrisch (109,5°)\n\nDamit lässt sich zum Beispiel die gewinkelte Form von Wasser erklären.'])); } },
+    ]);
+    const r = await run({ ...msg('Erkläre mir das EPA-Modell'), agent: 'learn', effort: 'auto' });
+    const text = r.text();
+    assert.equal(asked.q, 'EPA-Modell Molekülgeometrie Übersicht Bindungswinkel');
+    assert.match(text, /voneinander entfernt an\.\n\n\n\n```webbild\n\{"src":"https:\/\/studyflix\.de\/epa\.png"/, 'Bild direkt nach dem ersten Absatz');
+    assert.match(text, /"text":"Molekülformen nach dem EPA-Modell mit Bindungswinkeln"/);
+    assert.equal((text.match(/```webbild/g) || []).length, 1);
+    const evs = r.events.filter((e) => e.event === 'webbild').map((e) => e.data.status);
+    assert.deepEqual(evs, ['search', 'found']);
+    assert.match(M.systemOf(fx.calls.find(M.is.geminiStream)), /setzt die App selbst in deine Antwort ein/);
+  } finally { WEB.teachingImages = keep.t; WEB.fetchPublic = keep.f; }
+});
+
+test('Bild-Einsetzer: nie in Listen, Tabellen oder Code; ohne Bild läuft der Text unverändert durch', async () => {
+  const sent = [];
+  const send = (e, d) => { if (e === 'text') sent.push(d.text); };
+  let res; const promise = new Promise((ok) => { res = ok; });
+  const inj = W.teachInjector(send, { promise, stop: () => {} });
+  res({ src: 'https://x.org/a.png', url: 'https://x.org', site: 'x.org', license: 'Bild: x.org', text: 'Bild' });
+  await promise;
+  inj.text('Kurzer Satz.\n\n');                            // zu kurz für ein Bild
+  inj.text('- Punkt eins, der eine ganze Menge Text enthält, damit die Länge reicht und es nicht zu kurz ist für ein Bild hier\n\n'); // Liste → noch nicht
+  inj.text('```js\nconst a = 1;\n\nconst b = 2;\n```\n\n');  // im Code → nicht
+  inj.text('Jetzt ein normaler Absatz.\n\nNoch einer.');
+  await inj.finish();
+  const out = sent.join('');
+  assert.ok(out.indexOf('```webbild') > out.indexOf('Jetzt ein normaler Absatz.'), 'erst nach normalem Absatz');
+  assert.ok(!/const a = 1;\n\n\n\n```webbild/.test(out));
+  const sent2 = [];
+  const inj2 = W.teachInjector((e, d) => sent2.push(d.text), null);
+  inj2.text('a\n\nb'); await inj2.finish();
+  assert.equal(sent2.join(''), 'a\n\nb');
+});
+
+test('Gedanken ohne Überschriften (Groq, OpenRouter): live in Abschnitte geschnitten, jeder bekommt eine kurze deutsche Überschrift', async () => {
+  const P = require('../lib/providers');
+  const THO = require('../lib/thoughts');
+  const keep = P.smallJsonTask;
+  const seen = [];
+  P.smallJsonTask = async (env, o) => { seen.push(o.user); const n = (o.user.match(/^\[\d+\]/gm) || []).length; return { items: Array.from({ length: n }, (_, i) => ({ i, keep: true, title: 'Bindungswinkel bestimmen', body: 'Übersetzter Gedanke.' })) }; };
+  try {
+    const shown = [];
+    const tf = THO.createThoughtFilter({ env: {}, onThought: (t) => shown.push(t) });
+    const para = 'The user asks about the VSEPR model and wants the shapes. I should list linear, trigonal planar and tetrahedral geometries with their bond angles and explain lone pairs. ';
+    tf.push(para.repeat(5) + '\n\n'); // > 700 Zeichen → erster Abschnitt schon während des Denkens
+    tf.push('Water has two lone pairs so it is bent with about 104.5 degrees. That explains the shape.');
+    await new Promise((ok) => setTimeout(ok, 10));
+    assert.ok(seen.length >= 1, 'erster Abschnitt geht schon live raus');
+    await tf.flush();
+    assert.match(seen[0], /ÜBERSCHRIFT: \(keine\)/);
+    assert.ok(shown.length >= 1);
+    assert.match(shown[0], /^\*\*Bindungswinkel bestimmen\*\*/);
+  } finally { P.smallJsonTask = keep; }
+});

@@ -1572,6 +1572,13 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) { const f = sourceImageFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
   });
+  // Bild zur Erklärung (```webbild): echtes Bild aus einer Lernquelle bzw. Wikimedia Commons, vom Server passend geprüft – mit Unterschrift und Link
+  target.querySelectorAll('pre:has(code.language-webbild)').forEach((pre) => {
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._wb ||= new Map());
+    if (!keep.has(raw)) { const f = webImageFigure(raw); if (!f) { pre.remove(); return; } keep.set(raw, f); }
+    pre.replaceWith(keep.get(raw));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -2305,6 +2312,25 @@ function sourceImageFigure(raw, sources) {
   const cap = el('figcaption', '');
   if (d.text || im.alt) cap.append(el('span', 'src-img-t', escapeHtml(String(d.text || im.alt).slice(0, 200))));
   cap.append(el('span', 'src-img-l', `${escapeHtml(im.license || s.domain || '')}${s.n ? ` · Quelle [${s.n}]` : ''}`));
+  fig.append(a, cap);
+  return fig;
+}
+function webImageFigure(raw) {
+  let d = null;
+  try { d = JSON.parse(String(raw).trim()); } catch { return null; }
+  if (!/^https:\/\//.test(d?.src || '')) return null;
+  const fig = el('figure', 'src-img web-img');
+  const a = el('a', 'src-img-pic');
+  a.href = safeUrl(d.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
+  const img = document.createElement('img');
+  img.alt = String(d.text || ''); img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+  img.addEventListener('load', () => fig.classList.add('ready'));
+  img.addEventListener('error', () => fig.remove());
+  img.src = d.src;
+  a.append(img);
+  const cap = el('figcaption', '');
+  if (d.text) cap.append(el('span', 'src-img-t', escapeHtml(String(d.text).slice(0, 200))));
+  cap.append(el('span', 'src-img-l', escapeHtml(String(d.license || d.site || '').slice(0, 80))));
   fig.append(a, cap);
   return fig;
 }
@@ -3271,6 +3297,31 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     thought.steps.forEach(finishThoughtStep);
   };
   const pendingAskStep = () => false; // Rückfragen laufen über die Zeitleiste selbst
+  /* Bild zur Erklärung: Schritt „Passendes Bild suchen“ (läuft parallel zum Denken/Schreiben) → „Bild gefunden · studyflix.de“ mit Vorschau;
+     nichts Passendes → der Schritt verschwindet wieder (nichts Halbes zeigen) */
+  let webImg = null;
+  const onWebImage = (d) => {
+    if (d.status === 'search') {
+      if (webImg) return;
+      const from = Date.now();
+      const step = stepLine('spin', `<span class="shimmer">Passendes Bild suchen</span><span class="t live" data-from="${from}">1s</span>`);
+      step.classList.add('img-step');
+      const w = ensureWork();
+      w.steps.insertBefore(step, stages.answering?.step || null);
+      webImg = { step, from };
+      return;
+    }
+    if (!webImg || webImg.done) return;
+    webImg.done = true;
+    if (d.status !== 'found') { webImg.step.remove(); return; }
+    finishStep(webImg.step, `Bild gefunden <span class="ph-x">· ${escapeHtml(String(d.site || '').replace(/^www\./, ''))}</span> <span class="t">${secs(webImg.from)}</span>`);
+    markerIcon(webImg.step, 'image');
+    if (/^https:\/\//.test(d.src || '')) {
+      const row = el('div', 'chips img-chips');
+      const i = document.createElement('img'); i.alt = ''; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer'; i.src = d.src; i.onerror = () => row.remove();
+      row.append(i); webImg.step.append(row);
+    }
+  };
   /* Große PDFs: die Seitenbilder (Handschrift, Scans, Folien) entstehen nach dem Anhängen im Hintergrund. Sind sie beim Senden noch nicht
      fertig, wartet die Antwort darauf – sichtbar als Schritt „Dokumente analysieren · 5/18“; die Server-Stufe „Dokumente analysieren“
      übernimmt danach genau diesen Schritt (eine Zeile, kein „Handschrift …“). Fertige Bilder gehen hinter dem PDF in die Nachricht. */
@@ -3327,6 +3378,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (event === 'status') await onStatus(data);
       else if (event === 'research') onResearch(data);
       else if (event === 'web') onWeb(data);
+      else if (event === 'webbild') onWebImage(data);
       else if (event === 'deep') onDeep(data);
       else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
         const a = data.added?.length || 0, so = data.sold?.length || 0, sk = (data.skipped || 0) + (data.unchanged || 0), un = data.unknown?.length || 0;
@@ -3401,6 +3453,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   } finally {
     clearTimeout(idleTimer);
     closePrep(signal.aborted ? 'gestoppt' : '');
+    if (webImg && !webImg.done) webImg.step.remove(); // Bildsuche ohne Ergebnis → kein hängender Schritt
     window.CodeAgent?.status(msgEl, ''); // Live-Zeile des Coding-Agenten weg
     [...deep.subs.values(), ...[...deep.queries.values()].map((q) => q.row)].forEach((row) => { if (row.dataset.state === 'active') row.dataset.state = 'todo'; }); // ohne eigene Quelle: offen, kein vorgetäuschter Haken
     clearInterval(timer);

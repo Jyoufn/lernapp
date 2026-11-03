@@ -10784,3 +10784,10 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 @media (prefers-reduced-motion: reduce) { .cbg-std.cbg-wait { animation: none; } }
 /* Vorschau im Chat füllt die ganze Kartenbreite (aspect-ratio + max-height machte sie sonst schmaler – grauer Streifen rechts) */
 .cbg-fig .cbg-stage { width: 100%; }
+
+/* ===== 03.11.2026 (14): Rolle je Anbieter als ruhiger Umschalter (Haupt-KI · Ersatz · Aus) statt Text-Zeilen mit Knopf ===== */
+.st-keys-in .st-role { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 0; margin-top: 6px; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.st-role-n { color: var(--text-2); font-size: 13px; }
+.st-role-seg button:disabled { opacity: 0.35; cursor: default; }
+.st-role-why { margin: 2px 0 0; color: var(--text-4); font-size: 12px; line-height: 16px; }
+.st-main-tag.soft { background: rgba(255, 255, 255, 0.06); color: var(--text-3); }
