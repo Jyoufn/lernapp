@@ -90,3 +90,6 @@
 
 - Aufgaben-Zeile: 1–2 Tags normal, ab 3 farbige Punkte (höchstens 4, dann „+N“), Antippen öffnet ein Menü mit allen Tags. Erledigte Aufgaben zeigen vor dem Ergebnis die Restzeit bis zum Löschen (Uhr + „N Std.“/„N Min.“, nicht live, ohne Beschriftung).
 - Chat löschen bricht eine laufende Antwort sofort ab (kein Weiterarbeiten im Hintergrund).
+- **Anhänge** (`addFiles` → `prepareAttachment`): jede Datei wird sofort im Gerät gelesen (Foto verkleinern, PDF-Text bis 300 000 Zeichen, Scans bis 16 Seiten als Bilder); solange dreht ein Lade-Ring (Foto abgedunkelt, PDF-Karte „Wird gelesen · 40 %“), danach „PDF · N Seiten“. PDFs bis 250 MB; das PDF selbst geht nur bis 2,3 MB mit (Anfrage ≤ 4,5 MB), sonst der gelesene Text. Zu große/fremde Dateien → Hinweis statt still verworfen. Senden wartet auf das Lesen („Dateien werden gelesen …“).
+- **KI-Test** (`ki-test.js`, Einstellungen → Agenten): 7 feste Testfragen (Begrüßung, kurze Erklärung, Rechnung, Aktuelles, Recherche, „kurz“ trotz Max, Vergleich) gehen an `/api/chat`; automatische Prüfpunkte (Inhalt, Länge, Suche, Denken, Belege) und Musterantwort von Claude daneben; Ergebnis in `kitest.v1`.
+

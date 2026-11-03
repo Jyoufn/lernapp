@@ -866,3 +866,36 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   assert.match(sysK.slice(-900), /ausdrücklich KURZ/, 'Kurz-Wunsch steht ganz am Ende');
   assert.doesNotMatch(sysK, /ANTWORT NACH DER RECHERCHE/, 'kein „ausführlich“ gegen den Wunsch');
 });
+
+test('Bedingungen: wann recherchiert und wann nachgedacht wird (fest, vor der Einschätzung)', () => {
+  const c = W.conditions;
+  assert.equal(c('Hallo!').think, 'off');
+  assert.equal(c('Wer hat die letzte Formel-1-WM gewonnen?').research, 'must');
+  assert.equal(c('Was kostet ein iPhone 17?').research, 'must');
+  assert.equal(c('Recherchiere die Folgen von Social Media').research, 'must');
+  assert.deepEqual([c('Löse 3x + 7 = 2x - 5').research, c('Löse 3x + 7 = 2x - 5').think], ['never', 'high']);
+  assert.deepEqual([c('Schreib ein Gedicht über den Herbst').research, c('Schreib ein Gedicht über den Herbst').think], ['never', 'low']);
+  assert.equal(c('Übersetze: I like trains').research, 'never');
+  assert.equal(c('Formuliere den Text um').research, 'never');
+  assert.equal(c('Warum ist der Himmel blau?').think, 'high');
+  assert.equal(c('Fasse das zusammen', { files: 1 }).research, 'never');
+  assert.equal(c('Fasse das zusammen', { files: 1 }).think, 'high');
+  assert.equal(c('Erkläre die Photosynthese', { chosen: 'low' }).think, 'low');
+  assert.deepEqual([c('Was ist Mitose?').research, c('Was ist Mitose?').think], [null, null], 'sonst entscheidet die Einschätzung bzw. Gemini dynamisch');
+  assert.equal(c('Nobelpreis Physik erklärt').research, null, '„Nobelpreis“ ist keine Preisfrage');
+});
+
+test('Bedingung „aktuell“: auch wenn die Einschätzung keine Quellen will, wird im Web gesucht; Gedicht: kurz denken, nie suchen', async () => {
+  fx = M.installFetch([
+    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'medium', sources: 'none', queries: [], why: 'Fakt' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
+  ]);
+  const r = await run({ ...msg('Was kostet ein iPhone 17 gerade?'), agent: 'general', effort: 'auto' });
+  assert.ok(r.stages().some((x) => x.startsWith('browsing:')), 'Websuche läuft trotz „keine Quellen“ der Einschätzung');
+  fx.calls.length = 0;
+  await run({ ...msg('Schreib ein Gedicht über den Herbst'), agent: 'general', effort: 'auto' });
+  const gen = fx.calls.filter(M.is.geminiStream).pop();
+  assert.ok(!gen.body.tools, 'Gedicht: keine Suche');
+  const tc = gen.body.generationConfig.thinkingConfig;
+  assert.ok(tc.thinkingBudget === 2048 || tc.thinkingLevel === 'low', 'Gedicht: nur kurz denken');
+});

@@ -10644,3 +10644,67 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .agp-edit { display: block; width: 100%; min-height: 50vh; padding: 0; border: 0; outline: 0; resize: none; overflow: hidden; background: none; color: #d4d4d4; font: inherit; font-size: 15px; line-height: 1.7; }
 .agp-ov.editing .agp-doc-s { margin-bottom: 18px; }
 @media (max-width: 640px) { .agp-doc { padding: 22px 20px 100px; } .agp-sh-head .agp-btn { padding: 0 9px; } }
+
+/* ===================================================================
+   03.11.2026 (8) – Anhänge: Karte mit Symbol, Name und Art; beim Lesen eine kleine Lade-Animation (Fotos und PDFs)
+   =================================================================== */
+.thumb.thumb-pdf { display: inline-flex; align-items: center; gap: 10px; width: auto; max-width: 260px; height: 54px; padding: 0 32px 0 9px; border-radius: 13px; background: #1c1c1c; }
+.oi-pdf { display: inline-flex; align-items: center; gap: 10px; max-width: 260px; height: 50px; padding: 0 14px 0 8px; border: 1px solid var(--card-border); border-radius: 12px; background: #1c1c1c; }
+.pdf-ico, .thumb-pdf .pdf-ico, .oi-pdf .pdf-ico { position: relative; display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 9px; background: rgba(240, 98, 84, 0.15); color: #f47c6e; }
+.oi-pdf .pdf-ico { width: 32px; height: 32px; border-radius: 8px; }
+.pdf-ico > svg:first-child { width: 16px; height: 16px; transition: opacity 220ms ease, transform 320ms var(--spring, ease); }
+.thumb-at .pdf-ico { background: rgba(80, 150, 255, 0.14); }
+.pdf-txt { display: flex; flex-direction: column; justify-content: center; min-width: 0; gap: 2px; }
+.pdf-name { min-width: 0; overflow: hidden; color: var(--text); font-size: 12.5px; font-weight: 500; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
+.pdf-meta { color: var(--text-4); font-size: 11.5px; line-height: 14px; white-space: nowrap; }
+.thumb-pdf > button { top: 50%; right: 8px; margin-top: -9px; background: #2c2c2c; color: var(--text-2); }
+@media (hover: none) { .thumb button { opacity: 1; } }
+/* Lade-Ring: dreht sich, solange die Datei gelesen wird */
+.up-ring { position: absolute; left: 50%; top: 50%; width: 20px; height: 20px; margin: -10px 0 0 -10px; fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-dasharray: 30 101;
+  opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
+.loading .up-ring { opacity: 1; animation: up-spin 800ms linear infinite; }
+@keyframes up-spin { to { transform: rotate(360deg); } }
+.thumb-pdf.loading .pdf-ico > svg:first-child { opacity: 0.22; transform: scale(0.8); }
+.thumb:not(.thumb-pdf) .up-ring { width: 22px; height: 22px; margin: -11px 0 0 -11px; color: #fff; }
+.thumb:not(.thumb-pdf) img { transition: filter 380ms ease, transform 380ms ease; }
+.thumb.loading:not(.thumb-pdf) img { filter: blur(2px) brightness(0.5); transform: scale(1.08); }
+.thumb.failed:not(.thumb-pdf) img { filter: grayscale(1) brightness(0.45); }
+.thumb-pdf.failed .pdf-ico { background: #262626; color: var(--text-4); }
+.thumb-pdf.failed .pdf-meta { color: #e5857a; }
+.up-wait { padding: 4px 0; color: var(--text-3); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { .loading .up-ring { animation-duration: 2.4s; } }
+
+/* KI-Test (Einstellungen → Haupt-KI): Testfragen, Prüfpunkte, Antwort neben der Musterantwort */
+.kt .kt-head { align-items: flex-start; gap: 14px; padding-top: 14px; padding-bottom: 14px; }
+.kt-intro { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+.kt-intro b { color: var(--text); font-size: 13.5px; font-weight: 600; }
+.kt-intro > span { color: var(--text-3); font-size: 12.5px; line-height: 18px; }
+.kt-intro .kt-sum { margin-top: 4px; color: var(--text-3); }
+.kt-intro .kt-sum b { font-size: 12.5px; }
+.kt-row { cursor: pointer; gap: 10px; }
+.kt-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: #3a3a3a; }
+.kt-dot.ok { background: #4cc38a; } .kt-dot.mid { background: #e8b94a; } .kt-dot.bad { background: #e5705f; }
+.kt-dot.run { background: var(--accent); animation: kt-pulse 1.1s ease-in-out infinite; }
+@keyframes kt-pulse { 50% { opacity: 0.3; } }
+.kt-t { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.kt-t b { color: var(--text); font-size: 13px; font-weight: 500; }
+.kt-t span { overflow: hidden; color: var(--text-4); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.kt-score { flex: none; color: var(--text-2); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.kt-chev { display: grid; place-items: center; color: var(--text-4); transition: transform 240ms var(--spring, ease); }
+.kt-item.open .kt-chev { transform: rotate(90deg); }
+.kt-detail { padding: 2px 14px 16px; animation: cbx-in 300ms var(--spring, ease) both; }
+.kt-checks { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; padding: 0; list-style: none; }
+.kt-checks li { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 9px; border-radius: 7px; font-size: 12px; }
+.kt-checks li.ok { background: rgba(76, 195, 138, 0.12); color: #7fd8ab; }
+.kt-checks li.no { background: rgba(229, 112, 95, 0.12); color: #f0978a; }
+.kt-meta { margin-bottom: 10px; color: var(--text-4); font-size: 12px; }
+.kt-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.kt-col { min-width: 0; padding: 12px 14px; border-radius: 11px; background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.kt-h { margin-bottom: 6px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
+.kt-ans { max-height: 340px; overflow-y: auto; color: var(--text-2); font-size: 13px; line-height: 1.6; overscroll-behavior: contain; }
+.kt-ans table { font-size: 12px; }
+.kt-err { color: #f0978a; }
+@media (max-width: 700px) { .kt-cols { grid-template-columns: 1fr; } }
+.kt .kt-head { height: auto; min-height: 0; }
+.kt-row { height: auto; min-height: 54px; padding-top: 8px; padding-bottom: 8px; }
+.kt-item { border-top: 1px solid rgba(255, 255, 255, 0.06); }

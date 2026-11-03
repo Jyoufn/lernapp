@@ -338,7 +338,7 @@ composer.addEventListener('submit', (e) => {
   if (!text && attachments.length === 0) return;
   if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
   if (!attachments.length && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
-  const images = attachments.filter((a) => a.file).map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf })); // URLs bleiben für den Chat erhalten
+  const images = attachments.filter((a) => a.file && a.status !== 'error').map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf, prep: a.prep })); // URLs bleiben für den Chat erhalten; prep = schon gelesen bzw. wird gerade gelesen
   const mentioned = attachments.filter((a) => a.mention).map((a) => a.mention);
   input.value = '';
   attachments = [];
@@ -430,16 +430,51 @@ input.addEventListener('paste', (e) => {
   if (files.length) { e.preventDefault(); addFiles(files); }
 });
 
+/* Anhängen: jede Datei wird SOFORT im Gerät gelesen (Foto verkleinern, PDF-Text/Seiten auslesen) – solange zeigt die Karte eine kleine
+   Lade-Animation; Senden wartet einfach auf das Ergebnis. Große PDFs sind erlaubt (gelesen wird im Gerät, in die Anfrage geht der Text
+   bzw. die Seiten); nichts wird mehr still verworfen – zu große oder fremde Dateien bekommen einen Hinweis. */
+const isPdf = (f) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || '');
+const fmtSize = (n) => (n >= 1048576 ? `${(n / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 })} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 function addFiles(files) {
   for (const file of files) {
-    if (file.type.startsWith('image/')) attachments.push({ file, url: URL.createObjectURL(file) });
-    else if (file.type === 'application/pdf' && file.size <= PDF_MAX_BYTES) attachments.push({ file, url: null, pdf: true });
-    else if (isGoodnotes(file) && file.size <= 80 * 1024 * 1024) attachments.push({ file, url: null, pdf: true }); // GoodNotes: Karte wie ein PDF
+    let a = null;
+    if (file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')) a = { file, url: URL.createObjectURL(file) };
+    else if (isPdf(file)) { if (file.size > PDF_MAX_BYTES) { showHint(`„${file.name}“ ist zu groß (höchstens ${fmtSize(PDF_MAX_BYTES)})`); continue; } a = { file, url: null, pdf: true }; }
+    else if (isGoodnotes(file)) { if (file.size > 80 * 1024 * 1024) { showHint(`„${file.name}“ ist zu groß (höchstens 80 MB)`); continue; } a = { file, url: null, pdf: true }; } // GoodNotes: Karte wie ein PDF
+    else { showHint('Anhängen geht mit Fotos, PDFs und GoodNotes-Dateien'); continue; }
+    prepareAttachment(a);
+    attachments.push(a);
   }
   renderAttachments();
 }
-// PDF als kleine Karte (Icon + Dateiname) – im Eingabefeld und in der eigenen Nachricht
-const pdfChip = (name, cls) => el('div', cls, `<span class="pdf-ico">${FadeIcons.svg('file', 14)}</span><span class="pdf-name">${escapeHtml(name)}</span>`);
+function prepareAttachment(a) {
+  a.status = 'loading'; a.progress = 0;
+  const t0 = performance.now();
+  a.prep = fileToInline(a.file, 1600, (p) => { a.progress = p; updateAttachment(a); })
+    .then(async (r) => {
+      const wait = 500 - (performance.now() - t0); // die Animation ist immer kurz zu sehen (nicht nur ein Flackern)
+      if (wait > 0) await new Promise((ok) => setTimeout(ok, wait));
+      const list = [r].flat().filter(Boolean);
+      if (!list.length) throw new Error('leer');
+      a.status = 'ready';
+      const first = list[0];
+      a.meta = a.pdf ? (first.mime === 'application/pdf' ? `PDF · ${first.pages ? `${first.pages} ${first.pages === 1 ? 'Seite' : 'Seiten'}` : fmtSize(a.file.size)}`
+        : list.length > 1 || /^image\//.test(first.mime) ? `Scan · ${list.filter((x) => /^image\//.test(x.mime)).length} Seiten gelesen` : 'Gelesen') : '';
+      updateAttachment(a);
+      return r;
+    })
+    .catch(() => { a.status = 'error'; a.meta = 'Konnte nicht gelesen werden'; updateAttachment(a); return null; });
+}
+// PDF als kleine Karte (Symbol + Name + Art) – im Eingabefeld und in der eigenen Nachricht
+const pdfChip = (name, cls, meta = 'PDF') => el('div', cls, `<span class="pdf-ico">${FadeIcons.svg('file', 15)}<svg class="up-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg></span><span class="pdf-txt"><span class="pdf-name">${escapeHtml(name)}</span><span class="pdf-meta">${escapeHtml(meta)}</span></span>`);
+function updateAttachment(a) {
+  const node = a.el; if (!node) return;
+  node.classList.toggle('loading', a.status === 'loading');
+  node.classList.toggle('failed', a.status === 'error');
+  const meta = node.querySelector('.pdf-meta');
+  if (meta) meta.textContent = a.status === 'loading' ? `Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}` : a.meta || 'PDF';
+  node.querySelector('.pdf-meta')?.classList.toggle('shimmer', a.status === 'loading');
+}
 
 function renderAttachments() {
   attachmentsEl.replaceChildren(...attachments.map((a, i) => {
@@ -454,6 +489,7 @@ function renderAttachments() {
       chip.append(rm);
       return chip;
     }
+    if (a.el) return a.el; // schon gebaut → nicht neu (keine erneute Einblend-Animation, Ladezustand bleibt)
     const el = a.pdf ? pdfChip(a.file.name, 'thumb thumb-pdf') : document.createElement('div');
     if (!a.pdf) el.className = 'thumb';
     const img = document.createElement('img');
@@ -465,10 +501,13 @@ function renderAttachments() {
     remove.innerHTML = '<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     remove.addEventListener('click', () => {
       if (a.url) URL.revokeObjectURL(a.url);
-      attachments.splice(i, 1);
+      const k = attachments.indexOf(a); if (k >= 0) attachments.splice(k, 1);
       renderAttachments();
     });
-    if (a.pdf) el.append(remove); else el.append(img, remove);
+    if (a.pdf) el.append(remove);
+    else el.append(img, el.ownerDocument.createRange().createContextualFragment('<svg class="up-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg>'), remove);
+    a.el = el;
+    updateAttachment(a);
     return el;
   }));
 }
@@ -624,7 +663,8 @@ new ResizeObserver(() => chatScroll.style.setProperty('--composer-space', compos
 const sendBtn = $('sendBtn');
 const MAX_VISIBLE_IMAGES = 4;   // ab 5 Bildern: 3 zeigen + Kachel „+N“
 // Material (Fotos, PDFs) bleibt im ganzen Chat verfügbar – mitgeschickt werden die neuesten Anhänge, höchstens 8 Dateien / ~12 MB
-const PDF_MAX_BYTES = 15 * 1024 * 1024;
+const PDF_MAX_BYTES = 250 * 1024 * 1024; // gelesen wird im Gerät – auch große PDFs (in die Anfrage geht Text bzw. Seiten)
+const PDF_RAW_MAX = 2.3 * 1024 * 1024;     // bis hier geht das PDF selbst mit (Gemini sieht dann auch Tabellen/Abbildungen); Anfrage auf Vercel ≤ 4,5 MB
 const history = [];             // { role: 'user' | 'assistant', text, images: [{ mime, data }] }
 /* Mehrere Chats können gleichzeitig antworten – unabhängig voneinander. Je Chat-Tab ein eigener Lauf;
    Stopp-Knopf und Rückfragen-Feld zeigen immer nur den Zustand des gerade offenen Chats. */
@@ -1644,24 +1684,28 @@ const loadPdfJs = () => (pdfLib ||= new Promise((ok, fail) => {
   s.onload = () => { window.pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDFJS}pdf.worker.min.js`; ok(window.pdfjsLib); };
   s.onerror = fail; document.head.append(s);
 }));
-async function pdfText(bytes, maxChars = 60000) {
+async function pdfText(bytes, maxChars = 300000, onProgress = null) {
   try {
     const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
-    let out = '';
+    let out = '', read = 0;
     for (let p = 1; p <= doc.numPages && out.length < maxChars; p++) {
       const c = await (await doc.getPage(p)).getTextContent();
       out += `\n[Seite ${p}]\n${c.items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('')}`;
+      read = p;
+      if (p % 4 === 0) onProgress?.(p / doc.numPages);
     }
-    return out.replace(/[ \t]+/g, ' ').slice(0, maxChars).trim();
-  } catch { pdfLib = null; return ''; }
+    return { text: out.replace(/[ \t]+/g, ' ').slice(0, maxChars).trim(), pages: doc.numPages, read };
+  } catch { pdfLib = null; return { text: '', pages: 0, read: 0 }; }
 }
 /* Gescanntes PDF (Handschrift, abfotografierte Seiten) hat keinen Text – als PDF sieht Gemini es nur grob, und passt es nicht in die
    Anfrage, kam bisher gar nichts an. Darum werden seine Seiten im Gerät zu Bildern (je Seite eine Datei; Lupe und Lese-Helfer greifen dann). */
-const PDF_PAGE_MAX = 12;
-async function pdfPagesAsImages(bytes, name, max = 1600) {
+const PDF_PAGE_MAX = 16;
+async function pdfPagesAsImages(bytes, name, max = 1600, onProgress = null) {
   const doc = await (await loadPdfJs()).getDocument({ data: bytes }).promise;
   const out = [];
+  if (doc.numPages > 6) max = Math.min(max, 1350); // viele Seiten: etwas kleiner, damit mehr davon in die Anfrage passen
   for (let p = 1; p <= Math.min(doc.numPages, PDF_PAGE_MAX); p++) {
+    onProgress?.(0.5 + 0.5 * (p - 1) / Math.min(doc.numPages, PDF_PAGE_MAX));
     const page = await doc.getPage(p);
     const base = page.getViewport({ scale: 1 });
     const vp = page.getViewport({ scale: Math.min(3, max / Math.max(base.width, base.height)) });
@@ -1670,7 +1714,7 @@ async function pdfPagesAsImages(bytes, name, max = 1600) {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     await page.render({ canvasContext: ctx, viewport: vp }).promise;
-    out.push({ mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', 0.82).split(',')[1], name: `${name} · S. ${p}${p === PDF_PAGE_MAX && doc.numPages > p ? ` (von ${doc.numPages})` : ''}` });
+    out.push({ mime: 'image/jpeg', data: canvas.toDataURL('image/jpeg', doc.numPages > 6 ? 0.74 : 0.82).split(',')[1], name: `${name} · S. ${p}${p === PDF_PAGE_MAX && doc.numPages > p ? ` (von ${doc.numPages})` : ''}` });
   }
   return out;
 }
@@ -1722,20 +1766,21 @@ async function goodnotesToInline(file) {
   return out;
 }
 // Liefert eine Datei – oder bei gescannten PDFs/GoodNotes eine Liste (Aufrufer glätten mit .flat())
-async function fileToInline(file, max = 1600) {
+async function fileToInline(file, max = 1600, onProgress = null) {
   if (isGoodnotes(file)) return goodnotesToInline(file);
-  if (file.type === 'application/pdf') {
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) {
     const buf = new Uint8Array(await file.arrayBuffer());
-    let bin = '';
-    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    const text = await pdfText(buf.slice());
-    const words = text.replace(/\[Seite \d+\]/g, ' ').replace(/\s+/g, ' ').trim().length;
-    const pages = (text.match(/\[Seite \d+\]/g) || []).length || 1;
-    if (words < 60 * pages) { // kaum Text je Seite → Scan
-      const imgs = await pdfPagesAsImages(buf.slice(), file.name.replace(/\.pdf$/i, '')).catch(() => []);
+    const { text, pages, read } = await pdfText(buf.slice(), 300000, (p) => onProgress?.(p * 0.5));
+    const chars = text.replace(/\[Seite \d+\]/g, ' ').replace(/\s+/g, ' ').trim().length;
+    if (chars < 60 * Math.max(1, read)) { // kaum Text je Seite → Scan: Seiten als Bilder
+      const imgs = await pdfPagesAsImages(buf.slice(), file.name.replace(/\.pdf$/i, ''), max, onProgress).catch(() => []);
       if (imgs.length) return imgs;
     }
-    return { mime: 'application/pdf', data: btoa(bin), name: file.name, ...(text ? { text } : {}) };
+    // das PDF selbst nur, wenn es in die Anfrage passt – sonst reicht der gelesene Text (große Skripte, Bücher)
+    let bin = '';
+    if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    if (!bin && !text) throw new Error('PDF nicht lesbar');
+    return { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages, ...(text ? { text } : {}) };
   }
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
@@ -3681,7 +3726,11 @@ async function sendMessage(text, images, extra = {}) {
   const msgEl = el('div', 'msg-ai');
   chat.append(msgEl);
   try {
-    const inline = (await Promise.all(images.map((i) => fileToInline(i.file).catch(() => null)))).flat(); // gescanntes PDF → mehrere Seitenbilder
+    // Dateien noch nicht fertig gelesen (gerade erst angehängt) → kurz „Dateien werden gelesen“ statt einer leeren Antwort
+    const waitNote = images.length ? el('div', 'up-wait', `<span class="shimmer">Dateien werden gelesen …</span>`) : null;
+    const slow = waitNote && setTimeout(() => msgEl.append(waitNote), 250);
+    const inline = (await Promise.all(images.map((i) => (i.prep || fileToInline(i.file)).catch(() => null)))).flat();
+    if (slow) { clearTimeout(slow); waitNote.remove(); } // schon beim Anhängen gelesen; gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
     hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}), ...(extra.skills?.length ? { skills: extra.skills } : {}) });
     markDrafts();
