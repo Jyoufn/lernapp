@@ -885,22 +885,31 @@ test('Bedingungen: wann recherchiert und wann nachgedacht wird (fest, vor der Ei
   assert.equal(c('Nobelpreis Physik erklärt').research, null, '„Nobelpreis“ ist keine Preisfrage');
 });
 
-test('Bedingung „aktuell“: auch wenn die Einschätzung keine Quellen will, wird im Web gesucht; Gedicht: kurz denken, nie suchen', async () => {
+test('Gemini entscheidet Suche und Denken (Einschätzung); feste Bedingungen nur als Ersatz, wenn die Einschätzung ausfällt', async () => {
+  let route = () => M.nvidiaJson({ level: 'medium', sources: 'none', think: 'low', queries: [], why: 'Gedicht' });
   fx = M.installFetch([
-    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'medium', sources: 'none', queries: [], why: 'Fakt' }) },
+    { match: M.is.route, respond: () => route() },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
   ]);
-  const r = await run({ ...msg('Was kostet ein iPhone 17 gerade?'), agent: 'general', effort: 'auto' });
-  assert.ok(r.stages().some((x) => x.startsWith('browsing:')), 'Websuche läuft trotz „keine Quellen“ der Einschätzung');
-  fx.calls.length = 0;
   await run({ ...msg('Schreib ein Gedicht über den Herbst'), agent: 'general', effort: 'auto' });
-  const gen = fx.calls.filter(M.is.geminiStream).pop();
-  assert.ok(!gen.body.tools, 'Gedicht: keine Suche');
+  let gen = fx.calls.filter(M.is.geminiStream).pop();
+  assert.ok(!gen.body.tools, 'keine Suche – so eingeschätzt');
   const tc = gen.body.generationConfig.thinkingConfig;
-  assert.ok(tc.thinkingBudget === 2048 || tc.thinkingLevel === 'low', 'Gedicht: nur kurz denken');
+  assert.ok(tc.thinkingBudget === 2048 || tc.thinkingLevel === 'low', 'kurz denken – so eingeschätzt');
+  // Einschätzung fällt aus → feste Bedingung „aktuell“ greift: es wird im Web gesucht
+  route = () => new Response('weg', { status: 503 });
+  fx.calls.length = 0;
+  const r = await run({ ...msg('Was kostet ein iPhone 17 gerade?'), agent: 'general', effort: 'auto' });
+  assert.ok(r.stages().some((x) => x.startsWith('browsing:')), 'Ersatz-Bedingung: Websuche');
+  // gewählte Stufe High: nie „kurz“ denken, auch wenn die Einschätzung das sagt
+  route = () => M.nvidiaJson({ level: 'high', sources: 'none', think: 'low', queries: [], why: 'x' });
+  fx.calls.length = 0;
+  await run({ ...msg('Übersetze: I like trains'), agent: 'general', effort: 'high' });
+  gen = fx.calls.filter(M.is.geminiStream).pop();
+  assert.notEqual(gen.body.generationConfig.thinkingConfig.thinkingBudget, 2048, 'High → dynamisch');
 });
 
-test('Lernthema + Recherche: gesucht wird auf deutschen Lernplattformen (Studyflix, simpleclub); ohne Recherche keine Suche', async () => {
+test('Lern-Agent + Recherche: gesucht wird auf simpleclub, serlo, Studyflix; ohne Recherche keine Suche; Allgemein sucht offen', async () => {
   const WEB = require('../lib/web');
   const saved = { ...WEB.hooks.engines }, savedG = WEB.hooks.geminiSearch, asked = [];
   WEB.hooks.engines.ddg = WEB.hooks.engines.ddglite = WEB.hooks.engines.bing = async (q) => { asked.push(q); return []; };
@@ -911,16 +920,40 @@ test('Lernthema + Recherche: gesucht wird auf deutschen Lernplattformen (Studyfl
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
   ]);
   try {
-    const r = await run({ ...msg('Recherchiere, wie die Photosynthese funktioniert'), agent: 'general', effort: 'auto' });
+    const r = await run({ ...msg('Recherchiere, wie die Photosynthese funktioniert'), agent: 'learn', effort: 'auto' });
     assert.equal(r.result.status, 'completed');
-    assert.ok(asked.some((q) => /studyflix/i.test(q)) && asked.some((q) => /simpleclub/i.test(q)), `Suchen auf Lernplattformen: ${asked.join(' | ')}`);
+    assert.ok(asked.some((q) => /serlo/i.test(q)) && asked.some((q) => /simpleclub/i.test(q)), `Suchen auf Lernplattformen: ${asked.join(' | ')}`);
     const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
     assert.match(sys, /LERNTHEMA: Such zuerst auf deutschen Lernplattformen/, 'Google im Modell (Ersatz): erst die Lernplattformen');
     // ohne Recherche (Einschätzung: keine Quellen, keine Bedingung) → keine Suche, kein Lernplattform-Hinweis
     route = { level: 'medium', sources: 'none', lern: true, queries: [], why: 'Erklärung' };
     asked.length = 0; fx.calls.length = 0;
-    await run({ ...msg('Erklär mir die Photosynthese'), agent: 'general', effort: 'auto' });
+    await run({ ...msg('Erklär mir die Photosynthese'), agent: 'learn', effort: 'auto' });
     assert.equal(asked.length, 0, 'keine Websuche');
+    // Allgemein-Agent: keine Lernplattform-Vorgabe (sucht offen, wie Gemini entscheidet)
+    route = { level: 'high', sources: 'web', lern: true, queries: ['Photosynthese Ablauf'], why: 'Lernthema' };
+    asked.length = 0; fx.calls.length = 0;
+    await run({ ...msg('Recherchiere, wie die Photosynthese funktioniert'), agent: 'general', effort: 'auto' });
+    assert.ok(!asked.some((q) => /simpleclub|serlo/i.test(q)), `Allgemein sucht offen: ${asked.join(' | ')}`);
+    assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LERNTHEMA/);
     assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LERNTHEMA/);
   } finally { Object.assign(WEB.hooks.engines, saved); WEB.hooks.geminiSearch = savedG; }
+});
+
+test('Modell von Google abgeschaltet („no longer available to new users“): nächstes Modell sofort, danach gar nicht mehr probiert', async () => {
+  const P = require('../lib/providers');
+  P.resetLimits();
+  const gone = () => new Response(JSON.stringify({ error: { code: 404, status: 'NOT_FOUND', message: 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use models/gemini-3.8-flash.' } }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+  fx = M.installFetch([
+    { match: (c) => M.is.geminiStream(c) && /gemini-2\.5-flash:/.test(c.url), respond: gone },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
+  ]);
+  const r = await run({ ...msg('Was ist 2+2?'), effort: 'low' });
+  assert.equal(r.result.status, 'completed');
+  assert.equal(r.text(), 'Antwort.');
+  fx.calls.length = 0;
+  await run({ ...msg('Was ist 3+3?'), effort: 'low' });
+  assert.ok(!fx.calls.some((c) => M.is.geminiStream(c) && /gemini-2\.5-flash:/.test(c.url)), 'abgeschaltetes Modell wird übersprungen');
+  assert.match(W.friendlyError(new P.ProviderError(404, 'This model models/gemini-2.5-flash is no longer available to new users.')), /abgeschaltet/);
+  P.resetLimits();
 });

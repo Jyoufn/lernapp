@@ -1543,6 +1543,13 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) { const f = linksFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
   });
+  // Bild aus einer frei lizenzierten Quelle (```quellbild: serlo, Wikipedia) – mit Bildunterschrift, Lizenz und Link zur Quelle
+  target.querySelectorAll('pre:has(code.language-quellbild)').forEach((pre) => {
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._qb ||= new Map());
+    if (!keep.has(raw)) { const f = sourceImageFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
+    pre.replaceWith(keep.get(raw));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -2009,6 +2016,28 @@ const linkPreview = (url) => {
   if (!linkPreviews.has(url)) linkPreviews.set(url, fetch(`/api/link?url=${encodeURIComponent(url)}`).then((r) => (r.ok ? r.json() : {})).catch(() => ({})));
   return linkPreviews.get(url);
 };
+function sourceImageFigure(raw, sources) {
+  let d = null;
+  try { d = JSON.parse(String(raw).trim()); } catch { return null; }
+  const n = +d?.n, k = +(d?.bild ?? d?.b ?? 1);
+  const s = sources.find((q) => q?.n === n);
+  const im = s?.images?.[k - 1];
+  if (!im?.src || !/^https:\/\/(assets\.serlo\.org|upload\.wikimedia\.org)\//.test(im.src)) return null;
+  const fig = el('figure', 'src-img');
+  const a = el('a', 'src-img-pic');
+  a.href = safeUrl(s.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
+  const img = document.createElement('img');
+  img.alt = String(d.text || im.alt || ''); img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
+  img.addEventListener('load', () => fig.classList.add('ready'));
+  img.addEventListener('error', () => fig.remove());
+  img.src = im.src;
+  a.append(img);
+  const cap = el('figcaption', '');
+  if (d.text || im.alt) cap.append(el('span', 'src-img-t', escapeHtml(String(d.text || im.alt).slice(0, 200))));
+  cap.append(el('span', 'src-img-l', `${escapeHtml(im.license || s.domain || '')}${s.n ? ` · Quelle [${s.n}]` : ''}`));
+  fig.append(a, cap);
+  return fig;
+}
 function linksFigure(raw, sources) {
   let data = null;
   try { data = JSON.parse(String(raw).trim()); } catch { return null; }
@@ -2965,10 +2994,15 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
 
   try {
+    // Lern-Agent: passende Abschnitte des Kerncurriculums (Einstellungen → Lehrplan) gehen mit – passt nichts, nichts
+    const agentBody = window.agentPayload?.(window.PixelDogs?.mode, tab) || { agent: window.PixelDogs?.mode };
+    const lastAsk = [...historyOf(tab)].reverse().find((h) => h.role === 'user')?.text || '';
+    let lehrplan = null;
+    try { lehrplan = agentBody.agent === 'learn' && window.Lehrplan ? Lehrplan.payload(lastAsk) : null; } catch {}
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...(window.agentPayload?.(window.PixelDogs?.mode, tab) || { agent: window.PixelDogs?.mode }), ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(lehrplan ? { lehrplan } : {}), ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);

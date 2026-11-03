@@ -1150,6 +1150,54 @@ async function handleAgentAvatar(req, res) {
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
 }
 
+/* ---------- /api/lehrplan: Kerncurricula Niedersachsen finden und als PDF durchreichen ----------
+   Der Browser liest das PDF selbst (pdf.js, wie bei Anhängen) und hält die Abschnitte; der Server sucht nur das offizielle Dokument
+   (CuVo-Datenbank des NLQ) und reicht es durch – NUR von offiziellen Adressen (nibis.de, bildungsportal-niedersachsen.de, mk.niedersachsen.de). */
+const KC_HOSTS = /(^|\.)(nibis\.de|bildungsportal-niedersachsen\.de|mk\.niedersachsen\.de)$/i;
+async function handleLehrplanFind(req, res) {
+  const b = await readBody(req, 4000);
+  const fach = String(b.fach || '').replace(/[^\p{L}\s-]/gu, '').trim().slice(0, 40), stufe = Number(b.stufe) === 1 ? 1 : 2;
+  if (!fach) return sendJson(res, 400, { error: 'Fach fehlt' });
+  const env = readEnv();
+  const qs = stufe === 2
+    ? [`Kerncurriculum ${fach} gymnasiale Oberstufe Niedersachsen cuvo nibis`, `Kerncurriculum für das Gymnasium gymnasiale Oberstufe ${fach} Niedersächsisches Kultusministerium`]
+    : [`Kerncurriculum ${fach} Gymnasium Schuljahrgänge 5-10 Niedersachsen cuvo nibis`, `Kerncurriculum für das Gymnasium Schuljahrgänge 5-10 ${fach} Niedersächsisches Kultusministerium`];
+  const out = [], seen = new Set(), health = new Map();
+  const key = fach.toLowerCase().split(/[\s-]+/)[0];
+  for (const q of qs) {
+    let list = [];
+    try { list = await WEB.searchWeb(q, { env, min: 6, health }); } catch {}
+    for (const r of list) {
+      let host = r.host || '';
+      try { host ||= new URL(r.url).hostname; } catch { continue; }
+      host = host.replace(/^www\./, '');
+      if (!KC_HOSTS.test(host) || seen.has(r.url)) continue;
+      seen.add(r.url);
+      const t = `${r.title || ''} ${r.snippet || ''}`.toLowerCase();
+      const score = (t.includes(key) ? 2 : 0) + (/kerncurricul/.test(t) ? 1 : 0) + (/download|\.pdf/.test(r.url) ? 1 : 0) + (/oberstufe|sekundarbereich ii/.test(t) === (stufe === 2) ? 1 : 0);
+      out.push({ url: r.url, title: String(r.title || host).slice(0, 160), score });
+    }
+    if (out.filter((x) => x.score >= 3).length >= 2) break;
+  }
+  out.sort((a, b2) => b2.score - a.score);
+  sendJson(res, 200, { candidates: out.slice(0, 5) });
+}
+async function handleLehrplanPdf(req, res) {
+  const b = await readBody(req, 4000);
+  let start;
+  try { start = new URL(String(b.url || '')); } catch { return sendJson(res, 400, { error: 'Ungültige Adresse' }); }
+  if (!KC_HOSTS.test(start.hostname) && !/(^|\.)vertexaisearch\.cloud\.google\.com$/.test(start.hostname)) return sendJson(res, 400, { error: 'Nur offizielle Lehrplan-Seiten' });
+  try {
+    const r = await WEB.fetchPublic(start.href, { timeoutMs: 25000, accept: 'application/pdf,*/*;q=0.5', maxBytes: 4300000, binary: true });
+    if (!KC_HOSTS.test(new URL(r.url).hostname)) return sendJson(res, 400, { error: 'Nur offizielle Lehrplan-Seiten' });
+    if (!(r.body[0] === 0x25 && r.body[1] === 0x50 && r.body[2] === 0x44 && r.body[3] === 0x46)) return sendJson(res, 415, { error: 'Kein PDF' });
+    res.writeHead(200, { 'Content-Type': 'application/pdf', 'Cache-Control': 'private, max-age=86400', 'X-Lehrplan-Url': encodeURI(r.url) });
+    res.end(r.body);
+  } catch (err) {
+    sendJson(res, 502, { error: /zu groß/.test(err.message) ? 'Das PDF ist zu groß zum Durchreichen – bitte selbst herunterladen und hochladen.' : `Nicht erreichbar (${err.message})` });
+  }
+}
+
 /* ---------- /api/widget-fix: Mini-App reparieren (Fehler aus dem Kasten) ----------
    Gibt den vollständigen, korrigierten Inhalt des ```widget-Blocks zurück; die App ersetzt die Mini-App an derselben Stelle (keine neue Nachricht).
    Läuft beim Coding-Anbieter (MiniMax zuerst, außer „Coden mit: Gemini“) mit dem stärksten Modell. */
@@ -1514,6 +1562,8 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
+    if (req.method === 'POST' && urlPath === '/api/lehrplan/find') return await handleLehrplanFind(req, res);
+    if (req.method === 'POST' && urlPath === '/api/lehrplan/pdf') return await handleLehrplanPdf(req, res);
     if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
