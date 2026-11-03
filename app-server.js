@@ -95,6 +95,15 @@ function readBody(req, limit = 40 * 1024 * 1024) {
   });
 }
 
+// rohe Datei (Upload): höchstens limit Bytes
+function readRaw(req, limit) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', (c) => { size += c.length; if (size > limit) { reject(Object.assign(new Error('Datei zu groß'), { status: 413 })); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
 function sendJson(res, status, obj) {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(obj));
@@ -1199,6 +1208,26 @@ async function handlePolish(req, res) {
     return sendJson(res, 200, { text: out });
   } catch { return sendJson(res, 200, { text }); }
 }
+/* ---------- /api/upload: eine Datei (PDF bis 4,4 MB oder Seitenbild) zu Google hochladen (Files API) ----------
+   Große Dokumente gehen so vollständig an Gemini: die Chat-Anfrage enthält danach nur den Verweis (file_uri) statt der Daten.
+   Hochgeladen wird immer mit dem ERSTEN Gemini-Schlüssel – die Antwort nimmt dann bevorzugt denselben (fk). */
+const UPLOAD_TYPES = /^(application\/pdf|image\/(jpeg|png|webp))$/;
+async function handleUpload(req, res, urlObj) {
+  const env = readEnv();
+  const key = P.keysOf(env, 'GEMINI_API_KEY')[0];
+  const mime = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
+  if (!key) return sendJson(res, 400, { error: 'Für große Dateien fehlt ein Gemini-Key.' });
+  if (!UPLOAD_TYPES.test(mime)) return sendJson(res, 400, { error: 'Nur PDFs und Bilder' });
+  let data;
+  try { data = await readRaw(req, 4.4 * 1024 * 1024); } catch (err) { return sendJson(res, err.status || 400, { error: err.message }); }
+  if (data.length < 100) return sendJson(res, 400, { error: 'Leere Datei' });
+  const name = String(urlObj.searchParams.get('name') || 'Datei').replace(/[^\p{L}\p{N} ._·-]/gu, '').slice(0, 100) || 'Datei';
+  try {
+    const f = await P.geminiUpload(key, { mime, data, name }, AbortSignal.timeout(60000));
+    sendJson(res, 200, f);
+  } catch (err) { sendJson(res, 502, { error: err.status === 429 ? 'Google nimmt gerade keine Dateien an (Limit).' : 'Hochladen zu Google fehlgeschlagen.' }); }
+}
+
 async function handleTitle(req, res) {
   const body = await readBody(req, 50000);
   const env = readEnv();
@@ -1518,6 +1547,7 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
+    if (req.method === 'POST' && urlPath === '/api/upload') return await handleUpload(req, res, new URL(req.url, 'http://x'));
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
     if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);

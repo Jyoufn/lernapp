@@ -1061,3 +1061,28 @@ test('Gedanken ohne Überschriften (Groq, OpenRouter): live in Abschnitte geschn
     assert.match(shown[0], /^\*\*Bindungswinkel bestimmen\*\*/);
   } finally { P.smallJsonTask = keep; }
 });
+
+test('Große Dateien bei Google (Files API): Verweis nur mit passendem Schlüssel, sonst Text; Hochladen in zwei Schritten', async () => {
+  const P = require('../lib/providers');
+  const page = { mime: 'image/jpeg', gfile: 'https://generativelanguage.googleapis.com/v1beta/files/abc123', fk: P.keyTag('key-aaaa-111111'), name: 'Mitschrift · S. 3', page: 3 };
+  const pdf = { mime: 'application/pdf', gfile: 'https://generativelanguage.googleapis.com/v1beta/files/pdf1', fk: P.keyTag('key-aaaa-111111'), name: 'Skript.pdf', text: '[Seite 1]\nZellatmung', hand: '2–4' };
+  const [ok] = P.toGeminiContents([{ role: 'user', text: 'x', images: [page, pdf] }], 'key-aaaa-111111');
+  assert.equal(ok.parts[1].file_data.file_uri, page.gfile);
+  assert.equal(ok.parts[3].file_data.mime_type, 'application/pdf');
+  assert.match(ok.parts[4].text, /Seite 2–4 sind handschriftlich/);
+  const [other] = P.toGeminiContents([{ role: 'user', text: 'x', images: [page, pdf] }], 'anderer-key-222222');
+  assert.ok(!other.parts.some((p) => p.file_data), 'fremder Schlüssel: kein Verweis');
+  assert.match(other.parts[3].text, /Zellatmung/, 'PDF: dann ihr Text');
+  const calls = [];
+  const fx2 = M.installFetch([
+    { match: (c) => c.url.endsWith('/upload/v1beta/files'), respond: (c) => { calls.push(['start', c.init.headers['X-Goog-Upload-Command']]); return new Response('{}', { status: 200, headers: { 'x-goog-upload-url': 'https://generativelanguage.googleapis.com/upload/v1beta/files?upload_id=u1' } }); } },
+    { match: (c) => c.url.includes('upload_id=u1'), respond: (c) => { calls.push(['upload', c.init.headers['X-Goog-Upload-Command']]); return M.json({ file: { name: 'files/abc', uri: 'https://generativelanguage.googleapis.com/v1beta/files/abc', mimeType: 'image/jpeg', state: 'ACTIVE', expirationTime: '2026-11-05T10:00:00Z' } }); } },
+  ]);
+  try {
+    const f = await P.geminiUpload('key-aaaa-111111', { mime: 'image/jpeg', data: Buffer.alloc(2000, 7), name: 'S. 1' });
+    assert.deepEqual(calls, [['start', 'start'], ['upload', 'upload, finalize']]);
+    assert.equal(f.uri, 'https://generativelanguage.googleapis.com/v1beta/files/abc');
+    assert.equal(f.fk, '111111');
+    assert.equal(f.exp, Date.parse('2026-11-05T10:00:00Z'));
+  } finally { fx2.restore(); }
+});

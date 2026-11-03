@@ -1850,6 +1850,14 @@ async function pdfBytes(src) {
 }
 // Anfrage: PDFs, deren Daten nur im Gerät liegen (nach dem Neuladen), wieder als Datei mitschicken – solange sie in die Anfrage passen
 async function withFiles(messages) {
+  // Google-Dateien gelten 48 h: abgelaufene (oder gleich ablaufende) aus dem Gerätespeicher neu hochladen – der Verlauf merkt sich den neuen Verweis
+  const stale = messages.flatMap((m) => (m.images || []).filter((img) => img.gfile && img.fileId && (img.gexp || 0) < Date.now() + 30 * 60000));
+  await Promise.all(stale.slice(0, 40).map(async (img) => {
+    const blob = await fileStore.get(img.fileId);
+    if (!blob) return;
+    try { const f = await uploadToGemini(blob, img.mime, img.name); Object.assign(img, { gfile: f.uri, fk: f.fk, gexp: f.exp }); }
+    catch { if (img.mime === 'application/pdf' && blob.size <= PDF_RAW_MAX) { const u8 = new Uint8Array(await blob.arrayBuffer()); let bin = ''; for (let k = 0; k < u8.length; k += 0x8000) bin += String.fromCharCode(...u8.subarray(k, k + 0x8000)); img.data = btoa(bin); delete img.gfile; } }
+  }));
   const out = messages.slice();
   for (let i = 0; i < out.length; i++) {
     if (!out[i].images?.some((img) => img.cut && img.fileId && !img.data)) continue;
@@ -1992,7 +2000,7 @@ function pdfPagesText(texts, scans, { inPdf = false, pics = null, left = null } 
     if (left?.has(p)) return '(Handschrift/Scan – nicht mitgeschickt, das Dokument ist zu groß)';
     return '(Handschrift/Scan – Seite wird noch vorbereitet)';
   };
-  return Array.from({ length: texts.length }, (_, i) => `[Seite ${i + 1}]\n${body(i + 1)}`).join('\n\n').slice(0, 400000);
+  return Array.from({ length: texts.length }, (_, i) => `[Seite ${i + 1}]\n${body(i + 1)}`).join('\n\n').slice(0, 800000);
 }
 async function pdfToInline(file, onProgress, { defer = false } = {}) {
   const buf = new Uint8Array(await file.arrayBuffer());
@@ -2000,7 +2008,7 @@ async function pdfToInline(file, onProgress, { defer = false } = {}) {
   const n = doc.numPages, texts = [];
   let total = 0;
   for (let p = 1; p <= n; p++) {
-    const t = total < 300000 ? (await (await doc.getPage(p)).getTextContent()).items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim() : '';
+    const t = total < 700000 ? (await (await doc.getPage(p)).getTextContent()).items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim() : '';
     texts.push(t); total += t.length;
     if (p % 3 === 0) onProgress?.(0.9 * p / n, 'Wird gelesen');
   }
@@ -2012,40 +2020,81 @@ async function pdfToInline(file, onProgress, { defer = false } = {}) {
   const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: '', fileId: keepFile(file) };
   if (scans.length) { item.scans = scans.length; item.hand = pageRanges(scans); }
   if (bin) { item.text = pdfPagesText(texts, scans, { inPdf: true }); return [item]; } // Gemini liest das PDF selbst
-  // zu groß für die Anfrage: Seiten zum Ansehen – zuerst Handschrift/Scans, dann Seiten mit wenig Text (Folien, Skizzen)
+  // zu groß für die Anfrage: bis 4,4 MB geht das PDF selbst zu Google (Files API); sonst Seiten zum Ansehen – zuerst Handschrift/Scans,
+  // dann Seiten mit wenig Text (Folien, Skizzen) – als Bilder hochgeladen (vollständig, gute Qualität), nur im Notfall in die Anfrage
   const visual = texts.map((t, i) => (plain(t) >= SCAN_TEXT_MIN && plain(t) < VISUAL_TEXT_MAX ? i + 1 : 0)).filter(Boolean);
   const list = [...scans, ...visual];
   item.text = pdfPagesText(texts, scans);
-  if (!list.length) return [item];
+  if (!list.length && file.size > UPLOAD_MAX) return [item];
   const job = { file, texts, scans, list, k: 0, imgs: null, listeners: [] };
   pageJobs.set(item, job);
-  job.run = renderPages(item, job).catch(() => { job.imgs = []; item.text = pdfPagesText(texts, scans, { left: new Set(scans) }); return []; });
+  job.run = prepareBig(item, job).catch(() => { job.imgs = []; item.text = pdfPagesText(texts, scans, { left: new Set(scans) }); return []; });
   if (defer) return [item]; // Seitenbilder entstehen im Hintergrund (Senden ist schon frei)
   const imgs = await job.run;
   pageJobs.delete(item);
   return [item, ...imgs];
 }
-/* Seitenbilder eines großen PDFs: erst eine Probeseite, daraus die Stufe (Größe/Qualität), mit der alle Seiten ins Budget passen;
-   passen selbst in der kleinsten Stufe nicht alle, gehen Handschrift/Scans vor, der Rest wird im Text als „nicht mitgeschickt“ markiert. */
-async function renderPages(item, job) {
+/* Große PDFs vollständig an Gemini:
+   1) PDF ≤ 4,4 MB → als Ganzes zu Google hochladen (Files API) – Gemini liest Text, Handschrift, Skizzen selbst.
+   2) Größer → jede Seite, die man sehen muss, in guter Qualität rendern und einzeln hochladen (4 gleichzeitig). Die Chat-Anfrage enthält
+      danach nur Verweise – egal wie viele Seiten.
+   3) Klappt das Hochladen nicht (kein Gemini-Schlüssel, Google-Limit): Seiten in die Anfrage, die Qualität passt sich Seite für Seite an,
+      damit möglichst ALLE ins Budget passen; nur was dann noch fehlt, wird im Text als „nicht mitgeschickt“ markiert. */
+const UPLOAD_MAX = 4.4 * 1024 * 1024;
+let uploadOff = 0; // kein Gemini-Schlüssel / Hochladen gesperrt → eine Weile nicht wieder versuchen
+async function uploadToGemini(blob, mime, name) {
+  if (Date.now() < uploadOff) throw new Error('Hochladen gerade aus');
+  const r = await fetch(`/api/upload?name=${encodeURIComponent(String(name || 'Datei').slice(0, 100))}`, { method: 'POST', headers: { 'Content-Type': mime }, body: blob });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 400 && /Gemini-Key/.test(j.error || '')) uploadOff = Date.now() + 10 * 60000;
+  if (!r.ok || !j.uri) throw new Error(j.error || 'Hochladen fehlgeschlagen');
+  return j;
+}
+const jpegBlob = (data) => new Blob([b64Bytes(data)], { type: 'image/jpeg' });
+async function prepareBig(item, job) {
+  const tell = () => job.listeners.forEach((f) => f?.(job.k, job.list.length));
+  if (job.file.size <= UPLOAD_MAX) {
+    try {
+      const f = await uploadToGemini(job.file, 'application/pdf', item.name);
+      Object.assign(item, { gfile: f.uri, fk: f.fk, gexp: f.exp });
+      item.text = pdfPagesText(job.texts, job.scans, { inPdf: true });
+      job.k = job.list.length; tell(); job.imgs = [];
+      return [];
+    } catch {}
+    if (!job.list.length) { job.imgs = []; return []; }
+  }
   const doc = await (await loadPdfJs()).getDocument({ data: new Uint8Array(await job.file.arrayBuffer()) }).promise;
   const base = item.name.replace(/\.pdf$/i, '');
-  const tell = () => job.listeners.forEach((f) => f?.(job.k, job.list.length));
+  const imgs = [], failed = [], pics = new Set(), left = new Set(), running = new Set();
   try {
-    const probe = await renderPdfPage(doc, job.list[0], PAGE_TIERS[0][0], PAGE_TIERS[0][1]);
-    const est = (t) => probe.length * (PAGE_TIERS[t][0] / PAGE_TIERS[0][0]) ** 2 * (PAGE_TIERS[t][1] / PAGE_TIERS[0][1]) * job.list.length;
-    let tier = PAGE_TIERS.findIndex((_, t) => est(t) <= PAGE_IMG_BUDGET * 0.9);
-    if (tier < 0) tier = PAGE_TIERS.length - 1;
-    const [px, q] = PAGE_TIERS[tier];
-    const imgs = [], pics = new Set(), left = new Set();
-    let used = 0;
-    for (const [i, p] of job.list.entries()) {
-      const data = p === job.list[0] && tier === 0 ? probe : await renderPdfPage(doc, p, px, q);
-      if (used + data.length > PAGE_IMG_BUDGET) { job.list.slice(i).forEach((x) => left.add(x)); job.k = job.list.length; tell(); break; } // voll → Rest nur als Text
-      used += data.length; pics.add(p);
-      imgs.push({ mime: 'image/jpeg', data, name: `${base} · S. ${p}`, page: p, fileId: keepFile(new Blob([b64Bytes(data)], { type: 'image/jpeg' })) });
+    // 2) rendern + hochladen
+    for (const p of job.list) {
+      const data = await renderPdfPage(doc, p, 1600, 0.74);
+      const blob = jpegBlob(data), fileId = keepFile(blob);
+      if (Date.now() < uploadOff) failed.push(p);
+      else {
+        const run = uploadToGemini(blob, 'image/jpeg', `${base} · S. ${p}`)
+          .then((f) => { imgs.push({ mime: 'image/jpeg', gfile: f.uri, fk: f.fk, gexp: f.exp, name: `${base} · S. ${p}`, page: p, fileId }); pics.add(p); })
+          .catch(() => failed.push(p))
+          .finally(() => running.delete(run));
+        running.add(run);
+        while (running.size >= 4) await Promise.race(running);
+      }
       job.k++; tell();
       await new Promise((ok) => setTimeout(ok, 0)); // Oberfläche bleibt flüssig
+    }
+    while (running.size) await Promise.race(running);
+    // 3) Ersatz: nicht hochgeladene Seiten in die Anfrage – Qualität Seite für Seite so, dass alle ins Budget passen
+    let used = 0, perPx = 0;
+    const rest = failed.sort((a, b) => a - b);
+    for (const [i, p] of rest.entries()) {
+      const share = (PAGE_IMG_BUDGET - used) / (rest.length - i);
+      const tier = PAGE_TIERS.find(([px, q]) => !perPx || perPx * px * px * q <= share * 0.95) || PAGE_TIERS[PAGE_TIERS.length - 1];
+      const data = await renderPdfPage(doc, p, tier[0], tier[1]);
+      perPx = data.length / (tier[0] * tier[0] * tier[1]);
+      if (used + data.length > PAGE_IMG_BUDGET) { rest.slice(i).forEach((x) => left.add(x)); break; }
+      used += data.length; pics.add(p);
+      imgs.push({ mime: 'image/jpeg', data, name: `${base} · S. ${p}`, page: p, fileId: keepFile(jpegBlob(data)) });
     }
     imgs.sort((a, b) => a.page - b.page);
     item.text = pdfPagesText(job.texts, job.scans, { pics, left });
@@ -2085,16 +2134,21 @@ const thoughtsOf = (msgEl) => (msgEl._thoughts?.length || msgEl._plan?.length
 
 /* Alle Dateien sollen mit – aber EINE Anfrage darf auf Vercel höchstens ~4,5 MB groß sein. Neueste zuerst als echte Datei (Gemini sieht
    Bilder, Tabellen, Skizzen); passt ein PDF nicht mehr, geht sein gelesener Text mit. Was gar nicht passt, zählt `dropped` (die KI sagt es). */
-const MATERIAL_BUDGET = 3300000, MATERIAL_TEXT_BUDGET = 700000; // Base64-Zeichen für Dateien / Zeichen für ausgelesenen PDF-Text
+const MATERIAL_BUDGET = 3300000, MATERIAL_TEXT_BUDGET = 1000000, MATERIAL_TOTAL = 3900000; // Base64-Zeichen Dateien / Zeichen PDF-Text / beides zusammen (Anfrage ≤ 4,5 MB)
 function fitMaterial(list) {
   let used = 0, textUsed = 0, dropped = 0;
+  const room = (tl) => textUsed + tl <= MATERIAL_TEXT_BUDGET && used + textUsed + tl <= MATERIAL_TOTAL;
   const messages = list.slice().reverse().map((m) => {
     if (!m.images?.length) return m;
     const keep = [];
     for (const img of m.images) {
       const size = (img.data || '').length, tl = (img.text || '').length;
-      if (img.data && used + size <= MATERIAL_BUDGET && textUsed + tl <= MATERIAL_TEXT_BUDGET) { used += size; textUsed += tl; keep.push(img); }
-      else if (tl && textUsed + tl <= MATERIAL_TEXT_BUDGET) { textUsed += tl; keep.push({ mime: 'text/plain', name: img.name || 'PDF', text: img.text }); }
+      if (img.gfile && !img.data) { // liegt bei Google – nur der Verweis geht mit (und der Text, falls er Platz hat)
+        if (tl && room(tl)) { textUsed += tl; keep.push(img); } else keep.push({ ...img, text: '' });
+        continue;
+      }
+      if (img.data && used + size <= MATERIAL_BUDGET && room(tl) && used + size + textUsed + tl <= MATERIAL_TOTAL) { used += size; textUsed += tl; keep.push(img); }
+      else if (tl && room(tl)) { textUsed += tl; keep.push({ mime: 'text/plain', name: img.name || 'PDF', text: img.text }); }
       else dropped++;
     }
     return keep.length === m.images.length ? m : { ...m, images: keep };
@@ -3334,7 +3388,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     items.filter(({ img }) => pageJobs.get(img).imgs).forEach((x) => put(x, pageJobs.get(x.img).imgs)); // schon fertig → sofort
     if (!open.length) return;
     const jobs = open.map(({ img }) => pageJobs.get(img));
-    const total = jobs.reduce((n, j) => n + j.list.length, 0);
+    const total = Math.max(1, jobs.reduce((n, j) => n + j.list.length, 0)); // ganzes PDF hochladen = 1 Schritt
     ensureWork(); phase('material');
     const from = Date.now();
     const step = stepLine('spin', `<span class="shimmer">${P('material').sub}</span> <span class="ph-x scan-n">· 0/${total} Seiten</span><span class="t live" data-from="${from}">1s</span>`);
@@ -3342,18 +3396,18 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     prepStep = { step, from, total };
     scrollToBottom();
     const count = step.querySelector('.scan-n');
-    const paint = () => { count.textContent = `· ${Math.min(total, jobs.reduce((n, j) => n + j.k, 0))}/${total} Seiten`; };
+    const paint = () => { count.textContent = `· ${Math.min(total, jobs.reduce((n, j) => n + j.k, 0))}/${total} ${total === 1 ? 'Seite' : 'Seiten'}`; };
     jobs.forEach((j) => j.listeners.push(paint));
     paint();
     const stop = new Promise((_, no) => signal.addEventListener('abort', () => no(abortError()), { once: true }));
     for (const [i, x] of open.entries()) put(x, await Promise.race([jobs[i].run, stop]));
-    count.textContent = `· ${total} Seiten`;
+    count.textContent = `· ${total} ${total === 1 ? 'Seite' : 'Seiten'}`;
   };
   // Vorbereitungs-Schritt beenden, falls keine Server-Stufe „Dokumente analysieren“ kommt (z. B. Coden, Börse)
   const closePrep = (note = '') => {
     if (!prepStep || prepStep.adopted || prepStep.closed) return;
     prepStep.closed = true;
-    finishStep(prepStep.step, `${P('material').sub} <span class="ph-x">· ${note || `${prepStep.total} Seiten`}</span> <span class="t">${secs(prepStep.from)}</span>`);
+    finishStep(prepStep.step, `${P('material').sub} <span class="ph-x">· ${note || `${prepStep.total} ${prepStep.total === 1 ? 'Seite' : 'Seiten'}`}</span> <span class="t">${secs(prepStep.from)}</span>`);
   };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
   let idleTimer = null, idleHit = false;
