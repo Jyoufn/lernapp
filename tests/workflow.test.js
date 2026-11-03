@@ -899,3 +899,28 @@ test('Bedingung „aktuell“: auch wenn die Einschätzung keine Quellen will, w
   const tc = gen.body.generationConfig.thinkingConfig;
   assert.ok(tc.thinkingBudget === 2048 || tc.thinkingLevel === 'low', 'Gedicht: nur kurz denken');
 });
+
+test('Lernthema + Recherche: gesucht wird auf deutschen Lernplattformen (Studyflix, simpleclub); ohne Recherche keine Suche', async () => {
+  const WEB = require('../lib/web');
+  const saved = { ...WEB.hooks.engines }, savedG = WEB.hooks.geminiSearch, asked = [];
+  WEB.hooks.engines.ddg = WEB.hooks.engines.ddglite = WEB.hooks.engines.bing = async (q) => { asked.push(q); return []; };
+  WEB.hooks.geminiSearch = async (q) => { asked.push(q); return []; };
+  let route = { level: 'high', sources: 'web', lern: true, queries: ['Photosynthese Ablauf'], why: 'Lernthema' };
+  fx = M.installFetch([
+    { match: M.is.route, respond: () => M.nvidiaJson(route) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
+  ]);
+  try {
+    const r = await run({ ...msg('Recherchiere, wie die Photosynthese funktioniert'), agent: 'general', effort: 'auto' });
+    assert.equal(r.result.status, 'completed');
+    assert.ok(asked.some((q) => /studyflix/i.test(q)) && asked.some((q) => /simpleclub/i.test(q)), `Suchen auf Lernplattformen: ${asked.join(' | ')}`);
+    const sys = M.systemOf(fx.calls.filter(M.is.geminiStream).pop());
+    assert.match(sys, /LERNTHEMA: Such zuerst auf deutschen Lernplattformen/, 'Google im Modell (Ersatz): erst die Lernplattformen');
+    // ohne Recherche (Einschätzung: keine Quellen, keine Bedingung) → keine Suche, kein Lernplattform-Hinweis
+    route = { level: 'medium', sources: 'none', lern: true, queries: [], why: 'Erklärung' };
+    asked.length = 0; fx.calls.length = 0;
+    await run({ ...msg('Erklär mir die Photosynthese'), agent: 'general', effort: 'auto' });
+    assert.equal(asked.length, 0, 'keine Websuche');
+    assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LERNTHEMA/);
+  } finally { Object.assign(WEB.hooks.engines, saved); WEB.hooks.geminiSearch = savedG; }
+});
