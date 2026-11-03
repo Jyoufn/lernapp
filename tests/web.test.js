@@ -100,12 +100,14 @@ test('Websites: Seite mit eingeschleusten KI-Anweisungen wird ignoriert', async 
   assert.ok(!M.systemOf(fx.calls.find(M.is.geminiStream)).includes('Ignore all previous'));
 });
 
-test('Bilder aus frei lizenzierten Lernquellen (serlo, Wikipedia) – kommerzielle Seiten nie; im Prompt als BILD k mit Regel', () => {
+test('Bilder aus Lernquellen (serlo, Wikipedia, Lernplattformen) mit Herkunft – andere Seiten nie, keine Logos; im Prompt als BILD k mit Regel', () => {
   const W2 = require('../lib/web');
   const serlo = W2.extractImages('<main><img src="/_next/image?url=https%3A%2F%2Fassets.serlo.org%2Fabc%2Fschema.png&w=640" alt="Schema der Lichtreaktion" width="600"><img src="https://assets.serlo.org/logo.png" alt="Logo"></main>', 'https://de.serlo.org/biologie/1');
   assert.deepEqual(serlo.map((x) => x.src), ['https://assets.serlo.org/abc/schema.png']);
   assert.match(serlo[0].license, /CC BY-SA/);
-  assert.equal(W2.extractImages('<img src="https://simpleclub.com/a.png" alt="x">', 'https://simpleclub.com/lessons/a').length, 0);
+  const sc = W2.extractImages('<img src="https://simpleclub.com/a.png" alt="Aufbau der Zelle" width="600"><img src="https://simpleclub.com/logo.png" alt="simpleclub Logo">', 'https://simpleclub.com/lessons/a');
+  assert.deepEqual(sc.map((x) => [x.src, x.license]), [['https://simpleclub.com/a.png', 'Bild: simpleclub.com']]);
+  assert.equal(W2.extractImages('<img src="https://www.spiegel.de/a.png" alt="Zelle">', 'https://www.spiegel.de/wissen/a').length, 0, 'nur Lernquellen');
   const WF = require('../lib/workflow');
   const sys = WF.sourcesBlock([{ n: 1, title: 'Lichtreaktion – serlo', type: 'web', publisher: 'serlo.org', text: 'Text', images: serlo }], 'ok');
   assert.match(sys, /BILD 1: Schema der Lichtreaktion/);

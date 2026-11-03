@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'ki-test.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'ki-test.js', 'lehrplan.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -222,7 +222,7 @@ const imageModelDownUntil = new Map(); // Bildmodell → übersprungen bis (nach
 // prefer: Name des Bildmodells, das zuerst probiert wird; das Ergebnis enthält den benutzten Startwert (für spätere Anpassungen)
 // Wörter, an denen der Inhaltsfilter von FLUX.3 grundlos hängen bleibt (gefunden über chats/bilder/_gefiltert.log) → gleichbedeutend ersetzen
 const FILTER_SWAPS = [[/\bviolett?\b/gi, 'purple']];
-async function nvcfImage(env, prompt, seed, prefer) {
+async function nvcfImage(env, prompt, seed, prefer, size = null) {
   lastImageFiltered = false;
   prompt = FILTER_SWAPS.reduce((t, [re, to]) => t.replace(re, to), String(prompt));
   const models = prefer ? [...IMAGE_MODELS].sort((a, b) => (b.name === prefer) - (a.name === prefer)) : IMAGE_MODELS;
@@ -236,7 +236,7 @@ async function nvcfImage(env, prompt, seed, prefer) {
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const used = (seed + attempt * 7919) % 1e6;
-          let r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify({ prompt, ...params, seed: used }), signal: AbortSignal.timeout(90000) });
+          let r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify({ prompt, ...params, ...(size || {}), seed: used }), signal: AbortSignal.timeout(90000) });
           for (let i = 0; r.status === 202 && i < 4; i++) r = await fetch(`https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/${r.headers.get('nvcf-reqid')}`, { headers: H, signal: AbortSignal.timeout(90000) });
           if (r.status === 401 || r.status === 403) { badImageKeys.add(key); rejected = true; console.warn(`[Bild] ${name}: Key abgelehnt (HTTP ${r.status}) – nehme den nächsten`); break; }
           if (!r.ok) { console.warn(`[Bild] ${name}: HTTP ${r.status}`); modelFailed = true; break; }
@@ -508,8 +508,8 @@ async function referenceImagesFresh(query, first, max) {
   return out;
 }
 // FLUX malt den Auftrag; schlägt nur der Inhaltsfilter an, formuliert Gemini ihn schematischer und neutraler (ein zweiter Durchgang)
-async function paint(env, prompt, prefer, seed = Math.floor(Math.random() * 1e6)) {
-  let img = await nvcfImage(env, prompt.slice(0, 2000), seed, prefer);
+async function paint(env, prompt, prefer, seed = Math.floor(Math.random() * 1e6), size = null) {
+  let img = await nvcfImage(env, prompt.slice(0, 2000), seed, prefer, size);
   if (!img && lastImageFiltered) {
     const safe = await visionJson(env, SAFE_SYSTEM, prompt);
     if (String(safe?.prompt || '').length > 30) { console.warn('[Bild] Auftrag wird schematischer formuliert'); img = await nvcfImage(env, String(safe.prompt).slice(0, 2000), seed, prefer); if (img) img.prompt = String(safe.prompt); }
@@ -1126,7 +1126,9 @@ Antworte NUR mit JSON: {"desc":"englische Beschreibung der Figur, 10–40 Wörte
 - Bei einer Änderung: die bisherige Beschreibung übernehmen und NUR das Gewünschte ändern.`;
 const AVATAR_PICK = `Du wählst aus mehreren Entwürfen das beste Pixel-Profilbild für eine Lern-App. Die festen Profilbilder der App sind: NUR der Kopf (mit kurzem Hals),
 frontal und symmetrisch, der Kopf füllt die Bildbreite, grobe sichtbare Pixel, klarer schwarzer Umriss, ruhige natürliche Farben, kleine dunkle Augen mit Lichtpunkt, einfarbiger Hintergrund.
-Bewerte jeden Entwurf danach und ob er die gewünschte Figur klar zeigt. Antworte NUR mit JSON: {"best": Nummer des besten Bildes}`;
+Prüfe der Reihe nach: 1. Zeigt er klar die gewünschte Figur (Tier/Wesen, Farben, Merkmal)? 2. Nur ein Kopf, frontal, ganz im Bild, nichts abgeschnitten?
+3. Wirkt er freundlich und sympathisch, mit gut erkennbaren Augen? 4. Grobe Pixel, klarer Umriss, wenige ruhige Farben, kein Text, kein Muster im Hintergrund?
+Ein Entwurf, der bei 1 oder 2 scheitert, kommt nicht in Frage. Antworte NUR mit JSON: {"best": Nummer des besten Bildes}`;
 async function handleAgentAvatar(req, res) {
   const env = readEnv();
   const b = await readBody(req, 20000);
@@ -1137,7 +1139,9 @@ async function handleAgentAvatar(req, res) {
   if (desc.length < 5) desc = before ? `${before}, ${wish}` : wish;
   if (!imageKeys(env).length) return sendJson(res, 400, { error: 'Für eigene Profilbilder fehlt ein NVIDIA-Schlüssel (Einstellungen → Agenten → FLUX (Bilder) oder MiniMax).' });
   // mehrere Entwürfe (verschiedene Startwerte) – dann wählt ein Bildmodell den, der den Regeln am besten folgt (nur Kopf, frontal, Umriss, Pixel, passt zur Beschreibung)
-  const tries = await Promise.all([0, 1, 2].map((k) => paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`, undefined, Math.floor(Math.random() * 1e6) + k).catch(() => null)));
+  // quadratisch (der Kopf bekommt die volle Auflösung, nichts wird abgeschnitten) und vier Entwürfe – das Bildmodell wählt den besten
+  const SQUARE = { width: 1024, height: 1024 };
+  const tries = await Promise.all([0, 1, 2, 3].map((k) => paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`, undefined, Math.floor(Math.random() * 1e6) + k * 104729, SQUARE).catch(() => null)));
   const ok = tries.filter(Boolean);
   let out = ok[0] || null;
   if (ok.length > 1) {
@@ -1148,6 +1152,36 @@ async function handleAgentAvatar(req, res) {
   if (!out) out = await paint(env, `cute friendly ${desc.slice(0, 200)}, pixel art head portrait only, front view, black outline, plain flat magenta background`).catch(() => null); // kürzerer Auftrag als zweiter Versuch
   if (!out) return sendJson(res, 502, { error: lastImageFiltered ? 'Der Bild-Filter hat die Beschreibung abgelehnt – beschreib die Figur etwas anders.' : 'Das Bild konnte gerade nicht gezeichnet werden (Bildmodell nicht erreichbar) – gleich noch einmal versuchen.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
+}
+
+/* ---------- /api/transcribe: Seiten ohne Text (Handschrift, Scans, Fotos von Heftseiten) wörtlich abschreiben ----------
+   Beim Anhängen eines PDFs schickt der Browser die Seiten ohne Textschicht in Paketen (je ≤ ~3,5 MB) – zurück kommt die Abschrift je Seite.
+   So geht der Inhalt ALLER Seiten in die Anfrage (die Bilder selbst würden bei vielen Seiten das Größenlimit von ~4,5 MB sprengen). */
+const TRANSCRIBE_SYSTEM = `Du schreibst Seiten (Scans, Fotos, handschriftliche Notizen und Mitschriften, Arbeitsblätter) WORTGETREU und VOLLSTÄNDIG ab –
+nichts zusammenfassen, nichts weglassen, nichts ergänzen, nichts deuten. Jede Seite beginnt mit "=== Seite N ===" (N steht im Dateinamen), dann der Text in Lesereihenfolge.
+- Handschrift Wort für Wort entziffern, auch krakelige; ein unsicheres Wort mit [?] markieren, wirklich Unlesbares als [unleserlich] – nie raten oder überspringen.
+- Überschriften, Unterstreichungen und Markierungen als Überschrift bzw. **fett**; Aufzählungen als Liste; Tabellen als Markdown-Tabelle; Formeln, Reaktionsgleichungen und
+  Rechnungen in LaTeX ($…$), jede Zeile einer Rechnung einzeln; Pfeile und Skizzen kurz in eckigen Klammern beschreiben ([Skizze: …], [Pfeil von A nach B]).
+- Randnotizen und Ergänzungen an der passenden Stelle in eckigen Klammern ([Randnotiz: …]).
+Nur die Abschrift, kein Kommentar davor oder danach.`;
+async function handleTranscribe(req, res) {
+  const b = await readBody(req, 6 * 1024 * 1024);
+  const pages = (Array.isArray(b.pages) ? b.pages : []).filter((p) => /^image\/(jpeg|png|webp)$/.test(p?.mime) && typeof p.data === 'string' && p.data.length > 100).slice(0, 12);
+  if (!pages.length) return sendJson(res, 400, { error: 'Keine Seiten' });
+  const env = readEnv();
+  if (!P.keysOf(env, 'GEMINI_API_KEY').length) return sendJson(res, 400, { error: 'Für das Abschreiben fehlt ein Gemini-Key.' });
+  // Handschrift lesen die großen Flash-Modelle deutlich besser als die Lite-Modelle → zuerst sie, dann die Lite-Leiter
+  const models = [...new Set([...(await P.ladder(env, 'text')).filter((m) => !/lite|^gemini-2\./.test(m)).slice(0, 3), ...(await P.ladder(env, 'lite')).filter((m) => !/^gemini-2\./.test(m))])].slice(0, 6);
+  const files = pages.map((p) => ({ mime: p.mime, data: p.data, name: String(p.name || '').slice(0, 80) }));
+  let lastErr = null;
+  for (const model of models) {
+    const key = P.geminiKey(env, model);
+    try {
+      const text = await P.geminiOnce({ key, model, system: TRANSCRIBE_SYSTEM, user: `Schreib alle ${files.length} Seiten vollständig ab.`, files, maxTokens: 24000, thinking: { level: 'low', budget: 1024 }, signal: AbortSignal.timeout(110000) });
+      if (String(text).trim().length > 10) return sendJson(res, 200, { text: String(text).slice(0, 200000), model });
+    } catch (err) { lastErr = err; P.markLimited(model, err, key); }
+  }
+  sendJson(res, 502, { error: lastErr?.status === 429 ? 'Das Kontingent zum Abschreiben ist gerade erschöpft.' : 'Die Seiten konnten gerade nicht abgeschrieben werden.' });
 }
 
 /* ---------- /api/lehrplan: Kerncurricula Niedersachsen finden und als PDF durchreichen ----------
@@ -1562,6 +1596,7 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
+    if (req.method === 'POST' && urlPath === '/api/transcribe') return await handleTranscribe(req, res);
     if (req.method === 'POST' && urlPath === '/api/lehrplan/find') return await handleLehrplanFind(req, res);
     if (req.method === 'POST' && urlPath === '/api/lehrplan/pdf') return await handleLehrplanPdf(req, res);
     if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);

@@ -450,7 +450,7 @@ function addFiles(files) {
 function prepareAttachment(a) {
   a.status = 'loading'; a.progress = 0;
   const t0 = performance.now();
-  a.prep = fileToInline(a.file, 1600, (p) => { a.progress = p; updateAttachment(a); })
+  a.prep = fileToInline(a.file, 1600, (p, label) => { a.progress = p; a.label = label || ''; updateAttachment(a); })
     .then(async (r) => {
       const wait = 500 - (performance.now() - t0); // die Animation ist immer kurz zu sehen (nicht nur ein Flackern)
       if (wait > 0) await new Promise((ok) => setTimeout(ok, wait));
@@ -458,7 +458,7 @@ function prepareAttachment(a) {
       if (!list.length) throw new Error('leer');
       a.status = 'ready';
       const first = list[0];
-      a.meta = a.pdf ? (first.mime === 'application/pdf' ? `PDF · ${first.pages ? `${first.pages} ${first.pages === 1 ? 'Seite' : 'Seiten'}` : fmtSize(a.file.size)}`
+      a.meta = a.pdf ? (first.mime === 'application/pdf' ? `PDF · ${first.pages ? `${first.pages} ${first.pages === 1 ? 'Seite' : 'Seiten'}` : fmtSize(a.file.size)}${first.transcribed ? ` · ${first.transcribed} abgeschrieben` : ''}`
         : list.length > 1 || /^image\//.test(first.mime) ? `Scan · ${list.filter((x) => /^image\//.test(x.mime)).length} Seiten gelesen` : 'Gelesen') : '';
       updateAttachment(a);
       return r;
@@ -472,7 +472,7 @@ function updateAttachment(a) {
   node.classList.toggle('loading', a.status === 'loading');
   node.classList.toggle('failed', a.status === 'error');
   const meta = node.querySelector('.pdf-meta');
-  if (meta) meta.textContent = a.status === 'loading' ? `Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}` : a.meta || 'PDF';
+  if (meta) meta.textContent = a.status === 'loading' ? (a.label && /Handschrift/.test(a.label) ? a.label : `Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}`) : a.meta || 'PDF';
   node.querySelector('.pdf-meta')?.classList.toggle('shimmer', a.status === 'loading');
 }
 
@@ -1622,6 +1622,44 @@ const REVEAL_TICK = 24;      // ms zwischen zwei Schritten
 const REVEAL_MIN_CHARS = 2;  // mindestens so viele Zeichen pro Schritt (~80 Zeichen/s)
 const REVEAL_CATCHUP = 12;   // Rückstand wird in ~12 Schritten aufgeholt
 const BLOCK_FADE_MS = 420;   // Dauer des Einblendens neuer Blöcke
+const INK_FADE_MS = 560;     // neue Zeichen „tauchen auf“: weich von durchsichtig zu voll (wie bei großen KI-Chats)
+const REDUCE_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+/* Weicher Schreib-Saum: Die zuletzt hinzugekommenen Zeichen (je Schritt ein Stück) werden nach jedem Neuzeichnen in Spans mit negativer
+   Animations-Verzögerung gelegt – so blendet jedes Stück über ~0,5 s ein, auch wenn der Text bei jedem Schritt neu gerendert wird.
+   Formeln, Code, Tabellen, Grafiken und Bausteine bleiben unberührt. */
+const INK_SKIP = 'pre, code, .katex, svg, figure, table, .ask-panel, .chip, .cite, sup, a.cite, [data-blk]';
+function inkTail(root, steps, now) {
+  const nodes = [], walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.parentElement?.closest(INK_SKIP) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+  let total = 0;
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) { nodes.push({ n, from: total }); total += n.nodeValue.length; }
+  if (!steps.length || steps[steps.length - 1].len !== total) steps.push({ t: now, len: total });
+  while (steps.length > 1 && now - steps[1].t > INK_FADE_MS) steps.shift();
+  const young = steps.filter((st) => now - st.t < INK_FADE_MS);
+  if (!young.length || REDUCE_MOTION) return;
+  // Grenzen: Stück k reicht von (Länge davor) bis len_k, Alter = jetzt − t_k
+  const bounds = young.map((st) => ({ end: Math.min(st.len, total), age: now - st.t, start: 0 }));
+  for (let k = 0; k < bounds.length; k++) bounds[k].start = k ? bounds[k - 1].end : Math.max(0, steps[steps.indexOf(young[0]) - 1]?.len ?? (young[0].len - 40));
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const { n, from } = nodes[i], to = from + n.nodeValue.length;
+    if (to <= bounds[0].start) break;
+    const frag = document.createDocumentFragment();
+    let pos = from;
+    const txt = n.nodeValue;
+    const parts = [];
+    if (bounds[0].start > from) parts.push({ a: from, b: bounds[0].start, age: null });
+    for (const bd of bounds) { const a = Math.max(from, bd.start), b = Math.min(to, bd.end); if (b > a) parts.push({ a, b, age: bd.age }); }
+    if (!parts.length) continue;
+    for (const pt of parts) {
+      if (pt.a > pos) { frag.append(txt.slice(pos - from, pt.a - from)); }
+      const piece = txt.slice(pt.a - from, pt.b - from);
+      if (pt.age == null) frag.append(piece);
+      else { const sp = document.createElement('span'); sp.className = 'ink'; sp.style.animationDelay = `-${Math.round(pt.age)}ms`; sp.textContent = piece; frag.append(sp); }
+      pos = pt.b;
+    }
+    if (pos < to) frag.append(txt.slice(pos - from));
+    n.replaceWith(frag);
+  }
+}
 
 function makeRenderer(target, opts = {}) {
   let text = '';        // alles, was bisher angekommen ist
@@ -1631,12 +1669,14 @@ function makeRenderer(target, opts = {}) {
   const firstSeen = [];  // Zeitpunkt, an dem Block Nr. i zuerst erschien
 
   const blocksOf = () => target.querySelectorAll(':scope > *, :scope > ul > li, :scope > ol > li');
+  const inkSteps = []; // { t, len } – wann wie viel sichtbarer Text da war (für den weichen Schreib-Saum)
 
   let ended = false; // Antwort komplett (finish/flush) → Blöcke wie Lernsets wissen, dass nichts mehr kommt
   const draw = () => {
     renderMarkdown(target, text.slice(0, shown), { ...opts, live: !ended || shown < text.length });
     // neue Blöcke weich einblenden – auch über Neuzeichnungen hinweg ohne Flackern
     const now = performance.now();
+    if (!opts.noInk) { try { inkTail(target, inkSteps, now); } catch {} }
     blocksOf().forEach((block, i) => {
       if (firstSeen[i] == null) firstSeen[i] = now;
       const age = now - firstSeen[i];
@@ -1773,22 +1813,78 @@ async function goodnotesToInline(file) {
   return out;
 }
 // Liefert eine Datei – oder bei gescannten PDFs/GoodNotes eine Liste (Aufrufer glätten mit .flat())
+/* PDF lesen wie große KI-Plattformen: JEDE Seite einzeln – Seiten mit Text liefern ihren Text, Seiten OHNE Text (Handschrift, Scans,
+   abfotografierte Heftseiten) werden als Bild gerendert und schon beim Anhängen wortgetreu abgeschrieben (/api/transcribe, in Paketen).
+   So kommt der Inhalt aller Seiten in die Anfrage – auch bei gemischten PDFs (z. B. 17 Seiten Handschrift + 1 getippte Seite) und großen Dateien.
+   Das PDF selbst geht zusätzlich mit, wenn es in die Anfrage passt (Gemini sieht dann auch Skizzen und Tabellen). */
+const SCAN_TEXT_MIN = 80;        // weniger Zeichen auf einer Seite → als Scan/Handschrift behandeln
+const TRANSCRIBE_BATCH = 3200000; // Base64-Zeichen je Abschreib-Paket (Anfrage ≤ 4,5 MB)
+async function renderPdfPage(doc, p, max, quality) {
+  const page = await doc.getPage(p);
+  const base = page.getViewport({ scale: 1 });
+  const vp = page.getViewport({ scale: Math.min(3, max / Math.max(base.width, base.height)) });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(vp.width); canvas.height = Math.round(vp.height);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  const data = canvas.toDataURL('image/jpeg', quality).split(',')[1];
+  canvas.width = canvas.height = 0; // Speicher frei (iPad)
+  return data;
+}
+async function transcribePages(list) { // list: [{ p, data }] → Map(Seite → Text)
+  const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pages: list.map((x) => ({ mime: 'image/jpeg', data: x.data, name: `Seite ${x.p}` })) }) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.text) throw new Error(j.error || 'Abschreiben fehlgeschlagen');
+  const out = new Map();
+  const parts = String(j.text).split(/^\s*=+\s*Seite\s+(\d+)\s*=+\s*$/m);
+  for (let i = 1; i < parts.length; i += 2) out.set(Number(parts[i]), parts[i + 1].trim());
+  if (!out.size && list.length === 1) out.set(list[0].p, String(j.text).trim());
+  return out;
+}
+async function pdfToInline(file, onProgress) {
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const doc = await (await loadPdfJs()).getDocument({ data: buf.slice() }).promise;
+  const n = doc.numPages, texts = [];
+  let total = 0;
+  for (let p = 1; p <= n; p++) {
+    const t = total < 300000 ? (await (await doc.getPage(p)).getTextContent()).items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim() : '';
+    texts.push(t); total += t.length;
+    if (p % 3 === 0) onProgress?.(0.25 * p / n, 'Wird gelesen');
+  }
+  const scans = texts.map((t, i) => (t.replace(/\s/g, '').length < SCAN_TEXT_MIN ? i + 1 : 0)).filter(Boolean).slice(0, 60);
+  const done = new Map(), keepImgs = [];
+  if (scans.length) {
+    // Seiten rendern und in Paketen abschreiben lassen; was nicht abgeschrieben werden kann, geht als Bild mit
+    let batch = [], size = 0, read = 0;
+    const flush = async () => {
+      if (!batch.length) return;
+      const part = batch; batch = []; size = 0;
+      try { (await transcribePages(part)).forEach((v, k) => done.set(k, v)); } catch { keepImgs.push(...part); }
+      read += part.length;
+      onProgress?.(0.3 + 0.65 * read / scans.length, `Handschrift wird gelesen · ${read}/${scans.length}`);
+    };
+    onProgress?.(0.3, `Handschrift wird gelesen · 0/${scans.length}`);
+    for (const p of scans) {
+      const data = await renderPdfPage(doc, p, 1600, 0.8);
+      if (size + data.length > TRANSCRIBE_BATCH || batch.length >= 6) await flush();
+      batch.push({ p, data }); size += data.length;
+    }
+    await flush();
+  }
+  const pageText = (p) => { const t = texts[p - 1]; if (!scans.includes(p)) return t; return done.has(p) ? `(Handschrift/Scan – abgeschrieben)\n${done.get(p)}` : '(Seite ohne Text – als Bild beigefügt)'; };
+  const text = Array.from({ length: n }, (_, i) => `[Seite ${i + 1}]\n${pageText(i + 1)}`).join('\n\n').slice(0, 400000);
+  let bin = '';
+  if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  const base = file.name.replace(/\.pdf$/i, '');
+  // nicht abgeschriebene Seiten (z. B. Kontingent erschöpft) als kleinere Bilder – passen dann eher in die Anfrage
+  const imgs = [];
+  for (const x of keepImgs.slice(0, 16)) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, x.p, 1300, 0.72), name: `${base} · S. ${x.p}` });
+  return [{ mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, transcribed: done.size, text }, ...imgs];
+}
 async function fileToInline(file, max = 1600, onProgress = null) {
   if (isGoodnotes(file)) return goodnotesToInline(file);
-  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) {
-    const buf = new Uint8Array(await file.arrayBuffer());
-    const { text, pages, read } = await pdfText(buf.slice(), 300000, (p) => onProgress?.(p * 0.5));
-    const chars = text.replace(/\[Seite \d+\]/g, ' ').replace(/\s+/g, ' ').trim().length;
-    if (chars < 60 * Math.max(1, read)) { // kaum Text je Seite → Scan: Seiten als Bilder
-      const imgs = await pdfPagesAsImages(buf.slice(), file.name.replace(/\.pdf$/i, ''), max, onProgress).catch(() => []);
-      if (imgs.length) return imgs;
-    }
-    // das PDF selbst nur, wenn es in die Anfrage passt – sonst reicht der gelesene Text (große Skripte, Bücher)
-    let bin = '';
-    if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    if (!bin && !text) throw new Error('PDF nicht lesbar');
-    return { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages, ...(text ? { text } : {}) };
-  }
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) return pdfToInline(file, onProgress);
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
@@ -2022,7 +2118,7 @@ function sourceImageFigure(raw, sources) {
   const n = +d?.n, k = +(d?.bild ?? d?.b ?? 1);
   const s = sources.find((q) => q?.n === n);
   const im = s?.images?.[k - 1];
-  if (!im?.src || !/^https:\/\/(assets\.serlo\.org|upload\.wikimedia\.org)\//.test(im.src)) return null;
+  if (!im?.src || !/^https:\/\//.test(im.src)) return null; // der Server lässt nur Bilder der gelesenen Lernquelle durch (lib/web.js extractImages)
   const fig = el('figure', 'src-img');
   const a = el('a', 'src-img-pic');
   a.href = safeUrl(s.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
@@ -2317,6 +2413,7 @@ function messageFooter(msgEl, text) {
   toDoc.setAttribute('aria-label', 'Antwort als Dokument speichern');
   toDoc.addEventListener('click', () => importAnswer(msgEl));
   bar.append(copy, redo, toDoc);
+  if (msgEl._model) { const m = el('span', 'msg-model'); m.textContent = msgEl._model; m.title = 'Diese Antwort hat geschrieben: ' + msgEl._model; bar.append(m); }
   return bar;
 }
 
@@ -2863,6 +2960,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   };
 
   const onStatus = async (s) => {
+    if (s.stage === 'completed' && s.meta?.provider) msgEl._model = String(s.meta.provider).slice(0, 60); // welches Modell geantwortet hat (unten klein)
     if (s.stage === 'working' && s.meta?.quiet) { quiet = true; removePending(); return; }
     if (s.stage === 'thinking') {
       if (s.status === 'active' && work) phase('plan');
@@ -3192,7 +3290,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   if (suggested) msgEl.insertBefore(agentSuggestCard(msgEl, suggested), msgEl.querySelector('.msg-actions'));
   if (questions) {
     // Rückfrage gehört zum Denken: kein eigener Antworttext, sondern ein Schritt in der Zeitleiste
-    if (stripAskBlock(answerR.text).trim().length < 300) answer.remove();
+    if (stripAskBlock(answerR.text).trim().length < 300 && !/```(agententwurf|agentprofil|avatar)/.test(answerR.text)) answer.remove(); // Agenten-Entwurf bleibt stehen
     const w = ensureWork();
     const step = stepLine('spin', '<span class="shimmer">Wartet auf deine Antwort</span>');
     w.steps.append(step);
@@ -5212,7 +5310,7 @@ function chatItems(withImages) {
   return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
     const c = chatOf(tab);
     return {
-      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, setupName: c.setupName || undefined, setupRenamed: c.setupRenamed || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
       history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
     };
   });
@@ -5333,7 +5431,7 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     const tab = i === 0 && first ? first : createTab(s.title);
     if (i === 0) activateTab(tab);
     tab.dataset.cid = s.id;
-    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' };
+    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
     tab.querySelector('.tab-title').textContent = s.title;
     tab.classList.toggle('pinned', !!s.pinned);
     chat.replaceChildren();
@@ -5366,7 +5464,7 @@ async function openSavedChat(id) {
     if (!tab) {
       tab = createTab(s.title);
       tab.dataset.cid = s.id;
-      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' };
+      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
       tab.querySelector('.tab-title').textContent = s.title;
       chat.replaceChildren();
       history.length = 0;
@@ -5394,7 +5492,7 @@ function renderDetached(hist) {
   chat.append(keep); history.push(...keepH);
   return { nodes, history: h };
 }
-const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, ws: s.ws || 'main' });
+const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' });
 async function syncSharedChats() {
   if (restoring) return;
   const shared = new Set((window.Workspaces?.list() || []).filter((w) => w.shared).map((w) => w.id));

@@ -23,14 +23,15 @@ test('Eigener Agent: Anweisung wird geprüft und an den System-Prompt gehängt',
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 
-test('Einrichtungs-Chat: nur Einrichtung (Vorrang am Ende), keine Suche, strenge Pixel-Figuren', async () => {
+test('Einrichtungs-Chat: nur Einrichtung (Vorrang am Ende), keine Suche, KI schlägt Name und Aussehen vor, wenige Fragen', async () => {
   const fx = M.installFetch([{ match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Wofür soll er da sein?'])) }]);
   try {
     const c = M.collect();
     await W.runChat({ env: { ...M.ENV }, body: { log: false, setup: 'agent', agent: 'research', effort: 'low', setupBase: { name: 'Alt', prompt: 'alte Anweisung' }, messages: [{ role: 'user', text: 'Ich will einen Agenten für Bio' }] }, send: c.send, signal: new AbortController().signal });
     const sys = M.systemOf(fx.calls.find(M.is.geminiStream));
     assert.match(sys, /EINRICHTUNG EINES EIGENEN AGENTEN/);
-    assert.match(sys, /havaneser/);
+    assert.match(sys, /```agententwurf|\\`\\`\\`agententwurf|agententwurf/, 'Entwurf mit Name und Aussehen');
+    assert.match(sys, /NIE fragen nach: Ton, Anrede, Antwortlänge/, 'keine unnötigen Fragen');
     assert.match(sys, /alte Anweisung/);
     assert.ok(sys.lastIndexOf('EINRICHTUNG EINES EIGENEN AGENTEN') > sys.lastIndexOf('AGENT: ALLGEMEIN'), 'Einrichtung steht am Ende');
     assert.doesNotMatch(sys, /AGENT: RESEARCH/, 'Einrichtung läuft immer als Allgemein');

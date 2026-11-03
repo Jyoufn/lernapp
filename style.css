@@ -10716,3 +10716,69 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .src-img.ready .src-img-pic img { opacity: 1; }
 .src-img figcaption { display: flex; flex-wrap: wrap; gap: 2px 8px; margin-top: 7px; color: var(--text-3); font-size: 12.5px; line-height: 17px; }
 .src-img-l { color: var(--text-4); }
+
+/* Lehrplan (Einstellungen → Agenten): Stufe, Fächer als Chips, Stand je Fach */
+.lp .lp-fach-row { height: auto; align-items: flex-start; padding-top: 12px; padding-bottom: 12px; }
+.lp-chips { display: flex; flex: 1; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.lp-chip { height: 28px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, 0.09); border-radius: 999px; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; cursor: pointer; transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease; }
+.lp-chip:hover { color: var(--text); }
+.lp-chip.on { border-color: transparent; background: color-mix(in srgb, var(--accent) 18%, transparent); color: color-mix(in srgb, var(--accent) 55%, #fff); }
+.lp-info { min-width: 0; overflow: hidden; color: var(--text-3); font-size: 12.5px; white-space: nowrap; text-overflow: ellipsis; }
+.lp-ok { display: inline-flex; align-items: center; gap: 5px; color: var(--text-3); }
+.lp-ok svg { color: var(--accent); }
+.lp-fail { color: #e5857a; }
+.lp label.ags-ib, .lp a.ags-ib { display: grid; place-items: center; cursor: pointer; }
+.lp .lp-note { height: auto; padding-top: 12px; padding-bottom: 12px; }
+.lp .lp-note .st-muted { font-size: 12.5px; line-height: 18px; }
+
+/* ===================================================================
+   03.11.2026 (9) – Neuer Agent: Startfläche statt Schritt-für-Schritt, KI schlägt Namen und Aussehen vor (Entwurfs-Karte), flüssige Nachrichten
+   =================================================================== */
+.ags-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 470px; margin: max(9vh, 40px) auto 24px; padding: 0 16px; text-align: center; animation: ags-hero-in 640ms var(--spring, ease) both; }
+.ags-hero.out { animation: ags-hero-out 340ms ease both; }
+@keyframes ags-hero-in { from { opacity: 0; transform: translateY(14px) scale(0.98); } }
+@keyframes ags-hero-out { to { opacity: 0; transform: translateY(-10px) scale(0.98); filter: blur(4px); } }
+.ags-hero-art { display: grid; place-items: center; width: 116px; height: 116px; margin-bottom: 8px; border-radius: 30px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.ags-hero-art .ap-ghost svg:not(.ap-plus svg) { width: 64px; height: 64px; }
+.ags-hero-t { margin: 0; color: var(--text); font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.ags-hero-s { margin: 0; color: var(--text-3); font-size: 14px; line-height: 21px; }
+/* Entwurf: Bild links, Name (mit Stift), ein Satz, „Neu generieren“ */
+.md .agd { display: grid; grid-template-columns: 168px minmax(0, 1fr); gap: 18px; align-items: center; margin: 12px 0 8px; padding: 14px; border-radius: 16px;
+  background: color-mix(in srgb, var(--main-bg) 97%, #fff); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); animation: cbx-in 420ms var(--spring, ease) both; transition: opacity 300ms ease; }
+.md .agd.old { opacity: 0.5; }
+.agd.old .agd-acts, .agd.old .agd-ren { display: none; }
+.agd-pic { position: relative; display: grid; place-items: end center; width: 168px; aspect-ratio: 1; overflow: hidden; border-radius: 12px; background: rgba(255, 255, 255, 0.02); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.agd-pic.wait { display: block; overflow: visible; background: none; box-shadow: none; }
+.md .agd-pic.wait > .illustration-pending { display: flex; padding: 0 0 6px; }
+.agd-pic.wait > .ill-frame { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border: 1px solid #262626; border-radius: 12px; }
+.agd-pic.wait > .ill-frame svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.agd-pic.wait > .ill-frame rect { opacity: 0; animation: ill-tile 5s ease-in-out infinite backwards; }
+.agd-pic.ready svg { display: block; width: 86%; height: 86%; image-rendering: pixelated; animation: ill-reveal 900ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.agd-pic.err { place-items: center; padding: 14px; color: var(--text-3); font-size: 12.5px; line-height: 17px; text-align: center; }
+.agd-side { min-width: 0; }
+.agd-k { color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.agd-name { display: flex; align-items: center; gap: 4px; min-height: 34px; margin-top: 1px; }
+.agd-name b { min-width: 0; overflow: hidden; color: var(--text); font-size: 19px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; }
+.agd-ren { display: grid; flex: none; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-4); cursor: pointer; transition: color 140ms ease, background-color 140ms ease; }
+.agd-ren:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-2); }
+.agd-in { display: flex; align-items: center; gap: 6px; }
+.agd-in input { width: min(200px, 100%); height: 32px; padding: 0 10px; border: 1px solid var(--field-border, #2a2a2a); border-radius: 9px; background: var(--field-bg, #1c1c1c); color: var(--text); font: inherit; font-size: 15px; font-weight: 600; outline: none; }
+.agd-in button { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer; }
+.agd-desc { margin: 2px 0 0; color: var(--text-3); font-size: 13px; line-height: 19px; }
+.agd-acts { display: flex; gap: 8px; margin-top: 12px; }
+.agd-acts:empty { display: none; }
+@media (max-width: 520px) { .md .agd { grid-template-columns: 1fr; } .agd-pic { width: 100%; max-width: 240px; } }
+@media (prefers-reduced-motion: reduce) { .agd-pic.wait > .ill-frame rect { animation: none; opacity: 1; } .agd-pic.ready svg, .ags-hero { animation: none; } }
+/* flüssig: eigene Nachricht gleitet weich herein, der Chat scrollt sanft mit */
+.app.agent-setup .msg-out { animation: ags-out-in 460ms var(--spring, ease) both; transform-origin: 100% 100%; }
+@keyframes ags-out-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } }
+.app.agent-setup .chat-scroll { scroll-behavior: smooth; }
+
+/* Schreib-Saum: neue Zeichen tauchen weich auf (Gedanken, Antworten) */
+.ink { animation: ink-in 560ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@keyframes ink-in { from { opacity: 0; filter: blur(1.5px); } 55% { filter: none; } to { opacity: 1; filter: none; } }
+@media (prefers-reduced-motion: reduce) { .ink { animation: none; } }
+.msg-actions .msg-model { margin-left: auto; padding: 0 4px; color: var(--text-4); font-size: 11.5px; white-space: nowrap; opacity: 0; transition: opacity 200ms ease; }
+.msg-ai:hover .msg-model, .msg-actions:focus-within .msg-model { opacity: 1; }
+@media (hover: none) { .msg-actions .msg-model { opacity: 0.8; } }
+.lp .lp-note .st-muted { white-space: normal; overflow: visible; }
