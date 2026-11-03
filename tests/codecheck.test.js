@@ -63,7 +63,7 @@ test('Coden: fehlerhafter Code → Prüfblock mit Fehlern → Korrekturrunde →
   try {
     const c = M.collect();
     const prev = { role: 'assistant', text: `${F4}file:README.md\n# Snake\n${F4}` };
-    const result = await W.runChat({ env: { GEMINI_API_KEY: M.ENV.GEMINI_API_KEY, CODE_AGENT: 'on' }, body: { log: false, agent: 'code', effort: 'low', messages: [{ role: 'user', text: 'Bau Snake' }, prev, { role: 'user', text: 'Mach es besser' }] }, send: c.send, signal: new AbortController().signal });
+    const result = await W.runChat({ env: { GEMINI_API_KEY: M.ENV.GEMINI_API_KEY, CODE_AGENT_FILES: 'on' }, body: { log: false, agent: 'code', effort: 'low', messages: [{ role: 'user', text: 'Bau Snake' }, prev, { role: 'user', text: 'Mach es besser' }] }, send: c.send, signal: new AbortController().signal });
     const gens = fx.calls.filter(M.is.geminiStream);
     assert.equal(gens.length, 2, 'eine Korrekturrunde');
     assert.match(M.systemOf(gens[0]), /AKTUELLES PROJEKT[\s\S]*README\.md/, 'Projektstand steht im Prompt');

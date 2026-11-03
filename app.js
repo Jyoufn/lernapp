@@ -693,11 +693,11 @@ function userBubble(text, cls) {
 /* Rückfragen-Block der KI (```ask … ```) – wird nicht als Text gezeigt, sondern als Fragefeld */
 const ASK_BLOCK = /```ask\s*([\s\S]*?)(```|$)/;
 /* Agent-Empfehlung der KI (```agent {"agent":"code"}```) – erscheint als Karte zum Wechseln, nicht als Text */
-const AGENT_BLOCK = /```agent\s*([\s\S]*?)(```|$)/g;
+const AGENT_BLOCK = /```agent(?![\w-])\s*([\s\S]*?)(```|$)/g;
 const AGENT_NAMES = { general: 'Allgemein', research: 'Research', learn: 'Lernen', code: 'Coden', boerse: 'Börse' };
 const AGENT_ROLE = { research: 'Recherche mit Quellen', learn: 'Erklären und Lernen', code: 'Programmieren', boerse: 'Aktien und Planspiel Börse' };
 function parseAgentBlock(text) {
-  const m = String(text || '').match(/```agent\s*([\s\S]*?)```/);
+  const m = String(text || '').match(/```agent(?![\w-])\s*([\s\S]*?)```/);
   if (!m) return null;
   try { const id = JSON.parse(m[1]).agent; return AGENT_NAMES[id] && id !== window.PixelDogs?.mode ? id : null; } catch { return null; }
 }
@@ -1495,6 +1495,9 @@ function renderMarkdown(target, text, opts = {}) {
     illustrationsPlaced++;
     pre.replaceWith(tagViz(illustrationFigure(data), 'illustration', raw));
   });
+  // Mini-Apps (```widget), eigene Hintergründe, Einstellungen per Chat (code-box.js) und Agenten-Profile (agent-builder.js)
+  window.CodeBox?.render(target, text, opts);
+  window.AgentBuilder?.render(target, text, opts);
   if (codeParts.parts) CodeAgent.build(target, codeParts);
 }
 /* Bild entsteht: abgerundete Vierecke in einem geraden Raster, das genau in den 16:9-Rahmen passt (31 × 17, überall gleicher
@@ -2897,7 +2900,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, agent: window.PixelDogs?.mode, ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(historyOf(tab))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...(window.agentPayload?.(window.PixelDogs?.mode, tab) || { agent: window.PixelDogs?.mode }), ...(prefix ? { partial: prefix } : {}) }),
       signal,
     });
     if (!response.ok || !response.body) throw new Error(`Server antwortet nicht (HTTP ${response.status}). Läuft node server.js?`);
@@ -5073,7 +5076,7 @@ function chatItems(withImages) {
   return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
     const c = chatOf(tab);
     return {
-      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
       history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
     };
   });
@@ -5255,7 +5258,7 @@ function renderDetached(hist) {
   chat.append(keep); history.push(...keepH);
   return { nodes, history: h };
 }
-const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, ws: s.ws || 'main' });
+const chatFields = (s) => ({ title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, ws: s.ws || 'main' });
 async function syncSharedChats() {
   if (restoring) return;
   const shared = new Set((window.Workspaces?.list() || []).filter((w) => w.shared).map((w) => w.id));

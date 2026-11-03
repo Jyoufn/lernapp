@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -58,6 +58,7 @@ function deviceKeysOf(req) {
     const out = {};
     for (const k of DEVICE_KEYS) { const v = cleanKeys(obj[k]); if (v) out[k] = v; }
     if (obj.AI_ORDER === 'mistral') out.AI_ORDER = 'mistral'; // Einstellungen → Haupt-KI
+    if (obj.CODE_ORDER === 'gemini') out.CODE_ORDER = 'gemini'; // Einstellungen → Coden mit (Standard: Mistral zuerst)
     return out;
   } catch { return {}; }
 }

@@ -21,6 +21,6 @@ test('Mistral (NVIDIA): eigener Schlüssel, Reihenfolge laut Einstellung – Gem
   assert.deepEqual(P.familiesFor({ ...env, AI_ORDER: 'mistral' }).slice(0, 2), ['mistral', 'gemini']);
   const a = W.providerAttempts({ ...env, AI_ORDER: 'mistral', __family: 'mistral' }, 'x', ['gemini-2.5-flash']);
   assert.equal(a[0].provider, 'mistral');
-  assert.equal(a[0].model, 'mistralai/mistral-small-4-119b-2603');
+  assert.equal(a[0].model, 'mistralai/mistral-large-3-675b-instruct-2512');
   assert.ok(a.some((x) => x.kind === 'gemini'), 'danach Gemini');
 });

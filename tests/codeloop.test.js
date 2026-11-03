@@ -9,7 +9,7 @@ const reply = (content, calls = [], reasoning = '') => M.json({ choices: [{ mess
   ...(reasoning ? { reasoning_content: reasoning } : {}),
   ...(calls.length ? { tool_calls: calls.map(([name, args], i) => ({ id: `c${i}`, type: 'function', function: { name, arguments: JSON.stringify(args) } })) } : {}) } }] });
 const isCode = (c) => c.url.includes('integrate.api.nvidia.com') && Array.isArray(c.body?.tools);
-const ENV = { NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT: 'on' }; // Coden ist in der App vorerst gesperrt – für die Tests frei // Lauftest (echter Browser) ist eigens getestet
+const ENV = { NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT_FILES: 'on' }; // Datei-Modus des Coding-Agenten (in der App aus) – für die Tests an // Lauftest (echter Browser) ist eigens getestet
 
 test('Agenten-Schleife: Plan → Dateien schreiben → Prüfung findet Fehler → gezielt ändern → Prüfung ok → fertig', async () => {
   const steps = [
@@ -198,7 +198,7 @@ test('Agenten-Schleife: kaputter Werkzeug-Aufruf (400 tool_use_failed) → Hinwe
 
 /* OpenRouter (gratis) zuerst, NVIDIA direkt als Ersatz */
 const isOR = (c) => c.url.includes('openrouter.ai') && Array.isArray(c.body?.tools);
-const ENV_OR = { OPENROUTER_API_KEY: 'test-or-key', NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT: 'on' };
+const ENV_OR = { OPENROUTER_API_KEY: 'test-or-key', NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT_FILES: 'on' };
 
 test('OpenRouter: Nemotron 3 Ultra (free) wird zuerst benutzt, mit eigenem Schlüssel', async () => {
   let n = 0;
@@ -259,7 +259,7 @@ test('Gestreamter Schritt: Werkzeug-Aufruf kommt stückweise, Live-Status „Dat
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 
-test('Coden ist vorerst gesperrt: ohne CODE_AGENT=on läuft eine Coden-Anfrage wie beim Allgemein-Agenten (keine Werkzeug-Schleife)', async () => {
+test('Coden ohne Datei-Modus: keine Werkzeug-Schleife, Mini-App-Anleitung im Prompt (Code läuft im Kasten der App)', async () => {
   const fx = M.installFetch([
     { match: isCode, respond: () => reply('sollte nicht kommen') },
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Hallo!'])) },
@@ -270,6 +270,10 @@ test('Coden ist vorerst gesperrt: ohne CODE_AGENT=on läuft eine Coden-Anfrage w
     const result = await W.runChat({ env: { ...M.ENV, NVIDIA_CODE_API_KEY: 'test-code-key' }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Hallo' }] }, send: c.send, signal: new AbortController().signal });
     assert.ok(!fx.calls.some(isCode), 'keine Werkzeug-Schleife');
     assert.match(result.answer, /Hallo!/);
+    const sys = M.systemOf(fx.calls.find(M.is.geminiStream));
+    assert.match(sys, /AGENT: CODEN/);
+    assert.match(sys, /MINI-APPS/);
+    assert.doesNotMatch(sys, /file:index\.html/, 'kein Datei-Format');
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 

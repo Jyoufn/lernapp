@@ -104,6 +104,13 @@ const Thinking = (() => {
      wrote = Zeile, wenn das Bauen fertig ist (mit Zahlen aus dem Block, siehe statsOf). */
   const X = (main, sub, kind) => ({ main, sub, kind });
   const FORMATS = {
+    widget: { label: 'Mini-App', wrote: 'Mini-App gebaut',
+      start: X('Ziel verstehen', 'Was soll die Mini-App können?', 'read'),
+      plan: X('Planen', 'Aufbau und Bedienung planen', 'think'), thoughts: X('Planen', 'Aufbau und Bedienung planen', 'think'),
+      search: X('Recherchieren', 'Aktuelle Infos suchen', 'search'), gather: X('Recherchieren', 'Infos sammeln', 'read'),
+      analyze: X('Planen', 'Infos einordnen', 'check'),
+      work: X('Programmieren', 'Mini-App programmieren', 'write'), review: X('Prüfen', 'Code prüfen', 'check'),
+      done: X('Fertig', 'Mini-App fertig', 'check') },
     praesentation: { label: 'Präsentation', wrote: 'Präsentation erstellt',
       start: X('Ziel verstehen', 'Ziel der Präsentation festlegen', 'read'),
       plan: X('Planen', 'Folien gliedern', 'think'), thoughts: X('Planen', 'Folien gliedern', 'think'),
@@ -142,6 +149,7 @@ const Thinking = (() => {
   };
   // Format aus der Frage (Börse: „Chart“ ist dort der Aktienchart, kein eigenes Format)
   const ASK = [
+    ['widget', /mini-?app|simulation|\bspiel\b|\bgame\b|dashboard|interaktiv|programmier|veranschaulich\w* .*code/i],
     ['praesentation', /pr(ä|ae)sentation|powerpoint|keynote|\bfolien\b|vortragsfolien/i],
     ['mindmap', /mind\s?-?map|gedankenkarte/i],
     ['timeline', /zeitstrahl|zeitleiste|timeline|chronolog/i],
@@ -157,7 +165,7 @@ const Thinking = (() => {
   };
   // Block in der Antwort → Format (z. B. ```mindmap)
   const blockFormat = (text) => {
-    const m = /```(praesentation|mindmap|timeline|chart|heft)\b/.exec(String(text || ''));
+    const m = /```(praesentation|mindmap|timeline|chart|heft|widget)\b/.exec(String(text || ''));
     return m ? m[1] : null;
   };
   // Zahlen fürs „fertig“: Folien, Äste/Punkte, Ereignisse, Diagramme

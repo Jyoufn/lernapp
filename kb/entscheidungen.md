@@ -8,7 +8,7 @@ Damit nichts Abgelehntes wiederkommt. Kurz halten; nur Dinge, die man sonst wied
 - **Kalender**: keine KW-Anzeige, keine Ganztägig-Zeile, keine rote Jetzt-Linie, kein Anlegen per Klick ins Raster.
 - **Agenten-Leiste mit Hunden oben** ersetzt durch „Agenten | Dokumente“ (Agent wechseln über den Hund in der Mitte).
 - **Bibliothek als Tabelle** ausprobiert, abgelehnt – gleicher Aufbau wie der Chatverlauf.
-- **Coding-Agent** gesperrt (keine KI schnell/gut genug), Allgemein-Agent programmiert normal im Chat.
+- **Coding-Agent** (03.11.) wieder frei, aber ohne Datei-Projekte/Server-Vorschau (lief nur am PC): baut Mini-Apps im Kasten, Mistral Large zuerst.
 - **Planspiel-Login** bewusst entfernt (Teilnahmebedingungen).
 - **Tooltips** überall aus. **Glocke/Benachrichtigungen** entfernt. **Skill-System** entfernt.
 - **Präsentation**: nur Design „Klar“, keine grauen Unterzeilen. Bilder: erst ein geprüft passendes freies Foto (Wikimedia, englische Suchwörter), sonst ein passendes KI-Bild im Fotostil – nie ein unpassender Suchtreffer (31.10., vorher „nur echte Fotos“ → oft unpassend/keine Bilder).

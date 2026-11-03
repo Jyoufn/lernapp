@@ -50,7 +50,10 @@
   const app = document.getElementById('app');
   const inner = document.querySelector('.sidebar-inner');
   const panel = document.querySelector('.panel');
-  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten' };
+  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten', saved: 'Gespeichert' };
+  // Erweiterungen anderer Dateien (code-box.js, chat-bg.js, agent-builder.js): { page, order, html(), click(e, redraw), input(e), change(e) }
+  const hooks = (pg) => (window.SettingsHooks || []).filter((h) => !pg || h.page === pg).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const hooksHtml = (pg) => hooks(pg).map((h) => { try { return h.html(); } catch { return ''; } }).join('');
   let page = PAGES[read(PAGE_KEY, 'agents')] ? read(PAGE_KEY, 'agents') : 'agents';
   // Kacheln im Hintergrund des neuen Chats: Stufen statt Regler (Wert = Deckkraft in %)
   const TILES = [['Aus', 0], ['Leicht', 18], ['Mittel', 33], ['Stark', 60]];
@@ -63,7 +66,8 @@
   side.innerHTML = `<button type="button" class="st-back"><svg width="14" height="14"><use href="#o-chev"/></svg><span>Zurück</span></button>
     <a class="st-item" href="#" data-st="general"><svg width="15" height="15"><use href="#o-user"/></svg><span>Allgemein</span></a>
     <a class="st-item" href="#" data-st="look"><svg width="15" height="15"><use href="#o-look"/></svg><span>Aussehen</span></a>
-    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>`;
+    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>
+    <a class="st-item" href="#" data-st="saved"><svg width="15" height="15"><use href="#o-library"/></svg><span>Gespeichert</span></a>`;
   inner?.append(side);
 
   const view = document.createElement('section');
@@ -124,7 +128,26 @@
         <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
         + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div></div>
       <h2>Neuer Chat</h2><div class="st-card">
-        <div class="st-row"><span class="st-name">Hintergrund</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`;
+        <div class="st-row"><span class="st-name">Kacheln</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`
+      + hooksHtml('look');
+  }
+
+  /* Haupt-KI: zwei Karten (Logo, Name, wofür sie gut ist) – gewählt = blauer Haken + hellerer Rand; darunter „Coden mit“ */
+  const AIS = [
+    { id: 'gemini', name: 'Google Gemini', logo: 'gemini', model: 'Gemini 3.x Flash', text: 'Denkt sichtbar mit, liest Fotos und PDFs, Google-Suche' },
+    { id: 'mistral', name: 'Mistral', logo: 'mistral', model: 'Mistral Large 3 · NVIDIA', text: 'Sehr großes Modell, stark beim Programmieren und Schreiben' },
+  ];
+  function mainAiHtml() {
+    const order = deviceKeys.AI_ORDER === 'mistral' ? 'mistral' : 'gemini';
+    const code = deviceKeys.CODE_ORDER === 'gemini' ? 'gemini' : 'mistral';
+    const has = (id) => (id === 'gemini' ? keyList('GEMINI_API_KEY').length || fileKeys.GEMINI_API_KEY : keyList('MISTRAL_API_KEY').length || keyList('FLUX3_API_KEY').length || fileKeys.MISTRAL_API_KEY);
+    const cards = AIS.map((a) => `<button type="button" class="st-ai${a.id === order ? ' on' : ''}" data-ai-order="${a.id}" role="radio" aria-checked="${a.id === order}">
+        <span class="st-ai-top"><svg class="st-logo" width="22" height="22" aria-hidden="true"><use href="#b-${a.logo}"/></svg><span class="st-ai-check">${fi('check', 11)}</span></span>
+        <span class="st-ai-name">${esc(a.name)}</span><span class="st-ai-model">${esc(a.model)}</span><span class="st-ai-text">${esc(a.text)}</span>
+        ${has(a.id) ? '' : '<span class="st-ai-miss">Noch kein Schlüssel</span>'}</button>`).join('');
+    return `<h2>Haupt-KI</h2><div class="st-ai-grid" role="radiogroup" aria-label="Zuerst nutzen">${cards}</div>
+      <p class="st-ai-note">Wird zuerst genutzt. Ist das Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p>
+      <div class="st-card st-ai-code"><div class="st-row"><span class="st-dog">${window.PixelDogs?.svg('code', 24) || ''}</span><span class="st-name">Coden und Mini-Apps mit</span><span class="grow"></span>${seg('data-code-order', [['Mistral', 'mistral'], ['Gemini', 'gemini']], code)}</div></div>`;
   }
 
   /* ---------- Workspaces: Zeile antippen klappt sie auf (Symbol, Name, Öffnen, Personen einladen, Löschen) ---------- */
@@ -222,13 +245,14 @@
           <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Im Konto' : 'Aus .env'}</span></div></div>`;
     } else if (page === 'look') {
       body = lookPage();
+    } else if (page === 'saved') {
+      body = hooksHtml('saved') || '<h2>Gespeichert</h2><div class="st-card"><div class="st-row"><span class="st-muted">Noch nichts gespeichert.</span></div></div>';
     } else {
       const modes = window.PixelDogs?.MODES || [];
-      const order = deviceKeys.AI_ORDER === 'mistral' ? 'mistral' : 'gemini';
-      body = `<h2>Haupt-KI</h2><div class="st-card"><div class="st-row"><span class="st-name">Zuerst nutzen</span><span class="grow"></span>${seg('data-ai-order', [['Gemini', 'gemini'], ['Mistral', 'mistral']], order)}</div>
-          <p class="st-ws-note st-order-note">Ist ihr Kontingent aufgebraucht, übernimmt automatisch die andere – danach Groq und OpenRouter.</p></div>`
+      body = mainAiHtml()
         + `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
-        + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.map(agentRow).join('')}</div>` : '');
+        + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}</div>` : '')
+        + hooksHtml('agents');
     }
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
     drawSide();
@@ -283,6 +307,9 @@
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
+    const co = e.target.closest('[data-code-order]');
+    if (co) { if (co.dataset.codeOrder === 'gemini') deviceKeys.CODE_ORDER = 'gemini'; else delete deviceKeys.CODE_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
     const ao = e.target.closest('[data-ai-order]');
     if (ao) { if (ao.dataset.aiOrder === 'mistral') deviceKeys.AI_ORDER = 'mistral'; else delete deviceKeys.AI_ORDER; write(KEYS_KEY, deviceKeys); drawView(); return; }
     const lo = e.target.closest('[data-logout]');
@@ -318,10 +345,12 @@
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-ws-row]') && e.target === e.target.closest('[data-ws-row]')) { e.preventDefault(); e.target.click(); }
   });
   view.addEventListener('change', (e) => {
+    for (const h of hooks(page)) { try { if (h.change?.(e)) return; } catch {} }
     if (e.target.matches('[data-ws-file]')) wsUpload(wst.open, e.target.files?.[0]);
     if (e.target.matches('[data-ws-name]') && !e.target.readOnly) { window.Workspaces.rename(wst.open, e.target.value); drawView(); }
   });
   view.addEventListener('input', (e) => {
+    for (const h of hooks(page)) { try { if (h.input?.(e)) return; } catch {} }
     if (e.target.matches('.st-sw-own input')) { // eigene Akzentfarbe live, ohne neu zu zeichnen (der Farbwähler bliebe sonst nicht offen)
       window.Appearance?.set({ accent: e.target.value });
       const own = e.target.parentElement;
@@ -339,5 +368,7 @@
   // Symbol-Menü schließt bei Klick daneben
   document.addEventListener('pointerdown', (e) => { if (wst.ic && !e.target.closest('.st-ws-menu, [data-ws-ic]')) { wst.ic = false; drawView(); } }, true);
   loadStatus();
-  window.Settings = { open, close };
+  // von außen neu zeichnen (z. B. Mini-App gespeichert, Agent erstellt) – nur wenn offen und kein Feld gerade bearbeitet wird
+  const redraw = () => { if (app.classList.contains('settings-open') && !view.querySelector('textarea:focus, input:focus')) drawView(); };
+  window.Settings = { open, close, redraw };
 })();

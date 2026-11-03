@@ -5,7 +5,7 @@
 |---|---|
 | `index.html` | Gerüst, Linien-Icons der Sidebar (`#o-…`), alte Icons (`#i-…`), Sidebar-Einträge `data-nav` |
 | `auth.js` | Anmeldung (Vorschau links, Formular rechts), lädt Browser-Speicher aus dem Konto, startet App-Skripte |
-| `settings.js` | Einstellungen in der Sidebar: Tabs `general` (Allgemein, Workspaces), `look` (Aussehen), `agents` (Verbindung/API-Keys). `Settings.open('agents')` |
+| `settings.js` | Einstellungen in der Sidebar: Tabs `general` (Allgemein, Workspaces), `look` (Aussehen), `agents` (Haupt-KI-Karten, Verbindung/API-Keys), `saved` (Gespeichert). Erweiterbar über `window.SettingsHooks` ({page, order, html, click, input, change}); `Settings.open('agents')`, `Settings.redraw()` |
 | `icons.js` | `FadeIcons` (gefüllt, `#f-…`) und `DocIcons` (`#d-…`, nur Dokument-Icons) |
 | `app.js` (~5500 Z.) | Tabs (`createTab`, `activateTab`, `isDraft`, `openViewTab`, `openDocTab`), Sidebar (`renderSideChats`), Chat-Stream (`sendMessage` → SSE), Zeitleiste (`createWork`, `stepLine`, `startStage`/`endStage`, `phase`), Funde (`linksFigure`), Quellen (`siteIcon`, `sourceChip`, `fillChips`, `mainSources`, `placeSourceStack`, `openSourcesModal`), Rückfragen (`showAskPanel`, `parseAskBlock`), Karten (`keyCard`, `errorCard`, `resumeCard`, `agentSuggestCard`), Visuals (`chartFigure`, `mindmapFigure`, `timelineFigure`), Chatverlauf (`chatsView`), Umschalter „Erstellen“ (`createSwitch`), `AppActions` (Sprach-Agent) |
 | `thinking.js` | Hauptstatus/Unterpunkte der Zeitleiste je Agent (`FLOWS`) und je Format (`FORMATS`), `formatOf`, `blockFormat`, `statsOf` |
@@ -22,7 +22,10 @@
 | `calendar.js` | Wochenansicht (`render`, `layoutDay`, `band` für ganztägig), Tagesfenster (`drawDay`), Termin-Fenster (`edit`) |
 | `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow`, `colorPicker`, `timeGroups` (Zuletzt/Gestern/…) |
 | `search.js` | ⌘K-Palette, Workspace-Menü (`window.Workspaces`) |
-| `workspace-invite.js`, `music.js`, `timer.js`, `code-agent.js` | Einladung, Musik, Timer, Coding-Anzeige |
+| `workspace-invite.js`, `music.js`, `timer.js`, `code-agent.js` | Einladung, Musik, Timer, Coding-Anzeige (alter Datei-Modus) |
+| `code-box.js` | Mini-Apps (```widget): `parse`, `figure` (Kasten, Dashboard-Kacheln, Code-Ansicht), `srcdoc` (Sandbox + Grundstile + Laufzeit), `start/stop` (iframes, Wächter, Pause), Gespeichert (`codebox.saved.v1`), Design (`codebox.design.v1`), ```einstellung (`applySetting`), `render` (Haken aus `renderMarkdown`) |
+| `chat-bg.js` | Animierter Chat-Hintergrund (`chatbg.v1`): Leinwand-Szenen, eigener Code (```hintergrund) im iframe, Einstellungs-Abschnitt |
+| `agent-builder.js` | Eigene Agenten (`agents.custom.v1`): Fenster „Neuer Agent“ (Einrichtungs-Chat), Profil-Karte (```agentprofil), `window.agentPayload` (agent/custom/setup/look an jede Anfrage), Liste in Einstellungen → Agenten |
 | `style.css` (~8900 Z.) | Alle Stile; ältere Schichten oben, **gültig ist das Ende** |
 
 ## Server

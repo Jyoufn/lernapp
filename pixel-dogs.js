@@ -832,8 +832,67 @@ const PixelDogs = (() => {
     { id: 'code', name: 'Coden' },
     { id: 'boerse', name: 'Börse' },
   ];
-  // vorerst nicht verfügbar (ausgegraut, nicht wählbar, wird nicht vorgeschlagen) – der Coding-Agent ist noch nicht gut genug
-  const UNAVAILABLE = new Set(['code']);
+  // nicht verfügbare Agenten (ausgegraut) – Coden ist wieder frei (Mini-Apps, Mistral Large zuerst)
+  const UNAVAILABLE = new Set();
+
+  /* ---------- Eigene Agenten (agent-builder.js): Figur der festen Agenten, nur umgefärbt – exakt derselbe Pixel-Stil ----------
+     Gespeichert in localStorage 'agents.custom.v1' (geht mit ins Konto). id 'u-…', figur → Raster eines festen Agenten, farbe → Fellfarbe.
+     Umfärben: alle Farben außer Schwarz/Umriss bekommen Farbton und Sättigung der Fellfarbe, die Helligkeit bleibt (verschoben auf den Zielton). */
+  const CUSTOM_KEY = 'agents.custom.v1';
+  const FIGURES = { havaneser: 'general', collie: 'learn', golden: 'research', oktopus: 'code', baer: 'boerse' };
+  const FURS = { original: null, creme: [40, 0.32, 0.8], weiss: [40, 0.08, 0.9], grau: [0, 0, 0.58], schwarz: [230, 0.08, 0.26], braun: [26, 0.42, 0.4],
+    gold: [38, 0.66, 0.58], rot: [4, 0.6, 0.5], orange: [24, 0.8, 0.55], rosa: [338, 0.58, 0.72], blau: [214, 0.6, 0.58], tuerkis: [176, 0.52, 0.48], gruen: [140, 0.4, 0.48] };
+  const BASE = {}, PALMAP = {};
+  const hexHsl = (hex) => {
+    const n = parseInt(hex.slice(1), 16), r = ((n >> 16) & 255) / 255, g = ((n >> 8) & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, d = mx - mn;
+    let h = 0; const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+    if (d) h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(h * 60 + 360) % 360, sat, l];
+  };
+  const hslHex = (h, sat, l) => {
+    const c = (1 - Math.abs(2 * l - 1)) * sat, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = l - c / 2;
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return `#${[r, g, b].map((v) => Math.round((v + m) * 255).toString(16).padStart(2, '0')).join('')}`;
+  };
+  function furMap(baseId, fur) {
+    const t = FURS[fur]; const map = {};
+    if (!t) return map;
+    const cols = new Set();
+    Object.values(DOGS[baseId]).forEach((r) => Object.values(r.pal || {}).forEach((c) => cols.add(String(c).toLowerCase())));
+    const fur0 = [...cols].map((c) => [c, hexHsl(c)]).filter(([, [, , l]]) => l > 0.16 && l < 0.985);
+    if (!fur0.length) return map;
+    const avg = fur0.reduce((a, [, [, , l]]) => a + l, 0) / fur0.length;
+    fur0.forEach(([c, [, , l]]) => { map[c] = hslHex(t[0], t[1], Math.max(0.1, Math.min(0.95, l + (t[2] - avg) * 0.85))); });
+    return map;
+  }
+  const recolor = (html, id) => { const m = PALMAP[id]; return m ? String(html).replace(/(fill|stroke)="(#[0-9a-fA-F]{6})"/g, (all, a, c) => `${a}="${m[c.toLowerCase()] || c}"`) : html; };
+  function readCustom() { try { const l = JSON.parse(localStorage.getItem(CUSTOM_KEY) || '[]'); return Array.isArray(l) ? l.filter((a) => a && /^u-[\w-]{2,40}$/.test(a.id) && a.name) : []; } catch { return []; } }
+  let customCss = null;
+  function registerCustom(list = readCustom()) {
+    // alte eigene Agenten entfernen
+    for (let i = MODES.length - 1; i >= 0; i--) if (MODES[i].custom) MODES.splice(i, 1);
+    Object.keys(BASE).forEach((id) => { delete DOGS[id]; delete BASE[id]; delete PALMAP[id]; delete INFO_CUSTOM[id]; });
+    let css = '';
+    list.slice(0, 24).forEach((a) => {
+      const base = FIGURES[a.figur] || 'general', map = furMap(base, a.farbe);
+      BASE[a.id] = base; PALMAP[a.id] = map;
+      DOGS[a.id] = Object.fromEntries(Object.entries(DOGS[base]).map(([sz, r]) => [sz, { ...r, pal: Object.fromEntries(Object.entries(r.pal).map(([k, c]) => [k, map[String(c).toLowerCase()] || c])) }]));
+      MODES.push({ id: a.id, name: String(a.name).slice(0, 24), custom: true });
+      const tintHex = FURS[a.farbe] ? hslHex(FURS[a.farbe][0], FURS[a.farbe][1], 0.6) : '#a3a3a3';
+      const n = parseInt(tintHex.slice(1), 16);
+      INFO_CUSTOM[a.id] = { icon: 'agent', tint: `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, 0.08)`, text: String(a.beschreibung || 'Eigener Agent').slice(0, 140) };
+      if (typeof document !== 'undefined') {
+        document.documentElement.style.setProperty(`--dog-${a.id}`, iconUrl(a.id));
+        css += `#chat[data-dog="${a.id}"] .msg-ai:not([data-dog])::before,#chat .msg-ai[data-dog="${a.id}"]::before,.dcc-a[data-dog="${a.id}"]::before{background-image:var(--dog-${a.id})}`;
+      }
+    });
+    if (typeof document !== 'undefined') {
+      customCss ||= document.head.appendChild(document.createElement('style'));
+      customCss.textContent = css;
+    }
+  }
+  const INFO_CUSTOM = {};
 
   /* ---------- Raster → SVG (gleiche Farbe in einer Zeile wird zu einem Rechteck) ---------- */
   function rects({ rows, pal }, ox = 0, oy = 0) {
@@ -1083,6 +1142,7 @@ const PixelDogs = (() => {
   }
   const partsSvg = (parts) => parts.map((p) => rects(p, p.x, p.y)).join('');
   function scene(id) {
+    if (BASE[id]) { const s0 = scene(BASE[id]); return { ...s0, html: recolor(s0.html, id) }; } // eigener Agent: Figur der Vorlage, umgefärbt
     const tracks = sceneTracks(id);
     const g = (t, i) => `<g data-track="${i}">${t.frames.map((f, k) => `<g data-f="${k}"${k ? ' style="display:none"' : ''}>${partsSvg(f)}</g>`).join('')}</g>`;
     // Kopf, Blinzeln und Blick atmen gemeinsam; Pfoten und Gegenstände bleiben stehen
@@ -1147,9 +1207,11 @@ const PixelDogs = (() => {
     general: { icon: 'sparkle', tint: 'rgba(240, 232, 212, 0.07)', text: 'Für alles – fragt nach, erklärt, recherchiert, schreibt und programmiert.' },
     research: { icon: 'search', tint: 'rgba(226, 168, 104, 0.08)', text: 'Recherchiert gründlich – nur auf vertrauenswürdigen Seiten.' },
     learn: { icon: 'book', tint: 'rgba(255, 255, 255, 0.05)', text: 'Erklärt Schulstoff verständlich, auch mit deinem Material.' },
-    code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Hilft beim Programmieren. Projekte mit Vorschau folgen.' },
+    code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Programmiert und baut Mini-Apps, Spiele und Dashboards direkt im Chat.' },
     boerse: { icon: 'trend', tint: 'rgba(140, 90, 51, 0.10)', text: 'Nur Aktien: Echtzeitkurse, Charts, Chancen-Radar – wann rein, wann raus fürs Planspiel Börse.' },
   };
+  const infoOf = (id) => INFO[id] || INFO_CUSTOM[id] || INFO.general;
+  registerCustom(); // eigene Agenten vor dem ersten Zeichnen (gespeicherter Modus kann einer davon sein)
   const fine = (id) => (DOGS[id][64] ? 64 : 32); // feineres Raster für die großen Ansichten
   const art = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;
   // Kachel-Bild rechts: dieselben abgerundeten Quadrate wie beim Bild-Erzeugen – gerades Raster, ohne Animation, 9 % Deckkraft;
@@ -1164,6 +1226,7 @@ const PixelDogs = (() => {
     return `<span class="ap-tiles" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" width="100%" height="100%" preserveAspectRatio="xMaxYMid slice"><g fill="#fff" fill-opacity="0.09">${out}</g></svg></span>`;
   })();
   const ico = (n) => (window.FadeIcons ? FadeIcons.svg(n, 12) : '');
+  const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const heroDog = (id) => art(id);
   const pickers = new Set(); // alle offenen/geschlossenen Agenten-Felder (Klick daneben schließt sie)
 
@@ -1173,14 +1236,17 @@ const PixelDogs = (() => {
     picker.className = 'agent-picker';
     picker.setAttribute('role', 'dialog');
     picker.setAttribute('aria-label', 'Agenten');
-    picker.innerHTML = `<div class="ap-inner"><div class="ap-head"><span>Agenten</span><button type="button" class="ap-close" aria-label="Schließen" title="Schließen">${ico('x')}</button></div><div class="ap-grid">`
-      + MODES.map((m) => {
-        const off = UNAVAILABLE.has(m.id);
-        return `<div class="ap-card${off ? ' ap-off' : ''}" data-agent="${m.id}"${off ? ' aria-disabled="true" title="Vorerst nicht verfügbar"' : ''}><div class="ap-art" style="background-color:${INFO[m.id].tint}">${tilesArt}${art(m.id)}<span class="ap-chip">${ico(INFO[m.id].icon)}${m.name}</span></div>`
-          + `<p class="ap-text">${INFO[m.id].text}</p><div class="ap-actions">${off ? '<span class="ap-soon">Nicht verfügbar</span>' : `<button type="button" class="ap-pick" data-mode="${m.id}"></button>`}</div></div>`;
+    const cards = () => MODES.map((m) => {
+        const off = UNAVAILABLE.has(m.id), inf = infoOf(m.id);
+        return `<div class="ap-card${off ? ' ap-off' : ''}${m.custom ? ' ap-own' : ''}" data-agent="${m.id}"${off ? ' aria-disabled="true" title="Vorerst nicht verfügbar"' : ''}><div class="ap-art" style="background-color:${inf.tint}">${tilesArt}${art(m.id)}<span class="ap-chip">${ico(inf.icon)}${esc(m.name)}</span></div>`
+          + `<p class="ap-text">${esc(inf.text)}</p><div class="ap-actions">${off ? '<span class="ap-soon">Nicht verfügbar</span>' : `<button type="button" class="ap-pick" data-mode="${m.id}"></button>`}</div></div>`;
       }).join('')
-      + `</div></div>`;
+      // letzte Karte: eigenen Agenten erstellen (großes Fenster mit Einrichtungs-Chat, agent-builder.js)
+      + `<div class="ap-card ap-new" data-new-agent role="button" tabindex="0"><div class="ap-art">${tilesArt}<span class="ap-plus">${ico('plus')}</span><span class="ap-chip">${ico('agent')}Neuer Agent</span></div><p class="ap-text">Eigenen Agenten erstellen – im Gespräch mit der KI, mit eigenem Pixel-Profilbild.</p><div class="ap-actions"><span class="ap-pick ap-create">Erstellen</span></div></div>`;
+    picker.innerHTML = `<div class="ap-inner"><div class="ap-head"><span>Agenten</span><button type="button" class="ap-close" aria-label="Schließen" title="Schließen">${ico('x')}</button></div><div class="ap-grid">${cards()}</div></div>`;
     host.prepend(picker);
+    // eigene Agenten geändert → Karten neu
+    document.addEventListener('customagentschange', () => { picker.querySelector('.ap-grid').innerHTML = cards(); if (picker.classList.contains('open')) paint(); });
     const paint = (current = mode) => picker.querySelectorAll('.ap-pick[data-mode]').forEach((b) => {
       const on = b.dataset.mode === current;
       b.closest('.ap-card')?.classList.toggle('current', on);
@@ -1211,6 +1277,7 @@ const PixelDogs = (() => {
     triggers.forEach((t) => t.addEventListener('click', () => set(!picker.classList.contains('open'))));
     picker.addEventListener('click', (e) => {
       if (e.target.closest('.ap-close')) { set(false); return; }
+      if (e.target.closest('[data-new-agent]')) { set(false); setTimeout(() => window.AgentBuilder?.open(), 200); return; }
       const card = e.target.closest('.ap-card[data-agent]');
       if (!card || UNAVAILABLE.has(card.dataset.agent)) return;
       const id = card.dataset.agent;
@@ -1661,6 +1728,7 @@ const PixelDogs = (() => {
     };
   };
   function actor(id) {
+    if (BASE[id]) { const a0 = actor(BASE[id]); a0.el.innerHTML = recolor(a0.el.innerHTML, id); return a0; } // eigener Agent
     if (!DOGS[id]?.[20]) id = 'general';
     const anims = ANIMS(id);
     const wrap = document.createElement('span');
@@ -1722,7 +1790,15 @@ const PixelDogs = (() => {
     else mount();
   }
 
-  return { actor, DOGS, MODES, ANIMALS, UNAVAILABLE, SCENE_W, SCENE_H, sceneTracks, svg, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
+  // eigene Agenten neu einlesen (nach Erstellen/Löschen) – gelöschter aktiver Agent → Allgemein
+  function reloadCustom(list) {
+    registerCustom(list);
+    if (!DOGS[mode]) selectFn ? selectFn('general') : (mode = 'general');
+    document.dispatchEvent(new CustomEvent('customagentschange'));
+  }
+  // Vorschau eines noch nicht gespeicherten Agenten (Profil-Karte im Einrichtungs-Chat)
+  const previewArt = (figur, fur, size = 64) => { const base = FIGURES[figur] || 'general', m = furMap(base, fur); return art(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`); };
+  return { actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
 })();
 if (typeof window !== 'undefined') window.PixelDogs = PixelDogs;
 if (typeof module !== 'undefined') module.exports = PixelDogs;
