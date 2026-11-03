@@ -64,72 +64,111 @@ const CodeBox = (() => {
   function themeVars() {
     const acc = /^#[0-9a-f]{6}$/i.test(design.accent || '') ? design.accent : appAccent();
     const mode = window.Appearance?.get?.().mode;
-    const bg = design.surface === 'transparent' ? 'transparent' : mode === 'black' ? '#0f0f0f' : '#1a1a1a';
-    return `:root{--bg:${bg};--card:rgba(255,255,255,.045);--card-2:rgba(255,255,255,.08);--line:rgba(255,255,255,.09);--text:#f2f2f2;--text-2:#d4d4d4;--muted:#8f8f8f;
---accent:${acc};--accent-soft:${rgba(acc, 0.16)};--good:#4fcf8a;--bad:#f07a6e;--warn:#f0b43a;--radius:${RADIUS[design.corners] || RADIUS.normal};
+    void mode; const bg = 'transparent'; // die Fläche liefert der Kasten der App (gleiche Farbe wie die anderen Kästen)
+    const n = parseInt(acc.slice(1), 16), mix = (c) => Math.round(c + (255 - c) * 0.3); // heller Text-Akzent wie #6aa8ff zu #2f86ff
+    const accText = `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((c) => mix(c).toString(16).padStart(2, '0')).join('')}`;
+    return `:root{--bg:${bg};--card:rgba(255,255,255,.035);--card-2:rgba(255,255,255,.07);--hover:rgba(255,255,255,.05);--field:rgba(255,255,255,.02);
+--line:rgba(255,255,255,.08);--line-2:rgba(255,255,255,.16);--text:#f2f2f2;--text-2:#e6e6e6;--muted:#a3a3a3;--dim:#6e6e6e;
+--accent:${acc};--accent-text:${accText};--accent-soft:${rgba(acc, 0.16)};--good:#4fcf8a;--bad:#f07a6e;--bad-soft:rgba(239,107,95,.13);--warn:#f0913a;
+--radius:${RADIUS[design.corners] || RADIUS.normal};--spring:cubic-bezier(.16,1,.3,1);
 --font:${(FONTS[design.font] || FONTS.inter).css};--mono:'JetBrains Mono',ui-monospace,Menlo,monospace;color-scheme:dark}`;
   }
-  // Grundstile: so sieht eine Mini-App ohne eigene Gestaltung schon aus wie die App
-  const BASE_CSS = `*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
-body{margin:0;padding:14px;background:var(--bg);color:var(--text);font:400 14px/1.5 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
-h1,h2,h3,h4{margin:0 0 .5em;font-weight:600;letter-spacing:-.01em;line-height:1.25}h1{font-size:20px}h2{font-size:16px}h3{font-size:14px}h4{font-size:13px}
-p{margin:0 0 .7em}a{color:var(--accent)}small,.muted{color:var(--muted)}hr{border:0;border-top:1px solid var(--line);margin:12px 0}
-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 13px;border:1px solid var(--line);border-radius:calc(var(--radius) - 2px);
-background:var(--card);color:var(--text-2);font:500 13px var(--font);cursor:pointer;transition:background .15s,color .15s,border-color .15s;touch-action:manipulation}
-button:hover{background:var(--card-2);color:var(--text)}button:disabled{opacity:.45;cursor:default}
-button.primary{background:var(--accent);border-color:transparent;color:#fff}button.primary:hover{filter:brightness(1.08);background:var(--accent)}
-input,select,textarea{height:32px;padding:0 10px;border:1px solid var(--line);border-radius:calc(var(--radius) - 2px);background:transparent;color:var(--text);font:400 13.5px var(--font);outline:none}
-textarea{height:auto;padding:8px 10px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:rgba(255,255,255,.2)}
-input[type=range],input[type=checkbox],input[type=radio]{height:auto;padding:0;accent-color:var(--accent)}input[type=color]{width:36px;padding:2px}
-select option{background:#1e1e1e;color:var(--text)}label{color:var(--text-2);font-size:13px}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500;font-size:12px}
-code,pre{font-family:var(--mono);font-size:12.5px}pre{padding:10px 12px;border-radius:var(--radius);background:var(--card);overflow:auto}
-canvas,svg,img,video{display:block;max-width:100%}
-.card{padding:14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}.chip{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:500}
-.big{font-size:26px;font-weight:600;letter-spacing:-.02em}::selection{background:var(--accent-soft)}
-::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}::-webkit-scrollbar-track{background:transparent}`;
-  // Laufzeit im iframe: Höhe melden, Fehler melden, Herzschlag, Pause/Weiter (rAF + Timer), localStorage-Ersatz, Design live tauschen
+  // Grundstile = Design-System der App (kb/design.md): so sieht eine Mini-App ohne eigene Gestaltung schon aus wie die App
+  const BASE_CSS = `*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;height:100%}
+body{margin:0;min-height:100%;padding:16px;background:var(--bg);color:var(--text);font:400 13.5px/1.5 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0 0 .5em;font-weight:600;letter-spacing:-.01em;line-height:1.25;color:var(--text)}h1{font-size:18px}h2{font-size:15px}h3{font-size:14px}h4{font-size:13px}
+p{margin:0 0 .7em;color:var(--text-2)}a{color:var(--accent-text);text-decoration:none}small,.muted{color:var(--muted)}.dim{color:var(--dim)}hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+b,strong{font-weight:600}
+button{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 12px;border:1px solid var(--line);border-radius:8px;
+background:transparent;color:var(--text-2);font:500 12.5px var(--font);cursor:pointer;transition:background .14s,color .14s,border-color .14s;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:hover{background:var(--hover);color:var(--text)}button:disabled{opacity:.4;cursor:default}button:focus-visible{outline:none;border-color:var(--line-2)}
+button.primary{background:var(--accent);border-color:transparent;color:#fff}button.primary:hover{filter:brightness(1.07);background:var(--accent)}
+button.ghost{border-color:transparent}button.icon{width:30px;padding:0}button.danger{color:var(--bad);background:var(--bad-soft);border-color:transparent}
+button.big{height:38px;padding:0 18px;font-size:13.5px;border-radius:10px}
+input,select,textarea{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:400 13px var(--font);outline:none}
+textarea{height:auto;padding:8px 10px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--line-2)}input::placeholder,textarea::placeholder{color:var(--dim)}
+input[type=range],input[type=checkbox],input[type=radio]{height:auto;padding:0;accent-color:var(--accent)}input[type=color]{width:34px;padding:2px}
+select option{background:#202020;color:var(--text)}label{color:var(--muted);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:500;font-size:11.5px}
+tr:last-child td{border-bottom:0}
+code,pre{font-family:var(--mono);font-size:12.5px}pre{padding:10px 12px;border-radius:10px;background:var(--card);overflow:auto}
+canvas,svg,img,video{display:block;max-width:100%}img{border-radius:10px}
+.app{display:flex;flex-direction:column;gap:12px;min-height:calc(100vh - 32px)}.fill{flex:1;min-height:0}.center{display:grid;place-items:center}
+.card{padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--card)}.card-2{background:var(--card-2)}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.col{display:flex;flex-direction:column;gap:8px}.between{justify-content:space-between}.grow{flex:1}
+.grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.title{display:flex;align-items:center;gap:8px;color:var(--text);font-size:15px;font-weight:600}.title .ic{color:var(--muted)}
+.label{color:var(--muted);font-size:11.5px;font-weight:500}.big{font-size:26px;font-weight:600;letter-spacing:-.02em;color:var(--text)}.huge{font-size:40px;font-weight:600;letter-spacing:-.03em}
+.stat{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--card)}.stat .v{font-size:19px;font-weight:600;color:var(--text)}.stat .k{font-size:11.5px;color:var(--muted)}
+.chip,.tag{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:6px;background:color-mix(in srgb,var(--c,var(--accent)) 13%,transparent);color:color-mix(in srgb,var(--c,var(--accent)) 72%,#fff);font-size:11.5px;font-weight:500}
+.seg{display:inline-flex;padding:2px;border:1px solid var(--line);border-radius:10px}.seg button{height:26px;border:1px solid transparent;border-radius:8px;color:var(--muted)}.seg button.on{border-color:var(--line-2);color:var(--text);background:transparent}
+.list{display:flex;flex-direction:column}.item{display:flex;align-items:center;gap:10px;min-height:40px;padding:6px 4px;border-bottom:1px solid var(--line)}.item:last-child{border-bottom:0}
+.progress{height:6px;overflow:hidden;border-radius:6px;background:var(--card-2)}.progress>i{display:block;height:100%;border-radius:inherit;background:var(--accent);transition:width .4s var(--spring)}
+.switch{position:relative;width:34px;height:20px;border-radius:10px;background:var(--card-2);border:0;padding:0;flex:none}.switch::after{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s var(--spring)}.switch.on{background:var(--accent)}.switch.on::after{transform:translateX(14px)}
+.ic{width:16px;height:16px;flex:none;fill:currentColor}.ic.s{width:13px;height:13px}.ic.l{width:20px;height:20px}
+.empty{display:grid;place-items:center;gap:6px;padding:28px;color:var(--dim);font-size:12.5px;text-align:center}
+.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}.accent{color:var(--accent-text)}
+.fade-in{animation:cbx-fade .4s var(--spring) both}@keyframes cbx-fade{from{opacity:0;transform:translateY(6px)}}
+::selection{background:var(--accent-soft)}::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}`;
+  // Laufzeit im iframe: Fehler melden, Herzschlag, Pause/Weiter (rAF + Timer), localStorage-Ersatz, Design live tauschen,
+  // Icons (<i data-icon="name">) und Bilder (<img data-bild="Beschreibung" data-suche="english words">) über die App
   const RUNTIME = (id) => `(function(){var ID=${JSON.stringify(id)},P=parent,paused=false,q=[],send=function(m){m.cbx=ID;try{P.postMessage(m,'*')}catch(e){}};
 try{window.localStorage.getItem('x')}catch(e){var mem={},S={getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]},clear:function(){mem={}},key:function(i){return Object.keys(mem)[i]||null}};Object.defineProperty(S,'length',{get:function(){return Object.keys(mem).length}});try{Object.defineProperty(window,'localStorage',{value:S,configurable:true})}catch(e2){}try{Object.defineProperty(window,'sessionStorage',{value:S,configurable:true})}catch(e3){}}
 var rAF=window.requestAnimationFrame.bind(window),sT=window.setTimeout.bind(window),sI=window.setInterval.bind(window);
 window.requestAnimationFrame=function(cb){if(paused){q.push(cb);return -1}return rAF(cb)};
-window.setInterval=function(fn,ms){var a=[].slice.call(arguments,2);return sI(function(){if(!paused)typeof fn==='function'?fn.apply(null,a):0},ms)};
-window.setTimeout=function(fn,ms){var a=[].slice.call(arguments,2);var run=function(){if(paused){sT(run,200);return}typeof fn==='function'?fn.apply(null,a):0};return sT(run,ms)};
-window.addEventListener('message',function(e){var d=e.data||{};if(d.cbxCmd==='pause')paused=true;else if(d.cbxCmd==='resume'){paused=false;var l=q;q=[];l.forEach(function(cb){rAF(cb)})}else if(d.cbxCmd==='theme'){var s=document.getElementById('cbx-theme');if(s)s.textContent=d.css}});
-var last=0,h=function(){var b=document.body,v=b?Math.ceil(Math.max(b.scrollHeight,b.getBoundingClientRect().height)):0;if(Math.abs(v-last)>2){last=v;send({h:v})}};
-window.addEventListener('error',function(e){send({err:String(e.message||'Fehler').slice(0,300),line:e.lineno||0})});
-window.addEventListener('unhandledrejection',function(e){send({err:String((e.reason&&e.reason.message)||e.reason||'Fehler').slice(0,300)})});
-sI(function(){send({beat:1});h()},1000);
-document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserver(h).observe(document.body)}catch(e){}});window.addEventListener('load',h);})();`;
+window.setInterval=function(fn,ms){var a=[].slice.call(arguments,2);return sI(function(){if(!paused){typeof fn==='function'?fn.apply(null,a):(0,eval)(fn)}},ms)};
+window.setTimeout=function(fn,ms){var a=[].slice.call(arguments,2);var run=function(){if(paused){sT(run,200);return}typeof fn==='function'?fn.apply(null,a):(0,eval)(fn)};return sT(run,ms)};
+var imgs={},n=0;
+function icons(root){(root||document).querySelectorAll('i[data-icon]').forEach(function(el){var nm=el.getAttribute('data-icon'),s=document.createElementNS('http://www.w3.org/2000/svg','svg');s.setAttribute('class','ic'+(el.className?' '+el.className:''));s.setAttribute('aria-hidden','true');var u=document.createElementNS('http://www.w3.org/2000/svg','use');u.setAttribute('href','#f-'+nm);s.appendChild(u);el.replaceWith(s)})}
+function pics(root){(root||document).querySelectorAll('img[data-bild]:not([data-cbx])').forEach(function(el){var k='i'+(++n);el.setAttribute('data-cbx',k);imgs[k]=el;if(!el.getAttribute('src'))el.style.background='rgba(255,255,255,.05)';send({img:{k:k,desc:el.getAttribute('data-bild'),q:el.getAttribute('data-suche')||''}})})}
+window.CBX={icon:function(name,cls){return '<svg class="ic'+(cls?' '+cls:'')+'" aria-hidden="true"><use href="#f-'+name+'"/></svg>'},refresh:function(r){icons(r);pics(r)}};
+window.addEventListener('message',function(e){var d=e.data||{};if(d.cbxCmd==='pause')paused=true;else if(d.cbxCmd==='resume'){paused=false;var l=q;q=[];l.forEach(function(cb){rAF(cb)})}else if(d.cbxCmd==='theme'){var s=document.getElementById('cbx-theme');if(s)s.textContent=d.css}else if(d.cbxCmd==='img'&&imgs[d.k]){if(d.url)imgs[d.k].src=d.url;imgs[d.k].style.background=''}});
+var errs=0;window.addEventListener('error',function(e){if(e.target&&e.target!==window&&e.target.tagName==='SCRIPT'){send({err:'Skript konnte nicht geladen werden: '+(e.target.src||'')});return}if(++errs>5)return;send({err:String(e.message||'Fehler').slice(0,400),line:e.lineno||0,stack:String(e.error&&e.error.stack||'').slice(0,600)})},true);
+window.addEventListener('unhandledrejection',function(e){if(++errs>5)return;send({err:String((e.reason&&e.reason.message)||e.reason||'Fehler').slice(0,400)})});
+sI(function(){send({beat:1})},1000);
+document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new MutationObserver(function(){icons();pics()}).observe(document.body,{childList:true,subtree:true})}catch(e){}});})();`;
   const CSP = "default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com data:; img-src https: data: blob:; media-src https: data: blob:; connect-src https:; worker-src blob:";
+  // Icons der App (gefüllt, #f-…) – einmal aus der Seite gelesen, in jede Mini-App eingebettet
+  let spriteHtml = null;
+  const sprite = () => {
+    if (spriteHtml != null) return spriteHtml;
+    const sym = document.querySelector('symbol[id^="f-"]');
+    spriteHtml = sym?.parentElement ? `<svg width="0" height="0" style="position:absolute" aria-hidden="true">${[...sym.parentElement.querySelectorAll('symbol[id^="f-"]')].map((x) => x.outerHTML).join('')}</svg>` : '';
+    return spriteHtml;
+  };
   function srcdoc(code, id, extraCss = '') {
     const font = FONTS[design.font] || FONTS.inter;
     const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${CSP}">`
       + `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${font.link}&display=swap">`
       + `<style id="cbx-theme">${themeVars()}</style><style>${BASE_CSS}${extraCss}</style><script>${RUNTIME(id)}<\/script>`;
-    const src = String(code || '');
+    // externe Skripte mit crossorigin laden → echte Fehlermeldungen statt „Script error.“
+    const src = String(code || '').replace(/<script(?![^>]*\bcrossorigin\b)([^>]*\bsrc=["']https:)/gi, '<script crossorigin="anonymous"$1');
+    const icons = sprite();
     if (/<html[\s>]/i.test(src) || /<!doctype/i.test(src)) {
-      return /<head[^>]*>/i.test(src) ? src.replace(/<head[^>]*>/i, (m) => `${m}${head}`) : src.replace(/<html[^>]*>/i, (m) => `${m}<head>${head}</head>`);
+      const withHead = /<head[^>]*>/i.test(src) ? src.replace(/<head[^>]*>/i, (m) => `${m}${head}`) : src.replace(/<html[^>]*>/i, (m) => `${m}<head>${head}</head>`);
+      return /<body[^>]*>/i.test(withHead) ? withHead.replace(/<body[^>]*>/i, (m) => `${m}${icons}`) : withHead;
     }
-    return `<!doctype html><html lang="de"><head>${head}</head><body>${src}</body></html>`;
+    return `<!doctype html><html lang="de"><head>${head}</head><body>${icons}${src}</body></html>`;
   }
 
   /* ---------- laufende iframes: anlegen, anhalten, Wächter ---------- */
   const frames = new Map(); // id → { iframe, host, box, seen, beat, visible, view }
   let seq = 0;
+  // Bilder für Mini-Apps (<img data-bild="…">): dieselbe Bild-Suche wie im Chat (passendes freies Foto, sonst KI-Bild) – je Beschreibung einmal
+  const imgCache = new Map();
+  const imageFor = (desc, q) => {
+    const k = `${desc}|${q}`;
+    if (!imgCache.has(k)) imgCache.set(k, fetch('/api/illustration', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: `Bild für eine Mini-App: ${desc}`, query: q || desc, source: 'web' }) })
+      .then((r) => r.json()).then((j) => j.url || (j.data ? `data:${j.mime};base64,${j.data}` : '')).catch(() => ''));
+    return imgCache.get(k);
+  };
   window.addEventListener('message', (e) => {
     const d = e.data; if (!d || typeof d.cbx !== 'string') return;
     const f = frames.get(d.cbx); if (!f || e.source !== f.iframe.contentWindow) return;
     f.beat = Date.now();
-    if (d.h && f.auto) {
-      // feste Höhe, wenn der Inhalt mit der Fensterhöhe mitwächst (100vh) – sonst Schleife
-      f.grows = d.h > (f.lastH || 0) && Math.abs(d.h - (f.setH || 0)) < 6 ? (f.grows || 0) + 1 : 0;
-      if (f.grows > 6) { f.auto = false; f.iframe.style.height = '460px'; return; }
-      f.setH = Math.max(140, Math.min(f.maxH || 760, d.h)); f.lastH = d.h;
-      f.iframe.style.height = `${f.setH}px`;
-    }
-    if (d.err) f.onError?.(d.err, d.line);
+    if (d.img && d.img.desc) imageFor(String(d.img.desc).slice(0, 300), String(d.img.q || '').slice(0, 90)).then((url) => post(f, { cmd: 'img', k: d.img.k, url }));
+    if (d.err) f.onError?.(d.err, d.line, d.stack);
   });
   function start(host, code, opts = {}) {
     stop(host);
@@ -140,12 +179,9 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     iframe.setAttribute('referrerpolicy', 'no-referrer');
     iframe.setAttribute('allow', 'fullscreen; clipboard-write; accelerometer; gyroscope');
     iframe.title = opts.title || 'Mini-App';
-    const fixed = opts.height || /100vh|innerHeight|100dvh|height:\s*100%/.test(code) ? opts.height || 460 : 0;
-    if (!opts.fill) iframe.style.height = `${fixed || 220}px`;
-    if (opts.fill) iframe.classList.add('fill');
     iframe.srcdoc = srcdoc(code, id);
     host.replaceChildren(iframe);
-    const f = { id, iframe, host, beat: Date.now(), seen: Date.now(), visible: true, auto: !fixed && !opts.fill, maxH: opts.maxH || 760, onError: opts.onError };
+    const f = { id, iframe, host, beat: Date.now(), seen: Date.now(), visible: true, onError: opts.onError };
     frames.set(id, f); host._cbx = id;
     limit();
     return f;
@@ -180,6 +216,10 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
   document.addEventListener('visibilitychange', () => frames.forEach((f) => post(f, document.hidden || !f.visible ? 'pause' : 'resume')));
   function pushTheme() { const css = themeVars(); frames.forEach((f) => post(f, { cmd: 'theme', css })); }
 
+  /* ---------- Breite im Chat: bis 980 px, auch wenn die Textspalte schmaler ist ---------- */
+  const scroller = document.getElementById('chatScroll'), chatEl = document.getElementById('chat');
+  if (scroller && chatEl && typeof ResizeObserver !== 'undefined') new ResizeObserver(() => chatEl.style.setProperty('--cbx-w', `${Math.max(280, Math.min(980, scroller.clientWidth - 48))}px`)).observe(scroller);
+
   /* ---------- Gespeichert ---------- */
   const saved = () => read(SAVED_KEY, []).filter((x) => x && x.id && x.raw);
   const isSaved = (raw) => saved().some((x) => x.h === hash(raw));
@@ -206,53 +246,73 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
   };
   const keepLayout = (h, l) => { const all = read(LAYOUT_KEY, {}); all[h] = l; const keys = Object.keys(all); if (keys.length > 120) delete all[keys[0]]; write(LAYOUT_KEY, all); };
 
-  /* ---------- Kasten ---------- */
-  function figure(raw, o = {}) {
-    const spec = parse(raw), h = hash(raw);
+  /* ---------- Kasten: nur der programmierte Inhalt, groß; unten eine schmale Leiste mit Icons ----------
+     o.full: im Vollbild · o.defer: erst starten, wenn die Antwort fertig ist · o.live: in dieser Sitzung entstanden (dann repariert die App Fehler selbst)
+     o.onReplace(newRaw): repariert → im Verlauf an derselben Stelle ersetzen */
+  const AUTO_FIX = 2; // so oft repariert die App eine frisch geschriebene Mini-App von selbst
+  function figure(raw0, o = {}) {
+    let raw = raw0, spec = parse(raw), h = hash(raw);
     const fig = document.createElement('figure');
-    fig.className = `cbx${o.full ? ' cbx-full' : ''}`;
+    fig.className = `cbx${o.full ? ' cbx-full' : ''}${design.surface === 'transparent' ? ' clear' : ''}`;
     fig.dataset.viz = 'widget'; fig.dataset.raw = raw;
-    const multi = spec.views.length > 1;
-    const lay = layoutOf(h, spec.views.length);
-    let showCode = false;
-    const head = document.createElement('div');
-    head.className = 'cbx-head';
-    const body = document.createElement('div');
-    body.className = 'cbx-body';
-    fig.append(head, body);
+    let lay = layoutOf(h, spec.views.length), showCode = false, fixing = false, fixes = 0, errMsg = '';
+    const multi = () => spec.views.length > 1;
+    const body = document.createElement('div'); body.className = 'cbx-body';
+    const bar = document.createElement('div'); bar.className = 'cbx-bar';
+    fig.append(body, bar);
+    if (spec.height) fig.style.setProperty('--cbx-h', `${spec.height}px`);
     const btn = (act, ic, label, on) => `<button type="button" class="cbx-ib${on ? ' on' : ''}" data-cbx="${act}" aria-label="${label}">${fi(ic, 14)}</button>`;
-    function drawHead() {
+    function drawBar() {
       const sv = isSaved(raw);
-      head.innerHTML = `<span class="cbx-ic">${fi('codewin', 14)}</span><span class="cbx-title">${esc(spec.title)}</span>`
-        + (multi ? `<span class="cbx-n">${spec.views.length} Ansichten</span>` : '') + '<span class="cbx-grow"></span>'
-        + (multi && !showCode ? btn('layout', lay.mode === 'grid' ? 'stack' : 'dashboard', lay.mode === 'grid' ? 'Einzeln anzeigen' : 'Alle nebeneinander') : '')
+      const left = fixing ? `<span class="cbx-status shimmer">${fi('refresh', 12)}Fehler gefunden – wird behoben</span>`
+        : errMsg ? `<span class="cbx-status bad">${fi('alert', 12)}<span>${esc(errMsg)}</span></span><button type="button" class="cbx-fixbtn" data-cbx="fix">Beheben</button>`
+        : multi() && !showCode ? `<span class="cbx-views">${['Alle', ...spec.views.map((v) => v.name)].map((n, k) => `<button type="button" class="${(k === 0 ? lay.mode === 'grid' : lay.mode === 'single' && lay.view === k - 1) ? 'on' : ''}" data-cbx-view="${k - 1}">${esc(n)}</button>`).join('')}</span>` : '';
+      bar.innerHTML = `<span class="cbx-bar-l">${left}</span><span class="cbx-grow"></span>`
         + btn('code', 'terminal', showCode ? 'Mini-App zeigen' : 'Code anzeigen', showCode)
         + btn('reload', 'refresh', 'Neu starten')
         + btn('save', 'bookmark', sv ? 'Gespeichert – antippen zum Entfernen' : 'Speichern', sv)
-        + (o.full ? btn('close', 'x', 'Schließen') : btn('full', 'expand', 'Vollbild'));
+        + (o.full ? btn('close', 'shrink', 'Vollbild verlassen') : btn('full', 'expand', 'Vollbild'));
     }
     const hosts = [];
-    // im Chat erst starten, wenn die Antwort fertig ist (sonst würde jedes neue Textstück das iframe neu einhängen = neu laden)
     let go = !o.defer;
     const arm = (host) => { if (io) io.observe(host); else host._wake(); if (o.full) host._wake(); };
     fig._go = () => { if (go) return; go = true; hosts.forEach(arm); };
-    function errorBar(host, msg) {
-      let bar = host.parentElement.querySelector(':scope > .cbx-err');
-      if (!bar) { bar = document.createElement('div'); bar.className = 'cbx-err'; host.after(bar); }
-      bar.innerHTML = `<span class="cbx-err-t">${fi('alert', 12)}<span>${esc(msg)}</span></span><button type="button" data-cbx="fix">Beheben lassen</button><button type="button" data-cbx="errx" aria-label="Ausblenden">${fi('x', 11)}</button>`;
-      bar.dataset.msg = msg;
+    function onError(m, line) {
+      if (fixing) return;
+      errMsg = `${m}${line ? ` (Zeile ${line})` : ''}`.slice(0, 300);
+      // frisch geschrieben → selbst reparieren (an derselben Stelle, keine neue Nachricht); sonst Knopf „Beheben“
+      if (o.live && fixes < AUTO_FIX) { repair(); return; }
+      drawBar();
+    }
+    async function repair() {
+      if (fixing) return;
+      fixing = true; fixes++; drawBar();
+      fig.classList.add('fixing');
+      const err = errMsg; errMsg = '';
+      try {
+        const r = await fetch('/api/widget-fix', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ raw, error: err, look: look() }) });
+        const j = await r.json();
+        if (!r.ok || !j.raw) throw new Error(j.error || 'Reparatur fehlgeschlagen');
+        const old = raw;
+        raw = j.raw; spec = parse(raw); h = hash(raw); fig.dataset.raw = raw;
+        lay = layoutOf(h, spec.views.length);
+        if (spec.height) fig.style.setProperty('--cbx-h', `${spec.height}px`);
+        o.onReplace?.(old, raw);
+        fixing = false; fig.classList.remove('fixing');
+        drawBar(); drawBody();
+      } catch (e) {
+        fixing = false; fig.classList.remove('fixing');
+        errMsg = `${err} – ${e.message}`.slice(0, 300); drawBar();
+      }
     }
     function mountView(host, v) {
       hosts.push(host);
       host.className = 'cbx-stage';
       host.innerHTML = '<div class="cbx-wait"><span class="cbx-dot"></span></div>';
-      const run = () => {
-        host.parentElement?.querySelector(':scope > .cbx-err')?.remove();
-        start(host, v.code, { title: v.name, height: o.full ? 0 : spec.height, fill: !!o.full, onError: (m, line) => errorBar(host, `${m}${line ? ` (Zeile ${line})` : ''}`) });
-      };
+      const run = () => start(host, v.code, { title: v.name, fill: true, onError });
       host._wake = () => { if (!host._cbx && !host._paused && !host._dead) run(); };
       host._sleep = () => { stop(host, pausedNote(host, 'Angehalten, damit die App flüssig bleibt')); host._paused = true; };
-      host._hung = () => { host._dead = true; stop(host, pausedNote(host, 'Hing fest und wurde beendet (Endlosschleife?)', true)); errorBar(host, 'Die Mini-App hat nicht mehr reagiert.'); };
+      host._hung = () => { host._dead = true; stop(host, pausedNote(host, 'Hing fest und wurde beendet', true)); onError('Die Mini-App hat nicht mehr reagiert (Endlosschleife?).'); };
       host._run = () => { host._paused = false; host._dead = false; run(); };
       if (go) arm(host);
     }
@@ -267,17 +327,11 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
       hosts.forEach((x) => { stop(x); io?.unobserve(x); }); hosts.length = 0;
       body.replaceChildren();
       if (showCode) {
-        const all = spec.views.map((v) => (multi ? `<!-- === ${v.name} === -->\n${v.code}` : v.code)).join('\n\n');
+        const all = spec.views.map((v) => (multi() ? `<!-- === ${v.name} === -->\n${v.code}` : v.code)).join('\n\n');
         body.innerHTML = `<div class="cbx-codewrap"><button type="button" class="cbx-copy" data-cbx="copy">${fi('copy', 12)}<span>Kopieren</span></button><pre class="cbx-code"><code>${esc(all)}</code></pre></div>`;
         return;
       }
-      if (!multi || lay.mode === 'single') {
-        if (multi) {
-          const tabs = document.createElement('div');
-          tabs.className = 'cbx-tabs';
-          tabs.innerHTML = spec.views.map((v, i) => `<button type="button" class="cbx-tab${i === lay.view ? ' on' : ''}" data-cbx-view="${i}">${esc(v.name)}</button>`).join('');
-          body.append(tabs);
-        }
+      if (!multi() || lay.mode === 'single') {
         const host = document.createElement('div');
         body.append(host);
         mountView(host, spec.views[Math.min(lay.view, spec.views.length - 1)]);
@@ -303,31 +357,28 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     fig.addEventListener('click', (e) => {
       const b = e.target.closest('[data-cbx], [data-cbx-view], [data-cbx-move], [data-cbx-wide]'); if (!b || !fig.contains(b)) return;
       const act = b.dataset.cbx;
-      if (b.dataset.cbxView != null) { lay.view = +b.dataset.cbxView; keepLayout(h, lay); drawBody(); return; }
+      if (b.dataset.cbxView != null) { const k = +b.dataset.cbxView; if (k < 0) lay.mode = 'grid'; else { lay.mode = 'single'; lay.view = k; } keepLayout(h, lay); drawBar(); drawBody(); return; }
       if (b.dataset.cbxMove != null) { const p = +b.dataset.cbxMove, q = p + +b.dataset.dir; [lay.order[p], lay.order[q]] = [lay.order[q], lay.order[p]]; keepLayout(h, lay); drawBody(); return; }
       if (b.dataset.cbxWide != null) { const vi = +b.dataset.cbxWide; lay.wide = lay.wide.includes(vi) ? lay.wide.filter((x) => x !== vi) : [...lay.wide, vi]; keepLayout(h, lay); drawBody(); return; }
-      if (act === 'layout') { lay.mode = lay.mode === 'grid' ? 'single' : 'grid'; keepLayout(h, lay); drawHead(); drawBody(); }
-      else if (act === 'code') { showCode = !showCode; drawHead(); drawBody(); }
-      else if (act === 'reload') { showCode = false; drawHead(); drawBody(); }
-      else if (act === 'save') { if (isSaved(raw)) unsave(h); else { const r = save(raw, spec.title); if (!r.ok) toast(r.msg); else toast('Gespeichert – zu finden unter Einstellungen → Gespeichert'); } drawHead(); }
-      else if (act === 'full') openFull([raw]);
+      if (act === 'code') { showCode = !showCode; drawBar(); drawBody(); }
+      else if (act === 'reload') { showCode = false; errMsg = ''; drawBar(); drawBody(); }
+      else if (act === 'save') { if (isSaved(raw)) unsave(h); else { const r = save(raw, spec.title); toast(r.ok ? 'Gespeichert – zu finden unter Einstellungen → Gespeichert' : r.msg); } drawBar(); }
+      else if (act === 'full') openFull([raw], false, (old, nu) => { o.onReplace?.(old, nu); raw = nu; spec = parse(raw); h = hash(raw); fig.dataset.raw = raw; drawBar(); drawBody(); });
       else if (act === 'close') o.onClose?.();
       else if (act === 'copy') { navigator.clipboard?.writeText(spec.views.map((v) => v.code).join('\n\n')).then(() => { b.querySelector('span').textContent = 'Kopiert'; setTimeout(() => { if (b.isConnected) b.querySelector('span').textContent = 'Kopieren'; }, 1400); }).catch(() => {}); }
-      else if (act === 'errx') b.closest('.cbx-err')?.remove();
-      else if (act === 'fix') { const msg = b.closest('.cbx-err')?.dataset.msg || ''; o.onClose?.(); askChat(`Die Mini-App „${spec.title}“ meldet einen Fehler: ${msg}\nBitte behebe ihn und schreib die Mini-App vollständig neu.`); }
+      else if (act === 'fix') repair(); // „Beheben“: an derselben Stelle, keine neue Nachricht
     });
-    drawHead(); drawBody();
+    drawBar(); drawBody();
     fig._stop = () => hosts.forEach((x) => { stop(x); io?.unobserve(x); });
     return fig;
   }
-  // Wartekarte, solange die KI noch programmiert (Block noch offen)
+  // Warten, solange die KI noch programmiert: derselbe große Kasten mit der Kachel-Welle, unten „Programmieren · N Zeilen“
   function waiting(raw) {
-    const spec = parse(raw);
-    const n = String(raw || '').split('\n').length;
     const fig = document.createElement('figure');
     fig.className = 'cbx cbx-writing';
-    fig.innerHTML = `<div class="cbx-head"><span class="cbx-ic">${fi('codewin', 14)}</span><span class="cbx-title">${esc(spec.title && spec.title !== 'Mini-App' ? spec.title : 'Mini-App')}</span><span class="cbx-grow"></span><span class="cbx-lines shimmer">Programmieren · <b>${n}</b> Zeilen</span></div><div class="cbx-body"><div class="cbx-wave">${window.illustrationWave ? illustrationWave() : ''}</div></div>`;
-    fig.update = (r) => { const b = fig.querySelector('.cbx-lines b'); if (b) b.textContent = String(r || '').split('\n').length; const t = parse(r).title; if (t && t !== 'Mini-App') fig.querySelector('.cbx-title').textContent = t; };
+    fig.innerHTML = `<div class="cbx-body"><div class="cbx-stage cbx-wave">${window.illustrationWave ? illustrationWave() : ''}</div></div><div class="cbx-bar"><span class="cbx-bar-l"><span class="cbx-status shimmer">${fi('codewin', 12)}Programmieren · <b>0</b> Zeilen</span></span></div>`;
+    fig.update = (r) => { const b = fig.querySelector('.cbx-status b'); if (b) b.textContent = String(r || '').split('\n').length; };
+    fig.update(raw);
     return fig;
   }
 
@@ -342,7 +393,7 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     document.removeEventListener('keydown', escClose, true);
   }
   const escClose = (e) => { if (e.key === 'Escape' && fullEl && !e.target.closest?.('iframe')) { e.stopPropagation(); closeFull(); } };
-  function openFull(raws, picker = false) {
+  function openFull(raws, picker = false, onReplace = null) {
     closeFull();
     const el = document.createElement('div');
     el.className = 'cbx-overlay';
@@ -351,11 +402,11 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     let chosen = raws.slice(0, 4);
     const draw = () => {
       el.querySelectorAll('.cbx').forEach((f) => f._stop?.());
-      const bar = picker ? `<div class="cbx-ov-bar"><span class="cbx-ov-t">Mini-Apps</span><div class="cbx-ov-pills">${list.map((x) => `<button type="button" class="cbx-pill${chosen.includes(x.raw) ? ' on' : ''}" data-pick="${esc(x.id)}">${chosen.includes(x.raw) ? fi('check', 11) : ''}<span>${esc(x.title)}</span></button>`).join('')}</div><span class="cbx-grow"></span><button type="button" class="cbx-ib" data-ov-close aria-label="Schließen">${fi('x', 14)}</button></div>` : '';
+      const bar = picker && list.length > 1 ? `<div class="cbx-ov-bar"><span class="cbx-ov-t">Mini-Apps</span><div class="cbx-ov-pills">${list.map((x) => `<button type="button" class="cbx-pill${chosen.includes(x.raw) ? ' on' : ''}" data-pick="${esc(x.id)}">${chosen.includes(x.raw) ? fi('check', 11) : ''}<span>${esc(x.title)}</span></button>`).join('')}</div><span class="cbx-grow"></span><button type="button" class="cbx-ib" data-ov-close aria-label="Schließen">${fi('x', 14)}</button></div>` : '';
       el.innerHTML = `<div class="cbx-ov-in${chosen.length > 1 ? ' many' : ''}">${bar}<div class="cbx-ov-grid n${chosen.length}"></div></div>`;
       const grid = el.querySelector('.cbx-ov-grid');
       if (!chosen.length) grid.innerHTML = '<p class="cbx-ov-empty">Wähle oben eine oder mehrere Mini-Apps.</p>';
-      chosen.forEach((r) => grid.append(figure(r, { full: true, onClose: closeFull })));
+      chosen.forEach((r) => grid.append(figure(r, { full: true, onClose: closeFull, onReplace })));
     };
     el.addEventListener('click', (e) => {
       if (e.target === el || e.target.closest('[data-ov-close]')) { closeFull(); return; }
@@ -376,14 +427,6 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     requestAnimationFrame(() => t.classList.add('in'));
     setTimeout(() => { t.classList.remove('in'); setTimeout(() => t.remove(), 300); }, 2600);
   }
-  // Nachricht an den Chat schicken (z. B. „Beheben lassen“)
-  function askChat(text) {
-    const inp = document.getElementById('input'), form = document.getElementById('composer');
-    if (!inp || !form) return;
-    inp.value = text; inp.dispatchEvent(new Event('input', { bubbles: true }));
-    form.requestSubmit?.();
-  }
-
   /* ---------- ```einstellung: die KI stellt etwas ein ---------- */
   const BG_NAMES = { aus: 'Aus', punkte: 'Punkte', sterne: 'Sterne', wellen: 'Wellen', linien: 'Linien', raster: 'Raster', regen: 'Regen', nebel: 'Nebel', eigener: 'Eigener' };
   function applySetting(obj, customBg) {
@@ -426,6 +469,19 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
     return chip;
   }
 
+  /* ---------- reparierte Mini-App im Chat-Verlauf ersetzen (dieselbe Nachricht, keine neue) ---------- */
+  function replaceInHistory(target, old, nu) {
+    try {
+      const tab = typeof activeTab === 'function' ? activeTab() : null;
+      const hist = tab && typeof historyOf === 'function' ? historyOf(tab) : [];
+      const a = old.trim(), b = nu.trim();
+      const m = [...hist].reverse().find((x) => x.role === 'assistant' && String(x.text || '').includes(a));
+      if (m) { m.text = m.text.replace(a, b); if (typeof saveChats === 'function') saveChats(); }
+      const keep = target._cbxKeep;
+      if (keep) for (const [k, f] of keep) if (k.endsWith(`|${old}`)) { keep.delete(k); keep.set(k.slice(0, -old.length) + nu, f); }
+    } catch {}
+  }
+
   /* ---------- in eine Antwort einsetzen (aus renderMarkdown, app.js) ---------- */
   const seen = new Set(read(SEEN_KEY, [])); // von der KI schon automatisch gespeichert (nach dem Löschen nicht wieder anlegen)
   function render(target, text, opts = {}) {
@@ -463,7 +519,7 @@ document.addEventListener('DOMContentLoaded',function(){h();try{new ResizeObserv
           // „speichern: ja“ von der KI: einmal speichern (vor dem Zeichnen, damit das Lesezeichen gleich gefüllt ist)
           const spec = parse(raw), hs = hash(raw);
           if (spec.save && target._cbxLive && !seen.has(hs)) { seen.add(hs); write(SEEN_KEY, [...seen].slice(-200)); const r = save(raw, spec.title); setTimeout(() => toast(r.ok ? `„${spec.title}“ gespeichert` : r.msg), 400); }
-          const f = figure(raw, { defer: true });
+          const f = figure(raw, { defer: true, live: !!target._cbxLive, onReplace: (old, nu) => replaceInHistory(target, old, nu) });
           if (keep.has(`${key}|wait`)) f.classList.add('cbx-reveal');
           keep.set(k, f);
         }

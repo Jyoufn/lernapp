@@ -1135,6 +1135,31 @@ async function handleAgentAvatar(req, res) {
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
 }
 
+/* ---------- /api/widget-fix: Mini-App reparieren (Fehler aus dem Kasten) ----------
+   Gibt den vollständigen, korrigierten Inhalt des ```widget-Blocks zurück; die App ersetzt die Mini-App an derselben Stelle (keine neue Nachricht).
+   Läuft beim Coding-Anbieter (MiniMax zuerst, außer „Coden mit: Gemini“) mit dem stärksten Modell. */
+const WIDGET_FIX_SYSTEM = `Du reparierst eine Mini-App (HTML/CSS/JS, läuft in einem abgeschotteten iframe einer Lern-App). Du bekommst den Inhalt des \`\`\`widget-Blocks
+(Kopfzeilen "titel:", evtl. "hoehe:", Ansichten mit "=== Name ===") und die Fehlermeldung(en) aus dem Browser.
+- Finde die Ursache und behebe sie; prüfe dabei den ganzen Code auf weitere Fehler (undefinierte Variablen, falsche IDs, Reihenfolge, fehlende Elemente,
+  localStorage/Cookies – gesperrt, Zustand im Speicher halten; externe Bibliotheken nur von cdn.jsdelivr.net oder cdnjs.cloudflare.com).
+- „Script error.“ ohne Details = Fehler in einer externen Bibliothek bzw. deren Benutzung → prüfe Version, Ladereihenfolge und Aufrufe, notfalls ohne Bibliothek lösen.
+- Behalte Aufbau, Design, Texte und Funktionen bei. Ändere nur, was nötig ist.
+- Antworte NUR mit dem vollständigen korrigierten Inhalt des Blocks (gleiche Kopfzeilen, alle Ansichten, nichts ausgelassen) – OHNE \`\`\` und ohne Erklärung.`;
+async function handleWidgetFix(req, res) {
+  let env = readEnv();
+  const b = await readBody(req, 400000);
+  const raw = String(b.raw || '').slice(0, 120000), err = String(b.error || '').slice(0, 2000);
+  if (raw.length < 20) return sendJson(res, 400, { error: 'Kein Code' });
+  if (env.CODE_ORDER !== 'gemini') env = { ...env, AI_ORDER: 'minimax' };
+  try {
+    let out = String(await P.textTask(env, { system: WIDGET_FIX_SYSTEM, user: `FEHLER:\n${err || 'unbekannt'}\n\nCODE:\n${raw}`, maxTokens: 32000, timeoutMs: 240000, strong: true }) || '').trim();
+    out = out.replace(/^```(?:widget)?[^\n]*\n/, '').replace(/\n?```\s*$/, '').trim();
+    if (out.length < 20 || !/<|\w/.test(out)) return sendJson(res, 502, { error: 'Die Reparatur hat nichts geliefert.' });
+    if (!/^\s*(titel|title)\s*:/im.test(out)) { const t = /^\s*(?:titel|title)\s*:.*$/im.exec(raw); if (t) out = `${t[0].trim()}\n${out}`; }
+    sendJson(res, 200, { raw: out });
+  } catch (e) { sendJson(res, 502, { error: e.message || 'Reparatur fehlgeschlagen' }); }
+}
+
 /* ---------- /api/polish: diktierten Text glätten (nur nach der Spracheingabe) ----------
    Satzzeichen, Groß-/Kleinschreibung und offensichtliche Erkennungsfehler – keine Umformulierung. Ein kleiner Aufruf beim Anbieter der Anfrage. */
 const POLISH_SYSTEM = `Du bekommst Text aus einer Spracherkennung (meist Deutsch, gesprochen, ohne Satzzeichen).
@@ -1474,6 +1499,7 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
+    if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-ai') return await handleDocAi(req, res);
     if (req.method === 'POST' && urlPath === '/api/lernset/grade') return sendJson(res, 200, await LSET.grade(readEnv(), await readBody(req, 400000)));
