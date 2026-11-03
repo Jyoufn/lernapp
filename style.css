@@ -10470,3 +10470,20 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .cbx-full .cbx-grid { align-content: stretch; grid-auto-rows: minmax(300px, 1fr); overflow: auto; }
 .cbx-full .cbx-tile .cbx-stage { height: calc(100% - 30px); }
 .cbx-paused { height: 100%; }
+
+/* ===================================================================
+   03.11.2026 (4) – Fenster „Neuer Agent“: geführter Anfang wie ein Chat (Begrüßung, Fragen im Eingabefeld, feste Antworten),
+   Eingabefeld unten, kein Hund/Titel in der Mitte, feinere Ränder
+   =================================================================== */
+.app.agent-setup .panel { border-color: rgba(255, 255, 255, 0.07); box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45); }
+.app.agent-setup .dog-hero, .app.agent-setup .dog-peek, .app.agent-setup .home-plaza, .app.agent-setup .ags-ideas { display: none !important; }
+.app.agent-setup .panel.home .composer-area { transform: none !important; }
+.app.agent-setup .panel.home .chat-title-wrap { opacity: 0; }
+.ags-flow { display: contents; }
+/* festgelegte Antworten: rechts wie die eigene Nachricht, kleine Beschriftung mit Schloss darüber */
+.ags-fact .out-bubble { display: flex; flex-direction: column; gap: 2px; }
+.ags-fk { display: inline-flex; align-items: center; gap: 5px; color: var(--text-4); font-size: 11px; font-weight: 500; }
+.ags-fk svg { width: 10px; height: 10px; }
+.ags-fv { color: var(--text); }
+.ags-say .answer { animation: cbx-in 360ms var(--spring, ease) both; }
+.agv { border-color: rgba(255, 255, 255, 0.055); }

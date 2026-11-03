@@ -3143,9 +3143,10 @@ function renderInline(target, text) {
   if (p) p.replaceWith(...p.childNodes);
 }
 
-function showAskPanel(questions) {
+// opts.onDone(qa): eigene Abfrage (z. B. Einrichtung eines Agenten) statt Antwort an die KI · opts.kicker: Text oben links statt „Rückfrage“
+function showAskPanel(questions, opts = {}) {
   askPanel.tabIndex = -1;
-  ask = { questions, index: 0, answers: questions.map(() => ({ picked: new Set(), own: '' })) };
+  ask = { questions, index: 0, answers: questions.map(() => ({ picked: new Set(), own: '' })), onDone: opts.onDone || null, kicker: opts.kicker || '', noSkip: !!opts.noSkip, nextLabel: opts.nextLabel || '' };
   composer.classList.add('asking');
   renderAsk();
   scrollToBottom(true);
@@ -3192,7 +3193,7 @@ function renderAsk(dir = 0) {
   // Kopfzeile: „Rückfrage“ bzw. „Frage x von y“ mit Fortschritts-Strichen, rechts × (= Überspringen); darunter die Frage
   const head = el('div', 'ask-head');
   const top = el('div', 'ask-top');
-  top.append(el('span', 'ask-kicker', `Rückfrage <b class="ask-of">${ask.index + 1} von ${ask.questions.length}</b>`));
+  top.append(el('span', 'ask-kicker', ask.kicker ? escapeHtml(ask.kicker) : `Rückfrage <b class="ask-of">${ask.index + 1} von ${ask.questions.length}</b>`));
   if (many) {
     const bars = el('span', 'ask-progress');
     ask.questions.forEach((_, k) => bars.append(el('i', k < ask.index ? 'done' : k === ask.index ? 'on' : '')));
@@ -3204,7 +3205,7 @@ function renderAsk(dir = 0) {
   close.setAttribute('aria-label', 'Überspringen');
   close.title = 'Überspringen';
   close.addEventListener('click', skipAsk);
-  top.append(close);
+  if (!ask.noSkip) top.append(close);
   const qEl = el('div', 'ask-q md');
   renderInline(qEl, q.question);
   head.append(top, qEl);
@@ -3229,7 +3230,7 @@ function renderAsk(dir = 0) {
   const own = document.createElement('input');
   own.className = 'ask-own-in';
   own.type = 'text';
-  own.placeholder = q.options.length ? 'Oder eigene Antwort schreiben' : 'Deine Antwort…';
+  own.placeholder = q.placeholder || (q.options.length ? 'Oder eigene Antwort schreiben' : 'Deine Antwort…');
   own.value = a.own;
   const ownMic = el('button', 'ask-mic', icon('i-mic', 14));
   ownMic.type = 'button';
@@ -3270,7 +3271,7 @@ function renderAsk(dir = 0) {
   const skip = el('button', 'ask-btn ghost ask-skip', 'Überspringen');
   skip.type = 'button';
   skip.addEventListener('click', skipAsk);
-  foot.append(skip);
+  if (!ask.noSkip) foot.append(skip);
   if (ask.index > 0) {
     const back = el('button', 'ask-btn ghost ask-back', `${icon('i-back', 14)}Zurück`);
     back.type = 'button';
@@ -3278,7 +3279,7 @@ function renderAsk(dir = 0) {
     foot.append(back);
   }
   foot.append(el('div', 'flex-spacer'));
-  const next = el('button', 'ask-btn primary', last ? 'Senden' : 'Weiter');
+  const next = el('button', 'ask-btn primary', ask.nextLabel || (last ? 'Senden' : 'Weiter'));
   next.type = 'button';
   next.id = 'askNext';
   next.addEventListener('click', askNext);
@@ -3373,7 +3374,9 @@ function askNext() {
     if (a.own.trim()) picked.push({ num: null, text: a.own.trim() });
     return { question: q.question, picked };
   });
+  const done = ask.onDone;
   hideAskPanel();
+  if (done) { done(qa); return; } // eigene Abfrage (Agent einrichten)
   if (runOf()) return;
   if (pendingOf()) continueAfterAsk(qa);
   else sendMessage(qaText(qa), []);

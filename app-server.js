@@ -214,7 +214,8 @@ const IMAGE_MODELS = [
   { name: 'flux1-schnell', url: 'https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/105fe02c-924b-4dfa-9797-92d89c3936ad', params: { width: 1344, height: 768, steps: 4 } },
 ];
 // Keys: FLUX3_API_KEY zuerst, danach die übrigen NVIDIA-Keys – lehnt NVIDIA einen Key ab (401/403), wird automatisch der nächste probiert
-const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
+// derselbe NVIDIA-Zugang (build.nvidia.com) malt auch Bilder → auch der MiniMax-Schlüssel zählt
+const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY, env.MINIMAX_API_KEY, env.MISTRAL_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
 const badImageKeys = new Set(); // abgelehnte Keys bis zum Neustart überspringen
 let lastImageFiltered = false; // letzter Versuch scheiterte nur am Inhaltsfilter
 const imageModelDownUntil = new Map(); // Bildmodell → übersprungen bis (nach HTTP 5xx/Zeitüberschreitung; spart das Warten auf den Fehler)
@@ -1130,8 +1131,10 @@ async function handleAgentAvatar(req, res) {
   let desc = '';
   try { desc = String(P.parseJsonLoose(await P.textTask(env, { system: AVATAR_SYSTEM, user: `${before ? `Bisherige Beschreibung: ${before}\nÄnderung: ` : 'Wunsch: '}${wish}`, maxTokens: 400, timeoutMs: 20000, json: true }))?.desc || '').trim(); } catch {}
   if (desc.length < 5) desc = before ? `${before}, ${wish}` : wish;
-  const out = await nvcfImage(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`, Math.floor(Math.random() * 1e6));
-  if (!out) return sendJson(res, 502, { error: imageKeys(env).length ? 'Das Bild konnte gerade nicht gezeichnet werden.' : 'Für eigene Profilbilder fehlt der Bild-Schlüssel (Einstellungen → Agenten → FLUX (Bilder)).' });
+  if (!imageKeys(env).length) return sendJson(res, 400, { error: 'Für eigene Profilbilder fehlt ein NVIDIA-Schlüssel (Einstellungen → Agenten → FLUX (Bilder) oder MiniMax).' });
+  let out = await paint(env, `${desc.slice(0, 400)}. ${AVATAR_STYLE}`).catch(() => null); // mit Umformulieren, falls der Inhaltsfilter anschlägt
+  if (!out) out = await paint(env, `cute friendly ${desc.slice(0, 200)}, pixel art bust portrait, plain flat magenta background`).catch(() => null); // kürzerer Auftrag als zweiter Versuch
+  if (!out) return sendJson(res, 502, { error: lastImageFiltered ? 'Der Bild-Filter hat die Beschreibung abgelehnt – beschreib die Figur etwas anders.' : 'Das Bild konnte gerade nicht gezeichnet werden (Bildmodell nicht erreichbar) – gleich noch einmal versuchen.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}`, desc });
 }
 

@@ -17,13 +17,6 @@ const AgentBuilder = (() => {
   const FUR_NAMES = { original: 'Original', creme: 'Creme', weiss: 'Weiß', grau: 'Grau', schwarz: 'Schwarz', braun: 'Braun', gold: 'Gold', rot: 'Rot', orange: 'Orange', rosa: 'Rosa', blau: 'Blau', tuerkis: 'Türkis', gruen: 'Grün' };
   const ACT_NAMES = { kochen: 'Kocht', lupe: 'Sucht mit Lupe', buch: 'Liest', tablet: 'Schaut aufs Tablet', laptop: 'Tippt am Laptop', keine: 'Keine Animation' };
   const TOOL_NAMES = { miniapps: 'Mini-Apps', lernsets: 'Lernsets', diagramme: 'Diagramme', mindmaps: 'Mindmaps', bilder: 'Bilder', quellen: 'Quellen' };
-  const IDEAS = ['Vokabeltrainer für Englisch', 'Mathe-Coach, der nur Tipps gibt', 'Bewerbungs-Coach', 'Spiele-Programmierer'];
-  // Grundlagen-Fragen gleich beim Öffnen (kein KI-Aufruf nötig) – die Antworten gehen als erste Nachricht an die Einrichtung
-  const BASICS = [
-    { question: 'Wie soll dein Agent heißen?', options: ['Schlag mir passende Namen vor'], multi: false },
-    { question: 'Wie soll er aussehen? (oder beschreib unten eine eigene Figur, z. B. „Fuchs mit Brille“)', options: ['Havaneser (wie Allgemein)', 'Border Collie (wie Lernen)', 'Golden Retriever (wie Research)', 'Oktopus (wie Coden)', 'Bär (wie Börse)'], multi: false },
-    { question: 'Wobei soll er dir helfen?', options: ['Lernen und Schule', 'Sprachen und Vokabeln', 'Programmieren und Mini-Apps', 'Schreiben und Texte', 'Recherche'], multi: false },
-  ];
   const CREATE_ASK = /\b(erstell|bau|mach|leg|richt|kreier|design|programmier)\w*\b[^.?!\n]{0,40}\b(eigenen|neuen|einen|meinen)\s+(ki-?)?agent(en)?\b|\b(eigenen|neuen)\s+(ki-?)?agent(en)?\s+(erstellen|bauen|anlegen|einrichten|machen|designen)\b/i;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fi = (n, s = 14) => (window.FadeIcons ? FadeIcons.svg(n, s) : '');
@@ -145,20 +138,131 @@ const AgentBuilder = (() => {
   const head = document.createElement('div');
   head.className = 'ags-head';
   head.innerHTML = `<b class="ags-title">Neuen Agenten erstellen</b><span class="ags-grow"></span><button type="button" class="ags-x" aria-label="Schließen">${fi('x', 15)}</button>`;
-  const ideas = document.createElement('div');
-  ideas.className = 'ags-ideas';
-  ideas.innerHTML = IDEAS.map((t) => `<button type="button" class="ags-idea">${esc(t)}</button>`).join('');
   if (panel) panel.append(head);
-  document.querySelector('.composer-area')?.append(ideas);
   head.querySelector('.ags-x').addEventListener('click', () => close());
-  ideas.addEventListener('click', (e) => {
-    const b = e.target.closest('.ags-idea'); if (!b) return;
-    const c = chatData(tabNow()); if (c) { c.setupWish = b.textContent; saveChat(); }
-    if (typeof hideAskPanel === 'function') hideAskPanel();
-    send(`Ich möchte einen Agenten: ${b.textContent}.`);
-  });
   const send = (text) => { if (typeof sendMessage === 'function') sendMessage(text, []); };
-  const askBasics = () => { if (typeof showAskPanel === 'function' && isSetup(tabNow()) && typeof historyOf === 'function' && !historyOf(tabNow()).length) showAskPanel(BASICS.map((q) => ({ ...q, options: [...q.options] }))); };
+
+  /* ---------- Geführter Anfang (ohne KI-Aufruf): Begrüßung → Name → Aussehen (Bild, so oft ändern wie man will) → Animation → Aufgabe ----------
+     Stand je Chat in chatOf(tab).wizard = { step, name, look, aktion }; was festgelegt ist, steht als feste Zeile im Chat und ändert sich nicht mehr.
+     Danach geht die Aufgabe als erste Nachricht an die KI (Grundlagen gehen als setupInfo mit), die in Phasen weiterfragt. */
+  const ACT_OPTS = [['Kocht mit der Pfanne', 'kochen'], ['Sucht mit der Lupe', 'lupe'], ['Liest ein Buch', 'buch'], ['Schaut aufs Tablet', 'tablet'], ['Keine Animation', 'keine']];
+  const TASK_OPTS = ['Lernen und Schule', 'Sprachen und Vokabeln', 'Programmieren und Mini-Apps', 'Schreiben und Texte', 'Recherche'];
+  const INTRO = '**Moin!** Ich helfe dir, deinen eigenen Agenten zu bauen – Schritt für Schritt.\n\nZuerst bekommt er einen **Namen** und ein **Aussehen**, danach klären wir genau, **was er können soll**. Am Ende schreibe ich ihm eine ausführliche Anleitung, damit er wirklich zu dir passt.';
+  const flowOf = () => { let f = chatEl()?.querySelector(':scope > .ags-flow'); if (!f && chatEl()) { f = document.createElement('div'); f.className = 'ags-flow'; chatEl().prepend(f); } return f; };
+  const chatEl = () => document.getElementById('chat');
+  const wiz = () => { const c = chatData(tabNow()); if (!c) return null; c.wizard ||= { step: 'intro' }; return c.wizard; };
+  const keepWiz = () => saveChat();
+  const scroll = () => { try { if (typeof scrollToBottom === 'function') scrollToBottom(true); } catch {} };
+  // Text der Einrichtung (wie eine KI-Antwort, weich eingetippt)
+  function say(text, { instant = false } = {}) {
+    const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general';
+    const a = document.createElement('div'); a.className = 'answer md'; m.append(a);
+    flowOf()?.append(m);
+    return new Promise((done) => {
+      if (instant || typeof makeRenderer !== 'function') { if (typeof renderMarkdown === 'function') renderMarkdown(a, text); else a.textContent = text; done(m); scroll(); return; }
+      const r = makeRenderer(a); r.append(text);
+      Promise.resolve(r.finish?.()).then(() => { done(m); scroll(); });
+    });
+  }
+  // festgelegte Antwort: rechts wie die eigene Nachricht, mit kleiner Beschriftung und Schloss – ändert sich nicht mehr
+  function fact(label, value) {
+    const out = document.createElement('div'); out.className = 'msg-out ags-fact';
+    out.innerHTML = `<div class="out-bubble"><span class="ags-fk">${fi('lock', 10)}${esc(label)}</span><span class="ags-fv">${esc(value)}</span></div>`;
+    flowOf()?.append(out); scroll();
+  }
+  const ask = (q, opts) => { if (typeof showAskPanel === 'function') showAskPanel([q], { noSkip: true, ...opts }); };
+  const answerOf = (qa) => (qa?.[0]?.picked || []).map((p) => p.text).join(', ').trim();
+
+  async function stepName() {
+    const w = wiz(); w.step = 'name'; keepWiz();
+    ask({ question: 'Wie soll dein Agent heißen?', options: [], placeholder: 'Name eintragen …' }, { kicker: 'Schritt 1 von 3 · Name', onDone: (qa) => {
+      const v = answerOf(qa).replace(/\s+/g, ' ').slice(0, 24); if (!v) return stepName();
+      w.name = v; fact('Name', v); stepLook(true);
+    } });
+  }
+  async function stepLook(first) {
+    const w = wiz(); w.step = 'look'; keepWiz();
+    if (first) await say(`Schön – **${w.name}** also. Wie soll ${w.name} aussehen? Beschreib die Figur so genau du magst: Tier oder Wesen, Farben, besondere Merkmale. Ich zeichne sie dann im Pixel-Stil der App.`);
+    ask({ question: `Wie soll ${w.name} aussehen?`, options: [], placeholder: 'z. B. kleiner roter Fuchs mit runder Brille und grünem Schal' }, { kicker: 'Schritt 2 von 3 · Aussehen', onDone: (qa) => {
+      const v = answerOf(qa).slice(0, 300); if (!v) return stepLook(false);
+      w.look = v; fact('Aussehen', v); drawLook(v);
+    } });
+  }
+  // Bild zeichnen (KI-Bild → Pixel-Raster), danach „Passt das so?“ – eigene Antwort = Änderung, neu zeichnen
+  async function drawLook(desc) {
+    const w = wiz(); w.step = 'look-check'; w.lookDesc = desc; keepWiz();
+    const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general';
+    flowOf()?.append(m); scroll();
+    const card = avatarCard({ figur: 'eigenes', beschreibung: desc, aktion: w.aktion || 'buch', farbe: '' }, `wiz|${desc}`, true, {
+      scripted: true,
+      onReady: (cur) => { w.raster = cur.raster; keepWiz(); checkLook(); },
+      onFail: () => checkLook(true),
+    });
+    m.append(card); scroll();
+  }
+  function checkLook(failed) {
+    const w = wiz();
+    ask({ question: failed ? 'Das Bild hat nicht geklappt. Beschreib die Figur noch einmal oder etwas anders.' : 'Passt das so?', options: failed ? [] : ['Ja, so lassen'],
+      placeholder: failed ? 'Beschreibung …' : 'Oder beschreib, was anders sein soll …' }, { kicker: 'Schritt 2 von 3 · Aussehen', nextLabel: 'Weiter', onDone: (qa) => {
+      const v = answerOf(qa);
+      if (!failed && v === 'Ja, so lassen' && w.raster) {
+        const c = chatData(tabNow());
+        c.setupAvatar = { key: 'wizard', figur: 'eigenes', farbe: '', aktion: w.aktion || '', raster: w.raster, beschreibung: w.lookDesc };
+        fact('Aussehen', 'Festgelegt'); stepAnim(); return;
+      }
+      if (!v) return checkLook(failed);
+      const next = failed ? v : `${w.lookDesc} – Änderung: ${v}`;
+      fact(failed ? 'Aussehen' : 'Änderung', v); drawLook(next.slice(0, 400));
+    } });
+  }
+  function stepAnim() {
+    const w = wiz(); w.step = 'anim'; keepWiz();
+    ask({ question: `Was soll ${w.name} machen, während er für dich arbeitet?`, options: ACT_OPTS.map(([t]) => t) }, { kicker: 'Schritt 2 von 3 · Animation', onDone: (qa) => {
+      const v = answerOf(qa), hit = ACT_OPTS.find(([t]) => t === v);
+      w.aktion = hit ? hit[1] : 'keine';
+      const c = chatData(tabNow()); if (c.setupAvatar) c.setupAvatar.aktion = w.aktion === 'keine' ? '' : w.aktion;
+      fact('Animation', hit ? hit[0] : v || 'Keine');
+      showFinal(); stepTask();
+    } });
+  }
+  // fertiges Aussehen mit gewählter Animation (aus dem gespeicherten Raster – nichts wird neu gezeichnet)
+  function showFinal(instant) {
+    const a = chatData(tabNow())?.setupAvatar; if (!a?.raster) return;
+    const m = document.createElement('div'); m.className = 'msg-ai ags-say'; m.dataset.dog = 'general';
+    const fig = document.createElement('figure'); fig.className = 'agv agv-final';
+    fig.innerHTML = `<div class="agv-stage"><div class="agv-scene"></div></div><div class="agv-side"><div class="agv-t">${esc(wiz().name || 'Dein Agent')}</div><div class="agv-m">${esc(ACT_NAMES[a.aktion || 'keine'] || '')}</div><div class="agv-sizes"><span>${window.PixelDogs?.previewArt?.('eigenes', '', 24, a.raster) || ''}</span><span class="agv-cap">So im Chat</span></div></div>`;
+    window.PixelDogs?.preview?.({ figur: 'eigenes', aktion: a.aktion, raster: a.raster }, fig.querySelector('.agv-scene'), { size: 4 });
+    m.append(fig); flowOf()?.append(m); if (!instant) scroll();
+  }
+  async function stepTask() {
+    const w = wiz(); w.step = 'task'; keepWiz();
+    await say(`Fast geschafft mit den Grundlagen. Jetzt das Wichtigste: **Wobei soll ${w.name} dir helfen?** Je genauer, desto besser – danach frage ich gezielt weiter.`);
+    ask({ question: `Wobei soll ${w.name} dir helfen?`, options: TASK_OPTS, placeholder: 'Oder genauer beschreiben …' }, { kicker: 'Schritt 3 von 3 · Aufgabe', nextLabel: 'Weiter', onDone: (qa) => {
+      const v = answerOf(qa); if (!v) return stepTask();
+      w.task = v; w.step = 'ai'; keepWiz();
+      send(`Aufgabe: ${v}`); // ab hier fragt die KI in Phasen weiter (Name, Aussehen, Animation gehen als setupInfo mit)
+    } });
+  }
+  async function startWizard() {
+    const w = wiz(); if (!w) return;
+    if (w.step === 'intro') { await say(INTRO); stepName(); return; }
+    resumeStep();
+  }
+  // nach Neuladen/Tab-Wechsel: festgelegte Zeilen wieder zeigen und beim offenen Schritt weitermachen
+  function replay() {
+    const w = wiz(); if (!w || w.step === 'intro') return;
+    const f = flowOf(); if (!f || f.childElementCount) return;
+    say(INTRO, { instant: true });
+    if (w.name) fact('Name', w.name);
+    if (w.look) fact('Aussehen', w.look);
+    const a = chatData(tabNow())?.setupAvatar;
+    if (a?.raster && !['look', 'look-check'].includes(w.step)) { fact('Aussehen', 'Festgelegt'); if (w.aktion) fact('Animation', (ACT_OPTS.find(([, k]) => k === w.aktion) || ['Keine'])[0]); showFinal(true); }
+  }
+  function resumeStep() {
+    const w = wiz(); if (!w) return;
+    if (typeof historyOf === 'function' && historyOf(tabNow()).length) return; // KI-Teil läuft schon
+    ({ name: stepName, look: () => stepLook(false), 'look-check': () => (w.raster ? checkLook() : stepLook(false)), anim: stepAnim, task: stepTask }[w.step] || (() => {}))();
+  }
 
   function open(opts = {}) {
     if (typeof createTab !== 'function') return;
@@ -170,20 +274,21 @@ const AgentBuilder = (() => {
     const c = chatData(tab);
     c.setup = 'agent';
     if (opts.wish) c.setupWish = String(opts.wish).slice(0, 1000);
-    if (edit) { c.setupBase = edit.id; c.title = `${edit.name} bearbeiten`; c.auto = false; c.setupAvatar = { figur: edit.figur, farbe: edit.farbe, aktion: edit.aktion, raster: edit.raster || null, beschreibung: edit.beschreibungBild || '' }; }
+    if (edit) { c.setupBase = edit.id; c.title = `${edit.name} bearbeiten`; c.auto = false; c.wizard = { step: 'ai', name: edit.name }; c.setupAvatar = { figur: edit.figur, farbe: edit.farbe, aktion: edit.aktion, raster: edit.raster || null, beschreibung: edit.beschreibungBild || '' }; }
     saveChat();
     sync();
     if (edit) {
-      const inp = document.getElementById('input');
-      if (inp) { inp.value = `Ich möchte meinen Agenten „${edit.name}“ ändern: `; inp.dispatchEvent(new Event('input', { bubbles: true })); setTimeout(() => { inp.focus(); inp.setSelectionRange(inp.value.length, inp.value.length); }, 120); }
-    } else setTimeout(askBasics, 260); // sofort die Grundlagen-Fragen
+      say(`Was möchtest du an **${edit.name}** ändern? Name, Aussehen, Aufgabe, Arbeitsweise, Ton oder Grenzen – sag es einfach.`);
+      setTimeout(() => document.getElementById('input')?.focus(), 160);
+    } else setTimeout(startWizard, 120);
   }
   function close(selectId = null) {
     const tab = tabNow();
+    if (typeof hideAskPanel === 'function') hideAskPanel();
     if (isSetup(tab)) {
       // leer = Entwurf: ein neuer Chat genügt (der Entwurf wird beim Verlassen verworfen); mit Verlauf: löschen (neuer leerer Chat an seiner Stelle)
       const empty = typeof historyOf === 'function' && !historyOf(tab).length;
-      try { if (empty) { if (typeof hideAskPanel === 'function') hideAskPanel(); createTab('Neuer Chat'); } else if (typeof deleteChat === 'function') deleteChat(tab); } catch {}
+      try { if (empty) createTab('Neuer Chat'); else if (typeof deleteChat === 'function') deleteChat(tab); } catch {}
     }
     app?.classList.remove('agent-setup');
     const to = selectId || (prevDog && window.PixelDogs?.DOGS?.[prevDog] ? prevDog : null);
@@ -198,16 +303,20 @@ const AgentBuilder = (() => {
     const base = on && chatData(tab)?.setupBase ? byId(chatData(tab).setupBase) : null;
     head.querySelector('.ags-title').textContent = base ? `${base.name} bearbeiten` : 'Neuen Agenten erstellen';
     const inp = document.getElementById('input');
-    if (inp) { if (on) { inp.dataset.ph0 ||= inp.placeholder; inp.placeholder = 'Wofür soll dein Agent da sein?'; } else if (inp.dataset.ph0) { inp.placeholder = inp.dataset.ph0; delete inp.dataset.ph0; } }
+    if (inp) { if (on) { inp.dataset.ph0 ||= inp.placeholder; inp.placeholder = 'Antworte hier …'; } else if (inp.dataset.ph0) { inp.placeholder = inp.dataset.ph0; delete inp.dataset.ph0; } }
     greet();
   }
   function greet() {
     const t = document.querySelector('#composer .dh-title'); if (!t) return;
     heroText ||= t.textContent;
     const a = byId(window.PixelDogs?.mode);
-    t.textContent = isSetup(tabNow()) ? 'Was soll dein Agent können?' : a?.begruessung || heroText;
+    t.textContent = a?.begruessung || heroText;
   }
-  window.addEventListener('chat-tab-switched', () => setTimeout(() => { sync(); if (isSetup(tabNow())) setTimeout(askBasics, 200); }, 0));
+  window.addEventListener('chat-tab-switched', () => setTimeout(() => {
+    sync();
+    const tab = tabNow();
+    if (isSetup(tab) && !chatData(tab)?.setupBase) { const w = wiz(); if (w.step === 'intro') startWizard(); else { replay(); setTimeout(resumeStep, 150); } }
+  }, 0));
   document.addEventListener('dogmodechange', () => setTimeout(greet, 0));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && app?.classList.contains('agent-setup') && !document.querySelector('.agent-picker.open, .cbx-overlay, #composer.asking') && !e.target.closest?.('textarea, input')) close(); });
   setTimeout(sync, 0);
@@ -219,7 +328,7 @@ const AgentBuilder = (() => {
   }
 
   /* ---------- Vorschau des Aussehens (```avatar) ---------- */
-  function avatarCard(spec, raw, live) {
+  function avatarCard(spec, raw, live, flow = null) {
     const fig = document.createElement('figure');
     fig.className = 'agv';
     let stop = () => {}, cur = { ...spec, raster: null };
@@ -231,7 +340,7 @@ const AgentBuilder = (() => {
         <div class="agv-side"><div class="agv-t">Aussehen</div><div class="agv-m">${esc(meta())}</div>
         ${cur.raster || cur.figur !== 'eigenes' ? `<div class="agv-sizes"><span>${window.PixelDogs?.previewArt?.(cur.figur, cur.farbe, 24, cur.raster) || ''}</span><span class="agv-cap">So im Chat</span></div>` : ''}
         ${err ? `<p class="agv-err">${esc(err)}</p>` : ''}
-        <div class="agv-acts">${state === 'wait' ? '' : accepted() ? `<span class="agv-ok">${fi('check', 12)}Übernommen</span>`
+        <div class="agv-acts">${state === 'wait' || flow ? '' : accepted() ? `<span class="agv-ok">${fi('check', 12)}Übernommen</span>`
           : `${cur.figur === 'eigenes' ? `<button type="button" class="agv-btn" data-agv="again">${fi('refresh', 12)}Neu zeichnen</button>` : ''}${state === 'ok' ? '<button type="button" class="agv-btn primary" data-agv="take">Übernehmen</button>' : ''}`}</div></div>`;
       const sc = fig.querySelector('.agv-scene');
       if (state === 'wait') { sc.innerHTML = window.illustrationWave ? illustrationWave() : ''; return; }
@@ -241,7 +350,7 @@ const AgentBuilder = (() => {
       if (cur.figur !== 'eigenes') { draw('ok'); return; }
       const ck = hash(`${cur.beschreibung}|${raw}`);
       const hit = !fresh && cache()[ck];
-      if (hit) { cur.raster = hit.raster; cur.desc = hit.desc; draw('ok'); return; }
+      if (hit) { cur.raster = hit.raster; cur.desc = hit.desc; draw('ok'); flow?.onReady?.(cur); return; }
       if (!live && !fresh) { draw('idle', 'Vorschau nicht mehr gespeichert – „Neu zeichnen“ erstellt sie neu.'); return; }
       draw('wait');
       try {
@@ -250,8 +359,8 @@ const AgentBuilder = (() => {
         if (!r.ok || !j.src) throw new Error(j.error || 'Das Bild konnte gerade nicht gezeichnet werden.');
         cur.raster = await pixelate(j.src); cur.desc = j.desc || '';
         keepCache(ck, { raster: cur.raster, desc: cur.desc });
-        draw('ok');
-      } catch (err) { draw('idle', err.message || 'Fehler beim Zeichnen.'); }
+        draw('ok'); flow?.onReady?.(cur);
+      } catch (err) { draw('idle', err.message || 'Fehler beim Zeichnen.'); flow?.onFail?.(err); }
     }
     fig.addEventListener('click', (e) => {
       const b = e.target.closest('[data-agv]'); if (!b) return;
@@ -290,6 +399,7 @@ const AgentBuilder = (() => {
     const tab = tabNow(), editId = chatData(tab)?.setupBase || null;
     const existing = list().find((a) => a.id === editId) || list().find((a) => a.name.toLowerCase() === p.name.toLowerCase());
     const av = finalAvatar(p), words = p.prompt.split(/\s+/).length;
+    if (chatData(tab)?.wizard?.name && !existing) p.name = chatData(tab).wizard.name; // Name ist im ersten Schritt festgelegt
     fig.innerHTML = `<div class="agp-top"><div class="agp-art"><div class="agp-scene"></div></div><div class="agp-main">
         <div class="agp-name">${esc(p.name)}</div>
         <p class="agp-desc">${esc(p.beschreibung || 'Eigener Agent')}</p>
@@ -348,7 +458,9 @@ const AgentBuilder = (() => {
     const extra = look ? { look } : {};
     if (isSetup(tab)) {
       const c = chatData(tab), base = byId(c?.setupBase);
+      const w = c?.wizard || {};
       return { agent: 'general', setup: 'agent', ...(c?.setupWish ? { setupWish: c.setupWish } : {}),
+        ...(w.name ? { setupInfo: { name: w.name, aussehen: w.lookDesc || w.look || '', animation: w.aktion || '' } } : {}),
         ...(base ? { setupBase: { name: base.name, beschreibung: base.beschreibung, figur: base.figur, farbe: base.farbe, aktion: base.aktion, verhalten: base.verhalten, werkzeuge: base.tools, begruessung: base.begruessung, anweisung: base.prompt } } : {}), ...extra };
     }
     const a = byId(id);
