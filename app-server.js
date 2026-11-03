@@ -1155,8 +1155,10 @@ async function handleAgentAvatar(req, res) {
 }
 
 /* ---------- /api/transcribe: Seiten ohne Text (Handschrift, Scans, Fotos von Heftseiten) wörtlich abschreiben ----------
-   Beim Anhängen eines PDFs schickt der Browser die Seiten ohne Textschicht in Paketen (je ≤ ~3,5 MB) – zurück kommt die Abschrift je Seite.
-   So geht der Inhalt ALLER Seiten in die Anfrage (die Bilder selbst würden bei vielen Seiten das Größenlimit von ~4,5 MB sprengen). */
+   Beim Antworten schickt der Browser die Seiten ohne Textschicht in kleinen Paketen (je ≤ 3 Seiten, mehrere parallel) – zurück kommt die
+   Abschrift je Seite. So geht der Inhalt ALLER Seiten in die Anfrage (die Bilder selbst würden das Größenlimit von ~4,5 MB sprengen).
+   Zeitlich begrenzt: ein Modell bekommt höchstens 50 s, die ganze Anfrage höchstens ~90 s – nie „lädt ewig“. Kein langes Nachdenken
+   (Abschreiben braucht keins, kostet nur Zeit). */
 const TRANSCRIBE_SYSTEM = `Du schreibst Seiten (Scans, Fotos, handschriftliche Notizen und Mitschriften, Arbeitsblätter) WORTGETREU und VOLLSTÄNDIG ab –
 nichts zusammenfassen, nichts weglassen, nichts ergänzen, nichts deuten. Jede Seite beginnt mit "=== Seite N ===" (N steht im Dateinamen), dann der Text in Lesereihenfolge.
 - Handschrift Wort für Wort entziffern, auch krakelige; ein unsicheres Wort mit [?] markieren, wirklich Unlesbares als [unleserlich] – nie raten oder überspringen.
@@ -1173,13 +1175,16 @@ async function handleTranscribe(req, res) {
   // Handschrift lesen die großen Flash-Modelle deutlich besser als die Lite-Modelle → zuerst sie, dann die Lite-Leiter
   const models = [...new Set([...(await P.ladder(env, 'text')).filter((m) => !/lite|^gemini-2\./.test(m)).slice(0, 3), ...(await P.ladder(env, 'lite')).filter((m) => !/^gemini-2\./.test(m))])].slice(0, 6);
   const files = pages.map((p) => ({ mime: p.mime, data: p.data, name: String(p.name || '').slice(0, 80) }));
+  const until = Date.now() + 90000;
   let lastErr = null;
   for (const model of models) {
+    const left = until - Date.now();
+    if (left < 12000) break;
     const key = P.geminiKey(env, model);
     try {
-      const text = await P.geminiOnce({ key, model, system: TRANSCRIBE_SYSTEM, user: `Schreib alle ${files.length} Seiten vollständig ab.`, files, maxTokens: 24000, thinking: { level: 'low', budget: 1024 }, signal: AbortSignal.timeout(110000) });
+      const text = await P.geminiOnce({ key, model, system: TRANSCRIBE_SYSTEM, user: `Schreib alle ${files.length} Seiten vollständig ab.`, files, maxTokens: Math.min(20000, 3500 * files.length), thinking: { level: 'low', budget: 0 }, signal: AbortSignal.timeout(Math.min(50000, left)) });
       if (String(text).trim().length > 10) return sendJson(res, 200, { text: String(text).slice(0, 200000), model });
-    } catch (err) { lastErr = err; P.markLimited(model, err, key); }
+    } catch (err) { lastErr = err; if (err?.name !== 'TimeoutError' && err?.name !== 'AbortError') P.markLimited(model, err, key); }
   }
   sendJson(res, 502, { error: lastErr?.status === 429 ? 'Das Kontingent zum Abschreiben ist gerade erschöpft.' : 'Die Seiten konnten gerade nicht abgeschrieben werden.' });
 }

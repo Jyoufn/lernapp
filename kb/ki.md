@@ -129,6 +129,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
   Google-Modellliste wirklich kann (6 h gemerkt, auch „-preview“-Versionen); Abfrage fehlgeschlagen → bewährte Liste (2.5 Flash, 3.5 Flash, 3.5 Flash-Lite).
 - **Gratis-Kontingent (gemessen 31.10.)**: jedes 3.x-Flash-Modell 20 Anfragen/Tag (eigenes Kontingent je Modell → je mehr Modelle in der Leiter, desto länger antwortet ein starkes); Pro-Modelle 0; 2.5 Flash Lite 404 („nicht mehr für neue Nutzer“).
 - Limit: Tageslimit (quotaId „PerDay“) → Modell bis Mitternacht Pazifikzeit überspringen, sonst 90 s; 503 (überlastet) → 60 s; 404 → 1 Tag. Dann automatisch das nächstbeste.
+- **Hängt ein Modell** (50 s weder Gedanke noch Text, `cfg().firstTokenMs`, Env `FIRST_TOKEN_MS`), nimmt `generate` sofort das nächste – kein endloses Laden.
 - Google-Suche im Modell nur mit 2.5 Flash (kostenloses Grounding) → bei Aktuellem wird ein solches Modell nach vorn geholt.
 - Alle Regeln (Aufwand verbindlich, Denken, Quellen) gelten für jedes Modell der Leiter gleich. „Live“-Modelle sind Sprach-Echtzeit, nicht für Text.
 - Bildbearbeitung (Gemini Flash Image) hat laut Google keinen Gratis-Zugang → mit Gratis-Schlüssel wird neu gemalt (Ersatz).

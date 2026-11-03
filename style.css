@@ -10782,3 +10782,7 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .msg-ai:hover .msg-model, .msg-actions:focus-within .msg-model { opacity: 1; }
 @media (hover: none) { .msg-actions .msg-model { opacity: 0.8; } }
 .lp .lp-note .st-muted { white-space: normal; overflow: visible; }
+
+/* ===== 03.11.2026 (10): Senden gesperrt, solange Dateien gelesen werden · Schritt „Handschrift lesen“ ===== */
+#composer.uploading .send-btn:not(.running) { opacity: .35; cursor: progress; }
+.scan-step .scan-n { font-variant-numeric: tabular-nums; }

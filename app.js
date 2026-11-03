@@ -336,6 +336,7 @@ composer.addEventListener('submit', (e) => {
   const run = runOf(); if (run) { run.abort(); return; } // während der Antwort dieses Chats: Stopp-Button
   const text = input.value.trim();
   if (!text && attachments.length === 0) return;
+  if (filesLoading()) { showHint('Einen Moment – die Datei wird noch gelesen'); return; } // erst abschicken, wenn alles gelesen ist
   if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
   if (!attachments.length && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
   const images = attachments.filter((a) => a.file && a.status !== 'error').map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf, prep: a.prep })); // URLs bleiben für den Chat erhalten; prep = schon gelesen bzw. wird gerade gelesen
@@ -450,7 +451,8 @@ function addFiles(files) {
 function prepareAttachment(a) {
   a.status = 'loading'; a.progress = 0;
   const t0 = performance.now();
-  a.prep = fileToInline(a.file, 1600, (p, label) => { a.progress = p; a.label = label || ''; updateAttachment(a); })
+  // nur lesen, was schnell geht (Text, Fotos verkleinern) – Handschrift liest erst die Antwort (Schritt „Handschrift lesen“)
+  a.prep = fileToInline(a.file, 1600, (p, label) => { a.progress = p; a.label = label || ''; updateAttachment(a); }, { defer: true })
     .then(async (r) => {
       const wait = 500 - (performance.now() - t0); // die Animation ist immer kurz zu sehen (nicht nur ein Flackern)
       if (wait > 0) await new Promise((ok) => setTimeout(ok, wait));
@@ -458,7 +460,7 @@ function prepareAttachment(a) {
       if (!list.length) throw new Error('leer');
       a.status = 'ready';
       const first = list[0];
-      a.meta = a.pdf ? (first.mime === 'application/pdf' ? `PDF · ${first.pages ? `${first.pages} ${first.pages === 1 ? 'Seite' : 'Seiten'}` : fmtSize(a.file.size)}${first.transcribed ? ` · ${first.transcribed} abgeschrieben` : ''}`
+      a.meta = a.pdf ? (first.mime === 'application/pdf' ? `PDF · ${first.pages ? `${first.pages} ${first.pages === 1 ? 'Seite' : 'Seiten'}` : fmtSize(a.file.size)}${first.scans ? ` · ${first.scans === first.pages ? 'Handschrift' : `${first.scans} handschriftlich`}` : ''}`
         : list.length > 1 || /^image\//.test(first.mime) ? `Scan · ${list.filter((x) => /^image\//.test(x.mime)).length} Seiten gelesen` : 'Gelesen') : '';
       updateAttachment(a);
       return r;
@@ -467,7 +469,15 @@ function prepareAttachment(a) {
 }
 // PDF als kleine Karte (Symbol + Name + Art) – im Eingabefeld und in der eigenen Nachricht
 const pdfChip = (name, cls, meta = 'PDF') => el('div', cls, `<span class="pdf-ico">${FadeIcons.svg('file', 15)}<svg class="up-ring" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="16"/></svg></span><span class="pdf-txt"><span class="pdf-name">${escapeHtml(name)}</span><span class="pdf-meta">${escapeHtml(meta)}</span></span>`);
+/* Solange eine Datei noch gelesen wird, kann nicht abgeschickt werden (Senden-Knopf blass, Enter zeigt einen Hinweis) */
+const filesLoading = () => attachments.some((a) => a.status === 'loading');
+function syncUploading() {
+  const busy = filesLoading();
+  composer.classList.toggle('uploading', busy);
+  if (!sendBtn.classList.contains('running')) sendBtn.title = busy ? 'Datei wird noch gelesen …' : 'Senden';
+}
 function updateAttachment(a) {
+  syncUploading();
   const node = a.el; if (!node) return;
   node.classList.toggle('loading', a.status === 'loading');
   node.classList.toggle('failed', a.status === 'error');
@@ -477,6 +487,7 @@ function updateAttachment(a) {
 }
 
 function renderAttachments() {
+  queueMicrotask(syncUploading); // Datei entfernt, während sie noch gelesen wurde → Senden wieder frei
   attachmentsEl.replaceChildren(...attachments.map((a, i) => {
     if (a.mention) { // @Chat/@Dokument: Karte wie ein PDF, mit Chat- bzw. Dokument-Symbol
       const chip = document.createElement('div'); // (nicht el(): im Rest dieser Funktion heißt eine Variable so)
@@ -1791,7 +1802,7 @@ async function unzip(buf) {
 const fileKind = (b) => (b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46 ? 'application/pdf'
   : b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png'
   : String.fromCharCode(...b.subarray(4, 12)).startsWith('ftyphei') ? 'image/heic' : '');
-async function goodnotesToInline(file) {
+async function goodnotesToInline(file, opts = {}) {
   const base = file.name.replace(/\.goodnotes$/i, '');
   const found = [];
   for (const e of (await unzip(await file.arrayBuffer())).filter((x) => x.size > 2000).slice(0, 80)) {
@@ -1804,7 +1815,7 @@ async function goodnotesToInline(file) {
   const out = [];
   for (const [i, f] of use.entries()) {
     const name = f.type === 'application/pdf' ? `${base} (PDF ${i + 1}).pdf` : `${base} – Bild ${i + 1}`;
-    const item = await fileToInline(new File([f.bytes], name, { type: f.type })).catch(() => null);
+    const item = await fileToInline(new File([f.bytes], name, { type: f.type }), 1600, null, opts).catch(() => null);
     if (item) out.push(...[item].flat());
   }
   out.push({ mime: 'text/plain', name: file.name, text: out.length
@@ -1814,11 +1825,16 @@ async function goodnotesToInline(file) {
 }
 // Liefert eine Datei – oder bei gescannten PDFs/GoodNotes eine Liste (Aufrufer glätten mit .flat())
 /* PDF lesen wie große KI-Plattformen: JEDE Seite einzeln – Seiten mit Text liefern ihren Text, Seiten OHNE Text (Handschrift, Scans,
-   abfotografierte Heftseiten) werden als Bild gerendert und schon beim Anhängen wortgetreu abgeschrieben (/api/transcribe, in Paketen).
-   So kommt der Inhalt aller Seiten in die Anfrage – auch bei gemischten PDFs (z. B. 17 Seiten Handschrift + 1 getippte Seite) und großen Dateien.
+   abfotografierte Heftseiten) werden als Bild gerendert und wortgetreu abgeschrieben (/api/transcribe, mehrere kleine Pakete parallel).
+   Beim Anhängen (defer) wird NUR der Text gelesen – das geht schnell; die Handschrift liest erst die Antwort selbst, als Schritt
+   „Handschrift lesen · 3/17“ in der Zeitleiste (readScans in runChat). Ohne defer (Dokumente-KI) passiert beides sofort.
    Das PDF selbst geht zusätzlich mit, wenn es in die Anfrage passt (Gemini sieht dann auch Skizzen und Tabellen). */
-const SCAN_TEXT_MIN = 80;        // weniger Zeichen auf einer Seite → als Scan/Handschrift behandeln
-const TRANSCRIBE_BATCH = 3200000; // Base64-Zeichen je Abschreib-Paket (Anfrage ≤ 4,5 MB)
+const SCAN_TEXT_MIN = 80;         // weniger Zeichen auf einer Seite → als Scan/Handschrift behandeln
+const TRANSCRIBE_BATCH = 2400000; // Base64-Zeichen je Abschreib-Paket (Anfrage ≤ 4,5 MB)
+const TRANSCRIBE_PAGES = 3;       // Seiten je Paket – kleine Pakete sind schneller fertig und laufen parallel
+const TRANSCRIBE_PARALLEL = 3;    // so viele Pakete gleichzeitig
+const TRANSCRIBE_TIMEOUT = 100000; // ein Paket darf nie ewig hängen – danach gehen die Seiten als Bild mit
+const scanJobs = new WeakMap();   // PDF-Eintrag → Seiten, die noch abgeschrieben werden müssen
 async function renderPdfPage(doc, p, max, quality) {
   const page = await doc.getPage(p);
   const base = page.getViewport({ scale: 1 });
@@ -1830,10 +1846,14 @@ async function renderPdfPage(doc, p, max, quality) {
   await page.render({ canvasContext: ctx, viewport: vp }).promise;
   const data = canvas.toDataURL('image/jpeg', quality).split(',')[1];
   canvas.width = canvas.height = 0; // Speicher frei (iPad)
+  page.cleanup?.();
   return data;
 }
-async function transcribePages(list) { // list: [{ p, data }] → Map(Seite → Text)
-  const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pages: list.map((x) => ({ mime: 'image/jpeg', data: x.data, name: `Seite ${x.p}` })) }) });
+const abortError = () => new DOMException('Abgebrochen', 'AbortError');
+async function transcribePages(list, signal) { // list: [{ p, data }] → Map(Seite → Text)
+  const timeout = AbortSignal.timeout?.(TRANSCRIBE_TIMEOUT);
+  const sig = signal && timeout && AbortSignal.any ? AbortSignal.any([signal, timeout]) : signal || timeout;
+  const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: sig, body: JSON.stringify({ pages: list.map((x) => ({ mime: 'image/jpeg', data: x.data, name: `Seite ${x.p}` })) }) });
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.text) throw new Error(j.error || 'Abschreiben fehlgeschlagen');
   const out = new Map();
@@ -1842,7 +1862,16 @@ async function transcribePages(list) { // list: [{ p, data }] → Map(Seite → 
   if (!out.size && list.length === 1) out.set(list[0].p, String(j.text).trim());
   return out;
 }
-async function pdfToInline(file, onProgress) {
+// Text des ganzen PDFs, Seite für Seite; done = Abschriften (null = noch nicht gelesen), pics = Seiten, die als Bild mitgehen
+function pdfPagesText(texts, scans, done, pics = new Set()) {
+  const body = (p) => {
+    if (!scans.includes(p)) return texts[p - 1];
+    if (done?.has(p)) return `(Handschrift/Scan – abgeschrieben)\n${done.get(p)}`;
+    return pics.has(p) ? '(Seite ohne Text – als Bild beigefügt)' : '(Handschrift/Scan – nicht abgeschrieben)';
+  };
+  return Array.from({ length: texts.length }, (_, i) => `[Seite ${i + 1}]\n${body(i + 1)}`).join('\n\n').slice(0, 400000);
+}
+async function pdfToInline(file, onProgress, { defer = false } = {}) {
   const buf = new Uint8Array(await file.arrayBuffer());
   const doc = await (await loadPdfJs()).getDocument({ data: buf.slice() }).promise;
   const n = doc.numPages, texts = [];
@@ -1850,41 +1879,68 @@ async function pdfToInline(file, onProgress) {
   for (let p = 1; p <= n; p++) {
     const t = total < 300000 ? (await (await doc.getPage(p)).getTextContent()).items.map((i) => i.str + (i.hasEOL ? '\n' : ' ')).join('').replace(/[ \t]+/g, ' ').trim() : '';
     texts.push(t); total += t.length;
-    if (p % 3 === 0) onProgress?.(0.25 * p / n, 'Wird gelesen');
+    if (p % 3 === 0) onProgress?.(0.9 * p / n, 'Wird gelesen');
   }
   const scans = texts.map((t, i) => (t.replace(/\s/g, '').length < SCAN_TEXT_MIN ? i + 1 : 0)).filter(Boolean).slice(0, 60);
-  const done = new Map(), keepImgs = [];
-  if (scans.length) {
-    // Seiten rendern und in Paketen abschreiben lassen; was nicht abgeschrieben werden kann, geht als Bild mit
-    let batch = [], size = 0, read = 0;
-    const flush = async () => {
-      if (!batch.length) return;
-      const part = batch; batch = []; size = 0;
-      try { (await transcribePages(part)).forEach((v, k) => done.set(k, v)); } catch { keepImgs.push(...part); }
-      read += part.length;
-      onProgress?.(0.3 + 0.65 * read / scans.length, `Handschrift wird gelesen · ${read}/${scans.length}`);
-    };
-    onProgress?.(0.3, `Handschrift wird gelesen · 0/${scans.length}`);
-    for (const p of scans) {
-      const data = await renderPdfPage(doc, p, 1600, 0.8);
-      if (size + data.length > TRANSCRIBE_BATCH || batch.length >= 6) await flush();
-      batch.push({ p, data }); size += data.length;
-    }
-    await flush();
-  }
-  const pageText = (p) => { const t = texts[p - 1]; if (!scans.includes(p)) return t; return done.has(p) ? `(Handschrift/Scan – abgeschrieben)\n${done.get(p)}` : '(Seite ohne Text – als Bild beigefügt)'; };
-  const text = Array.from({ length: n }, (_, i) => `[Seite ${i + 1}]\n${pageText(i + 1)}`).join('\n\n').slice(0, 400000);
   let bin = '';
   if (buf.length <= PDF_RAW_MAX) for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-  const base = file.name.replace(/\.pdf$/i, '');
-  // nicht abgeschriebene Seiten (z. B. Kontingent erschöpft) als kleinere Bilder – passen dann eher in die Anfrage
-  const imgs = [];
-  for (const x of keepImgs.slice(0, 16)) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, x.p, 1300, 0.72), name: `${base} · S. ${x.p}` });
-  return [{ mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, transcribed: done.size, text }, ...imgs];
+  const item = { mime: 'application/pdf', ...(bin ? { data: btoa(bin) } : {}), name: file.name, pages: n, text: pdfPagesText(texts, scans, null) };
+  if (!scans.length) { doc.destroy?.(); return [item]; }
+  item.scans = scans.length;
+  scanJobs.set(item, { file, texts, scans });
+  if (defer) { doc.destroy?.(); return [item]; } // Handschrift erst beim Antworten lesen
+  try { return [item, ...await readScanJob(item, (k, all) => onProgress?.(0.9, `Handschrift wird gelesen · ${k}/${all}`), null, doc)]; } finally { doc.destroy?.(); }
 }
-async function fileToInline(file, max = 1600, onProgress = null) {
-  if (isGoodnotes(file)) return goodnotesToInline(file);
-  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) return pdfToInline(file, onProgress);
+/* Handschrift eines PDF-Eintrags abschreiben: Seiten rendern, in kleinen Paketen PARALLEL abschreiben lassen (deutlich schneller als
+   nacheinander). Was nicht klappt (Kontingent, Zeitlimit), geht als kleineres Bild mit. Ergebnis: der Eintrag hat danach den vollen Text;
+   zurück kommen die Bild-Seiten (für die Anfrage). onPage(fertig, alle) meldet den Fortschritt. */
+function readScanJob(item, onPage, signal, openDoc = null) {
+  const job = scanJobs.get(item);
+  if (!job) return Promise.resolve([]);
+  if (job.run) { job.listeners.push(onPage); return job.run; }
+  job.listeners = [onPage];
+  const tell = (k) => job.listeners.forEach((f) => f?.(k, job.scans.length));
+  job.run = (async () => {
+    const doc = openDoc || await (await loadPdfJs()).getDocument({ data: new Uint8Array(await job.file.arrayBuffer()) }).promise;
+    const done = new Map(), failed = [], running = new Set();
+    let read = 0, batch = [], size = 0;
+    tell(0);
+    const send = (part) => {
+      const run = transcribePages(part, signal)
+        .then((m) => { m.forEach((v, k) => done.set(k, v)); part.filter((x) => !m.has(x.p)).forEach((x) => failed.push(x.p)); })
+        .catch(() => { if (!signal?.aborted) failed.push(...part.map((x) => x.p)); })
+        .finally(() => { running.delete(run); read += part.length; tell(read); });
+      running.add(run);
+    };
+    try {
+      for (const p of job.scans) {
+        if (signal?.aborted) throw abortError();
+        const data = await renderPdfPage(doc, p, 1600, 0.8);
+        if (batch.length && (size + data.length > TRANSCRIBE_BATCH || batch.length >= TRANSCRIBE_PAGES)) {
+          send(batch); batch = []; size = 0;
+          while (running.size >= TRANSCRIBE_PARALLEL) await Promise.race(running); // höchstens 3 Pakete gleichzeitig
+        }
+        batch.push({ p, data }); size += data.length;
+      }
+      if (batch.length) send(batch);
+      while (running.size) await Promise.race(running);
+      if (signal?.aborted) throw abortError();
+      const base = item.name.replace(/\.pdf$/i, '');
+      const pics = failed.sort((a, b) => a - b).slice(0, 16);
+      const imgs = [];
+      for (const p of pics) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, p, 1300, 0.72), name: `${base} · S. ${p}` });
+      item.text = pdfPagesText(job.texts, job.scans, done, new Set(pics));
+      item.transcribed = done.size;
+      scanJobs.delete(item);
+      return imgs;
+    } finally { if (!openDoc) doc.destroy?.(); }
+  })();
+  job.run.catch(() => { job.run = null; }); // gestoppt → beim nächsten Senden bzw. „Neu erzeugen“ noch einmal
+  return job.run;
+}
+async function fileToInline(file, max = 1600, onProgress = null, opts = {}) {
+  if (isGoodnotes(file)) return goodnotesToInline(file, opts);
+  if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')) return pdfToInline(file, onProgress, opts);
   const bitmap = await createImageBitmap(file);
   const scale = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement('canvas');
@@ -3089,9 +3145,42 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     thought.steps.forEach(finishThoughtStep);
   };
   const pendingAskStep = () => false; // Rückfragen laufen über die Zeitleiste selbst
+  /* Handschrift in angehängten PDFs: erst JETZT abschreiben (beim Anhängen wurde nur der Text gelesen) – als erster Schritt der
+     Zeitleiste „Handschrift lesen · 3/17“, Hauptstatus „Verstehen“. Danach geht die Anfrage mit dem vollen Text an die KI. */
+  const readScans = async () => {
+    const items = historyOf(tab).filter((h) => h.role === 'user').flatMap((h) => (h.images || []).map((img) => ({ h, img }))).filter(({ img }) => scanJobs.has(img));
+    if (!items.length) return;
+    const total = items.reduce((n, { img }) => n + scanJobs.get(img).scans.length, 0);
+    ensureWork(); phase('material');
+    const from = Date.now();
+    const step = stepLine('spin', `<span class="shimmer">Handschrift lesen</span> <span class="ph-x scan-n">· 0/${total} ${total === 1 ? 'Seite' : 'Seiten'}</span><span class="t live" data-from="${from}">1s</span>`);
+    step.classList.add('scan-step');
+    work.steps.append(step);
+    scrollToBottom();
+    const count = step.querySelector('.scan-n');
+    const seen = new Map();
+    const tick = (img) => (k) => { seen.set(img, k); const sum = [...seen.values()].reduce((a, b) => a + b, 0); count.textContent = `· ${Math.min(sum, total)}/${total} ${total === 1 ? 'Seite' : 'Seiten'}`; };
+    let ok = 0, pics = 0;
+    try {
+      for (const { h, img } of items) {
+        const extra = await readScanJob(img, tick(img), signal);
+        ok += img.transcribed || 0;
+        pics += extra.length;
+        if (extra.length) { const at = h.images.indexOf(img); h.images.splice(at + 1, 0, ...extra); } // nicht lesbare Seiten als Bild dahinter
+      }
+    } catch (err) {
+      if (signal.aborted || err.name === 'AbortError') { finishStep(step, `Handschrift lesen <span class="ph-x">– gestoppt</span>`); throw err.name === 'AbortError' ? err : abortError(); }
+      finishStep(step, `Handschrift lesen <span class="ph-x">· nicht verfügbar</span> <span class="t">${secs(from)}</span>`); // z. B. pdf.js nicht ladbar → die KI bekommt, was schon da ist
+      return;
+    }
+    const pages = (k) => `${k} ${k === 1 ? 'Seite' : 'Seiten'}`;
+    finishStep(step, ok ? `Handschrift gelesen <span class="ph-x">· ${ok === total ? pages(total) : `${ok} von ${pages(total)}${pics ? `, ${pics} als Bild` : ''}`}</span> <span class="t">${secs(from)}</span>`
+      : `Handschrift <span class="ph-x">· ${pics ? `${pages(pics)} als Bild beigefügt` : 'nicht lesbar'}</span> <span class="t">${secs(from)}</span>`);
+  };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
 
   try {
+    await readScans();
     // Lern-Agent: passende Abschnitte des Kerncurriculums (Einstellungen → Lehrplan) gehen mit – passt nichts, nichts
     const agentBody = window.agentPayload?.(window.PixelDogs?.mode, tab) || { agent: window.PixelDogs?.mode };
     const lastAsk = [...historyOf(tab)].reverse().find((h) => h.role === 'user')?.text || '';
@@ -3861,7 +3950,7 @@ async function sendMessage(text, images, extra = {}) {
     // Dateien noch nicht fertig gelesen (gerade erst angehängt) → kurz „Dateien werden gelesen“ statt einer leeren Antwort
     const waitNote = images.length ? el('div', 'up-wait', `<span class="shimmer">Dateien werden gelesen …</span>`) : null;
     const slow = waitNote && setTimeout(() => msgEl.append(waitNote), 250);
-    const inline = (await Promise.all(images.map((i) => (i.prep || fileToInline(i.file)).catch(() => null)))).flat();
+    const inline = (await Promise.all(images.map((i) => (i.prep || fileToInline(i.file, 1600, null, { defer: true })).catch(() => null)))).flat();
     if (slow) { clearTimeout(slow); waitNote.remove(); } // schon beim Anhängen gelesen; gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
     hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}), ...(extra.skills?.length ? { skills: extra.skills } : {}) });
