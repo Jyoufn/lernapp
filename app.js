@@ -1579,6 +1579,27 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) { const f = webImageFigure(raw); if (!f) { pre.remove(); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
   });
+  // Podcast (```podcast): Player wie bei Spotify mit Transkript und Mitreden (podcast.js) – solange die KI noch schreibt: eine Warte-Karte
+  const podClosed = (text.match(/```podcast[^\n]*\n[\s\S]*?\n```/g) || []).length;
+  target.querySelectorAll('pre:has(code.language-podcast)').forEach((pre, i) => {
+    if (!window.Podcast) { pre.remove(); return; }
+    const raw = pre.querySelector('code').textContent;
+    const keep = (target._pod ||= new Map());
+    if (!keep.has(raw)) {
+      const data = !opts.live || i < podClosed ? Podcast.parse(raw) : null;
+      if (!data) {
+        if (!opts.live) { pre.remove(); return; }
+        target._podWait ||= Podcast.pending();
+        target._podWait._count(raw);
+        pre.replaceWith(target._podWait);
+        return;
+      }
+      target._podWait = null;
+      let cur = raw; // jede Frage ändert das Skript – gespeichert wird immer der neueste Stand
+      keep.set(raw, Podcast.figure(data, { onChange: (next) => { updatePodcast(cur, next); cur = next; } }));
+    }
+    pre.replaceWith(keep.get(raw));
+  });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
@@ -2368,6 +2389,14 @@ function sourceImageFigure(raw, sources) {
   cap.append(el('span', 'src-img-l', `${escapeHtml(im.license || s.domain || '')}${s.n ? ` · Quelle [${s.n}]` : ''}`));
   fig.append(a, cap);
   return fig;
+}
+// Podcast mit Fragen des Nutzers erweitert → neues Skript im Verlauf des Chats speichern (beim nächsten Öffnen ist alles wieder da)
+function updatePodcast(oldRaw, next) {
+  const old = oldRaw.trim();
+  for (const tab of tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')) {
+    const h = historyOf(tab).find((x) => x.role !== 'user' && x.text?.includes(old));
+    if (h) { h.text = h.text.replace(old, () => next); saveChats(); return; }
+  }
 }
 function webImageFigure(raw) {
   let d = null;

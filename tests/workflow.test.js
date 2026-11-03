@@ -1093,3 +1093,24 @@ test('Große Dateien bei Google (Files API): Verweis nur mit passendem Schlüsse
     assert.equal(f.exp, Date.parse('2026-11-05T10:00:00Z'));
   } finally { fx2.restore(); }
 });
+
+test('Podcast: Skript als ```podcast (Sprecher, Kapitel, Beiträge), gründlich gedacht, kein Bild dazwischen', async () => {
+  const WEB = require('../lib/web');
+  const keep = WEB.teachingImages;
+  let searched = false;
+  WEB.teachingImages = async () => { searched = true; return []; };
+  try {
+    fx = M.installFetch([
+      { match: M.is.route, respond: () => M.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({ level: 'low', sources: 'none', think: 'auto', lern: true, queries: [], images: [], photos: false, bild: { de: 'Tierzelle Aufbau', en: '' }, why: 'Podcast' }) }] } }] }) },
+      { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Hier ist dein Podcast.\n\n```podcast\n{"titel":"Die Zelle","sprecher":[{"name":"Lena","rolle":"Moderatorin","stimme":"w"},{"name":"Jonas","rolle":"Biologe","stimme":"m"}],"kapitel":[{"ab":0,"titel":"Einstieg"}],"zeilen":[{"s":"Lena","t":"Heute geht es um die Zelle."},{"s":"Jonas","t":"Genau, die kleinste Einheit des Lebens."}]}\n```'])) },
+    ]);
+    const r = await run({ ...msg('Mach mir einen Podcast über die Tierzelle'), agent: 'learn', effort: 'auto' });
+    const call = fx.calls.find(M.is.geminiStream);
+    assert.match(M.systemOf(call), /PODCAST: Der Nutzer will einen Podcast/);
+    assert.match(M.systemOf(call), /"sprecher":\[\{"name":"Lena"/);
+    const tc = call.body.generationConfig.thinkingConfig || {};
+    assert.ok(tc.thinkingLevel !== 'low' && tc.thinkingBudget !== 2048, 'ein gutes Skript braucht Nachdenken');
+    assert.ok(!searched, 'kein Erklärbild mitten im Podcast');
+    assert.match(r.text(), /```podcast\n\{"titel":"Die Zelle"/);
+  } finally { WEB.teachingImages = keep; }
+});

@@ -95,6 +95,7 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Nie Code zum Selberzeichnen (matplotlib o. Ä.); Diagramme/Zeitstrahl/Mindmap nur als Block. Mindmap nur Stichpunkte, Zeitstrahl ohne Limit, keine `source`-Felder.
 - Jeder Chat ist für sich; Bilder nur bei Bedarf/Wunsch; Rückfragen nur, wenn wirklich etwas fehlt; Hintergrund-Aufgaben nie mit Rückfragen.
 - Präsentationen (Lern-Agent) immer mit echten Quellen und echten Fotos (Wikimedia).
+- Podcast: `PODCAST_ASK` → `PODCAST_PROMPT` (ein Satz + ```podcast-JSON, gesprochene Sprache, Formeln ausgeschrieben), Auto mindestens High, kein Erklärbild. Antwort auf Fragen des Zuhörers: `/api/podcast/answer` (`P.smallJsonTask`, nur bekannte Sprecher, 2–6 Beiträge, führt zur nächsten Zeile zurück); Ton: `/api/podcast/audio` (Gemini-TTS mit `multiSpeakerVoiceConfig`, höchstens 2 Sprecher je Aufruf, PCM gestreamt).
 - Lernsets: Chat-Wunsch (`LS.ASK`) oder Erstellen-Fenster (`last.lernset`) → `LS.PROMPT(spec)`; Inhalt nur aus gegebenem Material, Titel kurz/deutsch, Anzahl genau. Korrektur offener Klausuraufgaben: `LS.grade` (leere Antwort 0 ohne Modell, sonst Text-Leiter, Punkte auf 0,5 gerundet und begrenzt).
 
 - Aufgaben-Ergebnis als Dokument (`mdToHtml` in `lib/agenttasks.js`): ```illustration/chart/mindmap/timeline/stock-Blöcke werden `<div data-viz>`-Grafiken (die App zeichnet/erzeugt sie beim Öffnen), nicht Text.

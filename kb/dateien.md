@@ -25,6 +25,7 @@
 | `workspace-invite.js`, `music.js`, `timer.js`, `code-agent.js` | Einladung, Musik, Timer, Coding-Anzeige (alter Datei-Modus) |
 | `code-box.js` | Mini-Apps (```widget): `parse`, `figure` (Kasten, Dashboard-Kacheln, Code-Ansicht), `srcdoc` (Sandbox + Grundstile + Laufzeit), `start/stop` (iframes, Wächter, Pause), Gespeichert (`codebox.saved.v1`), Design (`codebox.design.v1`), ```einstellung (`applySetting`), `render` (Haken aus `renderMarkdown`) |
 | `chat-bg.js` | Animierter Chat-Hintergrund (`chatbg.v1`): Leinwand-Szenen, eigener Code (```hintergrund) im iframe, Einstellungs-Abschnitt |
+| `podcast.js` | Podcasts im Chat (```podcast): `parse`, `figure(data, { onChange })` (Player, Transkript, Mitreden; Ton über `/api/podcast/audio`, Ersatz Gerätestimmen), `pending` (Warte-Karte) |
 | `agent-builder.js` | Eigene Agenten (`agents.custom.v1`): Fenster „Neuer Agent“ (Einrichtungs-Chat), Profil-Karte (```agentprofil), `window.agentPayload` (agent/custom/setup/look an jede Anfrage), Liste in Einstellungen → Agenten |
 | `style.css` (~8900 Z.) | Alle Stile; ältere Schichten oben, **gültig ist das Ende** |
 

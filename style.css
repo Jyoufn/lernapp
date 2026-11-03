@@ -10816,3 +10816,65 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .panel:not(.home) .ag-starters { display: none; }
 @media (prefers-reduced-motion: reduce) { .ag-starter { animation: none; } }
 .composer-area .ag-starters { pointer-events: auto; position: relative; margin-bottom: 4px; } /* die Fläche um das Feld lässt Klicks durch – die Starter nicht */
+
+/* ===== 03.11.2026 (16): Podcast im Chat (podcast.js) – Player wie Spotify, Transkript, Mitreden ===== */
+.pod { max-width: 760px; margin: 14px 0 18px; padding: 14px; border: 1px solid rgba(255, 255, 255, 0.065); border-radius: 14px; background: color-mix(in srgb, var(--main-bg) 98.5%, #fff); animation: card-in 520ms var(--spring) both; }
+.pod-top { display: flex; align-items: center; gap: 12px; }
+.pod-cover { flex: none; display: grid; place-items: center; width: 56px; height: 56px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 20%, var(--main-bg)); }
+.pod-wave { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+.pod-wave i { width: 4px; height: 8px; border-radius: 1px; background: color-mix(in srgb, var(--accent) 50%, #fff); transition: height 200ms ease; }
+.pod-wave i:nth-child(2) { height: 14px; } .pod-wave i:nth-child(3) { height: 19px; } .pod-wave i:nth-child(4) { height: 11px; } .pod-wave i:nth-child(5) { height: 6px; }
+.pod.playing .pod-wave i, .pod-wait .pod-wave i { animation: pod-eq 760ms ease-in-out infinite alternate; }
+.pod.playing .pod-wave i:nth-child(2), .pod-wait .pod-wave i:nth-child(2) { animation-delay: -420ms; }
+.pod.playing .pod-wave i:nth-child(3), .pod-wait .pod-wave i:nth-child(3) { animation-delay: -160ms; }
+.pod.playing .pod-wave i:nth-child(4), .pod-wait .pod-wave i:nth-child(4) { animation-delay: -600ms; }
+.pod.playing .pod-wave i:nth-child(5), .pod-wait .pod-wave i:nth-child(5) { animation-delay: -300ms; }
+@keyframes pod-eq { from { height: 4px; } to { height: 22px; } }
+.pod-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pod-kick { color: var(--text-4); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.pod-title { overflow: hidden; color: var(--text); font-size: 15px; font-weight: 600; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+.pod-sub { color: var(--text-3); font-size: 12.5px; }
+.pod-state { color: var(--text-3); font-size: 12px; }
+.pod-state:empty { display: none; }
+.pod-bar { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--text-4); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+.pod-bar > span { min-width: 30px; } .pod-d { text-align: right; }
+.pod-track { position: relative; flex: 1; height: 18px; cursor: pointer; touch-action: none; }
+.pod-track::before { content: ''; position: absolute; left: 0; right: 0; top: 7.5px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+.pod-fill { position: absolute; left: 0; top: 7.5px; width: 0; height: 3px; border-radius: 2px; background: var(--text); }
+.pod-knob { position: absolute; top: 4px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--text); opacity: 0; transition: opacity 120ms ease; }
+.pod-track:hover .pod-knob, .pod.playing .pod-knob { opacity: 1; }
+.pod.buffering .pod-fill, .pod.answering .pod-fill { animation: pod-blink 900ms ease-in-out infinite alternate; }
+@keyframes pod-blink { to { opacity: 0.35; } }
+.pod-ctrl { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.pod-btn { display: grid; place-items: center; width: 34px; height: 34px; border: 0; border-radius: 8px; background: none; color: var(--text-2); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pod-btn:hover { color: var(--text); background: var(--menu-hover); }
+.pod-play { display: grid; place-items: center; width: 42px; height: 42px; border: 0; border-radius: 50%; background: var(--text); color: var(--main-bg); cursor: pointer; transition: transform 120ms ease; -webkit-tap-highlight-color: transparent; }
+.pod-play:active { transform: scale(0.93); }
+.pod-grow { flex: 1; }
+.pod-vol { display: flex; align-items: center; gap: 6px; color: var(--text-3); }
+.pod-vol input { width: 86px; accent-color: var(--text); }
+.pod-ask { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--field-border, #272727); border-radius: 16px; background: var(--field-bg, #1c1c1c); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pod-ask:hover { color: var(--text); border-color: #3a3a3a; }
+.pod-askbox { display: flex; gap: 8px; margin-top: 10px; animation: card-in 280ms var(--spring) both; }
+.pod-askbox[hidden] { display: none; }
+.pod-askbox input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--field-border, #272727); border-radius: 10px; background: var(--field-bg, #1c1c1c); color: var(--text); font: inherit; font-size: 14px; outline: none; }
+.pod-askbox input::placeholder { color: var(--text-4); }
+.pod-send { height: 38px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--accent); color: #fff; font: inherit; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.pod-chaps { display: flex; gap: 6px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; }
+.pod-chaps::-webkit-scrollbar { display: none; }
+.pod-chap { flex: none; height: 28px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 8px; background: none; color: var(--text-3); font: inherit; font-size: 12.5px; cursor: pointer; transition: color 140ms ease, border-color 140ms ease; }
+.pod-chap:hover { color: var(--text-2); }
+.pod-chap.on { color: var(--text); border-color: rgba(255, 255, 255, 0.2); }
+.pod-tr { max-height: 300px; margin-top: 12px; padding: 6px 0 2px; overflow-y: auto; border-top: 1px solid rgba(255, 255, 255, 0.06); overscroll-behavior: contain; }
+.pod-l { margin: 0; padding: 7px 10px; border-radius: 10px; color: var(--text-3); font-size: 14px; line-height: 21px; cursor: pointer; transition: color 180ms ease, background 180ms ease; }
+.pod-l b { display: block; margin-bottom: 1px; font-size: 12px; font-weight: 600; }
+.pod-l:hover { color: var(--text-2); }
+.pod-l.on { background: rgba(255, 255, 255, 0.045); color: var(--text); }
+.pod-l.du { margin: 6px 0; border: 1px dashed rgba(255, 255, 255, 0.12); color: var(--text-2); cursor: default; }
+.pod-l.du b { color: var(--text-4); }
+.pod-wait .pod-sub:empty { display: none; }
+@media (max-width: 520px) { .pod-vol input { width: 56px; } .pod-ask { padding: 0 10px; } }
+@media (prefers-reduced-motion: reduce) { .pod-wave i, .pod-fill { animation: none !important; } }
+.pod-vol { flex: 0 1 auto; min-width: 0; }
+.pod-vol input { flex: 0 1 86px; width: auto; min-width: 36px; }
+.pod-ask { flex: none; white-space: nowrap; }

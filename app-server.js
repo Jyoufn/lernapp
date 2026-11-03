@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -952,6 +952,84 @@ async function handleTts(req, res) {
   sendJson(res, 503, { error: 'Sprachausgabe gerade nicht verfügbar' });
 }
 
+/* ---------- Podcast (podcast.js): Stimmen und „Mitreden“ ----------
+   /api/podcast/audio: ein Abschnitt (≤ 10 Beiträge, höchstens 2 Sprecher) als EIN Gespräch mit zwei Stimmen (Gemini-Sprachmodell, mehrere Sprecher),
+   gestreamt als rohes PCM wie /api/tts. /api/podcast/answer: Zuhörer schaltet sich mit einer Frage ein → 2–6 neue Beiträge, danach geht es
+   mit dem bisherigen Skript weiter. */
+const POD_VOICES = new Set(['Kore', 'Aoede', 'Leda', 'Zephyr', 'Callirrhoe', 'Autonoe', 'Despina', 'Sulafat', 'Achernar', 'Puck', 'Charon', 'Orus', 'Fenrir', 'Enceladus', 'Iapetus', 'Umbriel', 'Algieba', 'Achird', 'Sadaltager']);
+const podCool = new Map(); // „Modell|Schlüsselende“ → gesperrt bis
+const podName = (n) => String(n || '').replace(/[^\p{L}\p{N} .-]/gu, '').trim().slice(0, 30);
+async function handlePodcastAudio(req, res) {
+  const b = await readBody(req, 80000);
+  const env = readEnv();
+  const lines = (Array.isArray(b.lines) ? b.lines : []).slice(0, 12).map((l) => ({ s: podName(l?.s), t: String(l?.t || '').replace(/\s+/g, ' ').trim().slice(0, 700) })).filter((l) => l.s && l.t);
+  const speakers = [...new Set(lines.map((l) => l.s))];
+  if (!lines.length || speakers.length > 2) return sendJson(res, 400, { error: 'Ungültiger Abschnitt' });
+  if (!env.GEMINI_API_KEY) return sendJson(res, 503, { error: 'Für Stimmen fehlt ein Gemini-Key' });
+  const voices = b.voices && typeof b.voices === 'object' ? b.voices : {};
+  const voiceOf = (s, i) => (POD_VOICES.has(voices[s]) ? voices[s] : i ? 'Puck' : 'Kore');
+  const text = speakers.length === 2
+    ? `Lies dieses Gespräch als lebendigen, natürlichen deutschen Lern-Podcast vor – locker, freundlich, gut betont, mit natürlichen Pausen:\n${lines.map((l) => `${l.s}: ${l.t}`).join('\n')}`
+    : `Sprich locker und natürlich wie in einem deutschen Lern-Podcast: ${lines.map((l) => l.t).join(' ')}`;
+  const speechConfig = speakers.length === 2
+    ? { multiSpeakerVoiceConfig: { speakerVoiceConfigs: speakers.map((s, i) => ({ speaker: s, voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceOf(s, i) } } })) } }
+    : { voiceConfig: { prebuiltVoiceConfig: { voiceName: voiceOf(speakers[0], 0) } } };
+  const controller = new AbortController();
+  res.on('close', () => controller.abort());
+  // Sprachmodelle haben kleine Limits je Schlüssel → jedes Modell mit bis zu 3 Schlüsseln probieren, ein Limit sperrt nur dieses Paar für 1 Minute
+  const keys = P.keysOf(env, 'GEMINI_API_KEY').slice(0, 3);
+  for (const [model, key] of TTS_MODELS.flatMap((m) => keys.map((k) => [m, k]))) {
+    const tag = `${model}|${key.slice(-6)}`;
+    if ((podCool.get(tag) || 0) > Date.now()) continue;
+    let started = false;
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
+        body: JSON.stringify({ contents: [{ parts: [{ text }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig } }),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(90000)]),
+      });
+      if (r.status === 429) { podCool.set(tag, Date.now() + 60 * 1000); continue; }
+      if (r.status === 404) { keys.forEach((k) => podCool.set(`${model}|${k.slice(-6)}`, Date.now() + 3600 * 1000)); continue; } // Modell gibt es (noch) nicht
+      if (!r.ok) continue;
+      await P.readUpstreamSse(r, (chunk) => {
+        const part = chunk.candidates?.[0]?.content?.parts?.find((x) => x.inlineData);
+        if (!part) return;
+        if (!started) {
+          started = true;
+          const rate = Number((String(part.inlineData.mimeType).match(/rate=(\d+)/) || [])[1]) || 24000;
+          res.writeHead(200, { 'Content-Type': `audio/l16; rate=${rate}; channels=1`, 'Cache-Control': 'no-store', 'X-TTS-Model': model });
+        }
+        res.write(Buffer.from(part.inlineData.data, 'base64'));
+      });
+      if (started) return res.end();
+    } catch { if (controller.signal.aborted) return; if (started) return res.end(); }
+  }
+  sendJson(res, 503, { error: 'Stimmen gerade nicht verfügbar' });
+}
+const PODCAST_ANSWER_SYSTEM = `Du schreibst die Fortsetzung eines deutschen Lern-Podcasts. Ein Zuhörer hat sich gerade mit einer Frage eingeschaltet.
+Antworte NUR mit JSON: {"zeilen":[{"s":"Name","t":"…"}]}
+- 2–6 kurze, natürliche Wortbeiträge der VORHANDENEN Sprecher (nur deren Namen), wie in einem echten Gespräch: die Frage kurz aufgreifen,
+  fachlich korrekt und anschaulich beantworten (Beispiel oder Vergleich), sich gegenseitig ergänzen. Kein übertriebenes Lob für die Frage.
+- Der letzte Beitrag leitet natürlich zurück zum Gesprächsfaden (zur NÄCHSTEN ZEILE), ohne sie vorwegzunehmen.
+- Gesprochene Sprache: keine Regieanweisungen, kein Markdown, keine Aufzählungszeichen, Formeln in Worten.
+- Geht die Frage am Thema vorbei, beantworte sie kurz und freundlich und lenke zurück.`;
+async function handlePodcastAnswer(req, res) {
+  const b = await readBody(req, 200000);
+  const env = readEnv();
+  const speakers = (Array.isArray(b.speakers) ? b.speakers : []).slice(0, 3).map((x) => ({ name: podName(x?.name), rolle: String(x?.rolle || '').slice(0, 60) })).filter((x) => x.name);
+  const question = String(b.question || '').replace(/\s+/g, ' ').trim().slice(0, 600);
+  if (!speakers.length || !question) return sendJson(res, 400, { error: 'Frage fehlt' });
+  const before = (Array.isArray(b.before) ? b.before : []).slice(-24).map((l) => `${podName(l?.s)}: ${String(l?.t || '').slice(0, 500)}`).join('\n');
+  const user = `PODCAST: ${String(b.title || '').slice(0, 120)}\nSPRECHER: ${speakers.map((x) => `${x.name}${x.rolle ? ` (${x.rolle})` : ''}`).join(', ')}\n\nBISHER:\n${before}\n\nFRAGE DES ZUHÖRERS: ${question}\n\nNÄCHSTE ZEILE (danach geht es so weiter): ${String(b.next || '(Ende des Podcasts)').slice(0, 500)}`;
+  try {
+    const j = await P.smallJsonTask(env, { system: PODCAST_ANSWER_SYSTEM, user, maxTokens: 3000, timeoutMs: 45000, strong: true });
+    const names = new Set(speakers.map((x) => x.name));
+    const zeilen = (Array.isArray(j?.zeilen) ? j.zeilen : []).map((z) => ({ s: podName(z?.s), t: String(z?.t || '').replace(/[*#_`]/g, '').trim().slice(0, 700) })).filter((z) => names.has(z.s) && z.t).slice(0, 6);
+    if (!zeilen.length) throw new Error('leer');
+    sendJson(res, 200, { zeilen });
+  } catch { sendJson(res, 502, { error: 'Die Sprecher konnten gerade nicht antworten.' }); }
+}
+
 /* ---------- /api/title: kurzer, treffender Chat-Titel aus der ersten Anfrage ----------
    Schnellstes Modell zuerst (Gemini 2.5 Flash ohne Denkphase), sonst Flash-Lite. */
 /* ---------- /api/doc-ai: KI schreibt oder bearbeitet Dokumente ----------
@@ -1546,6 +1624,8 @@ async function handle(req, res) {
       return sendJson(res, 200, { clientId: readEnv().SPOTIFY_CLIENT_ID || '' });
     }
     if (req.method === 'POST' && urlPath === '/api/tts') return await handleTts(req, res);
+    if (req.method === 'POST' && urlPath === '/api/podcast/audio') return await handlePodcastAudio(req, res);
+    if (req.method === 'POST' && urlPath === '/api/podcast/answer') return await handlePodcastAnswer(req, res);
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/upload') return await handleUpload(req, res, new URL(req.url, 'http://x'));
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
