@@ -990,3 +990,20 @@ test('PDF mit Handschrift: Gemini bekommt das PDF selbst und den Hinweis, die Se
   const [d] = P.toGeminiContents([{ role: 'user', text: 'x', images: [{ mime: 'application/pdf', name: 'a.pdf', data: 'JVBERi0x' }] }]);
   assert.ok(!d.parts.some((p) => /handschriftlich/.test(p.text || '')));
 });
+
+test('Dateien an der Frage: keine Einschätzung (spart Zeit), Lesen/Zusammenfassen denkt kurz, Aufgaben lösen dynamisch', async () => {
+  fx = M.installFetch([
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Zusammenfassung …'])) },
+  ]);
+  const pdf = { mime: 'application/pdf', data: 'JVBERi0x', name: 'Mitschrift.pdf', hand: '1–17', text: '…' };
+  await run({ messages: [{ role: 'user', text: 'Mach mir einen Lernzettel aus meiner Mitschrift', images: [pdf] }], agent: 'learn', effort: 'auto' });
+  assert.ok(!fx.calls.some(M.is.route), 'keine Einschätzung mit Dateien');
+  const low = fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig;
+  assert.ok(low.thinkingBudget === 2048 || low.thinkingLevel === 'low', 'Lernzettel aus Material: kurz denken');
+  fx = M.installFetch([
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Lösung …'])) },
+  ]);
+  await run({ messages: [{ role: 'user', text: 'Löse Aufgabe 3 aus dem PDF', images: [pdf] }], agent: 'learn', effort: 'auto' });
+  const deep = fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig;
+  assert.ok(deep.thinkingBudget === -1 || deep.thinkingLevel === undefined, 'Aufgabe lösen: Gemini denkt dynamisch');
+});

@@ -2050,43 +2050,61 @@ async function pdfToInline(file, onProgress, { defer = false } = {}) {
 /* Handschrift eines PDF-Eintrags abschreiben: Seiten rendern, in kleinen Paketen PARALLEL abschreiben lassen (deutlich schneller als
    nacheinander). Was nicht klappt (Kontingent, Zeitlimit), geht als kleineres Bild mit. Ergebnis: der Eintrag hat danach den vollen Text;
    zurück kommen die Bild-Seiten (für die Anfrage). onPage(fertig, alle) meldet den Fortschritt. */
+/* Handschrift eines großen PDFs (passt nicht selbst in die Anfrage) für Gemini aufbereiten – schnellster Weg zuerst:
+   1) Seiten als kompakte Bilder DIREKT in die Anfrage (Gemini liest die Handschrift selbst, im selben Aufruf – kein Extra-Aufruf, kein Kontingent),
+      so viele, wie in die Anfrage passen (PAGE_IMG_BUDGET);
+   2) nur was dann noch übrig ist, in kleinen Paketen parallel abschreiben lassen (/api/transcribe); scheitert das, als kleines Bild.
+   Ergebnis: der Eintrag hat danach den vollen Text, zurück kommen die Seitenbilder. onPage(fertig, alle, art) meldet den Fortschritt. */
+const PAGE_IMG_BUDGET = 2500000; // Base64-Zeichen für Seitenbilder (Anfrage ≤ 4,5 MB, MATERIAL_BUDGET 3,3 MB)
 function readScanJob(item, onPage, signal, openDoc = null) {
   const job = scanJobs.get(item);
   if (!job) return Promise.resolve([]);
   if (job.run) { job.listeners.push(onPage); return job.run; }
   job.listeners = [onPage];
-  const tell = (k) => job.listeners.forEach((f) => f?.(k, job.scans.length));
+  let mode = 'bild';
+  const tell = (k) => job.listeners.forEach((f) => f?.(k, job.scans.length, mode));
   job.run = (async () => {
     const doc = openDoc || await (await loadPdfJs()).getDocument({ data: new Uint8Array(await job.file.arrayBuffer()) }).promise;
-    const done = new Map(), failed = [], running = new Set();
-    let read = 0, batch = [], size = 0;
+    const base = item.name.replace(/\.pdf$/i, '');
+    const done = new Map(), failed = [], running = new Set(), imgs = [], rest = [];
+    let read = 0, batch = [], size = 0, used = 0;
     tell(0);
-    const send = (part) => {
-      const run = transcribePages(part, signal)
-        .then((m) => { m.forEach((v, k) => done.set(k, v)); part.filter((x) => !m.has(x.p)).forEach((x) => failed.push(x.p)); })
-        .catch(() => { if (!signal?.aborted) failed.push(...part.map((x) => x.p)); })
-        .finally(() => { running.delete(run); read += part.length; tell(read); });
-      running.add(run);
-    };
     try {
       for (const p of job.scans) {
         if (signal?.aborted) throw abortError();
-        const data = await renderPdfPage(doc, p, 1600, 0.8);
-        if (batch.length && (size + data.length > TRANSCRIBE_BATCH || batch.length >= TRANSCRIBE_PAGES)) {
-          send(batch); batch = []; size = 0;
-          while (running.size >= TRANSCRIBE_PARALLEL) await Promise.race(running); // höchstens 3 Pakete gleichzeitig
-        }
-        batch.push({ p, data }); size += data.length;
+        if (rest.length) { rest.push(p); continue; }
+        const data = await renderPdfPage(doc, p, 1250, 0.55);
+        if (used + data.length > PAGE_IMG_BUDGET) { rest.push(p); continue; }
+        used += data.length;
+        imgs.push({ mime: 'image/jpeg', data, name: `${base} · S. ${p}`, page: p });
+        tell(++read);
       }
-      if (batch.length) send(batch);
-      while (running.size) await Promise.race(running);
+      if (rest.length) {
+        mode = 'text';
+        const send = (part) => {
+          const run = transcribePages(part, signal)
+            .then((m) => { m.forEach((v, k) => done.set(k, v)); part.filter((x) => !m.has(x.p)).forEach((x) => failed.push(x.p)); })
+            .catch(() => { if (!signal?.aborted) failed.push(...part.map((x) => x.p)); })
+            .finally(() => { running.delete(run); read += part.length; tell(read); });
+          running.add(run);
+        };
+        for (const p of rest) {
+          if (signal?.aborted) throw abortError();
+          const data = await renderPdfPage(doc, p, 1600, 0.8);
+          if (batch.length && (size + data.length > TRANSCRIBE_BATCH || batch.length >= TRANSCRIBE_PAGES)) {
+            send(batch); batch = []; size = 0;
+            while (running.size >= TRANSCRIBE_PARALLEL) await Promise.race(running); // höchstens 3 Pakete gleichzeitig
+          }
+          batch.push({ p, data }); size += data.length;
+        }
+        if (batch.length) send(batch);
+        while (running.size) await Promise.race(running);
+      }
       if (signal?.aborted) throw abortError();
-      const base = item.name.replace(/\.pdf$/i, '');
-      const pics = failed.sort((a, b) => a - b).slice(0, 16);
-      const imgs = [];
-      for (const p of pics) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, p, 1300, 0.72), name: `${base} · S. ${p}` });
-      item.text = pdfPagesText(job.texts, job.scans, done, new Set(pics));
+      for (const p of failed.sort((a, b) => a - b).slice(0, 8)) imgs.push({ mime: 'image/jpeg', data: await renderPdfPage(doc, p, 1100, 0.5), name: `${base} · S. ${p}`, page: p });
+      item.text = pdfPagesText(job.texts, job.scans, done, new Set(imgs.map((x) => x.page)));
       item.transcribed = done.size;
+      item.asImages = imgs.length;
       scanJobs.delete(item);
       return imgs;
     } finally { if (!openDoc) doc.destroy?.(); }
@@ -2140,7 +2158,7 @@ window.fitMaterial = fitMaterial;
    Neueste Fotos zuerst, nur solange das Größenbudget (MATERIAL_BUDGET) reicht – ganze Fotos haben immer Vorrang. */
 const tileCache = new Map();
 function photoTiles(img) {
-  if (!/^image\//.test(img?.mime || '') || !img.data) return Promise.resolve(null);
+  if (!/^image\//.test(img?.mime || '') || !img.data || img.page) return Promise.resolve(null);
   const key = `${img.data.length}:${img.data.slice(-48)}`;
   if (!tileCache.has(key)) {
     tileCache.set(key, (async () => {
@@ -3310,13 +3328,18 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const total = items.reduce((n, { img }) => n + scanJobs.get(img).scans.length, 0);
     ensureWork(); phase('material');
     const from = Date.now();
-    const step = stepLine('spin', `<span class="shimmer">Handschrift lesen</span> <span class="ph-x scan-n">· 0/${total} ${total === 1 ? 'Seite' : 'Seiten'}</span><span class="t live" data-from="${from}">1s</span>`);
+    const step = stepLine('spin', `<span class="shimmer scan-l">Handschrift vorbereiten</span> <span class="ph-x scan-n">· 0/${total} ${total === 1 ? 'Seite' : 'Seiten'}</span><span class="t live" data-from="${from}">1s</span>`);
     step.classList.add('scan-step');
     work.steps.append(step);
     scrollToBottom();
-    const count = step.querySelector('.scan-n');
+    const count = step.querySelector('.scan-n'), label = step.querySelector('.scan-l');
     const seen = new Map();
-    const tick = (img) => (k) => { seen.set(img, k); const sum = [...seen.values()].reduce((a, b) => a + b, 0); count.textContent = `· ${Math.min(sum, total)}/${total} ${total === 1 ? 'Seite' : 'Seiten'}`; };
+    const tick = (img) => (k, all, mode) => {
+      seen.set(img, k);
+      const sum = [...seen.values()].reduce((a, b) => a + b, 0);
+      count.textContent = `· ${Math.min(sum, total)}/${total} ${total === 1 ? 'Seite' : 'Seiten'}`;
+      if (mode === 'text' && label.textContent !== 'Handschrift lesen') label.textContent = 'Handschrift lesen'; // Rest wird abgeschrieben
+    };
     let ok = 0, pics = 0;
     try {
       for (const { h, img } of items) {
@@ -3331,8 +3354,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       return;
     }
     const pages = (k) => `${k} ${k === 1 ? 'Seite' : 'Seiten'}`;
-    finishStep(step, ok ? `Handschrift gelesen <span class="ph-x">· ${ok === total ? pages(total) : `${ok} von ${pages(total)}${pics ? `, ${pics} als Bild` : ''}`}</span> <span class="t">${secs(from)}</span>`
-      : `Handschrift <span class="ph-x">· ${pics ? `${pages(pics)} als Bild beigefügt` : 'nicht lesbar'}</span> <span class="t">${secs(from)}</span>`);
+    const what = ok && pics ? `${pics} als Bild, ${ok} abgeschrieben` : ok ? `${pages(ok)} abgeschrieben` : pics ? `${pages(pics)} für Gemini` : 'nicht lesbar';
+    finishStep(step, `Handschrift vorbereitet <span class="ph-x">· ${what}</span> <span class="t">${secs(from)}</span>`);
   };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
   let idleTimer = null, idleHit = false;
