@@ -295,7 +295,9 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
           if (out) { if (process.env.BILD_ZEITEN) console.log(`[Bild]   ${model}: ${Math.round((Date.now() - t0) / 1000)} s (${images.length} Bild${images.length === 1 ? '' : 'er'})`); return out; }
         }
         console.warn(`[Bild] ${model}: ${r.ok ? 'keine lesbare Antwort' : `HTTP ${r.status}`}`);
-        if (r.status === 429) P.noteLimit(await r.json().catch(() => null));
+        const errBody = r.ok ? null : await r.json().catch(() => null);
+        if (errBody?.error?.message && r.status !== 429) console.warn(`[Bild]   ${model}: ${String(errBody.error.message).slice(0, 160)}`);
+        if (r.status === 429) P.noteLimit(errBody);
         if (r.status === 429 || r.status === 404) P.markLimited(model, { status: r.status, message: '' }, P.geminiKey(env, model));
         if (r.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000;
       } catch (e) { console.warn(`[Bild] ${model}: ${e.message}`); }
@@ -1596,6 +1598,16 @@ async function handle(req, res) {
               const chunks = j.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
               out.google[model] = { status: r.status, ms: Date.now() - t0, treffer: chunks.length, top: chunks.slice(0, 5).map((c) => c.web?.title), fehler: j.error?.message?.slice(0, 160) };
             } catch (err) { out.google[model] = { fehler: err.message }; }
+          }
+          // Bildprüfung (visionJson) je Lite-Modell: gleiche Anfrage wie im Betrieb, mit einem winzigen PNG – warum HTTP 400?
+          out.vision = {};
+          const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+          for (const model of (await P.ladder({ ...env0, GEMINI_API_KEY: gk }, 'lite')).slice(0, 3)) {
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': gk },
+              body: JSON.stringify({ systemInstruction: { parts: [{ text: 'Antworte als JSON {"ok":true}' }] }, contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'image/png', data: png } }, { text: 'Test' }] }],
+                generationConfig: { maxOutputTokens: 5024, responseMimeType: 'application/json', thinkingConfig: P.thinkingConfigFor(model, { budget: 1024, level: 'low' }) } }), signal: AbortSignal.timeout(20000) }).catch((e) => ({ status: 0, json: async () => ({ error: { message: e.message } }) }));
+            const j = await r.json().catch(() => ({}));
+            out.vision[model] = { status: r.status, fehler: j.error?.message?.slice(0, 200) };
           }
         }
         return sendJson(res, 200, { q, out });
