@@ -1289,13 +1289,23 @@ const PixelDogs = (() => {
     return `<svg class="punch-glove" viewBox="0 0 12 8" width="${12 * px}" height="${8 * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
   };
   const HIT_MS = 190, OUT_MS = 280;
+  // Aufprall: ein paar Pixel-Splitter (weiß/hell, ein roter) fliegen an der Trefferstelle auseinander, dazu ein kurzer Blitz
+  function burst(box, px) {
+    const host = document.createElement('span');
+    host.className = 'punch-burst';
+    host.style.setProperty("--p", `${px}px`);
+    const parts = [[-14, -16], [-20, -2], [-12, 13], [4, -18], [6, 15], [-4, -24], [-24, 9]];
+    host.innerHTML = '<i class="pb-flash"></i>' + parts.map(([x, y], i) => `<i style="--x:${x * px / 2}px;--y:${y * px / 2}px;--d:${i * 12}ms"${i === 3 ? ' class="r"' : ''}></i>`).join('');
+    box.append(host);
+    setTimeout(() => host.remove(), 760);
+  }
   function punchSwap(box, oldEl, showNew, px) {
     box.insertAdjacentHTML('beforeend', gloveSvg(px));
     const g = box.lastElementChild;
     const drop = () => g.remove();
     g.addEventListener('animationend', drop, { once: true });
     setTimeout(drop, 1000);
-    setTimeout(() => oldEl?.classList.add('punched'), HIT_MS);
+    setTimeout(() => { oldEl?.classList.add('punched'); burst(box, px); }, HIT_MS);
     setTimeout(showNew, HIT_MS + OUT_MS);
   }
   const pickers = new Set(); // alle offenen/geschlossenen Agenten-Felder (Klick daneben schließt sie)

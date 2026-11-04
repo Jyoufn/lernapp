@@ -11139,3 +11139,12 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 
 /* Slash-Menü (05.11.): Liste füllt die Höhe, die das Menü über/unter der iPad-Tastatur bekommt, und scrollt darin */
 .dcs-menu > .dcs-list { max-height: none; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+/* Aufprall-Partikel beim Boxhieb */
+.punch-burst { position: absolute; right: 16px; top: 52%; width: 0; height: 0; z-index: 4; pointer-events: none; }
+.dog-peek .punch-burst { right: 6px; top: 55%; }
+.punch-burst i { position: absolute; left: 0; top: 0; width: var(--p); height: var(--p); background: #f7f7f7; animation: pb-fly 560ms cubic-bezier(.15, .8, .3, 1) var(--d) both; }
+.punch-burst i.r { background: #e5484d; }
+.punch-burst .pb-flash { width: calc(var(--p) * 5); height: calc(var(--p) * 5); margin: calc(var(--p) * -2.5) 0 0 calc(var(--p) * -2.5); border-radius: 50%; background: #f7f7f7; animation: pb-flash 240ms ease-out both; }
+@keyframes pb-fly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(.4); opacity: 0; } }
+@keyframes pb-flash { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(1.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .punch-burst { display: none; } }
