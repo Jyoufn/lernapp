@@ -462,7 +462,7 @@ const Praesentation = (() => {
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error('kein Foto'))))
         .then((r) => {
           if (r.source === 'commons' && /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(r.url)) return toImg(r.url, [r.author, r.license].filter(Boolean).join(' · ').replace(/<[^>]+>/g, ''));
-          if (r.source === 'ai' && /^data:image\//.test(r.url || '')) return toImg(r.url, 'KI-Bild'); // kein passendes Foto → passendes KI-Bild
+          if (r.source === 'ai' && /^data:image\//.test(r.url || '')) return toImg(r.url, ''); // kein passendes Foto → passendes KI-Bild (keine Quelle nötig – steht nicht als „Bild: KI-Bild“ in den Quellen)
           throw new Error('kein Foto');
         }));
     p.catch(() => imgMemo.delete(key));

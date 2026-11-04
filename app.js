@@ -2500,6 +2500,40 @@ function siteIcon(domain, fallback, cls = 'chip-ico') {
   return box;
 }
 
+/* Quellen-Schritt (Wunsch 05.11.): standardmäßig zugeklappt; rechts bis zu 3 Website-Bilder übereinander + „+N“;
+   ein Klick klappt auf → Suchanfragen und Quellen. srcFold liefert den Inhaltsbereich, srcStack aktualisiert die Vorschau. */
+function srcFold(step) {
+  if (step._fold) return step._fold;
+  const fold = el('div', 'fold'), inner = el('div', 'fold-in src-fold');
+  fold.append(inner); step.append(fold);
+  step.classList.add('foldable', 'has-box', 'src-step');
+  step.querySelector('.step-line')?.addEventListener('click', () => step.classList.toggle('open'));
+  return (step._fold = inner);
+}
+function srcStack(step, items) {
+  const list = [...new Map((items || []).filter((x) => x && (x.domain || x.url)).map((x) => [x.domain || x.url, x])).values()];
+  let st = step.querySelector(':scope > .src-stack');
+  if (!list.length) { st?.remove(); return; }
+  if (!st) {
+    st = el('button', 'src-stack'); st.type = 'button'; st.title = 'Suchanfragen und Quellen anzeigen';
+    st.addEventListener('click', (e) => { e.stopPropagation(); step.classList.toggle('open'); });
+    step.append(st);
+  }
+  st.replaceChildren(...list.slice(0, 3).map((x) => siteIcon(x.domain, x.title, 'ss-ico')));
+  if (list.length > 3) st.append(el('span', 'ss-more', `+${list.length - 3}`));
+}
+function srcQueries(box, queries) {
+  let list = box.querySelector(':scope > .dq-list');
+  if (!list) { list = el('div', 'dq-list'); box.prepend(list); }
+  const have = new Set([...list.querySelectorAll('.dq-text')].map((x) => x.textContent));
+  (queries || []).filter((q) => q && !have.has(q)).forEach((q) => {
+    const row = el('div', 'dq', `<div class="dq-q"><span class="dq-ico">${FadeIcons.svg('search', 12)}</span><span class="dq-text"></span></div>`);
+    row.dataset.state = 'done';
+    row.querySelector('.dq-text').textContent = q;
+    list.append(row);
+  });
+}
+
 function sourceChip(s) {
   const label = s.title.length > 60 ? s.title.slice(0, 58) + '…' : s.title;
   const a = el('a', 'chip', `<span class="chip-label">${escapeHtml(label || s.domain)}</span>`);
@@ -3048,9 +3082,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (st.list) return st.list;
     const list = el('div', 'plan-list branch');
     const fold = el('div', 'fold'), inner = el('div', 'fold-in');
-    inner.append(list); fold.append(inner); st.step.append(fold);
-    st.step.classList.add('foldable', 'open', 'has-box');
-    st.step.querySelector('.step-line').addEventListener('click', () => st.step.classList.toggle('open'));
+    srcFold(st.step).append(list); // zugeklappt; rechts die Website-Bilder (srcStack)
     st.list = list;
     return list;
   };
@@ -3112,6 +3144,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const it = queryRow(key, q);
       it.list.push(src);
       fillChips(it.chips, it.list, () => openSourcesModal(it.list, null), 1);
+      const stp = deep.steps[key]; (stp.srcs ||= []).push(src); srcStack(stp.step, stp.srcs);
       settle(it);
       (e.source.subs || []).forEach((id) => tick(deep.subs.get(id)));
     }
@@ -3201,15 +3234,18 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const n = st.pages.length;
       const k = st.gathering ? 'gather' : st.key;
       if (!n) { st.step.remove(); return; } // nichts gefunden → kein Schritt (kein „keine Quellen“)
+      if (!st.news) { const box = srcFold(st.step); srcQueries(box, st.queries); box.append(st.chips); srcStack(st.step, st.pages); }
       line.innerHTML = `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? 'Artikel' : (n === 1 ? 'Quelle' : 'Quellen')}</span> ${dur}`;
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
       if (!used.length) { st.step.remove(); return; } // nichts Brauchbares → Schritt verschwindet
       line.innerHTML = doneLine('search', '', dur.replace(/<[^>]+>/g, ''));
       line.innerHTML = doneLine('search', `${used.length} ${used.length === 1 ? 'Quelle' : 'Quellen'}`, dur.replace(/<[^>]+>/g, ''));
-      const chips = el('div', 'chips');
-      st.step.append(chips);
+      const box = srcFold(st.step), chips = el('div', 'chips');
+      srcQueries(box, st.queries);
+      box.append(chips);
       fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
+      srcStack(st.step, used);
     } else if (s.stage === 'images') {
       // Funde heraussuchen: Anzahl + bis zu 5 kleine Vorschaubilder (abgerundet, wie Datei-Chips)
       const m = s.meta || {};
@@ -3310,13 +3346,15 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (!st) {
         const step = addStep('<span class="web-line"></span>');
         st = stages.web = { step, chips: el('div', 'chips'), ended: true };
-        step.append(st.chips);
+        srcFold(step).append(st.chips);
       }
       st.step.querySelector('.web-line').innerHTML = `Quellen analysiert · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
       fillChips(st.chips, r.sources, () => openSourcesModal(r.sources, null));
+      srcStack(st.step, r.sources);
       groundSrc = r.sources; // für unten an der Antwort, wenn es keine nummerierten Belege gibt
       return;
     }
+    if (r.status === 'running' && Array.isArray(r.queries) && stages.searching_sources) stages.searching_sources.queries = r.queries.map((q) => (typeof q === 'string' ? q : q?.q || q?.query || '')).filter(Boolean).slice(0, 8);
     if (r.status === 'done' || r.status === 'failed') {
       renderOpts.sources = [];
       (r.sources || []).forEach((s) => { renderOpts.sources[s.n - 1] = s; });
@@ -3327,6 +3365,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
      Was auf der Seite stand, zeigt der Tooltip. */
   const onWeb = (e) => {
     const st = stages.browsing;
+    if (st && e.action === 'search' && e.query) (st.queries ||= []).includes(e.query) || st.queries.push(e.query);
     if (st && e.action === 'visit' && !st.gathering) {
       // Suche fertig → „Gathering information“ als eigener Schritt, darunter die gelesenen Seiten
       st.gathering = true;

@@ -845,10 +845,10 @@ async function fittingWebImage(env, description, query) {
       const r = await fetch(c.thumb || c.url, { headers: { 'User-Agent': 'BackboneLearningApp/1.0 (local educational app)' }, signal: AbortSignal.timeout(12000) });
       const type = (r.headers.get('content-type') || '').split(';')[0];
       const buf = r.ok ? Buffer.from(await r.arrayBuffer()) : null;
-      return buf && buf.length <= 4e6 && /^image\/(png|jpeg|webp)$/.test(type) ? { c, img: { mime: type, data: buf.toString('base64') } } : null;
+      return buf && buf.length <= 1.5e6 && /^image\/(png|jpeg|webp)$/.test(type) ? { c, img: { mime: type, data: buf.toString('base64') } } : null;
     } catch { return null; }
   }))).filter(Boolean);
-  if (!loaded.length) return null;
+  if (!loaded.length) return null; // je Bild ≤ 1,5 MB: Gemini lehnt Anfragen über 20 MB mit HTTP 400 ab (05.11. alle Bildprüfungen fehlgeschlagen → KI-Bilder)
   const v = await visionJson(env, FIT_SYSTEM, `Gewünschtes Bild: ${description}\n(${loaded.length} Bilder in dieser Reihenfolge)`, loaded.map((x) => x.img)).catch(() => null);
   const k = Number(v?.pick);
   return k >= 1 && k <= loaded.length ? loaded[k - 1].c : null;
@@ -877,7 +877,7 @@ async function handleIllustration(req, res) {
   }
   // Präsentationen: erst ein geprüft passendes Foto (oben); sonst ein passendes KI-Bild im ruhigen Fotostil – nie ein unpassender Suchtreffer
   if (source === 'webonly') {
-    const img = await paint(env, `${description}. Professional high-quality photograph for a school presentation, realistic, natural light, clean calm composition, subject clearly visible and centered, no text, no letters, no watermark`).catch(() => null);
+    const img = await paint(env, `${description}. Professional high-quality photograph for a school presentation, realistic, natural light, clean calm composition, subject clearly visible and centered, show the topic itself (places, objects, situations) – no random portraits or posed stock-photo people unless the description asks for them, no text, no letters, no watermark`).catch(() => null);
     if (img) { const out = { source: 'ai', url: `data:${img.mime};base64,${img.data}`, author: 'KI-Bild' }; writeImgCache(key, out); res.setHeader('Cache-Control', 'no-store'); return sendJson(res, 200, out); }
     return sendJson(res, 404, { error: 'Kein passendes Bild gefunden.' });
   }

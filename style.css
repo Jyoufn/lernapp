@@ -11081,3 +11081,19 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .msg-ai a.wb-credit, .msg-ai a.wb-credit:hover { color: var(--text-3); text-decoration: none; border-bottom: 1px solid var(--line); }
 .msg-ai a.wb-credit span { color: inherit; text-decoration: none; }
 .msg-ai a.wb-credit:hover span { color: var(--text); }
+
+/* Quellen-Schritt (05.11.): zugeklappt, rechts bis zu 3 Website-Bilder übereinander + „+N“; Klick klappt Suchanfragen und Quellen auf */
+.step.src-step { width: fit-content !important; max-width: 100%; padding-right: 92px; align-self: flex-start; justify-self: start; }
+.src-stack { position: absolute; right: 0; top: -2px; display: inline-flex; align-items: center; height: 26px; padding: 0 2px; border: 0; background: none; cursor: pointer; }
+.src-stack .ss-ico { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; overflow: hidden; background: #212121;
+  border: 2px solid #141414; margin-left: -7px; font-size: 10px; font-weight: 700; color: #ededed; transition: transform 200ms var(--ease); }
+.src-stack .ss-ico:first-child { margin-left: 0; }
+.src-stack .ss-ico img { width: 14px; height: 14px; border-radius: 3px; }
+.src-stack:hover .ss-ico { transform: translateY(-1px); }
+.src-stack .ss-more { margin-left: 6px; font-size: 12px; color: #909090; font-variant-numeric: tabular-nums; }
+.src-fold .chips { margin-top: 6px; }
+.src-fold > .dq-list { margin-top: 10px; }
+.step.src-step:not(.open) > .fold { width: 0; }
+.step.src-step.open { width: auto !important; }
+.step.src-step > .src-stack { transition: opacity 200ms ease; }
+.step.src-step.open > .src-stack { opacity: 0; pointer-events: none; }
