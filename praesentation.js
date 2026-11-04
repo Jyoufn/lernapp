@@ -16,6 +16,9 @@ const Praesentation = (() => {
   const FONTS = { sans: { pptx: 'Helvetica Neue', css: '"Helvetica Neue", Helvetica, Arial, sans-serif' }, serif: { pptx: 'Georgia', css: 'Georgia, "Times New Roman", serif' } };
   const FONT = FONTS.sans.pptx;
   const THEMES = {
+    // „Business“ (Vorlage des Nutzers 04.11.): weiß, kräftiges Firmenblau, blaue Titelfolie mit getöntem Foto, Agenda mit blauem Feld,
+    // Kicker in Großbuchstaben mit blauem Strich, Fuß mit Titel + Seitenzahl und dünner blauer Linie – ohne Punktmuster
+    business: { name: 'Business', bg: '#FFFFFF', soft: '#EEF2F6', text: '#1B2430', sub: '#6B7480', panel: '#EEF1F5', line: '#DCE3EA', accent: '#1565C0', dark: '#0D3C78', onAccent: '#FFFFFF', head: 'sans', title: 'business', radius: 0.12, fixedAccent: true },
     klar: { name: 'Klar', bg: '#FFFFFF', soft: '#F3F5F8', text: '#14161A', sub: '#5F6672', panel: '#F2F4F7', line: '#E3E6EB', accent: '#2F6BFF', onAccent: '#FFFFFF', head: 'sans', title: 'split', radius: 0.22 },
     nacht: { name: 'Nacht', bg: '#0E1320', text: '#F4F6FB', sub: '#9AA3B5', panel: '#182033', line: '#273049', accent: '#5EA2FF', onAccent: '#0B1020', head: 'sans', title: 'full', radius: 0.22 },
     papier: { name: 'Papier', bg: '#F6F1E7', text: '#2A2118', sub: '#76695A', panel: '#ECE3D3', line: '#DDD1BC', accent: '#B5532A', onAccent: '#FFFFFF', head: 'serif', title: 'split', radius: 0.08 },
@@ -23,7 +26,7 @@ const Praesentation = (() => {
     minimal: { name: 'Minimal', bg: '#FAFAFA', text: '#0A0A0A', sub: '#6B6B6B', panel: '#FFFFFF', line: '#D9D9D9', accent: '#0A0A0A', onAccent: '#FFFFFF', head: 'sans', title: 'minimal', radius: 0, fixedAccent: true },
   };
   const ALIAS = { hell: 'klar', dunkel: 'nacht', warm: 'papier' };
-  const themeOf = (deck) => { const T = THEMES.klar; return { ...T, ...(deck.accent && !T.fixedAccent && deck.accent ? { accent: deck.accent } : {}) }; };
+  const themeOf = (deck) => { const T = THEMES.business; return { ...T, ...(deck.accent && !T.fixedAccent && deck.accent ? { accent: deck.accent } : {}) }; };
   const TYPES = ['titel', 'gliederung', 'punkte', 'bild', 'zahlen', 'zwei', 'zitat', 'abschnitt', 'schritte', 'definition', 'frage', 'fazit', 'quellen', 'ende'];
   // „Titel | Text“, „**Titel**: Text“ oder „Titel: Text“ → Karte/Schritt mit fetter Überschrift
   const splitPt = (p) => {
@@ -131,6 +134,13 @@ const Praesentation = (() => {
     // side: Seite, auf der ein randloses Bild liegt ('l'/'r') – dort steht kein Fußtext, die Seitenzahl wird dann hell
     const footer = (dark, side = '') => {
       const c = dark ? 'rgba(255,255,255,0.75)' : T.sub;
+      if (T.title === 'business') { // dünne blaue Linie unten über die ganze Breite, links Titel, rechts „Seite N“
+        out.push({ k: 'rect', x: 0, y: H - 0.06, w: W, h: 0.06, fill: T.accent, foot: true });
+        if (side !== 'l') out.push({ k: 'text', x: M, y: H - 0.48, w: 6, lines: [words(deck.title)], size: 9, color: c, lh: 1.2, foot: true });
+        if (imo?.credit && !side) out.push({ k: 'text', x: 6.9, y: H - 0.48, w: 4.7, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8, foot: true });
+        out.push({ k: 'text', x: W - M - 1.2, y: H - 0.48, w: 1.2, lines: [words(`Seite ${i + 1}`)], size: 9, color: side === 'r' ? 'rgba(255,255,255,0.85)' : c, align: 'r', lh: 1.2, foot: true });
+        return;
+      }
       if (T.title === 'minimal' || T.head === 'serif') out.push({ k: 'rect', x: M, y: H - 0.62, w: W - 2 * M, h: 0.012, fill: dark ? 'rgba(255,255,255,0.35)' : T.line, foot: true });
       if (side !== 'l') out.push({ k: 'text', x: side === 'r' ? M : M, y: H - 0.5, w: side === 'r' ? 5 : 6, lines: [words(deck.title)], size: 10, color: c, lh: 1.2, foot: true });
       if (imo?.credit && !side) out.push({ k: 'text', x: 6.9, y: H - 0.5, w: 4.9, lines: [words(`Bild: ${imo.credit}`.slice(0, 80))], size: 8, color: c, align: 'r', lh: 1.2, alpha: 0.8, foot: true });
@@ -140,6 +150,13 @@ const Praesentation = (() => {
     let sec = '';
     if (!['quellen', 'ende', 'fazit'].includes(slide.type)) for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
     const heading = (t, w = W - 2 * M, x = M) => {
+      if (T.title === 'business') { // senkrechter blauer Strich + Kicker (Abschnitt) in Großbuchstaben, darunter der Folientitel
+        out.push({ k: 'rect', x: x - 0.22, y: 0.6, w: 0.05, h: sec ? 0.95 : 0.62, fill: T.accent });
+        let yb = 0.56;
+        if (sec) { out.push({ k: 'text', x, y: yb, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); yb += 0.3; }
+        const fb = text(t, { x, y: yb, w, h: 1.15, max: 30, min: 20, bold: true, color: T.text, maxLines: 2, lh: 1.1 });
+        return fb.bottom + 0.45;
+      }
       let y = 0.62;
       if (sec && T.title !== 'minimal') { out.push({ k: 'text', x, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
       const f = text(t, { x, y, w, h: 1.15, max: T.head === 'serif' ? 34 : 32, min: 22, bold: T.head !== 'serif', font: T.head, color: T.text, maxLines: 2, lh: 1.1 });
@@ -166,7 +183,46 @@ const Praesentation = (() => {
     };
     const R = T.radius;
     const s = slide;
-    if (s.type === 'titel') {
+    if (s.type === 'titel' && T.title === 'business') { // blaue Fläche, Foto blau getönt rechts, weißer Titel links mit Strich
+      const sub = s.text || deck.subtitle;
+      out[0].fill = T.accent;
+      if (im) { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: T.accent, alpha: 0.78 }); }
+      out.push({ k: 'rect', x: M, y: 2.85, w: 0.7, h: 0.05, fill: '#FFFFFF' });
+      const f = text((s.title || deck.title).toUpperCase(), { x: M, y: 3.1, w: 8.6, h: 2.0, max: 44, min: 28, bold: true, color: '#FFFFFF', maxLines: 3, lh: 1.08 });
+      if (sub) text(sub.toUpperCase(), { x: M, y: f.bottom + 0.25, w: 8.2, h: 0.9, max: 13, min: 10, color: 'rgba(255,255,255,0.85)', maxLines: 2, lh: 1.4 });
+      out.push({ k: 'rect', x: 0, y: H - 0.06, w: W, h: 0.06, fill: '#FFFFFF', alpha: 0.35 });
+    } else if (s.type === 'gliederung' && T.title === 'business') { // Agenda: links blaues Feld (mit Foto), rechts Liste mit Nummernkreisen
+      const pw = 4.2;
+      out.push({ k: 'rect', x: 0, y: 0, w: pw, h: H, fill: T.accent });
+      if (im) { out.push({ k: 'image', x: 0, y: 0, w: pw, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: pw, h: H, fill: T.accent, alpha: 0.72 }); }
+      out.push({ k: 'rect', x: M, y: 3.35, w: 0.6, h: 0.05, fill: '#FFFFFF' });
+      text((s.title || 'Agenda').toUpperCase(), { x: M, y: 3.55, w: pw - 1.2, h: 1.0, max: 28, min: 18, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.1 });
+      const items = s.points.length ? s.points : [];
+      const x0 = pw + 0.9, lw = W - x0 - M, rh = Math.min(0.92, (H - 1.9) / Math.max(items.length, 1)), y0 = (H - rh * items.length) / 2;
+      items.forEach((p, k) => {
+        const y = y0 + k * rh;
+        out.push({ k: 'ellipse', x: x0, y: y + rh / 2 - 0.2, w: 0.4, h: 0.4, fill: T.accent });
+        out.push({ k: 'text', x: x0, y: y + rh / 2 - 0.13, w: 0.4, lines: [words(String(k + 1), true)], size: 11, bold: true, color: '#FFFFFF', align: 'c', lh: 1.1 });
+        text(p, { x: x0 + 0.65, y: y + rh / 2 - 0.17, w: lw - 0.65, h: rh - 0.15, max: 18, min: 13, color: T.text, maxLines: 2, lh: 1.2 });
+        if (k < items.length - 1) out.push({ k: 'rect', x: x0 + 0.65, y: y + rh - 0.02, w: lw - 0.65, h: 0.012, fill: T.line });
+      });
+      footer(false, 'l');
+    } else if (s.type === 'abschnitt' && T.title === 'business') { // Trennfolie: hellgrau, große blasse Nummer links, Titel rechts mit blauem Strich
+      const num = deck.slides.slice(0, i + 1).filter((x) => x.type === 'abschnitt').length;
+      out[0].fill = T.panel;
+      if (im) { out.push({ k: 'image', x: 0, y: 0, w: 5.6, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: 5.6, h: H, fill: T.accent, alpha: 0.35 }); }
+      else out.push({ k: 'text', x: M, y: 1.9, w: 4.6, lines: [words(String(num).padStart(2, '0'), true)], size: 150, bold: true, color: '#D3DAE2', lh: 1 });
+      out.push({ k: 'rect', x: 6.6, y: 3.0, w: 0.6, h: 0.05, fill: T.accent });
+      text(s.title.toUpperCase(), { x: 6.6, y: 3.2, w: W - 6.6 - M, h: 1.8, max: 30, min: 20, bold: true, color: T.accent, maxLines: 3, lh: 1.1 });
+      footer(false, im ? 'l' : '');
+    } else if (s.type === 'ende' && T.title === 'business') { // Schluss: links „Vielen Dank“ + Hinweis, rechts Titel groß in Blau, Trennlinie
+      out.push({ k: 'rect', x: M, y: 2.5, w: 0.6, h: 0.05, fill: T.accent });
+      text((s.title || 'Vielen Dank!').toUpperCase(), { x: M, y: 2.7, w: 5.2, h: 1.1, max: 30, min: 20, bold: true, color: T.accent, maxLines: 2, lh: 1.1 });
+      if (s.text) text(s.text, { x: M, y: 3.75, w: 5.2, h: 0.9, max: 18, min: 13, color: T.sub, maxLines: 2, lh: 1.3 });
+      out.push({ k: 'rect', x: 6.55, y: 1.6, w: 0.012, h: H - 3.2, fill: T.line });
+      text(deck.title.toUpperCase(), { x: 7.2, y: 2.9, w: W - 7.2 - M, h: 1.7, max: 32, min: 20, bold: true, color: T.accent, align: 'c', maxLines: 3, lh: 1.1 });
+      footer(false);
+    } else if (s.type === 'titel') {
       const sub = s.text || deck.subtitle;
       if (T.title === 'full') {
         if (im) { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: '#060A14', alpha: 0.55 }); }

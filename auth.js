@@ -150,6 +150,8 @@
     // nach dem Anmelden bleibt die App so stehen, wie die Animation endet (leerer Chat) – kein Springen zum letzten Tab;
     // app.js liest das beim Wiederherstellen der Tabs (restoreLayout)
     if (fresh) window.AUTH_FRESH = true;
+    // frisch angemeldet: genau der Agent, der in der Vorschau zu sehen war (Kontodaten haben evtl. einen anderen gemerkt)
+    try { const dog = sessionStorage.getItem('auth.dog'); sessionStorage.removeItem('auth.dog'); if (fresh && dog) ls.setItem('dogMode', dog); } catch {}
   }
 
   /* ===================================================================
@@ -346,6 +348,8 @@
       const appEl = document.getElementById('app');
       const collapsed = lsGet('sidebarCollapsed') === '1';
       root.classList.add('auth-opening');
+      // der Agent aus der Vorschau bleibt nach dem Neustart derselbe (sonst springt der Hund am Ende der Animation)
+      try { sessionStorage.setItem('auth.dog', window.PixelDogs?.mode || 'general'); } catch {}
       appEl?.classList.toggle('collapsed', collapsed);
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
       setTimeout(() => location.reload(), reduce ? 60 : 620);

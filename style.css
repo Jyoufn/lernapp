@@ -10992,3 +10992,12 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .lb2-row.picked::before, .lb2-row.picked + .lb2-row::before { opacity: 0; }
 @media (max-width: 760px) { .lb2-check { left: 10px; } }
 @media (prefers-reduced-motion: reduce) { .lb2-row.picked .lb2-check svg { animation: none; } }
+/* Bibliothek (04.11. nachts): Filter als schlichtes Icon, „Neues Dokument“ als ruhige Pille im Palette-Ton */
+.lb2-filter { width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-4); }
+.lb2-filter svg { width: 13px; height: 13px; }
+.lb2-filter:hover, .lb2-filter.on { color: var(--text); background: var(--pop-bg); border: 0; }
+.lb2-filter.set { color: var(--text); }
+.lb2 .cl-new { height: 30px; padding: 0 13px 0 11px; gap: 6px; border: 0; border-radius: 999px; background: var(--pop-bg); color: var(--text); font-size: 12.5px; font-weight: 500; }
+.lb2 .cl-new svg { width: 12px; height: 12px; color: var(--text-3); }
+.lb2 .cl-new:hover { background: var(--pop-bg); color: var(--text); }
+.lb2 .cl-new:hover svg { color: var(--text); }
