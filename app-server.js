@@ -1554,6 +1554,19 @@ async function handle(req, res) {
         if (secret && req.headers.authorization !== `Bearer ${secret}` && q.get('key') !== secret) return sendJson(res, 401, { error: 'Nicht erlaubt' });
         return sendJson(res, 200, { ok: true, started: await runAutomations(store) });
       }
+      // Prüfseite Suche (ohne Anmeldung, nur Treffer-Titel, gedrosselt): welche Suchmaschine liefert vom Server aus brauchbare Treffer?
+      if (urlPath === '/api/diag/suche') {
+        if (Date.now() - (handle.diagAt || 0) < 3000) return sendJson(res, 429, { error: 'Bitte kurz warten' });
+        handle.diagAt = Date.now();
+        const q = String(new URL(req.url, 'http://x').searchParams.get('q') || '').slice(0, 120);
+        const R = require('./lib/research'), terms = R.terms(q), out = {};
+        await Promise.all(Object.entries(WEB.hooks.engines).map(async ([name, run]) => {
+          const t0 = Date.now();
+          try { const list = await run(q, { timeoutMs: 9000 }); out[name] = { ms: Date.now() - t0, n: list.length, passend: list.filter((r) => R.relevance(terms, r.title, r.snippet) >= 0.34).length, top: list.slice(0, 6).map((r) => `${r.title} — ${r.url}`.slice(0, 140)) }; }
+          catch (err) { out[name] = { ms: Date.now() - t0, fehler: String(err.message).slice(0, 160) }; }
+        }));
+        return sendJson(res, 200, { q, out });
+      }
       user = await ACC.sessionUser(store, cookiesOf(req).sid);
       if (!user) return sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
       if (user.renewed) res.setHeader('Set-Cookie', sessionCookie(req, cookiesOf(req).sid, ACC.SESSION_TTL)); // Cookie mit verlängern

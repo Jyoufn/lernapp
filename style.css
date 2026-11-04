@@ -11021,3 +11021,9 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .cs-pill button { height: 30px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: var(--text-4); font: 500 13px Inter, sans-serif; transition: color 160ms ease, background-color 200ms ease; }
 .cs-pill button:hover { color: var(--text-2); }
 .cs-pill button.on { background: var(--win-bg); color: var(--text); border: 0; }
+/* „Agenten · Dokumente“: Größe wie vorher (36/28 px), Rundung bleibt, Farben umgekehrt – Leiste im Fenster-Ton, gewählter Teil heller */
+.cs-pill { height: 36px; padding: 0 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--win-bg); }
+.cs-pill button { height: 28px; padding: 0 12px; border-radius: 9px; }
+.cs-pill button.on { background: #242424; color: var(--text); }
+/* Auswahl-Menüs: Farbe wie der Knopf „Neues Dokument“ (Fenster-Ton, leiser Rand); Zeile beim Darüberfahren #212121 */
+:root { --menu-bg: #181818; --menu-hover: #212121; }
