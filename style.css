@@ -11027,3 +11027,26 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .cs-pill button.on { background: #242424; color: var(--text); }
 /* Auswahl-Menüs: Farbe wie der Knopf „Neues Dokument“ (Fenster-Ton, leiser Rand); Zeile beim Darüberfahren #212121 */
 :root { --menu-bg: #181818; --menu-hover: #212121; }
+
+/* ===== Aufgaben-Liste im Stil der Bibliothek (04.11.) =====
+   Zeilen ohne Kasten, feine Trennlinie, Hover-Fläche, Titel 14 px, Fälligkeit/Prio rechts leise. */
+.tk-view.tk-listmode .tk-row { position: relative; min-height: 44px; padding: 0 8px 0 10px; border: 0; border-radius: 9px; background: none; transition: background-color 90ms ease; }
+.tk-view.tk-listmode .tk-row + .tk-row::before { content: ''; position: absolute; left: 44px; right: 10px; top: 0; height: 1px; background: rgba(255,255,255,.055); }
+.tk-view.tk-listmode .tk-row:hover, .tk-view.tk-listmode .tk-row:focus-visible, .tk-view.tk-listmode .tk-row.open { background: var(--menu-hover); }
+.tk-view.tk-listmode .tk-row:hover::before, .tk-view.tk-listmode .tk-row:hover + .tk-row::before, .tk-view.tk-listmode .tk-row.open::before, .tk-view.tk-listmode .tk-row.open + .tk-row::before { opacity: 0; }
+.tk-view.tk-listmode .tk-row-line { min-height: 44px; gap: 10px; }
+.tk-view.tk-listmode .tk-row-title { color: var(--text-2); font-size: 14px; font-weight: 400; }
+.tk-view.tk-listmode .tk-row:hover .tk-row-title { color: var(--text); }
+.tk-view.tk-listmode .tk-row.done .tk-row-title { color: var(--text-4); }
+.tk-view.tk-listmode :is(.tk-row-due, .tk-row-rep, .tk-row-left) { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tk-view.tk-listmode .tk-row-notes { color: var(--text-4); font-size: 12.5px; }
+/* Gruppen wie in der Bibliothek: kein Kasten, nur eine leise Überschrift („Heute“, „Diese Woche“ …) */
+.tk-view.tk-listmode .tk-grp > .tk-rows { padding: 0; border: 0; border-radius: 0; background: none; overflow: visible; }
+.tk-view.tk-listmode .tk-grp-head { min-height: 0; padding: 16px 10px 6px; background: none; }
+.tk-view.tk-listmode .tk-grp-head .tk-grp-n { color: var(--text-4); font-size: 12px; font-weight: 500; }
+.tk-view.tk-listmode .tk-grp-head .tk-count { font-size: 12px; }
+.tk-view.tk-listmode .tk-grp.g-done .tk-grp-head:hover { background: none; }
+.tk-view.tk-listmode .tk-grp + .tk-grp { margin-top: 0; }
+/* Bibliothek: gewählter Haken hell (fast weiß) mit dickem dunklem Haken für Kontrast */
+.lb2-row.picked .lb2-check { background: #e6e6e6; border-color: #e6e6e6; color: #141414; }
+.lb2-row.picked .lb2-check svg { width: 12px; height: 12px; stroke: #141414; stroke-width: 1.6; paint-order: stroke; }

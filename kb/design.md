@@ -21,7 +21,7 @@ Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flac
 
 **5. Farbe nur als Akzent**: `--accent` #2f86ff für Hauptknopf (z. B. „Aufgabe erstellen“), Haken, Wichtigstes. Gefahr #f07a6e, Fläche `rgba(239,107,95,.12–.14)`. Getönte Etiketten: Fläche Farbe 12–13 %, Text ~72 % + Weiß. Fach-/Termin-Farben: `UIKit.COLORS`.
 
-**6. Auswahl**: Kästchen 18 px, Radius 6, Rand #3a3a3a auf `--main-bg`; gewählt = leicht durchsichtiges Grau `rgba(255,255,255,.16)` mit hellem Haken (kurze Feder-Animation, kein Blau) UND die Zeile bekommt den Fenster-Ton #181818. Aktive Zeile in der Sidebar (offener Chat, Bereich) = #212121. Beim Antippen nichts grau (`-webkit-tap-highlight-color: transparent`), kein Fokus-Rand, nichts schrumpft.
+**6. Auswahl**: Kästchen 18 px, Radius 6, Rand #3a3a3a auf `--main-bg`; gewählt = helles Grau #e6e6e6 mit dickem dunklem Haken (#141414, Kontrast; kurze Feder-Animation, kein Blau) UND die Zeile bekommt den Fenster-Ton #181818. Aktive Zeile in der Sidebar (offener Chat, Bereich) = #212121. Beim Antippen nichts grau (`-webkit-tap-highlight-color: transparent`), kein Fokus-Rand, nichts schrumpft.
 
 **7. Form**: Pillen (Radius 999) für Leisten-Knöpfe/Filter/Auswahl-Leiste; Menüs Radius 10; Karten/Fenster 12–14; Eingabefeld 18. Filter/Werkzeug-Knöpfe nur als Icon.
 

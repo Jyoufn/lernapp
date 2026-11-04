@@ -54,6 +54,8 @@
 - Aufgaben mit Agent: Pille **Quellen** → Dokumente als Quelle („Dokument als Quelle“ → Liste; Titel + Text gehen an den Agenten, max. 5) · gestrichelter Kasten „Fotos hochladen“ (nur Bilder, verkleinert, max. 4 → `t.srcFiles`, gehen als Bilder an den Agenten) und darunter „Website hinzufügen“ (Link + Enter → `t.srcLinks`/`task.sources`, gehen in den Prompt). High/Max (Standard) → Prompt verlangt echte Recherche; Ergebnis-Dokument mit Tabellen/Diagrammen, bekommt passendes Icon (`pickIcon`) und die Priorität der Aufgabe (`doc.priority`). Sperre `agt:run:lock:*` → kein doppeltes Dokument. Prompt: jedes Mal frisch arbeiten, nicht an früheren Ergebnissen orientieren.
 - Hintergrund-Lauf: Server (`lib/agenttasks.js`) ohne Rückfragen (`noClarify`), auch bei geschlossener App (Cron). Ziel des Nutzers: Hausaufgaben eintragen → Agent erledigt sie → später Export (PDF) für GoodNotes.
 
+- **Aufgaben-Liste im Stil der Bibliothek** (04.11.): Gruppen ohne Kasten (leise Überschrift „Heute“, „Diese Woche“ …), Zeilen 44 px mit feiner Trennlinie und Hover-Fläche, Titel 14 px, Fälligkeit/Prio rechts leise.
+
 ## Kalender (`calendar.js`)
 - Wochenansicht: Tage „Mo 26“ (heute rote Pille), Stunden 56 px, Termine getönt mit Farbstrich. **Ganztägig = Farbband durch den ganzen Tag** (Titel klebt oben), keine Ganztägig-Zeile, keine Jetzt-Linie, kein Überscrollen. Klick in leere Felder macht nichts – neue Termine nur über „Neu“. Klick auf Tagesnamen öffnet das Tagesfenster.
 - Termin-Fenster wie das Aufgaben-Fenster (Datum, Zeit/Ganztägig, Farbe, Icon). Neuer Termin: Icon folgt dem Titel (`guessIcon`/`ICON_WORDS` in `calendar.js`), bis eins von Hand gewählt wird.

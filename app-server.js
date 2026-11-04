@@ -46,7 +46,7 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['TAVILY_API_KEY', 'GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
 // mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
 const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
@@ -275,7 +275,10 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
   if (env.GEMINI_API_KEY) {
     // Hauptmodell, dann Ersatz; ist das Ersatzmodell gerade ausgelastet (429, mehrere Bilder gleichzeitig), ein zweiter Versuch nach kurzer Pause
     // Modell-Leiter (bestes verfügbares zuerst, bei Limit das nächste); das letzte nach kurzer Pause noch einmal
-    const lad = (await P.ladder(env, 'text')).slice(0, 4);
+    // Kontingent schonen (04.11.: viele 429 bei den besten Modellen, Antworten wurden dadurch schwächer): Bild-Hilfsaufgaben zuerst mit den
+    // Lite-Modellen (eigenes Kontingent), erst danach das schwächste Text-Modell – die besten Modelle bleiben für die Antworten
+    const lite = (await P.ladder(env, 'lite')).slice(0, 3), text = await P.ladder(env, 'text');
+    const lad = [...lite, ...text.slice(-2)].filter((m, i, a) => m && a.indexOf(m) === i);
     for (const [model, wait] of [...lad.map((m) => [m, 0]), [lad[lad.length - 1], 4000]]) {
       if (P.isCooling(model) && wait === 0 && lad.length > 1) continue;
       const t0 = Date.now();
@@ -825,25 +828,28 @@ async function handleCoverImage(req, res) {
 }
 
 // Freies Bild aus dem Netz (Wikimedia Commons, mit Quelle/Lizenz) – Gemini schaut sich die Kandidaten an und nimmt nur ein wirklich passendes
-const FIT_SYSTEM = `Du prüfst, ob ein Bild für eine Lern-App wirklich zum Thema passt. Antworte NUR mit JSON: {"fits": true|false}
-true nur, wenn das Bild genau das gewünschte Thema fachlich richtig und gut erkennbar zeigt (kein ähnliches Thema, kein Ausschnitt von etwas anderem, keine Textseite).`;
+const FIT_SYSTEM = `Du wählst für eine Lern-App aus mehreren Bildern das EINE, das wirklich zum Thema passt – oder keines. Antworte NUR mit JSON: {"pick": Nummer|-1}
+Nummer = Position des Bildes (1 = erstes). Nur ein Bild, das genau das gewünschte Thema fachlich richtig und gut erkennbar zeigt (kein ähnliches Thema,
+kein Ausschnitt von etwas anderem, keine Textseite); sonst -1.`;
 async function fittingWebImage(env, description, query) {
   const seen = new Set(), list = [];
   for (const q of [query, `${query || ''} diagram`.trim(), String(description).split(/\s+/).slice(0, 5).join(' ')]) {
     for (const c of await commonsIllustration(q, 4).catch(() => [])) if (!seen.has(c.url)) { seen.add(c.url); list.push(c); }
     if (list.length >= 4) break;
   }
-  for (const c of list.slice(0, 4)) {
+  // Kandidaten laden (parallel), dann EIN Prüf-Aufruf für alle – vorher bis zu 4 Aufrufe je Bild (Kontingent!)
+  const loaded = (await Promise.all(list.slice(0, 4).map(async (c) => {
     try {
-      const r = await fetch(c.url, { headers: { 'User-Agent': 'BackboneLearningApp/1.0 (local educational app)' }, signal: AbortSignal.timeout(12000) });
+      const r = await fetch(c.thumb || c.url, { headers: { 'User-Agent': 'BackboneLearningApp/1.0 (local educational app)' }, signal: AbortSignal.timeout(12000) });
       const type = (r.headers.get('content-type') || '').split(';')[0];
       const buf = r.ok ? Buffer.from(await r.arrayBuffer()) : null;
-      if (!buf || buf.length > 4e6 || !/^image\/(png|jpeg|webp)$/.test(type)) continue;
-      const v = await visionJson(env, FIT_SYSTEM, `Gewünschtes Bild: ${description}`, [{ mime: type, data: buf.toString('base64') }]);
-      if (v?.fits === true) return c;
-    } catch {}
-  }
-  return null;
+      return buf && buf.length <= 4e6 && /^image\/(png|jpeg|webp)$/.test(type) ? { c, img: { mime: type, data: buf.toString('base64') } } : null;
+    } catch { return null; }
+  }))).filter(Boolean);
+  if (!loaded.length) return null;
+  const v = await visionJson(env, FIT_SYSTEM, `Gewünschtes Bild: ${description}\n(${loaded.length} Bilder in dieser Reihenfolge)`, loaded.map((x) => x.img)).catch(() => null);
+  const k = Number(v?.pick);
+  return k >= 1 && k <= loaded.length ? loaded[k - 1].c : null;
 }
 
 // frühere Schlüssel-Formen (Stil-Versionen), damit bereits erzeugte Bilder in gespeicherten Chats erhalten bleiben

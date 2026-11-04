@@ -52,6 +52,12 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Antwort-Wächter (`lib/thoughts.js`): ein ganzer Absatz „**Executing Task**“/„**Task Analysis Confirmed**“ (englische Gedanken-Überschrift) am Anfang einer deutschen Antwort fällt weg.
 
 ## Recherche
+- **Websuche vom Server (gemessen 04.11. über `/api/diag/suche` auf Vercel)**: DuckDuckGo, Mojeek, Qwant, Ecosia 403 · Brave 429 · Yahoo/Startpage leer ·
+  Bing liefert fremde Treffer (Netflix zu „Websites wie linear.app“). Darum **Tavily** zuerst (`WEB.tavily`, Schlüssel `TAVILY_API_KEY` in Einstellungen →
+  Verbindung „Tavily (Websuche)“): Suche `advanced` + Seitentext (`PREFETCHED`, `readPage`/`browse` laden die Seite dann nicht selbst). Ohne Schlüssel bleibt
+  Google im Modell (Gemini-Grounding) der Ersatz. Produkt-/Website-Fragen („ähnlich wie X“, Alternativen): englische Suchbegriffe mit dem genauen Namen (`ROUTE_SYSTEM`).
+- **Kontingent**: Bild-Hilfsaufgaben (`visionJson` in `app-server.js`) laufen zuerst über die Lite-Modelle, die besten Modelle bleiben für Antworten;
+  passendes Foto für Präsentationen = EIN Prüf-Aufruf für alle Kandidaten (`fittingWebImage`, vorher bis zu 4 je Bild).
 - Research-Agent: **Tiefen-Recherche** (Teilfragen → Websuche DDG/Bing/Google → ~20 Seiten à bis 9 000 Zeichen lesen → Quellen vergleichen → Lücken schließen), dann schreibt das beste Modell – Aufbau frei, Vergleich als Arbeitsgrundlage (sicher/offen/vorsichtig). Nur eine kurze Faktenfrage (Einschätzung low) → einfache Websuche.
 - `searchWeb(…, { health })`: Suchmaschinen, die bei einer Anfrage zweimal blocken oder nichts liefern, werden für den Rest dieser Anfrage übersprungen (spart bis zu 8 s je Suche). Websuche (`browse`): bis 3 Suchbegriffe, 8 Treffer je Suche, Seiten bis 9 000 Zeichen; Seiten je Stufe: Medium 4, High 6, Max 8 (+2 nativ).
 - Allgemein: Websuche (`web`) bzw. Fachquellen (`learn`) laut Einschätzung. Lernen: nur deutsche Fachquellen, Relevanz-Prüfung an der ersten Suchanfrage.
@@ -71,6 +77,9 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
+- **Stand 04.11. (Nutzer: „Aufwand wird nicht beachtet“)**: Im Gemini-nativen Ablauf denkt die KI NUR bei Auto dynamisch. Gewählte Stufe = deren Denktiefe
+  (`EFFORTS[level].thinking`: Low low/1024 · Medium medium/4096 · High high/8192 · Max high/24576), deutliche Längen-/Tiefen-Sätze (`NATIVE_EFFORT`),
+  Low ohne Suche (außer Aktuelles/Wunsch), Max: einfache Websuche wird zur Tiefen-Recherche.
 Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl im Eingabefeld), Aufgaben und Automatisierungen.
 - **Auto**: Gemini entscheidet selbst (dynamisches Denken, Antwortlänge nach Bedarf); bei Börse/Coden die Analyse.
 - **Ausdrücklich gewählt** (Low/Medium/High/Max): GENAU diese Stufe – kein internes Herunterstufen bei „einfachen“ Fragen,

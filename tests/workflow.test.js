@@ -856,7 +856,7 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   const streams = fx.calls.filter(M.is.geminiStream);
   assert.equal(streams.length, 1, 'Max: ein Aufruf – die KI denkt selbst (keine Zusatz-Runde)');
   assert.ok(JSON.stringify(streams[0].body.tools || []).includes('google_search'), 'Max: immer Quellen – hier über Google im Modell');
-  assert.match(M.systemOf(streams[0]), /GEWÄHLTER AUFWAND: Maximum/, 'gewählter Aufwand gilt');
+  assert.match(M.systemOf(streams[0]), /GEWÄHLTER AUFWAND: Max/, 'gewählter Aufwand gilt');
   assert.ok(!m.stages().includes('verifying:active'), 'keine Prüf-Runde');
   assert.equal(m.text(), 'Antwort.');
   // „kurz zusammenfassen“ geht auch bei Max vor

@@ -57,3 +57,23 @@ test('Funde heraussuchen: passende Seiten aus der Websuche (Google-Weiterleitung
     assert.strictEqual(r[2].title, 'behance.net', 'Google-Treffer ohne echten Titel: Domain als Titel');
   } finally { Object.assign(WEB.hooks.engines, saved); WEB.hooks.geminiSearch = savedG; WEB.hooks.photos = savedP; WEB.hooks.lookup = lookup; global.fetch = realFetch; }
 });
+
+test('Tavily: kommt zuerst, liefert echte Treffer samt Text – die Seite wird nicht noch einmal geladen', async () => {
+  const orig = globalThis.fetch, calls = [];
+  globalThis.fetch = async (url, init) => {
+    calls.push(String(url));
+    if (String(url).startsWith('https://api.tavily.com/search')) {
+      assert.match(init.headers.Authorization, /^Bearer tvly-/);
+      return new Response(JSON.stringify({ results: [{ url: 'https://linear.app/compare', title: 'Linear alternatives', content: 'Linear alternatives such as Plane and Height', raw_content: 'Linear alternatives: Plane, Height, Shortcut … '.repeat(20) }] }), { status: 200 });
+    }
+    throw new Error('keine andere Anfrage erwartet: ' + url);
+  };
+  try {
+    const res = await WEB.searchWeb('Linear alternatives', { env: { TAVILY_API_KEY: 'tvly-abc' }, min: 1 });
+    assert.equal(res[0].url, 'https://linear.app/compare');
+    assert.equal(res[0].via, 'tavily');
+    const page = await WEB.readPage('https://linear.app/compare', { topic: 'Linear' });
+    assert.match(page.text, /Plane, Height/);
+    assert.equal(calls.filter((u) => !u.includes('tavily')).length, 0, 'Seite kam aus dem Tavily-Text, kein eigener Abruf');
+  } finally { globalThis.fetch = orig; }
+});

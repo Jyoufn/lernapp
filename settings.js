@@ -14,6 +14,7 @@
     { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true, fam: 'groq' },
     { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true, fam: 'openrouter' },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
+    { id: 'TAVILY_API_KEY', name: 'Tavily (Websuche)', logo: 'tavily', where: 'app.tavily.com', multi: true }, // Recherche: echte Treffer samt Text
     { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true, image: true },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
   ];
