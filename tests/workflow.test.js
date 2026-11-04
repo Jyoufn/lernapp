@@ -1135,3 +1135,9 @@ test('Aufwand wirkt (04.11.): gewählte Stufe = eigene Denktiefe und eigener Sti
   assert.ok(!seen.low.tools.includes('google_search'), 'Low: keine Suche');
   assert.notEqual(seen.low.sys.length, seen.high.sys.length, 'Stufen unterscheiden sich im Prompt');
 });
+
+test('MUST_WEB: Begriff „Wetter“ allein ist keine Aktualitätsfrage', () => {
+  assert.equal(W.MUST_WEB.test('Was ist der Unterschied zwischen Wetter und Klima?'), false);
+  assert.equal(W.MUST_WEB.test('Wie wird das Wetter morgen in Berlin?'), true);
+  assert.equal(W.MUST_WEB.test('Wetter in Hamburg'), true);
+});
