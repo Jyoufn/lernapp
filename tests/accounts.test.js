@@ -158,3 +158,18 @@ test('Chats laden bleibt unter dem Vercel-Limit: Datei-Daten der ältesten Chats
   const raw = JSON.parse((await store.hgetall(A.K('u5', 'chats'))).caaaa1);
   assert.equal(raw.history[0].images[0].data.length, big.length);
 });
+
+test('Rettungs-Kopien: höchstens 5, gleiche Kopie nicht doppelt (füllte sonst den Speicher)', async () => {
+  const s = require('../lib/store').memoryStore();
+  const A = require('../lib/accounts');
+  await A.addRecovery(s, 'u1234', { chats: [1] });
+  await A.addRecovery(s, 'u1234', { chats: [1] });
+  assert.equal((await s.hkeys(A.K('u1234', 'wiederherstellung'))).length, 1);
+  for (let i = 0; i < 8; i++) { await A.addRecovery(s, 'u1234', { chats: [i + 2] }); await new Promise((r) => setTimeout(r, 2)); }
+  const keys = await s.hkeys(A.K('u1234', 'wiederherstellung'));
+  assert.equal(keys.length, A.RECOVERY_KEEP);
+  assert.equal(await s.hget(A.K('u1234', 'wiederherstellung'), keys.sort().pop()), JSON.stringify({ chats: [9] }));
+  const chk = await A.storageCheck(s, 'u1234');
+  assert.equal(chk.probeSchreiben, 'ok');
+  assert.match(chk.rettungsKopien, /^5 /);
+});

@@ -5654,6 +5654,21 @@ function historyOf(tab) {
   if (tab.classList.contains('active')) return history;
   return tabChats.get(tab)?.history || [];
 }
+/* Speichern fehlgeschlagen (Chats/Dokumente): nie mehr still – Grund sichtbar (höchstens alle 60 s) und nach 5 s erneut versuchen.
+   Vorher gingen Fehler des Servers (z. B. Speicher voll, abgemeldet) unbemerkt verloren. */
+const saveFails = { chats: 0, docs: 0 }, saveRetry = {}, SAVE_WHAT = { chats: 'Chats', docs: 'Dokumente' };
+let saveHintAt = 0;
+async function saveProblem(kind, res) {
+  const n = ++saveFails[kind];
+  let why = '';
+  if (res) { try { why = (await res.json()).error || ''; } catch {} if (res.status === 401) why = 'Du bist abgemeldet – bitte neu anmelden'; }
+  if ((res || n >= 3) && Date.now() - saveHintAt > 60000) { saveHintAt = Date.now(); showHint(`${SAVE_WHAT[kind]} nicht gespeichert${why ? `: ${why}` : ' – keine Verbindung'}`); }
+  if (res?.status === 401) return;
+  clearTimeout(saveRetry[kind]);
+  saveRetry[kind] = setTimeout(() => (kind === 'chats' ? writeChats() : window.DocsSave?.()), Math.min(60000, 5000 * n));
+}
+function saveOk(kind) { saveFails[kind] = 0; }
+window.saveProblem = saveProblem; window.saveOk = saveOk;
 function saveChats() {
   markDrafts();
   window.renderSideChats?.(); // Titel/Reihenfolge der letzten Chats in der Sidebar
@@ -5722,7 +5737,7 @@ function writeChats() {
       packs.forEach((list, k) => {
         const body = `{"deleted":${JSON.stringify(k ? [] : sent)},"active":${JSON.stringify(active)},"order":${JSON.stringify(order)},"chats":[${list.map((c) => strs.get(c.id)).join(',')}]}`;
         fetch('/api/chats', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
-          .then((r) => { if (!r.ok) return; if (!k) { sent.forEach((id) => deletedChats.delete(id)); writeChats.active = active; } list.forEach((c) => sentChats.set(c.id, strs.get(c.id))); }).catch(() => {});
+          .then(async (r) => { if (!r.ok) return saveProblem('chats', r); saveOk('chats'); if (!k) { sent.forEach((id) => deletedChats.delete(id)); writeChats.active = active; } list.forEach((c) => sentChats.set(c.id, strs.get(c.id))); }).catch(() => saveProblem('chats'));
       });
     }
     // Ersatz im Browser, falls der Server mal nicht erreichbar ist

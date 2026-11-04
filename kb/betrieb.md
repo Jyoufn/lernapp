@@ -8,3 +8,4 @@
 - Automatisierungen: bei offener App stößt der Browser fällige Läufe an (`/api/agent-tasks/due`), am PC prüft der Server minütlich. Für geschlossene App auf Vercel: `CRON_SECRET` setzen und z. B. cron-job.org alle 10 min `https://<app>.vercel.app/api/agent-tasks/cron?key=<CRON_SECRET>` aufrufen lassen.
 - Börsen-Radar hat eigenen Cron-Endpunkt `/api/boerse/radar-cron`.
 - Löschen ist endgültig (kein Papierkorb); gelöschte IDs bleiben gemerkt, damit andere Geräte sie nicht zurückbringen.
+- **Speichern geht nicht?** Angemeldet `https://<app>/api/speicher-check` öffnen: Probe-Schreiben, Größe der Chat-/Dokument-Antwort (Vercel ≤ ~4,5 MB), Zahl der Rettungs-Kopien, Schlüssel in Upstash. Speicherfehler stehen im Vercel-Log als `[speicher]`.

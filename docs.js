@@ -52,25 +52,40 @@ const Docs = (() => {
     if (changed.length || sent.length || proj !== sentProjects) {
       const body = JSON.stringify({ docs: changed, projects, deleted: sent });
       fetch('/api/docs', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body, keepalive: body.length < 60000 })
-        .then((r) => { if (!r.ok) return; sent.forEach((id) => deletedIds.delete(id)); changed.forEach((d) => sentDocs.set(d.id, strs.get(d.id))); sentProjects = proj; }).catch(() => {});
+        .then((r) => { if (!r.ok) return window.saveProblem?.('docs', r); window.saveOk?.('docs'); sent.forEach((id) => deletedIds.delete(id)); changed.forEach((d) => sentDocs.set(d.id, strs.get(d.id))); sentProjects = proj; }).catch(() => window.saveProblem?.('docs'));
     }
     try { localStorage.setItem(LS, JSON.stringify({ docs, projects, deleted: sent })); } catch {}
   }
   window.addEventListener('pagehide', write);
+  window.DocsSave = write; // erneuter Versuch nach einem Speicherfehler (saveProblem in app.js)
   (async () => {
     // Nur vom Server laden. Ist er (z. B. beim Neustart) kurz nicht erreichbar: weiter versuchen und so lange
     // nichts speichern – nie einen alten Stand aus dem Browser übernehmen (der würde den Server überschreiben).
+    // Klappt es 7× nicht, geht es trotzdem weiter und NEUE/geänderte Dokumente werden gespeichert (sicher: der Server löscht nie still,
+    // alter Stand überschreibt nie neueren) – vorher hing die App hier endlos und speicherte gar nichts mehr. Die Server-Dokumente kommen nach.
     let data = null;
     for (let i = 0; !data; i++) {
       try { const r = await fetch('/api/docs'); if (r.ok) data = await r.json(); } catch {}
-      if (!data) await new Promise((res) => setTimeout(res, Math.min(5000, 600 + i * 400)));
+      if (data) break;
+      if (i >= 6) { data = { docs: [], projects: [], later: true }; window.showHint?.('Deine Dokumente laden gerade nicht – neue werden trotzdem gespeichert'); break; }
+      await new Promise((res) => setTimeout(res, Math.min(5000, 600 + i * 400)));
     }
+    if (data.later) (async function more(n = 0) {
+      await new Promise((res) => setTimeout(res, Math.min(30000, 3000 + n * 2000)));
+      let d = null;
+      try { const r = await fetch('/api/docs', { cache: 'no-store' }); if (r.ok) d = await r.json(); } catch {}
+      if (!d) { if (n < 40) more(n + 1); return; }
+      const have = new Set(docs.map((x) => x.id));
+      (d.docs || []).forEach((x) => { if (x?.id && !have.has(x.id) && !deletedIds.has(x.id)) { docs.push(x); sentDocs.set(x.id, JSON.stringify(x)); } });
+      if (!projects.length && Array.isArray(d.projects)) { projects = d.projects; sentProjects = JSON.stringify(projects); }
+      renderSide(); if (list.open) list.render();
+    })();
     // Rettung: was der Browser-Speicher noch hat, auf dem Server aber fehlt, erst sichern (wiederherstellung/), dann weiter
     try {
       const old = JSON.parse(localStorage.getItem(LS) || 'null');
       const have = new Set((data.docs || []).map((d) => d.id));
       const missing = (old?.docs || []).filter((d) => d?.id && !have.has(d.id) && !isEmpty(d));
-      if (missing.length) await fetch('/api/recovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: `Browser-Speicher ${location.origin}`, docs: missing }) });
+      if (missing.length && !data.later) await fetch('/api/recovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: `Browser-Speicher ${location.origin}`, docs: missing }) });
     } catch {}
     docs = Array.isArray(data?.docs) ? data.docs : [];
     projects = Array.isArray(data?.projects) ? data.projects : [];

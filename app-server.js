@@ -1655,6 +1655,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && urlPath === '/api/account/storage') return sendJson(res, 200, { data: await ACC.getStorage(store, user.id) });
     if (req.method === 'PUT' && urlPath === '/api/account/storage') { await ACC.patchStorage(store, user.id, await readBody(req, 4 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
     // Notfall-Sicherung aus einem offenen Tab: landet im Konto (löscht nie etwas)
+    if (req.method === 'GET' && urlPath === '/api/speicher-check') return sendJson(res, 200, await ACC.storageCheck(store, user.id));
     if (req.method === 'POST' && urlPath === '/api/recovery') { await ACC.addRecovery(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
     if (req.method === 'GET' && urlPath === '/api/icon') return await handleIcon(req, res, new URL(req.url, 'http://x').searchParams);
     if (req.method === 'GET' && urlPath === '/api/status') {
@@ -1663,6 +1664,7 @@ async function handle(req, res) {
       return sendJson(res, 200, { gemini: !!env.GEMINI_API_KEY, nvidia: !!nvidiaKeyOf(env), model: GEMINI_MODEL, env: Object.fromEntries(DEVICE_KEYS.map((k) => [k, !!file[k]])) });
     }
   } catch (err) {
+    if (/^Speicher:/.test(err.message || '')) console.error(`[speicher] ${req.method} ${urlPath}: ${err.message}`);
     if (!res.headersSent) return sendJson(res, err.status || 400, { error: err.message });
     return res.end();
   }
