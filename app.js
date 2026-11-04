@@ -5094,7 +5094,7 @@ window.AppActions = {
   // Ansicht öffnen: chat (neuer Chat), calendar, tasks, docs, inbox, chats (Liste aller Chats)
   open({ view } = {}) {
     if (view === 'chat') { createTab('Neuer Chat'); return; }
-    if (view === 'chats' && typeof chatsView !== 'undefined') { chatsView.show?.(); return; }
+    if (view === 'chats') { openViewTab('docs'); return; }
     if (VIEW_TABS[view] && view !== 'doc') openViewTab(view);
   },
   close_tab() { const t = tabsEl.querySelector('.tab.active'); if (t) closeTab(t); },
@@ -5397,7 +5397,7 @@ chatsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   clearTimeout(hoverT);
   showChatsPop(false);
-  chatsView.toggle();
+  openViewTab('docs'); // Chats stehen jetzt in der Bibliothek
 });
 chatsPop.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => closeChatPops());
@@ -5503,6 +5503,15 @@ const chatsView = (() => {
   return { show, hide, toggle: () => (open ? hide() : show()), render, get open() { return open; } };
 })();
 
+/* Bibliothek (docs.js) zeigt Chats und Dokumente zusammen (Wunsch 04.11.: kein eigener Chatverlauf mehr) – dafür die Chats als Liste */
+const libTab = (id) => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].find((t) => chatId(t) === id);
+window.LibChats = {
+  items: () => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
+    .map((t) => { const c = chatOf(t); return { id: chatId(t), title: c.title || 'Neuer Chat', updated: c.updated || 0, pinned: !!c.pinned, av: chatAvatar(t, 'cl-av') }; }),
+  open: (id) => { const t = libTab(id); if (t) { t.hidden = false; activateTab(t); } },
+  pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
+  del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
+};
 /* ---------- Sidebar: Bereiche „Chats“ und „Dokumente“ lassen sich ein- und ausklappen (Klick auf die Überschrift,
    bleibt gemerkt). „Chats“ = die 8 neuesten (auch geschlossene); antwortet einer gerade, steht rechts ein Halbkreis. ---------- */
 const SB_SEC_KEY = 'sidebar.closed.v1';
@@ -5621,6 +5630,7 @@ window.renderSideChats = () => {
 };
 // Übersicht aller Chats auch aus Kalender, Aufgaben, Bibliothek … öffnen: vorher in einen Chat-Tab wechseln
 function openChatsFromAnywhere() {
+  openViewTab('docs'); return; // Chatverlauf gibt es nicht mehr – Chats stehen in der Bibliothek
   const act = activeTab();
   if (!act || act.dataset.view) {
     const t = [...tabsEl.querySelectorAll('.tab:not([data-view]):not(.uil-tab):not([hidden])')][0];

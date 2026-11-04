@@ -41,6 +41,7 @@ Keine neuen Grautöne erfinden.
 
 ## Bausteine (so sehen sie heute aus)
 - **Hauptknopf**: blau gefüllt, Radius 8, weißer Text („Neue Aufgabe“, „Neues Dokument“, „Neuer Chat“). Nebenknopf: Rand, keine Fläche. Löschen: rot transparent.
+- **Bibliotheks-Liste** (`.lb2-*`): Zeilen ohne Kasten, feine Trennlinie (6 % Weiß), Hover `--menu-hover`; Kästchen 16 px Radius 5 links außerhalb der Zeile, gewählt = blauer Rand + Haken (keine Fläche); Chips 24 px mit Rand `--menu-border`, Radius 8; Menüs wie `.tk-box`.
 - **Seitenköpfe** Chats/Bibliothek/Aufgaben: Titel 18 px links, blauer Knopf rechts, darunter Suchfeld (40 px, Radius 12, Fläche `--main-bg`, Icon 14).
 - **Kalender-Kopf**: auf Höhe des Sidebar-Knopfs oben links, Trennstrich, „Oktober 2026“ 15 px; rechts „‹ Heute ›“ und „Neu“ gleich hoch.
 - **Menüs/Aufklapp-Kästen** (`.tk-box`): `--menu-bg`, Rand `--menu-border`, Radius 10, Zeilen 30 px, Auswahl nur blauer Haken.

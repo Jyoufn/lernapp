@@ -10878,3 +10878,65 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .pod-vol { flex: 0 1 auto; min-width: 0; }
 .pod-vol input { flex: 0 1 86px; width: auto; min-width: 36px; }
 .pod-ask { flex: none; white-space: nowrap; }
+
+/* ===== Bibliothek: Chats + Dokumente in einer Liste (04.11., Vorbild Pocket-Liste) =====
+   Zeile mit Trennlinie, Beschreibung nur bei Dokumenten, beim Darüberfahren Kästchen links + Ordner/Tag/⋯ rechts. */
+.lb2 { max-width: 700px; }
+.lb2-bar { display: flex; align-items: center; gap: 6px; height: 30px; margin: 18px 0 2px; padding: 0 8px; }
+.lb2-all { flex: 1; color: var(--text-2); font-size: 13.5px; font-weight: 500; }
+.lb2-sel { flex: 1; display: flex; align-items: center; gap: 4px; min-width: 0; }
+.lb2-sel[hidden], .lb2-all[hidden] { display: none; }
+.lb2-sel b { font-weight: 500; font-size: 13px; color: var(--text); margin-right: 6px; white-space: nowrap; }
+.lb2-btn, .lb2-filter, .lb2-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--menu-border); border-radius: 8px; background: none; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, border-color 120ms ease; }
+.lb2-btn:hover, .lb2-filter:hover, .lb2-chip:hover, .lb2-chip.on, .lb2-filter.on { color: var(--text); border-color: #444; }
+.lb2-danger, .lb2-danger:hover { color: #f07a6e; }
+.lb2-btn.lb2-danger.confirm { background: rgba(239,107,95,.13); border-color: transparent; }
+.lb2-list, .lb2 .cl-list { gap: 0; }
+.lb2 .cl-label { padding: 16px 10px 6px; }
+.lb2-row { position: relative; display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 7px 8px 7px 10px; border-radius: 9px; cursor: pointer; outline: none; animation: step-in 240ms var(--ease) both; transition: background-color 90ms ease; -webkit-tap-highlight-color: transparent; }
+.lb2-row + .lb2-row::before { content: ''; position: absolute; left: 44px; right: 10px; top: 0; height: 1px; background: rgba(255,255,255,.055); }
+.lb2-row:hover, .lb2-row:focus-visible { background: var(--menu-hover); }
+.lb2-row:hover::before, .lb2-row:hover + .lb2-row::before { opacity: 0; }
+.lb2-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lb2-title { color: var(--text-2); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb2-row:hover .lb2-title { color: var(--text); }
+.lb2-desc { color: var(--text-4); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb2-time { flex: none; color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+.lb2-acts { display: none; flex: none; align-items: center; gap: 6px; }
+.lb2-row:hover .lb2-acts, .lb2-row:focus-within .lb2-acts { display: flex; }
+.lb2-row:hover .lb2-time, .lb2-row:focus-within .lb2-time { display: none; }
+.lb2-chip { height: 24px; padding: 0 7px; gap: 4px; max-width: 150px; }
+.lb2-chip span { overflow: hidden; text-overflow: ellipsis; }
+.lb2-chip svg:last-child { opacity: .7; }
+.lb2-more { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.lb2-more:hover, .lb2-more.on { color: var(--text); }
+/* Auswahl-Kästchen links neben der Zeile (beim Darüberfahren bzw. sobald etwas ausgewählt ist) */
+.lb2-check { position: absolute; left: -26px; top: 50%; width: 16px; height: 16px; margin-top: -8px; padding: 0; display: grid; place-items: center; border: 1.5px solid #4a4a4a; border-radius: 5px; background: none; color: transparent; cursor: pointer; opacity: 0; transition: opacity 120ms ease, border-color 120ms ease; -webkit-tap-highlight-color: transparent; }
+.lb2-check svg { width: 11px; height: 11px; }
+.lb2-row:hover .lb2-check, .lb2-picking .lb2-check, .lb2-check:focus-visible { opacity: 1; }
+.lb2-check:hover { border-color: var(--text-3); }
+.lb2-row.picked .lb2-check { border-color: var(--accent); color: var(--accent); }
+/* Menüs Ordner / Tag / ⋯ / Filter */
+.lb2-menu { position: fixed; z-index: 400; min-width: 180px; max-width: 260px; max-height: 320px; overflow-y: auto; padding: 4px; background: var(--menu-bg); border: 1px solid var(--menu-border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45); animation: lb2-pop 160ms var(--spring) both; }
+@keyframes lb2-pop { from { opacity: 0; transform: translateY(-4px); } }
+.lb2-mi { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.lb2-mi span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb2-mi:hover { background: var(--menu-hover); color: var(--text); }
+.lb2-mi > svg { color: var(--text-3); flex: none; }
+.lb2-mi.lb2-danger, .lb2-mi.lb2-danger > svg { color: #f07a6e; }
+.lb2-mi.confirm { background: rgba(239,107,95,.13); }
+.lb2-tick { display: grid; color: var(--accent); }
+.lb2-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin: 0 3px; }
+.lb2-sep { height: 1px; margin: 4px 6px; background: var(--menu-border); }
+.lb2-none { padding: 8px; color: var(--text-4); font-size: 12px; }
+/* schmal (iPad hochkant/Handy): Kästchen in die Zeile statt daneben, Chips ohne Text */
+@media (max-width: 760px) {
+  .lb2-picking .lb2-row { padding-left: 34px; }
+  .lb2-check { left: 10px; }
+  .lb2-row:hover .lb2-check:not(:hover) { opacity: 0; }
+  .lb2-picking .lb2-row .lb2-check { opacity: 1; }
+  .lb2-chip span { display: none; }
+}
+@media (hover: none) { .lb2-acts { display: flex; } .lb2-chip { display: none; } .lb2-time { display: inline; } .lb2-row:hover .lb2-time { display: inline; } }
+@media (prefers-reduced-motion: reduce) { .lb2-row, .lb2-menu { animation: none; } }
+.lb2 .cl-label { color: var(--text-4); font-size: 12px; font-weight: 500; }
