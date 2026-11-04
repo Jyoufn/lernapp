@@ -187,11 +187,9 @@ const Tasks = (() => {
   }
   /* ---------- Listen-Ansicht: Blöcke nach Fälligkeit, jede Aufgabe eine Zeile mit Kreis zum Abhaken ---------- */
   const GROUPS = [
-    { id: 'late', name: 'Überfällig', test: (d) => d && d.diff < 0 },
-    { id: 'today', name: 'Heute', test: (d) => d && d.diff === 0 },
-    { id: 'soon', name: 'Diese Woche', test: (d) => d && d.diff > 0 && d.diff <= 7 },
-    { id: 'later', name: 'Später', test: (d) => d && d.diff > 7 },
-    { id: 'none', name: 'Ohne Datum', test: (d) => !d },
+    // nur noch „Heute“ (inkl. Überfälligem), „Offen“ und darunter „Erledigt“ (Wunsch 05.11.)
+    { id: 'today', name: 'Heute', test: (d) => d && d.diff <= 0 },
+    { id: 'open', name: 'Offen', test: (d) => !d || d.diff > 0 },
   ];
   const PRIO_RANK = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
   const DONE_KEY = 'tasks.doneOpen.v1';

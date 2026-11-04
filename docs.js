@@ -569,9 +569,11 @@ const Docs = (() => {
   side.classList.toggle('closed', !!window.sbSectionClosed?.('docs'));
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
+  // gleiches Seiten-Icon wie in der Bibliothek (Wunsch 05.11.)
+  const SIDE_PAGE_ICON = '<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="17" rx="2.5"/><path d="M4.5 6h7M4.5 9h7M4.5 12h4.5"/></svg>';
   function renderSide() {
     const mine = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated);
-    const link = (d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : '<svg width="15" height="15"><use href="#o-doc"/></svg>'}<span>${esc(d.title || 'Unbenannt')}</span></a>`;
+    const link = (d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : SIDE_PAGE_ICON}<span>${esc(d.title || 'Unbenannt')}</span></a>`;
     // Projekte als Ordner (Icon in Projektfarbe + Name, ein-/ausklappbar), darin die Dokumente etwas eingerückt; danach Dokumente ohne Projekt
     const folders = projects.map((p) => ({ p, list: mine.filter((d) => d.projectId === p.id) })).filter((f) => f.list.length)
       .sort((a, b) => b.list[0].updated - a.list[0].updated);
@@ -642,7 +644,7 @@ const Docs = (() => {
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
-        .map((d) => ({ kind: 'doc', id: d.id, title: d.title || 'Ohne Titel', desc: descOf(d), updated: d.updated || 0, pinned: !!d.pinned, d }));
+        .map((d) => ({ kind: 'doc', id: d.id, title: d.title || 'Ohne Titel', desc: '', updated: d.updated || 0, pinned: !!d.pinned, d })); // keine Beschreibung in der Liste (Wunsch 05.11.)
       const cs = filter === 'doc' ? [] : (window.LibChats?.items() || []).filter((c) => !q || c.title.toLowerCase().includes(q))
         .map((c) => ({ kind: 'chat', id: c.id, title: c.title, desc: '', updated: c.updated, pinned: c.pinned, av: c.av }));
       return [...ds, ...cs].sort((a, b) => b.updated - a.updated);

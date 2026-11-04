@@ -11155,3 +11155,5 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .st-seg button:hover:not(:disabled) { color: var(--text-2); }
 .st-seg button.on, .st-seg button[aria-checked="true"] { background: #2e2e2e !important; box-shadow: none !important; border: 0 !important; color: var(--text); }
 .st-role { margin-top: 10px; }
+.lb2-page.sb-page { width: 13px !important; height: 16px !important; flex: none; margin: 0 1px; }
+.nav-item:hover .lb2-page.sb-page, .nav-item.active .lb2-page.sb-page { stroke: var(--text-3); }
