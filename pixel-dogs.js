@@ -1279,6 +1279,25 @@ const PixelDogs = (() => {
   const ico = (n) => (window.FadeIcons ? FadeIcons.svg(n, 12) : '');
   const esc = (t) => String(t ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const heroDog = (id) => art(id);
+  /* Agentenwechsel (Wunsch 05.11.): roter Pixel-Boxhandschuh kommt von rechts, haut den alten Agenten nach links weg,
+     der neue gleitet von rechts herein – im gleichen Pixelstil wie die Hunde */
+  const GLOVE_MAP = ['...RRRRR....', '.RRRRRRRR...', 'RRRRRRRRRCWW', 'RRRRRRRRRCWW', 'RRRRRRRRRCWW', 'DRRRRRRRRCWW', '.DRRRRRRDCWW', '..DDDDDD..WW'];
+  const GLOVE_COL = { R: '#e5484d', D: '#a8353a', C: '#c93f44', W: '#ededed' };
+  const gloveSvg = (px) => {
+    let r = '';
+    GLOVE_MAP.forEach((row, y) => [...row].forEach((c, x) => { if (GLOVE_COL[c]) r += `<rect x="${x}" y="${y}" width="1" height="1" fill="${GLOVE_COL[c]}"/>`; }));
+    return `<svg class="punch-glove" viewBox="0 0 12 8" width="${12 * px}" height="${8 * px}" shape-rendering="crispEdges" aria-hidden="true">${r}</svg>`;
+  };
+  const HIT_MS = 190, OUT_MS = 280;
+  function punchSwap(box, oldEl, showNew, px) {
+    box.insertAdjacentHTML('beforeend', gloveSvg(px));
+    const g = box.lastElementChild;
+    const drop = () => g.remove();
+    g.addEventListener('animationend', drop, { once: true });
+    setTimeout(drop, 1000);
+    setTimeout(() => oldEl?.classList.add('punched'), HIT_MS);
+    setTimeout(showNew, HIT_MS + OUT_MS);
+  }
   const pickers = new Set(); // alle offenen/geschlossenen Agenten-Felder (Klick daneben schließt sie)
 
   // host: das Eingabefeld (position: relative); triggers: was das Feld öffnet; onPick(id): Hund wechseln
@@ -1418,8 +1437,15 @@ const PixelDogs = (() => {
     const updateHero = (id, animate) => {
       const box = hero.querySelector('.dh-dog');
       if (!animate || reduced() || !box.firstElementChild) { box.innerHTML = heroDog(id); return; }
-      box.classList.add('swap'); // weich aus- und wieder einblenden
-      setTimeout(() => { box.innerHTML = heroDog(id); box.classList.remove('swap'); }, 220);
+      const old = box.querySelector(':scope > svg:not(.punch-glove)');
+      const token = (box._punch = (box._punch || 0) + 1);
+      punchSwap(box, old, () => {
+        if (token !== box._punch) return; // inzwischen schon wieder gewechselt
+        box.querySelectorAll(':scope > svg:not(.punch-glove)').forEach((x) => x.remove());
+        box.insertAdjacentHTML('afterbegin', heroDog(id));
+        const n = box.firstElementChild; n.classList.add('slide-in');
+        n.addEventListener('animationend', () => n.classList.remove('slide-in'), { once: true });
+      }, 4);
     };
 
     let swapToken = 0;
@@ -1447,18 +1473,15 @@ const PixelDogs = (() => {
         peek.replaceChildren();
         const sc = scene(id);
         peek.insertAdjacentHTML('beforeend', sc.html);
-        if (animate && !reduced()) peek.lastElementChild.classList.add('in');
+        if (animate && !reduced()) peek.lastElementChild.classList.add('slide-in');
         play(peek.lastElementChild, sc.tracks);
       };
       const old = peek.querySelector('svg');
       if (!old || !animate || reduced()) return show();
       runners.forEach((r) => r.stop());
-      old.classList.remove('in');
-      old.classList.add('out');
-      let done = false;
-      const next = () => { if (!done) { done = true; show(); } };
-      old.addEventListener('animationend', next, { once: true });
-      setTimeout(next, 400); // falls das Animationsende ausbleibt
+      old.classList.remove('in', 'slide-in');
+      peek.querySelectorAll('.punch-glove').forEach((x) => x.remove());
+      punchSwap(peek, old, show, 2); // Handschuh von rechts → alter Hund fliegt nach links → neuer gleitet herein
     }
 
     bar.addEventListener('click', (e) => {

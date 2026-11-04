@@ -11109,3 +11109,30 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .tk-view.tk-listmode .tk-grp-head, .tk-view.tk-listmode .tk-grp-head * { color: #909090 !important; font-size: 12px; font-weight: 500; }
 .tk-view.tk-listmode .tk-grp:not(.g-done) .tk-grp-head .tk-count { display: none; }
 .tk-view.tk-listmode .tk-grp-head { padding: 16px 10px 6px; }
+
+/* Agentenwechsel als Boxhieb (05.11.): Pixel-Handschuh von rechts, alter Agent fliegt nach links, neuer gleitet von rechts herein */
+.dh-dog { position: relative; overflow: visible; }
+.dh-dog .punch-glove, .dog-peek .punch-glove { position: absolute; top: 58%; right: -38px; left: auto; bottom: auto; z-index: 3; pointer-events: none; image-rendering: pixelated; animation: glove-punch 640ms cubic-bezier(.2, .9, .3, 1) both; }
+.dog-peek .punch-glove { right: -14px; top: 55%; }
+@keyframes glove-punch {
+  0% { transform: translate(64px, -50%); opacity: 0; }
+  12% { opacity: 1; }
+  30% { transform: translate(-6px, -50%); }
+  42% { transform: translate(2px, -50%); }
+  58% { transform: translate(0, -50%); opacity: 1; }
+  100% { transform: translate(72px, -50%); opacity: 0; }
+}
+.dh-dog .punch-glove { animation: glove-punch 640ms cubic-bezier(.2, .9, .3, 1) both; }
+.dog-peek .punch-glove { animation: glove-punch-sm 640ms cubic-bezier(.2, .9, .3, 1) both; }
+@keyframes glove-punch-sm {
+  0% { transform: translate(30px, -50%); opacity: 0; }
+  12% { opacity: 1; }
+  30% { transform: translate(-3px, -50%); }
+  58% { transform: translate(0, -50%); opacity: 1; }
+  100% { transform: translate(34px, -50%); opacity: 0; }
+}
+.dh-dog svg.punched, .dog-peek svg.punched { animation: dog-knock 280ms cubic-bezier(.4, 0, .9, .4) forwards; }
+@keyframes dog-knock { 0% { transform: translateX(0) rotate(0); opacity: 1; } 100% { transform: translateX(-150%) rotate(-16deg); opacity: 0; } }
+.dh-dog svg.slide-in, .dog-peek svg.slide-in { animation: dog-slide-in 520ms cubic-bezier(.16, .9, .3, 1) both; }
+@keyframes dog-slide-in { 0% { transform: translateX(120%); opacity: 0; } 35% { opacity: 1; } 100% { transform: translateX(0); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .punch-glove { display: none; } .dh-dog svg.punched, .dog-peek svg.punched, .dh-dog svg.slide-in, .dog-peek svg.slide-in { animation: none; } }
