@@ -10937,6 +10937,12 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
   .lb2-picking .lb2-row .lb2-check { opacity: 1; }
   .lb2-chip span { display: none; }
 }
-@media (hover: none) { .lb2-acts { display: flex; } .lb2-chip { display: none; } .lb2-time { display: inline; } .lb2-row:hover .lb2-time { display: inline; } }
 @media (prefers-reduced-motion: reduce) { .lb2-row, .lb2-menu { animation: none; } }
 .lb2 .cl-label { color: var(--text-4); font-size: 12px; font-weight: 500; }
+/* Bibliothek (04.11. abends): rechts Anheften + Löschen statt „⋯“, Ordner/Tag auch für Chats; Touch: Chips nur als Icon */
+.lb2-acts .lb-act { width: 26px; height: 26px; }
+.lb2-pin.on { color: var(--text); }
+@media (hover: none) {
+  .lb2-acts { display: flex; } .lb2-time, .lb2-row:hover .lb2-time { display: none; }
+  .lb2-chip { display: inline-flex; padding: 0 6px; } .lb2-chip span, .lb2-chip svg:last-child { display: none; }
+}

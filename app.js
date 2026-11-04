@@ -5507,7 +5507,10 @@ const chatsView = (() => {
 const libTab = (id) => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].find((t) => chatId(t) === id);
 window.LibChats = {
   items: () => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
-    .map((t) => { const c = chatOf(t); return { id: chatId(t), title: c.title || 'Neuer Chat', updated: c.updated || 0, pinned: !!c.pinned, av: chatAvatar(t, 'cl-av') }; }),
+    .map((t) => { const c = chatOf(t); return { id: chatId(t), title: c.title || 'Neuer Chat', updated: c.updated || 0, pinned: !!c.pinned, projectId: c.projectId || '', tags: c.tags || [], av: chatAvatar(t, 'cl-av') }; }),
+  // Ordner (Projekt) und Tags auch für Chats (Wunsch 04.11.) – werden mit dem Chat gespeichert
+  setProject: (id, v) => { const t = libTab(id); if (t) { chatOf(t).projectId = v; saveChats(); } },
+  setTags: (id, tags) => { const t = libTab(id); if (t) { chatOf(t).tags = tags; saveChats(); } },
   open: (id) => { const t = libTab(id); if (t) { t.hidden = false; activateTab(t); } },
   pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
   del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
@@ -5692,7 +5695,7 @@ function chatItems(withImages) {
   return [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].map((tab) => {
     const c = chatOf(tab);
     return {
-      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, setupName: c.setupName || undefined, setupRenamed: c.setupRenamed || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
+      id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, projectId: c.projectId || undefined, tags: c.tags?.length ? c.tags : undefined, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, setupName: c.setupName || undefined, setupRenamed: c.setupRenamed || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
       history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
     };
   });
@@ -5858,7 +5861,7 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     const tab = i === 0 && first ? first : createTab(s.title);
     if (i === 0) activateTab(tab);
     tab.dataset.cid = s.id;
-    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
+    tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, projectId: s.projectId || '', tags: Array.isArray(s.tags) ? s.tags : [], updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
     tab.querySelector('.tab-title').textContent = s.title;
     tab.classList.toggle('pinned', !!s.pinned);
     chat.replaceChildren();
@@ -5915,7 +5918,7 @@ async function openSavedChat(id) {
     if (!tab) {
       tab = createTab(s.title);
       tab.dataset.cid = s.id;
-      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
+      tab._chat = { title: s.title, auto: s.auto, pinned: !!s.pinned, projectId: s.projectId || '', tags: Array.isArray(s.tags) ? s.tags : [], updated: s.updated || Date.now(), docId: s.docId, agent: s.agent, setup: s.setup, setupBase: s.setupBase, setupWish: s.setupWish, setupAvatar: s.setupAvatar, setupName: s.setupName, setupRenamed: s.setupRenamed, ws: s.ws || 'main' };
       tab.querySelector('.tab-title').textContent = s.title;
       chat.replaceChildren();
       history.length = 0;
