@@ -620,7 +620,7 @@ const Docs = (() => {
     const view = el('section', 'dc-view dc-list');
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
-      <div class="cl-head"><h2>Bibliothek</h2><button type="button" class="cl-new" data-act="new">${fi('plus', 14)}<span>Neues Dokument</span></button></div>
+      <div class="cl-head"><h2>Bibliothek</h2></div>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b>
         <button type="button" class="lb2-btn" data-bulk="pin">${fi('pin', 13)}<span>Anheften</span></button>
