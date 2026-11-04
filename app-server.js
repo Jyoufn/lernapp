@@ -1581,6 +1581,23 @@ async function handle(req, res) {
           try { const list = await run(q, { timeoutMs: 9000 }); out[name] = { ms: Date.now() - t0, n: list.length, passend: list.filter((r) => R.relevance(terms, r.title, r.snippet) >= 0.34).length, top: list.slice(0, 6).map((r) => `${r.title} — ${r.url}`.slice(0, 140)) }; }
           catch (err) { out[name] = { ms: Date.now() - t0, fehler: String(err.message).slice(0, 160) }; }
         }));
+        // mit EVAL_SECRET: Google-Suche über Gemini (Grounding) je Modell mit dem Schlüssel des Hauptkontos – welches Modell darf suchen?
+        const env0 = serverEnv(), qk = new URL(req.url, 'http://x').searchParams.get('key');
+        if (env0.EVAL_SECRET && qk === env0.EVAL_SECRET) {
+          const { uid } = await ACC.uidForEmail(store, env0, env0.LOGIN_EMAIL || '');
+          const gk = String((uid && (await accountKeys(store, uid)).GEMINI_API_KEY) || '').split(/[\s,;]+/).filter(Boolean)[0];
+          out.google = {};
+          for (const model of ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-3-flash-preview', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite-preview']) {
+            const t0 = Date.now();
+            try {
+              const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': gk },
+                body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: `Suche im Web: ${q}` }] }], tools: [{ google_search: {} }], generationConfig: { maxOutputTokens: 300 } }), signal: AbortSignal.timeout(20000) });
+              const j = await r.json().catch(() => ({}));
+              const chunks = j.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+              out.google[model] = { status: r.status, ms: Date.now() - t0, treffer: chunks.length, top: chunks.slice(0, 5).map((c) => c.web?.title), fehler: j.error?.message?.slice(0, 160) };
+            } catch (err) { out.google[model] = { fehler: err.message }; }
+          }
+        }
         return sendJson(res, 200, { q, out });
       }
       // KI-Prüfung mit den Schlüsseln des Hauptkontos (nur mit EVAL_SECRET, für Tests über das Vercel-MCP): eine Frage, ein Aufwand – Antwort,
