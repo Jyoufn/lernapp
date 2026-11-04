@@ -1560,7 +1560,17 @@ async function handle(req, res) {
         handle.diagAt = Date.now();
         const q = String(new URL(req.url, 'http://x').searchParams.get('q') || '').slice(0, 120);
         const R = require('./lib/research'), terms = R.terms(q), out = {};
-        await Promise.all(Object.entries(WEB.hooks.engines).map(async ([name, run]) => {
+        // Kandidaten zum Ausprobieren (nur hier): Rohtext-Größe + gefundene Links, damit man sieht, wer echte Treffer liefert
+        const raw = (url) => async (qq, o) => { const r = await WEB.fetchPublic(url(encodeURIComponent(qq)), o); const links = [...String(r.body).matchAll(/href="(https?:\/\/[^"]+)"/g)].map((m) => m[1]).filter((u) => !/(yahoo|bing|brave|startpage|qwant|ecosia|duckduckgo|mojeek|yimg|microsoft|w3\.org)\./.test(u)); return links.slice(0, 10).map((u) => ({ url: u, title: u, snippet: '' })); };
+        const TRY = { ...WEB.hooks.engines,
+          yahoo: raw((x) => `https://search.yahoo.com/search?p=${x}&ei=UTF-8`),
+          bingrss: raw((x) => `https://www.bing.com/search?format=rss&q=${x}&setlang=de`),
+          brave: raw((x) => `https://search.brave.com/search?q=${x}&source=web`),
+          startpage: raw((x) => `https://www.startpage.com/do/search?q=${x}`),
+          ecosia: raw((x) => `https://www.ecosia.org/search?q=${x}`),
+          qwant: async (qq, o) => { const j = JSON.parse((await WEB.fetchPublic(`https://api.qwant.com/v3/search/web?q=${encodeURIComponent(qq)}&count=10&locale=de_DE&offset=0&device=desktop`, { ...o, accept: 'application/json' })).body); return (j?.data?.result?.items?.mainline || []).flatMap((m) => m.items || []).map((r) => ({ url: r.url, title: r.title, snippet: r.desc })); },
+        };
+        await Promise.all(Object.entries(TRY).map(async ([name, run]) => {
           const t0 = Date.now();
           try { const list = await run(q, { timeoutMs: 9000 }); out[name] = { ms: Date.now() - t0, n: list.length, passend: list.filter((r) => R.relevance(terms, r.title, r.snippet) >= 0.34).length, top: list.slice(0, 6).map((r) => `${r.title} — ${r.url}`.slice(0, 140)) }; }
           catch (err) { out[name] = { ms: Date.now() - t0, fehler: String(err.message).slice(0, 160) }; }
