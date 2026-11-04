@@ -775,7 +775,8 @@ test('Lern-Agent: nur deutsche Fachquellen – keine (englische) Fachliteratur, 
 
 /* ---------- Präsentation: Recherche läuft auf Auto, die Quellenfolie bekommt die echten Quellen ---------- */
 test('Präsentation (Lernen): recherchiert immer und hängt die echten Quellen als ```belege an', async () => {
-  const block = '```praesentation\n{"title":"Photosynthese","slides":[{"type":"punkte","title":"Pflanzen machen Zucker","points":["Licht wird genutzt"]}],"sources":[1,"Arbeitsblatt des Nutzers"]}\n```';
+  const slides = Array.from({ length: 9 }, (_, i) => ({ type: 'punkte', title: `Pflanzen machen Zucker ${i}`, points: ['Licht wird in den Chloroplasten genutzt', 'Kohlenstoffdioxid wird zu Zucker aufgebaut'] }));
+  const block = '```praesentation\n' + JSON.stringify({ title: 'Photosynthese', slides, sources: [1, 'Arbeitsblatt des Nutzers'] }) + '\n```';
   fx = M.installFetch([
     { match: M.is.analyze, respond: () => M.nvidiaJson({ ...ANALYSIS_RESEARCH, research: false }) },
     ...researchRoutes(),
@@ -1140,4 +1141,13 @@ test('MUST_WEB: Begriff „Wetter“ allein ist keine Aktualitätsfrage', () => 
   assert.equal(W.MUST_WEB.test('Was ist der Unterschied zwischen Wetter und Klima?'), false);
   assert.equal(W.MUST_WEB.test('Wie wird das Wetter morgen in Berlin?'), true);
   assert.equal(W.MUST_WEB.test('Wetter in Hamburg'), true);
+});
+
+test('deckThin: Präsentation nur mit Bildern/Titeln gilt als zu dünn, eine echte nicht', () => {
+  const deck = (slides) => '```praesentation\n' + JSON.stringify({ title: 'T', slides }) + '\n```';
+  const leer = Array.from({ length: 8 }, (_, i) => ({ type: 'punkte', title: `Folie ${i}`, image: { query: 'x', prompt: 'ein Bild von etwas Schönem' } }));
+  assert.match(W.deckThin(deck(leer), 'max'), /ohne Inhalt/);
+  assert.match(W.deckThin(deck(leer.slice(0, 3).map((x) => ({ ...x, points: ['Die Geburtenrate liegt bei 1,4 Kindern je Frau'] }))), 'max'), /nur 3/);
+  const gut = Array.from({ length: 9 }, (_, i) => ({ type: 'punkte', title: `F${i}`, points: ['Die Bevölkerung altert deutlich schneller', 'Mehr Rentner stehen weniger Erwerbstätigen gegenüber'] }));
+  assert.equal(W.deckThin(deck(gut), 'max'), '');
 });
