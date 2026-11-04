@@ -150,3 +150,9 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Aufbau/Struktur in Antworten (v. a. High/Max): als ```illustration-Bild mit genauer Beschreibung, Beschriftung und Beispielbild-Suchwörtern (`query`) – nie als ASCII-/Kasten-Skizze.
 - **Abgeschaltete Modelle** (03.11.: „gemini-2.5-flash is no longer available to new users“): `P.GONE` erkennt die Meldung, `markLimited` sperrt das Modell 30 Tage je Schlüssel, `ladder` lässt es weg; die Antwort läuft sofort mit dem nächsten Modell; bei Dateien als letzte Chance auch die anderen Anbieter (PDF als Text). `WEB.geminiSearch` probiert mehrere Modelle. Verständliche Meldung in `friendlyError`.
 
+
+
+## Präsentation & Quellen-Anzeige (Stand 05.11.)
+- Präsentation (alle Agenten außer Börse/Coden, `pzAsk`): ab High **Tiefen-Recherche** (`DEEP.run`, viele Quellen lesen und vergleichen) statt nur Lernquellen; Quellenfolie über ```belege. `deckThin` prüft das Ergebnis (zu wenige Inhaltsfolien / Folien ohne Inhalt) → einmal vollständig neu schreiben (`reset`).
+- Bilder: Bildprüfung über Lite-Modelle; Fehlertext wird geloggt (`[Bild]   modell: …`). Ersatz-KI-Bilder zeigen das Thema (keine beliebigen Personen) und stehen NICHT als „KI-Bild“ in den Quellen.
+- Quellen-Schritt in der Zeitleiste: standardmäßig zu, rechts bis zu 3 Website-Logos + „+N“ (`srcStack`); Klick → Suchanfragen + Quellen (`srcFold`, `srcQueries` in `app.js`).

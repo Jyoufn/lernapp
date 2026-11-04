@@ -5129,9 +5129,10 @@ document.addEventListener('focus:done', (e) => {
    dann kann der Agent sie sofort benutzen.
    =================================================================== */
 window.AppActions = {
-  // Neuen KI-Chat (eigener Tab) öffnen und die Frage direkt stellen
-  new_chat({ prompt, title, effort, model } = {}) {
+  // Neuen KI-Chat (eigener Tab) öffnen und die Frage direkt stellen – optional mit einem bestimmten Agenten (z. B. research)
+  new_chat({ prompt, title, effort, model, agent } = {}) {
     const text = String(prompt || '').trim();
+    if (agent) this.switch_agent({ agent });
     const name = String(title || text || 'Neuer Chat').replace(/\s+/g, ' ').trim();
     createTab(name.length > 28 ? `${name.slice(0, 27).trim()}…` : name);
     setEffortByName(effort || 'auto');
@@ -5174,12 +5175,43 @@ window.AppActions = {
   update_task(a = {}) { window.Tasks?.update(a.match || a.title, { ...a, title: a.match ? a.title : undefined }); },
   delete_task({ title } = {}) { window.Tasks?.remove(title); },
   delete_event(a = {}) { window.Calendar?.remove(a); },
+  // Termin ändern = alten löschen, neuen mit den geänderten Feldern eintragen
+  update_event(a = {}) {
+    const q = String(a.match || a.title || '').toLowerCase(), ev = (window.Calendar?.events || []).find((e) => (e.title || '').toLowerCase() === q && (!a.date_old || e.date === a.date_old))
+      || (window.Calendar?.events || []).find((e) => (e.title || '').toLowerCase().includes(q));
+    if (!ev) return;
+    window.Calendar.remove({ title: ev.title, date: ev.date });
+    window.Calendar.add({ ...ev, ...Object.fromEntries(Object.entries({ title: a.match ? a.title : undefined, date: a.date, time: a.time, description: a.description, icon: a.icon }).filter(([, v]) => v !== undefined)) });
+  },
+  // Chats (per Titel, sonst der offene): öffnen, umbenennen, anheften, löschen (Wunsch 05.11.: der Agent kann alles, was man selbst kann)
+  open_chat({ title } = {}) { const t = findChatTab(title); if (t) { if (chatsView.open) chatsView.hide(); activateTab(t); } },
+  rename_chat({ title, name } = {}) { const t = title ? findChatTab(title) : activeTab(); if (t && !t.dataset.view && name) setChatTitle(t, String(name).trim().slice(0, 80)); },
+  pin_chat({ title, on } = {}) { const t = title ? findChatTab(title) : activeTab(); if (t && !t.dataset.view && (on === undefined || !!chatOf(t).pinned !== !!on)) togglePin(t); },
+  delete_chat({ title } = {}) { const t = title ? findChatTab(title) : null; if (t) deleteChat(t); },
+  // Agent wechseln: general | learn | research | code | boerse (oder ein eigener Agent per Name)
+  switch_agent({ agent } = {}) {
+    const q = String(agent || '').toLowerCase().trim(), modes = window.PixelDogs?.MODES || [];
+    const alias = { allgemein: 'general', lernen: 'learn', lern: 'learn', recherche: 'research', coden: 'code', programmieren: 'code', börse: 'boerse', aktien: 'boerse' };
+    const m = modes.find((x) => x.id === q || x.id === alias[q]) || modes.find((x) => (x.name || '').toLowerCase() === q);
+    if (m) window.PixelDogs.select(m.id);
+  },
+  // Recherche: neuer Chat mit dem Research-Agenten
+  research({ prompt, title, effort } = {}) { this.new_chat({ prompt, title: title || prompt, effort: effort || 'auto', agent: 'research' }); },
+  // Projekte (Ordner für Dokumente) anlegen; Dokument in ein Projekt verschieben
+  new_project({ name } = {}) { window.Docs?.addProject?.(String(name || '').trim()); },
+  move_doc({ title, project } = {}) { const d = findDoc(title); if (d) window.Docs?.moveToProject?.(d.id, project); },
   run(a) {
     if (Array.isArray(a?.actions)) { a.actions.forEach((x) => this.run(x)); return; } // mehrere Schritte auf einmal
     const fn = a && typeof a.action === 'string' && a.action !== 'run' ? this[a.action] : null;
     if (fn) fn.call(this, a);
   },
 };
+// Chat-Tab per Titel finden (genau, sonst Teil des Titels)
+function findChatTab(title) {
+  const q = String(title || '').toLowerCase().trim(); if (!q) return null;
+  const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t));
+  return all.find((t) => (chatOf(t)?.title || '').toLowerCase() === q) || all.find((t) => (chatOf(t)?.title || '').toLowerCase().includes(q)) || null;
+}
 // Dokument per Titel finden (genau, sonst Teil des Titels)
 function findDoc(title) {
   const q = String(title || '').toLowerCase().trim(), all = window.Docs?.docs || [];
@@ -5198,6 +5230,9 @@ function appStateText() {
   out.push(`Nächste Termine:${ev.length ? '' : ' keine'}`, ...ev.map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''}: ${e.title}`));
   const ds = window.Docs?.docs || [];
   out.push(`Dokumente (${ds.length}):${ds.length ? '' : ' keine'}`, ...ds.slice(0, 60).map((d) => `- ${d.title || 'Unbenannt'}`));
+  const chats = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t)).map((t) => chatOf(t)).sort((x, y) => y.updated - x.updated);
+  out.push(`Chats (${chats.length}):${chats.length ? '' : ' keine'}`, ...chats.slice(0, 40).map((c) => `- ${c.title}${c.pinned ? ' [angepinnt]' : ''}`));
+  out.push(`Gewählter Agent: ${window.PixelDogs?.mode || 'general'} (verfügbar: ${(window.PixelDogs?.MODES || []).map((m) => `${m.id} = ${m.name}`).join(', ')})`);
   if (window.FocusTimer?.active) out.push(`Laufende Timer: ${FocusTimer.count}`);
   if (window.Music?.connected?.()) out.push(`Spotify verbunden${window.Music.isPlaying?.() ? ', Musik läuft' : ''}`);
   return out.join('\n').slice(0, 7000);

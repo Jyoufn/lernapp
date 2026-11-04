@@ -3029,6 +3029,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
 
   return {
     list, editor, open, create, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
+    // für den Sprach-Agenten: Projekt anlegen (gibt es den Namen schon, wird es wiederverwendet) und Dokument verschieben
+    addProject: (name) => { const n = String(name || '').trim().slice(0, 40); if (!n) return null; const have = projects.find((p) => p.name.toLowerCase() === n.toLowerCase()); if (have) return have; const pr = { id: newId('p'), name: n, c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); open$.add(pr.id); save(); renderSide(); if (list.open) list.render(); return pr; },
+    moveToProject: (id, name) => { const d = docOf(id); if (!d) return; const q = String(name || '').toLowerCase().trim(); const pr = q ? (projects.find((p) => p.name.toLowerCase() === q) || projects.find((p) => p.name.toLowerCase().includes(q))) : null; d.projectId = pr ? pr.id : ''; touch(d); save(); renderSide(); if (list.open) list.render(); },
     get: (id) => docOf(id),
     isEmpty: (id) => { const d = docOf(id); return !d || isEmpty(d); },
     titleOf: (id) => docOf(id)?.title || 'Unbenannt',
