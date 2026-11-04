@@ -26,9 +26,6 @@ const Calendar = (() => {
   // angezeigte Woche: Montag 12 Uhr (12 Uhr, damit Zeitumstellungen das Datum nicht verschieben)
   const mondayOf = (d) => { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; };
   let cursor = mondayOf(new Date());
-  // Ansicht: nur Woche oder Tag (Wunsch 04.11.); dayCur = der Tag in der Tagesansicht
-  let mode = localStorage.getItem('cal.mode') === 'day' ? 'day' : 'week';
-  let dayCur = new Date(); dayCur.setHours(12, 0, 0, 0);
   let open = false;
   const WEEK_HOUR = 56; // Höhe einer Stunde in der Wochenansicht
   // Kalenderwoche nach ISO 8601
@@ -44,7 +41,6 @@ const Calendar = (() => {
     <header class="cal-head">
       <div class="cal-title"><span class="cw-my"><span class="cal-month"></span> <span class="cal-year"></span></span></div>
       <div class="cal-nav">
-        <div class="cal-mode" role="tablist"><button type="button" data-mode="week" role="tab">Woche</button><button type="button" data-mode="day" role="tab">Tag</button></div>
         <div class="cal-seg">
           <button type="button" data-cal="prev" aria-label="Vorherige Woche" title="Vorherige Woche">${icon('f-back')}</button>
           <button type="button" class="cal-seg-today" data-cal="today">Heute</button>
@@ -79,26 +75,20 @@ const Calendar = (() => {
     return out;
   }
   function render(dir = 0) {
-    const n7 = mode === 'day' ? 1 : 7, start = mode === 'day' ? dayCur : cursor;
-    const days = Array.from({ length: n7 }, (_, i) => { const d = new Date(start); d.setDate(start.getDate() + i); return d; });
-    view.classList.toggle('cal-dayview', mode === 'day');
-    view.style.setProperty('--ncol', n7);
-    view.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('on', b.dataset.mode === mode));
-    view.querySelector('[data-cal="prev"]').setAttribute('aria-label', mode === 'day' ? 'Vorheriger Tag' : 'Vorherige Woche');
-    view.querySelector('[data-cal="next"]').setAttribute('aria-label', mode === 'day' ? 'Nächster Tag' : 'Nächste Woche');
+    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(cursor); d.setDate(cursor.getDate() + i); return d; });
+    const a = days[0], b = days[6];
     // Monat wie in der Vorlage: der Monat, in dem der Donnerstag der Woche liegt (gehört nach ISO zu diesem Monat)
-    const mid = days[Math.min(3, days.length - 1)];
-    view.querySelector('.cal-month').textContent = mode === 'day' ? `${days[0].getDate()}. ${MONTHS[mid.getMonth()]}` : MONTHS[mid.getMonth()];
-    view.querySelector('.cal-year').textContent = mid.getFullYear();
+    view.querySelector('.cal-month').textContent = MONTHS[days[3].getMonth()];
+    view.querySelector('.cal-year').textContent = days[3].getFullYear();
     const off = -new Date().getTimezoneOffset() / 60;
     view.querySelector('.cw-tz').textContent = `GMT${off >= 0 ? '+' : '−'}${Math.abs(off)}`;
     const today = todayIso();
     daysBox.querySelectorAll('.cw-day').forEach((x) => x.remove());
-    daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); const wd = (d.getDay() + 6) % 7; return `<button type="button" class="cw-day${k === today ? ' today' : ''}${wd > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${mode === 'day' ? WEEKDAYS_L[wd] : DAYS[wd]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
+    daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); return `<button type="button" class="cw-day${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${DAYS[i]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
     // Spalten mit Terminen
     colsBox.replaceChildren(...days.map((d, i) => {
       const k = iso(d), col = document.createElement('div');
-      col.className = `cw-col${k === today ? ' today' : ''}${(d.getDay() + 6) % 7 > 4 ? ' weekend' : ''}`;
+      col.className = `cw-col${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}`;
       col.dataset.date = k;
       // ganztägig: keine eigene Zeile oben – der Termin zieht sich als Farbband von oben bis unten durch den Tag
       const allDay = events.filter((e) => e.date === k && minsOf(e.time) == null);
@@ -108,16 +98,11 @@ const Calendar = (() => {
       layoutDay(events.filter((e) => e.date === k)).forEach(({ e, s, en, lane, n }) => {
         const p = pill(e);
         p.classList.add('cw-ev');
-        // Karte wie die Vorlage (04.11.): getönte Fläche mit Rand, oben Status (vorbei = Haken, läuft = Uhr, sonst Icon) + Titel,
-        // darunter die Beschreibung, unten die Uhrzeit
-        const now = new Date(), nowM = now.getHours() * 60 + now.getMinutes();
-        const st = k < today || (k === today && en <= nowM) ? 'done' : k === today && s <= nowM ? 'now' : '';
-        const stIcon = st === 'done' ? '<svg width="16" height="16" aria-hidden="true"><use href="#f-check-circle"/></svg>' : st === 'now' ? '<svg width="16" height="16" aria-hidden="true"><use href="#f-clock"/></svg>' : icon(e.icon || 'i-calendar');
-        p.innerHTML = `<span class="cw-ev-head"><i class="cw-st${st ? ` ${st}` : ''}">${stIcon}</i><span class="cw-ev-title">${esc(e.title)}</span></span>`
-          + (e.description && (en - s) >= 60 ? `<span class="cw-ev-sub">${esc(e.description)}</span>` : '') + `<span class="cal-pill-time">${esc(e.time)}</span>`;
+        // wie in der Vorlage: Farbstrich links, oben Icon + Titel, darunter die Uhrzeit
+        p.innerHTML = `<i class="cw-bar"></i><span class="cal-pill-t">${icon(e.icon || 'i-calendar')}<span>${esc(e.title)}</span></span><span class="cal-pill-time">${esc(e.time)}</span>`;
         if ((en - s) < 45) p.classList.add('short');
         Object.assign(p.style, { top: `${(s / 60) * WEEK_HOUR + 1}px`, height: `${Math.max(20, ((en - s) / 60) * WEEK_HOUR - 3)}px`, left: `calc(${(lane / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` });
-        const t = p.querySelector('.cal-pill-time'); if (t && e.end && (en - s) >= 45 && mode === 'day') t.textContent = `${e.time} – ${e.end}`;
+        const t = p.querySelector('.cal-pill-time'); if (t && e.end && (en - s) >= 45) t.textContent = `${e.time} – ${e.end}`;
         col.append(p);
       });
       return col;
@@ -150,27 +135,18 @@ const Calendar = (() => {
     b.title = [e.time, e.title, e.description].filter(Boolean).join(' · ');
     return b;
   }
-  const shiftWeek = (n) => { if (mode === 'day') { dayCur.setDate(dayCur.getDate() + n); cursor = mondayOf(dayCur); } else cursor.setDate(cursor.getDate() + 7 * n); render(n); };
-  const WEEKDAYS_L = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
-  function setMode(m, date) {
-    if (date) { dayCur = new Date(`${date}T12:00:00`); cursor = mondayOf(dayCur); }
-    else if (m === 'day' && mode === 'week') { const t = new Date(); t.setHours(12, 0, 0, 0); dayCur = +mondayOf(t) === +cursor ? t : new Date(cursor); }
-    else if (m === 'week') cursor = mondayOf(dayCur);
-    mode = m; try { localStorage.setItem('cal.mode', m); } catch {}
-    render();
-  }
+  const shiftWeek = (n) => { cursor.setDate(cursor.getDate() + 7 * n); render(n); };
 
   view.addEventListener('click', (ev) => {
     const a = ev.target.closest('[data-cal]')?.dataset.cal;
     if (a === 'prev') { shiftWeek(-1); return; }
     if (a === 'next') { shiftWeek(1); return; }
-    const mb = ev.target.closest('[data-mode]'); if (mb) { if (mb.dataset.mode !== mode) setMode(mb.dataset.mode); return; }
-    if (a === 'today') { const was = mode === 'day' ? +dayCur : +cursor; dayCur = new Date(); dayCur.setHours(12, 0, 0, 0); cursor = mondayOf(dayCur); render(Math.sign((mode === 'day' ? +dayCur : +cursor) - was)); const n = new Date(); scroller.scrollTo({ top: Math.max(0, n.getHours() - 2) * WEEK_HOUR, behavior: 'smooth' }); return; }
+    if (a === 'today') { const was = +cursor; cursor = mondayOf(new Date()); render(Math.sign(+cursor - was)); const n = new Date(); scroller.scrollTo({ top: Math.max(0, n.getHours() - 2) * WEEK_HOUR, behavior: 'smooth' }); return; }
     if (a === 'new') { edit(null, todayIso()); return; }
     const p = ev.target.closest('.cal-pill');
     if (p) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
     const day = ev.target.closest('[data-day]');
-    if (day) { if (mode === 'week') setMode('day', day.dataset.day); return; } // Tagesname → Tagesansicht
+    if (day) { openDay(day.dataset.day, day); return; }
     // Klick in ein leeres Feld legt nichts an – neue Termine nur über „Neu“
   });
   // Wischen auf dem iPad: links/rechts = Woche vor/zurück
@@ -486,7 +462,7 @@ const Calendar = (() => {
     save();
     if (open) {
       const d = new Date(`${item.date}T12:00:00`);
-      cursor = mondayOf(d); if (mode === 'day') dayCur = d;
+      cursor = mondayOf(d);
       render();
       const fresh = view.querySelector(`[data-id="${item.id}"]`);
       fresh?.classList.add('fresh');

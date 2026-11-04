@@ -54,7 +54,7 @@
 - Hintergrund-Lauf: Server (`lib/agenttasks.js`) ohne Rückfragen (`noClarify`), auch bei geschlossener App (Cron). Ziel des Nutzers: Hausaufgaben eintragen → Agent erledigt sie → später Export (PDF) für GoodNotes.
 
 ## Kalender (`calendar.js`)
-- **Nur zwei Ansichten: Woche und Tag** (Umschalter „Woche · Tag“ im Kopf, `mode`, gemerkt in `cal.mode`; ‹ › blättert eine Woche bzw. einen Tag; Klick auf einen Tagesnamen → Tagesansicht dieses Tages). Tage „Mo 26“ (heute rote Pille), Stunden 56 px. **Termin-Karte** (Vorbild 04.11.): getönte Fläche (Farbe 13 %) mit Rand (34 %), Radius 10, oben Status-Icon + Titel (600, weiß) – vorbei = Haken, läuft gerade = Uhr, sonst eigenes Icon –, darunter Beschreibung (ab 1 h Länge), unten Uhrzeit (Woche: Beginn, Tag: „von – bis“). **Ganztägig = Farbband durch den ganzen Tag**, keine Jetzt-Linie. Klick in leere Felder macht nichts – neue Termine nur über „Neu“.
+- Wochenansicht: Tage „Mo 26“ (heute rote Pille), Stunden 56 px, Termine getönt mit Farbstrich. **Ganztägig = Farbband durch den ganzen Tag** (Titel klebt oben), keine Ganztägig-Zeile, keine Jetzt-Linie, kein Überscrollen. Klick in leere Felder macht nichts – neue Termine nur über „Neu“. Klick auf Tagesnamen öffnet das Tagesfenster.
 - Termin-Fenster wie das Aufgaben-Fenster (Datum, Zeit/Ganztägig, Farbe, Icon). Neuer Termin: Icon folgt dem Titel (`guessIcon`/`ICON_WORDS` in `calendar.js`), bis eins von Hand gewählt wird.
 
 ## Börse (Bär)
