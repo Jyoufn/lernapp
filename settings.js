@@ -55,7 +55,7 @@
   const app = document.getElementById('app');
   const inner = document.querySelector('.sidebar-inner');
   const panel = document.querySelector('.panel');
-  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten', saved: 'Gespeichert' };
+  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten' }; // „Gespeichert“ entfällt (Wunsch 05.11.)
   // Erweiterungen anderer Dateien (code-box.js, chat-bg.js, agent-builder.js): { page, order, html(), click(e, redraw), input(e), change(e) }
   const hooks = (pg) => (window.SettingsHooks || []).filter((h) => !pg || h.page === pg).sort((a, b) => (a.order || 0) - (b.order || 0));
   const hooksHtml = (pg) => hooks(pg).map((h) => { try { return h.html(); } catch { return ''; } }).join('');
@@ -71,8 +71,7 @@
   side.innerHTML = `<button type="button" class="st-back"><svg width="14" height="14"><use href="#o-chev"/></svg><span>Zurück</span></button>
     <a class="st-item" href="#" data-st="general"><svg width="15" height="15"><use href="#o-user"/></svg><span>Allgemein</span></a>
     <a class="st-item" href="#" data-st="look"><svg width="15" height="15"><use href="#o-look"/></svg><span>Aussehen</span></a>
-    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>
-    <a class="st-item" href="#" data-st="saved"><svg width="15" height="15"><use href="#o-library"/></svg><span>Gespeichert</span></a>`;
+    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>`;
   inner?.append(side);
 
   const view = document.createElement('section');
@@ -117,8 +116,8 @@
     const why = { main: 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.', backup: 'Springt nur ein, wenn die Haupt-KI gerade nicht kann.', off: 'Wird nie genutzt.' }[role]
       + (main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : '');
     const opt = (v, label) => `<button type="button" role="radio" aria-checked="${role === v}" class="${role === v ? 'on' : ''}" data-ai-role="${p.fam}:${v}"${main && v !== 'main' ? ' disabled' : ''}>${label}</button>`;
-    return `<div class="st-role"><span class="st-role-n">Rolle</span><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>
-      <p class="st-role-why">${esc(why)}</p>`;
+    return `<div class="st-role"><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>
+`;
   }
 
 
@@ -129,9 +128,7 @@
     const off = dogs?.UNAVAILABLE?.has(m.id);
     let cur = 'general';
     try { cur = localStorage.getItem('dogMode') || 'general'; } catch {}
-    const right = off ? '<span class="st-muted">Nicht verfügbar</span>'
-      : cur === m.id ? `<span class="st-ok">${fi('check', 12)}Aktiv</span>`
-      : `<button type="button" class="st-btn dark" data-agent="${m.id}">Auswählen</button>`;
+    const right = off ? '<span class="st-muted">Nicht verfügbar</span>' : ''; // nur auflisten – keiner „aktiv“ (Wunsch 05.11.)
     return `<div class="st-row${off ? ' off' : ''}"><span class="st-dog">${dogs ? dogs.svg(m.id, 24) : ''}</span><span class="st-name">${esc(m.name)}</span><span class="grow"></span>${right}</div>`;
   }
 
@@ -255,7 +252,7 @@
       const modes = window.PixelDogs?.MODES || [];
       body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
         + '<p class="st-ai-note">Anbieter antippen: Schlüssel hinzufügen und festlegen, welche KI die Haupt-KI ist. Ist ihr Kontingent aufgebraucht, springen die anderen als Ersatz ein.</p>'
-        + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}</div>` : '')
+        + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}${window.AgentSettingsRows?.() || ''}</div>` : '')
         + hooksHtml('agents');
     }
     // gleiche Seite neu gezeichnet (z. B. Hintergrund gewählt) → Scroll-Position behalten, nicht nach oben springen. Die neue Seite behält kurz

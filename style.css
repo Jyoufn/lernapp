@@ -11148,3 +11148,10 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 @keyframes pb-fly { 0% { transform: translate(0, 0) scale(1); opacity: 1; } 100% { transform: translate(var(--x), var(--y)) scale(.4); opacity: 0; } }
 @keyframes pb-flash { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(1.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .punch-burst { display: none; } }
+
+/* Einstellungen (05.11.): Stufen-Auswahl wie der Erstellen-Schalter – gewählte Stufe hellgrau gefüllt, ohne Umrandung */
+.st-seg { padding: 3px; gap: 2px; border: 1px solid var(--line); border-radius: 10px; background: var(--win-bg); }
+.st-seg button { height: 26px; padding: 0 12px; border: 0; border-radius: 7px; color: var(--text-4); transition: color 160ms ease, background-color 200ms ease; }
+.st-seg button:hover:not(:disabled) { color: var(--text-2); }
+.st-seg button.on, .st-seg button[aria-checked="true"] { background: #2e2e2e !important; box-shadow: none !important; border: 0 !important; color: var(--text); }
+.st-role { margin-top: 10px; }
