@@ -1583,6 +1583,31 @@ async function handle(req, res) {
         }));
         return sendJson(res, 200, { q, out });
       }
+      // KI-Prüfung mit den Schlüsseln des Hauptkontos (nur mit EVAL_SECRET, für Tests über das Vercel-MCP): eine Frage, ein Aufwand – Antwort,
+      // Quellen, Zeitleiste, Dauer und Denk-Abschnitte als JSON. Keine Schlüssel in der Antwort.
+      if (urlPath === '/api/diag/ki') {
+        const env0 = serverEnv(), qs = new URL(req.url, 'http://x').searchParams;
+        if (!env0.EVAL_SECRET || qs.get('key') !== env0.EVAL_SECRET) return sendJson(res, 401, { error: 'Nicht erlaubt' });
+        const { uid } = await ACC.uidForEmail(store, env0, env0.LOGIN_EMAIL || '');
+        if (!uid) return sendJson(res, 404, { error: 'Hauptkonto nicht gefunden' });
+        const keys = await accountKeys(store, uid);
+        const t0 = Date.now(), ev = { text: '', thoughts: 0, timeline: [], sources: [], errors: [] };
+        const send = (type, d = {}) => {
+          if (type === 'text') { ev.first ||= Date.now() - t0; ev.text += d.text || ''; }
+          else if (type === 'reset') ev.text = '';
+          else if (type === 'thought') ev.thoughts++;
+          else if (type === 'status' && d.status === 'active') ev.timeline.push(`${((Date.now() - t0) / 1000).toFixed(1)}s ${d.description || d.stage}`);
+          else if (type === 'status' && d.meta?.provider) ev.model = d.meta.provider;
+          else if (['research', 'web', 'deep'].includes(type)) for (const x of [...(d.sources || []), ...(d.pages || [])]) if (x?.url && !ev.sources.includes(x.url)) ev.sources.push(x.url);
+          else if (type === 'done') ev.effort = d.effort;
+          else if (type === 'error') ev.errors.push(d.message || String(d));
+        };
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 270000);
+        try {
+          await requestKeys.run(keys, () => W.runChat({ env: readEnv(), body: withAgentData({ messages: [{ role: 'user', text: String(qs.get('q') || '').slice(0, 2000) }], agent: qs.get('agent') || 'general', effort: qs.get('effort') || 'auto' }, { id: uid }), send, signal: ctl.signal }));
+        } catch (err) { ev.errors.push(err.message); } finally { clearTimeout(tm); }
+        return sendJson(res, 200, { ms: Date.now() - t0, firstTextMs: ev.first, model: ev.model, effort: ev.effort, thoughts: ev.thoughts, timeline: ev.timeline, sources: ev.sources.slice(0, 20), errors: ev.errors, chars: ev.text.length, text: ev.text.slice(0, 6000), schluessel: Object.keys(keys) });
+      }
       user = await ACC.sessionUser(store, cookiesOf(req).sid);
       if (!user) return sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
       if (user.renewed) res.setHeader('Set-Cookie', sessionCookie(req, cookiesOf(req).sid, ACC.SESSION_TTL)); // Cookie mit verlängern

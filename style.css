@@ -11068,3 +11068,16 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .lb-stage > img { width: 100%; height: 100%; max-width: 1600px; object-fit: contain; border-radius: 10px; }
 @keyframes lb-calm { from { opacity: 0; transform: scale(.985); } }
 @media (max-width: 1100px) { .lb-stage { padding: 56px 16px 24px; } }
+/* Bilder in Antworten: runder, ohne Unterschrift; Bildquellen als Kärtchen am Ende der Nachricht (04.11.) */
+.web-img { margin: 12px 0; }
+.web-img .src-img-pic, .web-img img { border-radius: 16px; }
+.web-img figcaption { display: none; }
+.wb-credits { clear: both; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.wb-credit { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px 0 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--win-bg); color: var(--text-3); font-size: 12px; text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.wb-credit:hover { background: var(--pop-bg); color: var(--text); }
+.wb-credit > svg { color: var(--text-4); flex: none; }
+.wb-credit img { width: 18px; height: 18px; border-radius: 5px; object-fit: cover; flex: none; }
+.wb-credit span { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.msg-ai a.wb-credit, .msg-ai a.wb-credit:hover { color: var(--text-3); text-decoration: none; border-bottom: 1px solid var(--line); }
+.msg-ai a.wb-credit span { color: inherit; text-decoration: none; }
+.msg-ai a.wb-credit:hover span { color: var(--text); }

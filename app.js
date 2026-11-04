@@ -1579,6 +1579,7 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) { const f = webImageFigure(raw); if (!f) { pre.remove(); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
   });
+  wbCredits(target);
   // Podcast (```podcast): Player wie bei Spotify mit Transkript und Mitreden (podcast.js) – solange die KI noch schreibt: eine Warte-Karte
   const podClosed = (text.match(/```podcast[^\n]*\n[\s\S]*?\n```/g) || []).length;
   target.querySelectorAll('pre:has(code.language-podcast)').forEach((pre, i) => {
@@ -2398,6 +2399,21 @@ function updatePodcast(oldRaw, next) {
     if (h) { h.text = h.text.replace(old, () => next); saveChats(); return; }
   }
 }
+// Bildquellen am Ende der Nachricht: je Bild ein kleines Kärtchen (Bild-Icon, Mini-Vorschau, Website) mit Link zur Quelle
+function wbCredits(target) {
+  const figs = [...target.querySelectorAll('figure.web-img')].filter((f) => f._wb);
+  let row = target.querySelector(':scope > .wb-credits');
+  if (!figs.length) { row?.remove(); return; }
+  if (!row) row = el('div', 'wb-credits');
+  row.replaceChildren(...figs.map((f) => {
+    const d = f._wb, a = el('a', 'wb-credit');
+    a.href = safeUrl(d.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.innerHTML = `${icon('f-image', 12)}<img alt="" src="${escapeHtml(d.src)}" referrerpolicy="no-referrer" decoding="async"><span>${escapeHtml(String(d.site || d.license || 'Quelle').slice(0, 40))}</span>`;
+    a.title = String(d.text || '');
+    return a;
+  }));
+  target.append(row); // immer ans Ende (auch während die Antwort noch wächst)
+}
 function webImageFigure(raw) {
   let d = null;
   try { d = JSON.parse(String(raw).trim()); } catch { return null; }
@@ -2413,12 +2429,9 @@ function webImageFigure(raw) {
   img.addEventListener('error', () => fig.remove());
   img.src = d.src;
   a.append(img);
-  const cap = el('figcaption', '');
-  if (d.text) cap.append(el('span', 'src-img-t', escapeHtml(String(d.text).slice(0, 200))));
-  const src = el('a', 'src-img-l', escapeHtml(String(d.license || d.site || '').slice(0, 80)));
-  src.href = safeUrl(d.url); src.target = '_blank'; src.rel = 'noopener noreferrer';
-  cap.append(src);
-  fig.append(a, cap);
+  // keine Unterschrift unter dem Bild (Wunsch 04.11.) – die Quelle steht am Ende der Nachricht (Bild-Icon + Vorschau + Website, siehe wbCredits)
+  fig._wb = d;
+  fig.append(a);
   return fig;
 }
 function linksFigure(raw, sources) {
