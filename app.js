@@ -5422,7 +5422,7 @@ function renderChatList() {
   if (!chatsPop.classList.contains('open')) return;
   const tabs = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')];
   const items = tabs.map((t) => ({ tab: t, c: chatOf(t) })).sort((a, b) => b.c.updated - a.c.updated);
-  const groups = [['Angeheftet', items.filter((x) => x.c.pinned)], ['Zuletzt', items.filter((x) => !x.c.pinned)]];
+  const groups = [['Angepinnt', items.filter((x) => x.c.pinned)], ['Zuletzt', items.filter((x) => !x.c.pinned)]];
   const frag = document.createDocumentFragment();
   groups.forEach(([label, list]) => {
     if (!list.length) return;
@@ -5493,7 +5493,7 @@ const chatsView = (() => {
     const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t)).map((t) => ({ tab: t, c: chatOf(t) })); // leere Chats zählen nicht
     const items = all.filter((x) => !q || x.c.title.toLowerCase().includes(q)).sort((a, b) => b.c.updated - a.c.updated);
     const frag = document.createDocumentFragment();
-    [['Angeheftet', items.filter((x) => x.c.pinned)], ...(window.UIKit ? UIKit.timeGroups(items.filter((x) => !x.c.pinned), (x) => x.c.updated) : [['Zuletzt', items.filter((x) => !x.c.pinned)]])].forEach(([label, rows]) => {
+    [['Angepinnt', items.filter((x) => x.c.pinned)], ...(window.UIKit ? UIKit.timeGroups(items.filter((x) => !x.c.pinned), (x) => x.c.updated) : [['Zuletzt', items.filter((x) => !x.c.pinned)]])].forEach(([label, rows]) => {
       if (!rows.length) return;
       frag.append(el('div', 'cl-label', label));
       rows.forEach(({ tab, c }, i) => {
@@ -5682,7 +5682,18 @@ window.renderSideChats = () => {
       });
       return a;
     };
-    if (pinnedItems.length) inner.append(el('div', 'sb-sub', 'Angeheftet'), ...pinnedItems.map(mk), ...(items.length ? [el('div', 'sb-sub', 'Zuletzt')] : []));
+    // Angepinnt: eigener Bereich über „Chats“ (Wunsch 05.11.), nur wenn etwas angepinnt ist
+    const sbPinned = $('sbPinned');
+    if (sbPinned) {
+      sbPinned.hidden = !pinnedItems.length;
+      sbPinned.classList.toggle('closed', sbClosed.has('pinned'));
+      if (pinnedItems.length) {
+        const pb = el('div', 'sb-sec-body'), pi = el('div', 'sb-sec-in');
+        pb.append(pi); pi.append(...pinnedItems.map(mk));
+        sbPinned.innerHTML = `<div class="sb-sec-row">${window.sbSectionHead('Angepinnt', 'pinned')}</div>`;
+        sbPinned.append(pb);
+      } else sbPinned.replaceChildren();
+    }
     inner.append(...items.map(mk));
     sbChats.innerHTML = `<div class="sb-sec-row">${window.sbSectionHead('Chats', 'chats')}<button type="button" class="sb-sec-add" aria-label="Neuer Chat" title="Neuer Chat"><svg width="14" height="14"><use href="#o-plus"/></svg></button></div>`;
     sbChats.append(body);

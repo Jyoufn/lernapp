@@ -672,7 +672,7 @@ const Docs = (() => {
         const have = new Set(items.map((x) => `${x.kind}:${x.id}`));
         [...sel].forEach((k) => { if (!have.has(k)) sel.delete(k); });
         let i = 0;
-        rows.innerHTML = [['Angeheftet', items.filter((x) => x.pinned)], ...UIKit.timeGroups(items.filter((x) => !x.pinned), (x) => x.updated)]
+        rows.innerHTML = [['Angepinnt', items.filter((x) => x.pinned)], ...UIKit.timeGroups(items.filter((x) => !x.pinned), (x) => x.updated)]
           .filter(([, r]) => r.length).map(([label, r]) => `<div class="cl-label">${label === 'Zuletzt' ? 'Heute' : label}</div>${r.map((x) => row(x, i++)).join('')}`).join('')
           || `<div class="cl-empty">${q ? 'Nichts gefunden' : 'Noch keine Chats oder Dokumente'}</div>`;
         syncBar();

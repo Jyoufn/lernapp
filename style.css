@@ -11097,3 +11097,15 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .step.src-step.open { width: auto !important; }
 .step.src-step > .src-stack { transition: opacity 200ms ease; }
 .step.src-step.open > .src-stack { opacity: 0; pointer-events: none; }
+
+/* Bibliothek (05.11.): Auswahlkästchen mit dünnerem Rand */
+.lb2-check { border-width: 1px; }
+.sb-pinned[hidden] { display: none; }
+
+/* Aufgaben wie Bibliothek (05.11.): ruhige Kopfzeile ohne blauen Knopf, Gruppen grau ohne Zähler, Überfällig nur am Datum rot */
+.tk-view.tk-listmode .tk-new, .tk-view.tk-listmode .tk-new:hover { background: #212121; color: #ededed; border: 1px solid #242424; filter: none; }
+.tk-view.tk-listmode .tk-new:hover { background: #262626; }
+.tk-view.tk-listmode .tk-new svg { color: #bbbbbb; }
+.tk-view.tk-listmode .tk-grp-head, .tk-view.tk-listmode .tk-grp-head * { color: #909090 !important; font-size: 12px; font-weight: 500; }
+.tk-view.tk-listmode .tk-grp:not(.g-done) .tk-grp-head .tk-count { display: none; }
+.tk-view.tk-listmode .tk-grp-head { padding: 16px 10px 6px; }
