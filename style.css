@@ -11136,3 +11136,6 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .dh-dog svg.slide-in, .dog-peek svg.slide-in { animation: dog-slide-in 520ms cubic-bezier(.16, .9, .3, 1) both; }
 @keyframes dog-slide-in { 0% { transform: translateX(120%); opacity: 0; } 35% { opacity: 1; } 100% { transform: translateX(0); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .punch-glove { display: none; } .dh-dog svg.punched, .dog-peek svg.punched, .dh-dog svg.slide-in, .dog-peek svg.slide-in { animation: none; } }
+
+/* Slash-Menü (05.11.): Liste füllt die Höhe, die das Menü über/unter der iPad-Tastatur bekommt, und scrollt darin */
+.dcs-menu > .dcs-list { max-height: none; flex: 1 1 auto; min-height: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }

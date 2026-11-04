@@ -1594,6 +1594,7 @@ const DocBlocks = (() => {
         });
         m.addEventListener('pointermove', (e) => { const row = e.target.closest('[data-i]'); if (row && menu.mode === 'items' && +row.dataset.i !== menu.idx) { menu.idx = +row.dataset.i; mark(); } });
         menu = { el: m, idx: 0, mode: 'items' };
+        if (window.visualViewport && !attach._vv) { attach._vv = true; const re = () => { if (menu) position(); }; visualViewport.addEventListener('resize', re); visualViewport.addEventListener('scroll', re); }
         setTimeout(() => document.addEventListener('pointerdown', outside), 0);
       }
       Object.assign(menu, { node, start, query, mode: 'items' });
@@ -1630,10 +1631,16 @@ const DocBlocks = (() => {
     function position() {
       const r = document.createRange();
       try { r.setStart(menu.node, menu.start); r.setEnd(menu.node, Math.min(menu.node.length, menu.start + 1)); } catch { return; }
-      const rect = r.getBoundingClientRect(), h = menu.el.offsetHeight || 340, w = 320;
-      const below = rect.bottom + 6 + h < innerHeight - 8;
+      // iPad: die Bildschirmtastatur verdeckt den unteren Teil – nur der sichtbare Bereich (visualViewport) zählt, sonst lag das Menü
+      // unter der Tastatur und „/“ schien nicht zu funktionieren. Höhe an den freien Platz anpassen.
+      const vv = window.visualViewport, top0 = (vv?.offsetTop || 0) + 8, bottom0 = (vv ? vv.offsetTop + vv.height : innerHeight) - 8;
+      const rect = r.getBoundingClientRect(), w = 320;
+      const spaceBelow = bottom0 - rect.bottom - 6, spaceAbove = rect.top - 6 - top0;
+      const below = spaceBelow >= Math.min(340, menu.el.scrollHeight || 340) || spaceBelow >= spaceAbove;
+      menu.el.style.maxHeight = `${Math.max(140, Math.min(360, below ? spaceBelow : spaceAbove))}px`;
+      const h = menu.el.offsetHeight || 340;
       menu.el.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, rect.left - 4))}px`;
-      menu.el.style.top = `${below ? rect.bottom + 6 : Math.max(8, rect.top - h - 6)}px`;
+      menu.el.style.top = `${below ? rect.bottom + 6 : Math.max(top0, rect.top - h - 6)}px`;
     }
     function outside(e) { if (menu && !menu.el.contains(e.target)) close(); }
     function close() {
