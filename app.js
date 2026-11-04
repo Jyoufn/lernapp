@@ -5604,13 +5604,15 @@ window.renderSideChats = () => {
     const v = activeTab()?.dataset.view;
     const kind = chatsView.open ? 'history' : createSwitch.isCreate(activeTab()) ? 'new' : v === 'doc' ? 'docs' : v || '';
     document.querySelectorAll('.sidebar .sb-main [data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === kind));
-    const items = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
-      .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => (b.c.pinned - a.c.pinned) || (b.c.updated - a.c.updated)).slice(0, 8); // angeheftete zuerst
+    // angeheftete Chats immer alle (eigene Gruppe „Angeheftet“), darunter die 8 neuesten übrigen (Wunsch 04.11.)
+    const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
+      .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => b.c.updated - a.c.updated);
+    const pinnedItems = all.filter((x) => x.c.pinned), items = all.filter((x) => !x.c.pinned).slice(0, 8);
     // „Chats“ steht immer da (auch ohne Chats, dann ohne Hinweis darunter); rechts ein Plus für einen neuen Chat – nur beim Darüberfahren
     const body = el('div', 'sb-sec-body');
     const inner = el('div', 'sb-sec-in');
     body.append(inner);
-    inner.append(...items.map(({ tab, c }) => {
+    const mk = ({ tab, c }) => {
       const a = el('a', `nav-item sb-chat${tab.classList.contains('active') && !chatsView.open ? ' active' : ''}`, `${chatAvatar(tab, 'sb-av')}<span class="sb-chat-t"></span>${runOf(tab) ? '<span class="spinner sb-busy" role="img" aria-label="Antwortet gerade"></span>' : ''}`
         + `<span class="sb-chat-acts"><span class="sb-chat-act${c.pinned ? ' on' : ''}" data-sbc="pin" role="button" aria-label="${c.pinned ? 'Lösen' : 'Anheften'}" title="${c.pinned ? 'Lösen' : 'Anheften'}">${icon('f-pin', 13)}</span>`
         + `<span class="sb-chat-act" data-sbc="more" role="button" aria-label="Mehr" title="Mehr">${icon('f-more', 13)}</span></span>`);
@@ -5623,7 +5625,9 @@ window.renderSideChats = () => {
         chatsView.hide(); activateTab(tab);
       });
       return a;
-    }));
+    };
+    if (pinnedItems.length) inner.append(el('div', 'sb-sub', 'Angeheftet'), ...pinnedItems.map(mk), ...(items.length ? [el('div', 'sb-sub', 'Zuletzt')] : []));
+    inner.append(...items.map(mk));
     sbChats.innerHTML = `<div class="sb-sec-row">${window.sbSectionHead('Chats', 'chats')}<button type="button" class="sb-sec-add" aria-label="Neuer Chat" title="Neuer Chat"><svg width="14" height="14"><use href="#o-plus"/></svg></button></div>`;
     sbChats.append(body);
   });

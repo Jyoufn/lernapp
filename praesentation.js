@@ -18,7 +18,7 @@ const Praesentation = (() => {
   const THEMES = {
     // „Business“ (Vorlage des Nutzers 04.11.): weiß, kräftiges Firmenblau, blaue Titelfolie mit getöntem Foto, Agenda mit blauem Feld,
     // Kicker in Großbuchstaben mit blauem Strich, Fuß mit Titel + Seitenzahl und dünner blauer Linie – ohne Punktmuster
-    business: { name: 'Business', bg: '#FFFFFF', soft: '#EEF2F6', text: '#1B2430', sub: '#6B7480', panel: '#EEF1F5', line: '#DCE3EA', accent: '#1565C0', dark: '#0D3C78', onAccent: '#FFFFFF', head: 'sans', title: 'business', radius: 0.12, fixedAccent: true },
+    business: { name: 'Business', bg: '#FFFFFF', soft: '#F4F6F9', text: '#1B2430', sub: '#6B7480', panel: '#EEF1F5', line: '#DCE3EA', accent: '#1565C0', dark: '#0D3C78', onAccent: '#FFFFFF', head: 'sans', title: 'business', radius: 0.12, fixedAccent: true },
     klar: { name: 'Klar', bg: '#FFFFFF', soft: '#F3F5F8', text: '#14161A', sub: '#5F6672', panel: '#F2F4F7', line: '#E3E6EB', accent: '#2F6BFF', onAccent: '#FFFFFF', head: 'sans', title: 'split', radius: 0.22 },
     nacht: { name: 'Nacht', bg: '#0E1320', text: '#F4F6FB', sub: '#9AA3B5', panel: '#182033', line: '#273049', accent: '#5EA2FF', onAccent: '#0B1020', head: 'sans', title: 'full', radius: 0.22 },
     papier: { name: 'Papier', bg: '#F6F1E7', text: '#2A2118', sub: '#76695A', panel: '#ECE3D3', line: '#DDD1BC', accent: '#B5532A', onAccent: '#FFFFFF', head: 'serif', title: 'split', radius: 0.08 },
@@ -72,16 +72,10 @@ const Praesentation = (() => {
       x.image = { query: '', prompt: `Foto passend zur Folie „${x.title || topic}“ einer Schulpräsentation über ${topic}, sachlich, Motiv gut erkennbar` };
       have++;
     }
-    // Gliederung ist Pflicht: fehlt sie, kommt sie hinter die Titelfolie (Abschnitte, sonst die Folientitel)
-    if (!slides.some((s) => s.type === 'gliederung')) {
-      const secs = slides.filter((s) => s.type === 'abschnitt').map((s) => s.title);
-      const items = (secs.length >= 2 ? secs : slides.filter((s) => !['titel', 'fazit', 'zitat'].includes(s.type)).map((s) => s.title)).filter(Boolean).slice(0, 8);
-      if (items.length >= 2) slides.splice(slides[0].type === 'titel' ? 1 : 0, 0, { type: 'gliederung', title: 'Gliederung', text: '', points: items, left: null, right: null, image: null, notes: '' });
-    }
-    // Ende immer mit Quellen und Schluss-Folie (fehlen sie, setzt die App sie dazu; Bildnachweise kommen beim Zeichnen dazu)
+    // Quellen (Bildnachweise kommen beim Zeichnen dazu)
     const sources = (Array.isArray(o.sources) ? o.sources : []).filter((x) => typeof x !== 'number' && !/^\s*\[?\d{1,2}\]?\s*$/.test(String(x))).map((x) => str(typeof x === 'string' ? x : [x?.title, x?.publisher, x?.year, x?.url].filter(Boolean).join(' · '), 220)).filter(Boolean).slice(0, 14);
-    if (!slides.some((x) => x.type === 'ende')) slides.push({ type: 'ende', title: 'Vielen Dank!', text: 'Fragen?', points: [], left: null, right: null, image: null, notes: '' });
-    if (!slides.some((x) => x.type === 'quellen')) slides.splice(slides.length - 1, 0, { type: 'quellen', title: 'Quellen', text: '', points: [], left: null, right: null, image: null, notes: '' });
+    // keine feste Struktur (Wunsch 04.11.): Gliederung und Schlussfolie nur, wenn die KI sie plant; Quellen kommen ans Ende (vor eine Schlussfolie)
+    if (!slides.some((x) => x.type === 'quellen')) { const endAt = slides.findIndex((x) => x.type === 'ende'); slides.splice(endAt < 0 ? slides.length : endAt, 0, { type: 'quellen', title: 'Quellen', text: '', points: [], left: null, right: null, image: null, notes: '' }); }
     const theme = 'klar'; // nur noch ein Design: „Klar“
     return { title: plain(str(o.title || slides[0].title, 110)), subtitle: plain(str(o.subtitle, 160)), theme, aiTheme: theme, accent: hex(o.accent), sources, slides };
   }
@@ -151,11 +145,9 @@ const Praesentation = (() => {
     if (!['quellen', 'ende', 'fazit'].includes(slide.type)) for (let k = i; k >= 0; k--) if (deck.slides[k].type === 'abschnitt') { sec = deck.slides[k].title; break; }
     const heading = (t, w = W - 2 * M, x = M) => {
       if (T.title === 'business') { // senkrechter blauer Strich + Kicker (Abschnitt) in Großbuchstaben, darunter der Folientitel
-        out.push({ k: 'rect', x: x - 0.22, y: 0.6, w: 0.05, h: sec ? 0.95 : 0.62, fill: T.accent });
-        let yb = 0.56;
-        if (sec) { out.push({ k: 'text', x, y: yb, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); yb += 0.3; }
-        const fb = text(t, { x, y: yb, w, h: 1.15, max: 30, min: 20, bold: true, color: T.text, maxLines: 2, lh: 1.1 });
-        return fb.bottom + 0.45;
+        const fb = text(String(t).toUpperCase(), { x, y: 0.58, w: w - 1.2, h: 0.9, max: 20, min: 14, bold: true, color: T.accent, maxLines: 2, lh: 1.15 });
+        out.push({ k: 'rect', x: x - 0.2, y: 0.6, w: 0.045, h: Math.max(0.3, fb.bottom - 0.62), fill: T.accent });
+        return fb.bottom + 0.5;
       }
       let y = 0.62;
       if (sec && T.title !== 'minimal') { out.push({ k: 'text', x, y, w, lines: [words(sec.toUpperCase(), true)], size: 11, bold: true, color: T.accent, lh: 1.2 }); y += 0.3; }
@@ -183,26 +175,33 @@ const Praesentation = (() => {
     };
     const R = T.radius;
     const s = slide;
+    // Kreis mit Zahl genau in der Mitte (Textfeld so hoch wie eine Zeile, senkrecht um den Mittelpunkt gelegt)
+    const numDot = (cx, cy, d, num, size, fill = T.accent, color = T.onAccent) => {
+      out.push({ k: 'ellipse', x: cx - d / 2, y: cy - d / 2, w: d, h: d, fill });
+      out.push({ k: 'text', x: cx - d / 2, y: cy - size * PT * 0.56, w: d, lines: [words(String(num), true)], size, bold: true, color, align: 'c', lh: 1.1 });
+    };
     if (s.type === 'titel' && T.title === 'business') { // blaue Fläche, Foto blau getönt rechts, weißer Titel links mit Strich
       const sub = s.text || deck.subtitle;
-      out[0].fill = T.accent;
-      if (im) { out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: T.accent, alpha: 0.78 }); }
-      out.push({ k: 'rect', x: M, y: 2.85, w: 0.7, h: 0.05, fill: '#FFFFFF' });
-      const f = text((s.title || deck.title).toUpperCase(), { x: M, y: 3.1, w: 8.6, h: 2.0, max: 44, min: 28, bold: true, color: '#FFFFFF', maxLines: 3, lh: 1.08 });
-      if (sub) text(sub.toUpperCase(), { x: M, y: f.bottom + 0.25, w: 8.2, h: 0.9, max: 13, min: 10, color: 'rgba(255,255,255,0.85)', maxLines: 2, lh: 1.4 });
-      out.push({ k: 'rect', x: 0, y: H - 0.06, w: W, h: 0.06, fill: '#FFFFFF', alpha: 0.35 });
+      if (im) {
+        out[0].fill = T.accent;
+        out.push({ k: 'image', x: 0, y: 0, w: W, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: W, h: H, fill: T.accent, alpha: 0.8 });
+        const f = text((s.title || deck.title).toUpperCase(), { x: M, y: 2.9, w: 8.6, h: 2.0, max: 40, min: 26, bold: true, color: '#FFFFFF', maxLines: 3, lh: 1.1 });
+        if (sub) text(sub.toUpperCase(), { x: M, y: f.bottom + 0.25, w: 8.2, h: 0.9, max: 12, min: 9, color: 'rgba(255,255,255,0.85)', maxLines: 2, lh: 1.5 });
+      } else {
+        const f = text((s.title || deck.title).toUpperCase(), { x: 1.5, y: 2.75, w: W - 3, h: 1.7, max: 44, min: 28, bold: true, color: T.accent, align: 'c', maxLines: 2, lh: 1.1 });
+        if (sub) text(sub.toUpperCase(), { x: 2, y: f.bottom + 0.2, w: W - 4, h: 0.8, max: 13, min: 10, color: T.sub, align: 'c', maxLines: 2, lh: 1.5 });
+        out.push({ k: 'rect', x: 0, y: H - 0.06, w: W, h: 0.06, fill: T.accent });
+      }
     } else if (s.type === 'gliederung' && T.title === 'business') { // Agenda: links blaues Feld (mit Foto), rechts Liste mit Nummernkreisen
       const pw = 4.2;
       out.push({ k: 'rect', x: 0, y: 0, w: pw, h: H, fill: T.accent });
       if (im) { out.push({ k: 'image', x: 0, y: 0, w: pw, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: pw, h: H, fill: T.accent, alpha: 0.72 }); }
-      out.push({ k: 'rect', x: M, y: 3.35, w: 0.6, h: 0.05, fill: '#FFFFFF' });
       text((s.title || 'Agenda').toUpperCase(), { x: M, y: 3.55, w: pw - 1.2, h: 1.0, max: 28, min: 18, bold: true, color: '#FFFFFF', maxLines: 2, lh: 1.1 });
       const items = s.points.length ? s.points : [];
       const x0 = pw + 0.9, lw = W - x0 - M, rh = Math.min(0.92, (H - 1.9) / Math.max(items.length, 1)), y0 = (H - rh * items.length) / 2;
       items.forEach((p, k) => {
         const y = y0 + k * rh;
-        out.push({ k: 'ellipse', x: x0, y: y + rh / 2 - 0.2, w: 0.4, h: 0.4, fill: T.accent });
-        out.push({ k: 'text', x: x0, y: y + rh / 2 - 0.13, w: 0.4, lines: [words(String(k + 1), true)], size: 11, bold: true, color: '#FFFFFF', align: 'c', lh: 1.1 });
+        numDot(x0 + 0.2, y + rh / 2, 0.4, k + 1, 12);
         text(p, { x: x0 + 0.65, y: y + rh / 2 - 0.17, w: lw - 0.65, h: rh - 0.15, max: 18, min: 13, color: T.text, maxLines: 2, lh: 1.2 });
         if (k < items.length - 1) out.push({ k: 'rect', x: x0 + 0.65, y: y + rh - 0.02, w: lw - 0.65, h: 0.012, fill: T.line });
       });
@@ -212,11 +211,9 @@ const Praesentation = (() => {
       out[0].fill = T.panel;
       if (im) { out.push({ k: 'image', x: 0, y: 0, w: 5.6, h: H, src: im }); out.push({ k: 'rect', x: 0, y: 0, w: 5.6, h: H, fill: T.accent, alpha: 0.35 }); }
       else out.push({ k: 'text', x: M, y: 1.9, w: 4.6, lines: [words(String(num).padStart(2, '0'), true)], size: 150, bold: true, color: '#D3DAE2', lh: 1 });
-      out.push({ k: 'rect', x: 6.6, y: 3.0, w: 0.6, h: 0.05, fill: T.accent });
       text(s.title.toUpperCase(), { x: 6.6, y: 3.2, w: W - 6.6 - M, h: 1.8, max: 30, min: 20, bold: true, color: T.accent, maxLines: 3, lh: 1.1 });
       footer(false, im ? 'l' : '');
     } else if (s.type === 'ende' && T.title === 'business') { // Schluss: links „Vielen Dank“ + Hinweis, rechts Titel groß in Blau, Trennlinie
-      out.push({ k: 'rect', x: M, y: 2.5, w: 0.6, h: 0.05, fill: T.accent });
       text((s.title || 'Vielen Dank!').toUpperCase(), { x: M, y: 2.7, w: 5.2, h: 1.1, max: 30, min: 20, bold: true, color: T.accent, maxLines: 2, lh: 1.1 });
       if (s.text) text(s.text, { x: M, y: 3.75, w: 5.2, h: 0.9, max: 18, min: 13, color: T.sub, maxLines: 2, lh: 1.3 });
       out.push({ k: 'rect', x: 6.55, y: 1.6, w: 0.012, h: H - 3.2, fill: T.line });
@@ -331,8 +328,7 @@ const Praesentation = (() => {
       if (n > 1) out.push({ k: 'rect', x: M + cw / 2, y: cy - 0.012, w: (n - 1) * (cw + gap), h: 0.024, fill: T.accent, alpha: 0.35 });
       parts.forEach((p, k) => {
         const x = M + k * (cw + gap), by = cy + 0.58, bh = H - by - 0.95;
-        out.push({ k: 'ellipse', x: x + cw / 2 - 0.29, y: cy - 0.29, w: 0.58, h: 0.58, fill: T.accent });
-        out.push({ k: 'text', x: x + cw / 2 - 0.29, y: cy - 0.125, w: 0.58, lines: [words(String(k + 1), true)], size: 15, bold: true, color: T.onAccent, align: 'c', lh: 1 });
+        numDot(x + cw / 2, cy, 0.58, k + 1, 15);
         out.push({ k: 'rect', x, y: by, w: cw, h: bh, fill: '#FFFFFF', r: R });
         let ty = by + 0.3;
         if (p.t) { const f = text(p.t, { x: x + 0.24, y: ty, w: cw - 0.48, h: 0.85, max: 21, min: 12, bold: true, color: T.text, maxLines: 2, lh: 1.15, align: 'c' }); ty = f.bottom + 0.14; }
@@ -366,8 +362,7 @@ const Praesentation = (() => {
         pts.forEach((p, k) => {
           const x = M + k * (cw + 0.3);
           out.push({ k: 'rect', x, y, w: cw, h, fill: T.title === 'split' ? '#FFFFFF' : T.panel, r: R });
-          out.push({ k: 'ellipse', x: x + 0.38, y: y + 0.4, w: 0.62, h: 0.62, fill: T.accent });
-          out.push({ k: 'text', x: x + 0.38, y: y + 0.53, w: 0.62, lines: [words(String(k + 1), true)], size: 18, bold: true, color: T.onAccent, align: 'c', lh: 1 });
+          numDot(x + 0.69, y + 0.71, 0.62, k + 1, 18);
           text(p, { x: x + 0.38, y: y + 1.35, w: cw - 0.76, h: h - 1.7, max: 19, min: 12, color: T.text, lh: 1.32 });
         });
       } else bullets(pts, { x: M, y: top + 0.1, w: W - 2 * M, h: H - top - 1.0 });
@@ -416,9 +411,10 @@ const Praesentation = (() => {
         parts.forEach((p, k) => {
           const x = M + (k % cols) * (cw + gap), y = y0 + Math.floor(k / cols) * (ch + gap);
           out.push({ k: 'rect', x, y, w: cw, h: ch, fill: '#FFFFFF', r: R });
-          out.push({ k: 'rect', x: x + 0.34, y: y + 0.36, w: 0.42, h: 0.05, fill: T.accent, r: 0.025 });
-          let ty = y + 0.58;
-          if (p.t) { const f = text(p.t, { x: x + 0.34, y: ty, w: cw - 0.68, h: 0.85, max: 23, min: 14, bold: true, color: T.text, maxLines: 2, lh: 1.15 }); ty = f.bottom + 0.14; }
+          // Business: kein Strich über dem Kartentitel, Titel in Blau (Vorlage „LOREM IPSUM“)
+          if (T.title !== 'business') out.push({ k: 'rect', x: x + 0.34, y: y + 0.36, w: 0.42, h: 0.05, fill: T.accent, r: 0.025 });
+          let ty = y + (T.title === 'business' ? 0.4 : 0.58);
+          if (p.t) { const f = text(T.title === 'business' ? p.t.toUpperCase() : p.t, { x: x + 0.34, y: ty, w: cw - 0.68, h: 0.85, max: T.title === 'business' ? 17 : 23, min: 12, bold: true, color: T.title === 'business' ? T.accent : T.text, maxLines: 2, lh: 1.15 }); ty = f.bottom + 0.14; }
           text(p.b, { x: x + 0.34, y: ty, w: cw - 0.68, h: y + ch - ty - 0.3, max: p.t ? 19 : 22, min: 12, color: p.t ? T.sub : T.text, lh: 1.34 });
         });
       } else if (cols2) { // viele Punkte: zwei ruhige Spalten statt einer langen Liste

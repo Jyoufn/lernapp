@@ -11013,3 +11013,11 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 :is(.cl-search, .tk-search) input::placeholder { color: var(--text-4); }
 :is(.cl-search, .tk-search):focus-within { border-color: var(--line); }
 :is(.cl-search, .tk-search) > svg { width: 14px; height: 14px; color: var(--text-4); }
+/* Sidebar: Gruppe „Angeheftet“ über den letzten Chats */
+.sb-sub { padding: 8px 10px 3px; color: var(--text-4); font-size: 11px; font-weight: 500; }
+.sb-sub:first-child { padding-top: 2px; }
+/* „Agenten · Dokumente“ wie die Vorlage (Live/Finished/Interrupted): Leiste #242424 mit leisem Rand, gewählter Teil eingesetzt #181818 */
+.cs-pill { height: 38px; padding: 0 4px; gap: 2px; border: 1px solid #2a2a2a; border-radius: 13px; background: #242424; }
+.cs-pill button { height: 30px; padding: 0 14px; border: 0; border-radius: 10px; background: none; color: var(--text-4); font: 500 13px Inter, sans-serif; transition: color 160ms ease, background-color 200ms ease; }
+.cs-pill button:hover { color: var(--text-2); }
+.cs-pill button.on { background: var(--win-bg); color: var(--text); border: 0; }
