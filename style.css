@@ -11050,3 +11050,21 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 /* Bibliothek: gewählter Haken hell (fast weiß) mit dickem dunklem Haken für Kontrast */
 .lb2-row.picked .lb2-check { background: #e6e6e6; border-color: #e6e6e6; color: #141414; }
 .lb2-row.picked .lb2-check svg { width: 12px; height: 12px; stroke: #141414; stroke-width: 1.6; paint-order: stroke; }
+
+/* ===== Bilder in Antworten (04.11.): Größe nach Inhalt, groß öffnen; Lightbox ruhig und passend auf dem iPad ===== */
+.web-img.wb-klein { float: right; width: min(40%, 280px); margin: 4px 0 12px 18px; }
+.web-img.wb-mittel { width: min(100%, 520px); }
+.web-img.wb-gross { width: 100%; }
+.web-img .src-img-pic { cursor: zoom-in; }
+.web-img figcaption a.src-img-l { color: var(--text-4); text-decoration: none; }
+.web-img figcaption a.src-img-l:hover { color: var(--text-3); }
+.msg-ai { display: flow-root; } /* kleines Bild (float) bleibt in der Nachricht */
+.msg-ai :is(h1, h2, h3, table, pre, figure:not(.wb-klein), hr) { clear: both; }
+@media (max-width: 640px) { .web-img.wb-klein { float: none; width: min(100%, 360px); margin: 10px 0; } }
+/* Lightbox: Bild füllt den Platz (auch kleine Bilder), kein doppeltes Wackeln (nur sanftes Einblenden), Hintergrund im Hauptteil-Ton */
+.lb-backdrop { background: color-mix(in srgb, var(--main-bg) 94%, transparent); }
+.lb-stage { padding: 52px 64px; transform: none; transition: opacity 200ms ease; }
+.lightbox.open .lb-stage > img { animation: lb-calm 220ms ease both; }
+.lb-stage > img { width: 100%; height: 100%; max-width: 1600px; object-fit: contain; border-radius: 10px; }
+@keyframes lb-calm { from { opacity: 0; transform: scale(.985); } }
+@media (max-width: 1100px) { .lb-stage { padding: 56px 16px 24px; } }

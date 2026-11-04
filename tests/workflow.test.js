@@ -1114,3 +1114,24 @@ test('Podcast: Skript als ```podcast (Sprecher, Kapitel, Beiträge), gründlich 
     assert.match(r.text(), /```podcast\n\{"titel":"Die Zelle"/);
   } finally { WEB.teachingImages = keep; }
 });
+
+test('Aufwand wirkt (04.11.): gewählte Stufe = eigene Denktiefe und eigener Stil, Low ohne Suche, Auto dynamisch', async () => {
+  fx = M.installFetch([
+    { match: M.is.route, respond: () => M.nvidiaJson({ level: 'medium', sources: 'none', queries: [], think: 'auto', why: 'Erklärung' }) },
+    { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Antwort.'])) },
+  ]);
+  const seen = {};
+  for (const effort of ['low', 'medium', 'high', 'max', 'auto']) {
+    fx.calls.length = 0;
+    await run({ ...msg('Wie funktioniert ein Elektromotor?'), agent: 'general', effort });
+    const gen = fx.calls.filter(M.is.geminiStream).pop();
+    seen[effort] = { tc: gen.body.generationConfig.thinkingConfig, sys: M.systemOf(gen), tools: JSON.stringify(gen.body.tools || []) };
+  }
+  const lvl = (e) => seen[e].tc.thinkingLevel ?? seen[e].tc.thinkingBudget;
+  const rank = (v) => (typeof v === 'number' ? v : { low: 1, medium: 2, high: 3 }[v]);
+  assert.ok(rank(lvl('low')) < rank(lvl('medium')) && rank(lvl('medium')) < rank(lvl('high')) && rank(lvl('high')) <= rank(lvl('max')), `Denktiefe steigt: ${['low', 'medium', 'high', 'max'].map(lvl)}`);
+  assert.ok(seen.auto.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.auto.tc.thinkingBudget), 'Auto: Gemini entscheidet selbst');
+  assert.match(seen.low.sys, /Aufwand: Low|AUFWAND: Low/); assert.match(seen.high.sys, /AUFWAND: High/); assert.match(seen.max.sys, /AUFWAND: Max/);
+  assert.ok(!seen.low.tools.includes('google_search'), 'Low: keine Suche');
+  assert.notEqual(seen.low.sys.length, seen.high.sys.length, 'Stufen unterscheiden sich im Prompt');
+});

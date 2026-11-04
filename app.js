@@ -2402,9 +2402,11 @@ function webImageFigure(raw) {
   let d = null;
   try { d = JSON.parse(String(raw).trim()); } catch { return null; }
   if (!/^https:\/\//.test(d?.src || '')) return null;
-  const fig = el('figure', 'src-img web-img');
+  // Größe nach Inhalt (Server-Prüfung): klein = neben dem Text, mittel, groß = volle Breite; Antippen öffnet groß (Lightbox), der Link steht unten
+  const fig = el('figure', `src-img web-img wb-${['klein', 'mittel', 'gross'].includes(d.size) ? d.size : 'mittel'}`);
   const a = el('a', 'src-img-pic');
   a.href = safeUrl(d.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
+  a.addEventListener('click', (e) => { e.preventDefault(); openLightbox([img], 0); });
   const img = document.createElement('img');
   img.alt = String(d.text || ''); img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
   img.addEventListener('load', () => fig.classList.add('ready'));
@@ -2413,7 +2415,9 @@ function webImageFigure(raw) {
   a.append(img);
   const cap = el('figcaption', '');
   if (d.text) cap.append(el('span', 'src-img-t', escapeHtml(String(d.text).slice(0, 200))));
-  cap.append(el('span', 'src-img-l', escapeHtml(String(d.license || d.site || '').slice(0, 80))));
+  const src = el('a', 'src-img-l', escapeHtml(String(d.license || d.site || '').slice(0, 80)));
+  src.href = safeUrl(d.url); src.target = '_blank'; src.rel = 'noopener noreferrer';
+  cap.append(src);
   fig.append(a, cap);
   return fig;
 }
@@ -5733,7 +5737,7 @@ function writeChats() {
     const act = activeTab();
     const sent = [...deletedChats];
     const active = chatId(act && !act.dataset.view ? act : tabs.find((t) => !t.hidden) || tabs[0]);
-    const items = chatItems(true);
+    const items = chatItems(true).filter((c) => c.history.length || c.setup); // leere Entwürfe nicht auf den Server
     const slim = items.map(serverChat);
     const strs = new Map(slim.map((c) => [c.id, JSON.stringify(c)]));
     const changed = slim.filter((c) => sentChats.get(c.id) !== strs.get(c.id));
@@ -5853,6 +5857,9 @@ restoring = true; // bis geladen ist, nichts speichern (sonst würde der leere S
     const missing = (old?.chats || []).filter((c) => c?.id && !have.has(c.id) && (c.history || []).length);
     if (missing.length) await fetch('/api/recovery', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: `Browser-Speicher ${location.origin}`, chats: missing }) });
   } catch {}
+  // leere Chats (ohne Nachricht) nicht als Tabs anlegen: sie wurden früher mitgespeichert und haben beim Laden die Tabs durcheinandergebracht –
+  // der wiederhergestellte Chat war dann aktiv, aber leer (Inhalt hing noch im Zwischenspeicher), und fehlte in Sidebar/Bibliothek
+  if (saved?.chats) saved.chats = saved.chats.filter((c) => (c.history || []).length || c.setup);
   if (!saved?.chats?.length) { restoring = false; renderBookmarks(); restoreLayout(); return; }
   try {
   const first = tabsEl.querySelector('.tab:not(.uil-tab):not([data-view])');
