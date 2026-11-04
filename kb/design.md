@@ -7,20 +7,21 @@
 - Keine Browser-Tooltips (`title` wird von `app.js` automatisch entfernt).
 - Eng statt luftig, alles sauber auf gleicher Höhe/Kante ausgerichtet. Texte auf **Deutsch**.
 
-## Farben (CSS-Variablen)
-| Zweck | Wert |
-|---|---|
-| Hauptkasten | `--main-bg` #171717 |
-| Sidebar | `--sidebar-bg` #141414 |
-| Menü/Popover | `--menu-bg` #202020, Rand `--menu-border` #343434, Hover `--menu-hover` #2b2b2b |
-| Eingabefeld-Stil (Karten wie Agent-Empfehlung) | `--field-bg`, `--field-border` |
-| Karten (Börse, Aufgaben-Fenster) | ~1,5–4 % heller als `--main-bg`, Rand `rgba(255,255,255,.08–.1)`, Radius 14 |
+## Farben (CSS-Variablen) – DREI FLÄCHEN (verbindlich seit 04.11.)
+Nur drei Grautöne für Flächen, Prinzip wie die Vorlage „Thought for 3s“-Karte:
+| Ebene | Wert | Wofür |
+|---|---|---|
+| Hauptteil | `--main-bg` = `--sidebar-bg` #141414 | Sidebar, Hauptbereich |
+| Fenster | `--win-bg` = `--field-bg` = `--card` #181818 | Karten, Eingabefeld, Fenster, Inhalts-Kästen, Kacheln |
+| Ausklappbar | `--pop-bg` = `--menu-bg` #212121 | Menüs, Aufklapp-Kästen, Köpfe, Hover-Flächen, Leisten |
+| Rand | `--menu-border` = `--line` #262626 | alle Ränder/Trennlinien |
+Gewählt/aktiv in einer Leiste = eine Stufe dunkler (Fenster-Ton auf Ausklappbar-Fläche, z. B. `--menu-hover` #181818). Keine anderen Grautöne erfinden – neue Flächen nehmen eine der drei Variablen. Block „DREI FLÄCHEN“ am Ende von `style.css`; Modus „Dunkel“ setzt dieselben Werte (`MODES.dark` in `app.js`).
 | Text | `--text` #f2f2f2 · `--text-2` #e6e6e6 · `--text-3` #a3a3a3 · `--text-4` #6e6e6e |
+|---|---|
 | Akzent | `--accent` #2f86ff (heller Text-Akzent #6aa8ff) |
 | Gefahr | #f07a6e / #e5705f, Fläche `rgba(239,107,95,.12–.14)` |
 | Getönte Etiketten | Fläche = Farbe 12–13 %, Text = Farbe ~72 % + Weiß |
 | Fach-/Termin-Farben | #6aa8ff #b49cff #f472b6 #f07a6e #f0913a #facc15 #4fcf8a #2dd4bf #a3a3a3 (`UIKit.COLORS`) |
-Keine neuen Grautöne erfinden.
 
 ## Schrift und Maße
 - Inter; Zahlen `tabular-nums`. Größen: 11 · 11.5 · 12 · **12.5 (Menüs)** · 13 · 13.5 (Sidebar) · 14 (Zeilentitel) · 15 (Abschnitt/Kalender-Kopf) · 18 (Seitentitel Chats/Bibliothek/Aufgaben). Stärke 400/500/600, nie 700+.
@@ -46,7 +47,7 @@ Keine neuen Grautöne erfinden.
 - **Kalender-Kopf**: auf Höhe des Sidebar-Knopfs oben links, Trennstrich, „Oktober 2026“ 15 px; rechts „‹ Heute ›“ und „Neu“ gleich hoch.
 - **Menüs/Aufklapp-Kästen** (`.tk-box`): `--menu-bg`, Rand `--menu-border`, Radius 10, Zeilen 30 px, Auswahl nur blauer Haken.
 - **Fenster Aufgabe/Termin**: ohne × und ohne Kopftext; Titel, „Beschreibung hinzufügen“ (wächst, höchstens ~6 Zeilen, dann scrollt sie; das ganze Fenster höchstens Bildschirmhöhe und scrollbar), darunter Pillen-Zeilen (Icon + Text), die bündig einen Kasten aufklappen. Knopf unten rechts „Aufgabe erstellen“.
-- **Inhalts-Kästen im Chat (verbindlich, wie Börse „Mein Depot“/Empfehlungen)**: Quiz steht in EINEM Kasten; Karteikarten und Probeklausur OHNE äußeren Kasten – Titel frei darüber, nur die Hauptfläche (Karte bzw. Klausur-Karte) hat diesen Ton. Kasten/Hauptfläche: Fläche `color-mix(in srgb, var(--main-bg) 98.5%, #fff)`, Rand `rgba(255,255,255,.065)`, Radius 14 (nicht runder), Titel oben links 15 px fett (600) mit grauem Icon, rechts kleine Icon-Knöpfe (Radius 7–8). Elemente darin (Karteikarte) nur einen Hauch heller (~96,5 %), grau – keine Farbtöne. Knöpfe wie ×, Mischen, Pfeile: Radius 8, nicht kreisrund.
+- **Inhalts-Kästen im Chat (verbindlich, wie Börse „Mein Depot“/Empfehlungen)**: Quiz steht in EINEM Kasten; Karteikarten und Probeklausur OHNE äußeren Kasten – Titel frei darüber, nur die Hauptfläche (Karte bzw. Klausur-Karte) hat diesen Ton. Kasten/Hauptfläche: Fläche `var(--win-bg)`, Rand `rgba(255,255,255,.065)`, Radius 14 (nicht runder), Titel oben links 15 px fett (600) mit grauem Icon, rechts kleine Icon-Knöpfe (Radius 7–8). Elemente darin (Karteikarte) nur einen Hauch heller (~96,5 %), grau – keine Farbtöne. Knöpfe wie ×, Mischen, Pfeile: Radius 8, nicht kreisrund.
 - **Karten im Chat** (Agent-Empfehlung, Fehler, API-Key fehlt, Unterbrochen): Hund links, Titel + Satz, rechts ein Knopf; Fläche/Rand wie Eingabefeld. Nicht noch eine Karte im Muster „Icon links + Titel + Untertitel“ erfinden – der Nutzer will dafür bessere Lösungen.
 - **Tags**: getönte Fläche 12 %, farbiger Text, ohne Punkt (Liste) – im Dokument mit Punkt.
 - **Leisten oben mittig** (`.cs-pill`): runde Pille 36 px, Rand #2a2a2a, Fläche #1a1a1a; gewählt = weißer Text, sonst `--text-4`.

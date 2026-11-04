@@ -6558,8 +6558,8 @@ document.addEventListener('click', (e) => {
   const base = getComputedStyle(root);
   // main/side: Flächen; field/fieldBorder: Eingabefeld; pv*: Farben der Mini-Vorschau (so, wie es auf dem Bildschirm aussieht)
   const MODES = {
-    dark: { label: 'Dunkel', main: base.getPropertyValue('--main-bg').trim() || '#171717', side: base.getPropertyValue('--sidebar-bg').trim() || '#141414', field: '#1c1c1c', fieldBorder: '#272727',
-      pv: { main: '#171717', side: '#141414', line: 'rgba(255,255,255,.16)', field: 'rgba(255,255,255,.16)' } },
+    dark: { label: 'Dunkel', main: '#141414', side: '#141414', field: '#181818', fieldBorder: '#262626', // drei Flächen (04.11.)
+      pv: { main: '#141414', side: '#141414', line: 'rgba(255,255,255,.16)', field: 'rgba(255,255,255,.16)' } },
     black: { label: 'Schwarz', main: '#0a0a0a', side: '#060606', field: '#111111', fieldBorder: '#1f1f1f',
       pv: { main: '#0a0a0a', side: '#060606', line: 'rgba(255,255,255,.14)', field: 'rgba(255,255,255,.14)' } },
     // Hell: Werte vor der Umkehrung (#101010 wird zu #efefef)
