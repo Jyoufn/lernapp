@@ -163,19 +163,19 @@ const UIKit = (() => {
   /* ---------- Beschreibung, die beim Schreiben mitwächst ----------
      Leer und ohne Fokus eine Zeile; beim Schreiben (Fokus oder Text da) mindestens `focusLines` Zeilen, darüber mit dem Text bis `maxLines`,
      danach scrollen. Gemessen wird an einer unsichtbaren Kopie – so läuft die Höhe weich (CSS-Übergang), ohne erst auf 0 zu springen. */
-  function autoGrow(ta, { line = 20, minLines = 1, focusLines = 5, maxLines = 10 } = {}) {
+  // Beschreibung: wächst NUR mit dem Text (kein Aufklappen beim Antippen), höchstens 4 Zeilen, danach scrollt sie (Wunsch 04.11.)
+  function autoGrow(ta, { line = 20, minLines = 1, maxLines = 4 } = {}) {
     const meas = ta.cloneNode(false);
     meas.removeAttribute('name'); meas.removeAttribute('id'); meas.tabIndex = -1; meas.setAttribute('aria-hidden', 'true');
     Object.assign(meas.style, { position: 'absolute', visibility: 'hidden', pointerEvents: 'none', height: '0px', minHeight: '0', left: '0', top: '0', overflow: 'hidden', transition: 'none' });
     const fit = () => {
       if (!meas.isConnected) ta.parentNode?.append(meas);
       meas.style.width = `${ta.clientWidth}px`; meas.value = ta.value;
-      const big = document.activeElement === ta || ta.value.trim();
-      const h = Math.max((big ? focusLines : minLines) * line, Math.min(meas.scrollHeight, maxLines * line));
+      const h = Math.max(minLines * line, Math.min(meas.scrollHeight, maxLines * line));
       ta.style.height = `${h}px`;
       ta.style.overflowY = meas.scrollHeight > maxLines * line ? 'auto' : 'hidden';
     };
-    ['input', 'focus', 'blur'].forEach((ev) => ta.addEventListener(ev, fit));
+    ta.addEventListener('input', fit);
     requestAnimationFrame(fit);
     return fit;
   }

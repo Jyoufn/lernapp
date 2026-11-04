@@ -473,7 +473,7 @@ const Tasks = (() => {
     if (listMode) UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
     // Liste: Beschreibung wächst beim Schreiben auf mind. 5 Zeilen (UIKit.autoGrow); Board: wie bisher
-    const grow = listMode ? UIKit.autoGrow(notes) : () => { notes.style.height = 'auto'; notes.style.height = `${Math.min(notes.scrollHeight, 200)}px`; };
+    const grow = UIKit.autoGrow(notes); // wächst nur mit dem Text, höchstens 4 Zeilen
     if (!listMode) notes.addEventListener('input', grow);
 
     let swapping = false; // läuft gerade der Wechsel Datum ↔ Zeitplan
