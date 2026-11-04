@@ -637,6 +637,8 @@ const Docs = (() => {
     document.body.append(menu);
     const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
     const when = (t) => { const day0 = new Date(); day0.setHours(0, 0, 0, 0); return t >= day0.getTime() - 86400000 ? hhmm(t) : relTime(t); };
+    // Dokument-Icon wie die Vorlage (04.11.): hochkantes Blatt mit runden Ecken und drei Textzeilen, hell umrandet
+    const PAGE_ICON = '<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="17" rx="2.5"/><path d="M4.5 6h7M4.5 9h7M4.5 12h4.5"/></svg>';
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
@@ -652,7 +654,7 @@ const Docs = (() => {
     };
     const row = (x, i) => {
       const k = `${x.kind}:${x.id}`;
-      const ic = x.kind === 'chat' ? x.av : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : '<svg width="16" height="16"><use href="#o-doc"/></svg>'}</span>`;
+      const ic = x.kind === 'chat' ? x.av : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : PAGE_ICON}</span>`;
       return `<div class="lb2-row${sel.has(k) ? ' picked' : ''}" data-k="${k}" data-key="${k}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
         ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>

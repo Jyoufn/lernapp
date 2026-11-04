@@ -10946,3 +10946,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
   .lb2-acts { display: flex; } .lb2-time, .lb2-row:hover .lb2-time { display: none; }
   .lb2-chip { display: inline-flex; padding: 0 6px; } .lb2-chip span, .lb2-chip svg:last-child { display: none; }
 }
+.lb2-page { width: 16px !important; height: 20px !important; fill: rgba(255,255,255,.03); stroke: var(--text-4); stroke-width: 1.2; stroke-linecap: round; }
+.lb2-page path { fill: none; stroke: color-mix(in srgb, var(--text-4) 70%, transparent); }
+.lb2-row:hover .lb2-page { stroke: var(--text-3); }
