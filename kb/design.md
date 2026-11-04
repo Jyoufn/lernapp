@@ -1,32 +1,32 @@
 # Design – verbindliche Regeln (aktueller Stand)
 
-## Grundsätze
-- Dunkel und ruhig; Kontrast über Helligkeit von Text/Icons, nicht über Farbe. Nicht „KI-haft“: keine Deko-Verläufe, kein Glow, kein Lila, keine Emojis.
-- **Blau nur als Akzent**: Hauptknopf, Haken einer Auswahl, Wichtigstes im Diagramm. Alles andere grau.
-- **Auswahl = blauer Haken, keine Fläche** (weder grau noch blau hinterlegt). Beim Antippen nichts grau (`-webkit-tap-highlight-color: transparent`), beim Fokus kein Rand, nichts wird heller, nichts schrumpft beim Drücken. Gilt auch für Auswahl-Knöpfe, Antwort-Optionen und Eingabefelder (z. B. im Lernset): Antippen/Öffnen ändert weder Rand noch Fläche.
-- **Keine Schatten** (verbindlich, 04.11.): kein `box-shadow` mit Versatz/Unschärfe, kein `drop-shadow` – nirgends (Fenster, Menüs, Karten, Knöpfe). Erlaubt sind nur Ringe ohne Unschärfe (`0 0 0 1px …`, `inset`).
-- **Ränder nur leicht sichtbar**: immer `var(--line)` (#242424) oder schwächer; keine hellen Grau-Ränder.
-- **Auswahl-Menüs** (alles mit `--menu-bg`, Aufklapp-Listen, `<select>`): Fläche = Hauptteil #141414, Rand `var(--line)`, Hover #181818.
-- **Kein Schwarz**: nichts darf dunkler als #141414 sein. Aufklapp-Kästen/Menüs INNERHALB eines Fensters = #212121 (nie dunkler als das Fenster). Abdunkelung hinter Fenstern/Overlays = Hauptteil-Ton halbdurchsichtig (`color-mix(var(--main-bg) 72%, transparent)`), nie `rgba(0,0,0,…)`.
-- Bibliothek: Knopf „Neues Dokument“ in `--pop-bg` mit leisem Rand (nicht blau); Filter nur als Icon (gefiltert = Icon hell).
-- Keine Browser-Tooltips (`title` wird von `app.js` automatisch entfernt).
-- Eng statt luftig, alles sauber auf gleicher Höhe/Kante ausgerichtet. Texte auf **Deutsch**.
+## DESIGNSCHEMA (verbindlich seit 04.11. – überall anwenden, vor jeder UI-Änderung prüfen)
+Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flach, wenig Kontrast über Flächen, Kontrast über Text.
 
-## Farben (CSS-Variablen) – DREI FLÄCHEN (verbindlich seit 04.11.)
-Nur drei Grautöne für Flächen, Prinzip wie die Vorlage „Thought for 3s“-Karte:
-| Ebene | Wert | Wofür |
-|---|---|---|
-| Hauptteil | `--main-bg` = `--sidebar-bg` #141414 | Sidebar, Hauptbereich |
-| Fenster | `--win-bg` = `--field-bg` = `--card` #181818 | Karten, Eingabefeld, Fenster, Inhalts-Kästen, Kacheln |
-| Ausklappbar | `--pop-bg` #212121 | Aufklapp-Köpfe, Hover-Flächen, Leisten (Auswahl-Menüs dagegen im Hauptteil-Ton, `--menu-bg` #141414) |
-| Rand | `--menu-border` = `--line` #242424 | alle Ränder/Trennlinien |
-Gewählt/aktiv in einer Leiste = eine Stufe dunkler (Fenster-Ton auf Ausklappbar-Fläche, z. B. `--menu-hover` #181818). Keine anderen Grautöne erfinden – neue Flächen nehmen eine der drei Variablen. Block „DREI FLÄCHEN“ am Ende von `style.css`; Modus „Dunkel“ setzt dieselben Werte (`MODES.dark` in `app.js`).
-| Text (exakt Vorlage) | `--text` #f7f7f7 (Titel) · `--text-2` #ededed · `--text-3` #bbbbbb (Fließtext) · `--text-4` #909090 (leise) |
-|---|---|
-| Akzent | `--accent` #2f86ff (heller Text-Akzent #6aa8ff) |
-| Gefahr | #f07a6e / #e5705f, Fläche `rgba(239,107,95,.12–.14)` |
-| Getönte Etiketten | Fläche = Farbe 12–13 %, Text = Farbe ~72 % + Weiß |
-| Fach-/Termin-Farben | #6aa8ff #b49cff #f472b6 #f07a6e #f0913a #facc15 #4fcf8a #2dd4bf #a3a3a3 (`UIKit.COLORS`) |
+**1. Nur drei Flächen-Töne** (alles andere ist falsch, auch „fast gleiche“ Grautöne):
+| Ebene | Wert | Variable | Wofür |
+|---|---|---|---|
+| Hauptteil | #141414 | `--main-bg`, `--sidebar-bg` | Sidebar, Hauptbereich, Auswahl-Menüs/Dropdowns (`--menu-bg`), `<select>` |
+| Fenster | #181818 | `--win-bg`, `--field-bg`, `--card` | Eingabefeld, Suchfelder, Karten, Fenster/Sheets, Inhalts-Kästen, gewählte Zeile, Hover in Menüs (`--menu-hover`) |
+| Ausklappbar | #212121 | `--pop-bg` | Aufklapp-Kästen und Menüs INNERHALB eines Fensters, Köpfe, Leisten, Hover-Flächen, aktive Sidebar-Zeile, Neben-Knöpfe (z. B. „Neues Dokument“ in der Bibliothek) |
+- **Nichts ist dunkler als #141414** (kein Schwarz, kein #0d0d0d). In einem Fenster ist nichts dunkler als das Fenster.
+- Abdunkelung hinter Fenstern/Overlays: `color-mix(in srgb, var(--main-bg) 72%, transparent)` – nie `rgba(0,0,0,…)`.
+- Gewählt/aktiv in einer Leiste = eine Stufe tiefer (Fenster-Ton auf Ausklappbar-Fläche).
+
+**2. Ränder nur leicht sichtbar**: `--line` #242424 (bzw. `--menu-border`, `--field-border`). Keine helleren Grau-Ränder; farbige Ränder nur für Akzent/Gefahr.
+
+**3. Keine Schatten**: kein `box-shadow` mit Versatz/Unschärfe, kein `drop-shadow` – nirgends. Erlaubt: Ringe ohne Unschärfe (`0 0 0 1px …`, `inset`).
+
+**4. Text** (exakt Vorlage): `--text` #f7f7f7 (Titel) · `--text-2` #ededed · `--text-3` #bbbbbb (Fließtext) · `--text-4` #909090 (leise). Keine anderen Text-Grautöne.
+
+**5. Farbe nur als Akzent**: `--accent` #2f86ff für Hauptknopf (z. B. „Aufgabe erstellen“), Haken, Wichtigstes. Gefahr #f07a6e, Fläche `rgba(239,107,95,.12–.14)`. Getönte Etiketten: Fläche Farbe 12–13 %, Text ~72 % + Weiß. Fach-/Termin-Farben: `UIKit.COLORS`.
+
+**6. Auswahl**: Kästchen 18 px, Radius 6, Rand #3a3a3a auf `--main-bg`; gewählt = blau gefüllt mit weißem Haken (kurze Feder-Animation) UND die Zeile bekommt den Fenster-Ton #181818. Aktive Zeile in der Sidebar (offener Chat, Bereich) = #212121. Beim Antippen nichts grau (`-webkit-tap-highlight-color: transparent`), kein Fokus-Rand, nichts schrumpft.
+
+**7. Form**: Pillen (Radius 999) für Leisten-Knöpfe/Filter/Auswahl-Leiste; Menüs Radius 10; Karten/Fenster 12–14; Eingabefeld 18. Filter/Werkzeug-Knöpfe nur als Icon.
+
+**8. Sonst**: keine Browser-Tooltips, keine Emojis, keine Deko-Verläufe/Glow/Lila, kein „KI-Look“, Texte nur Deutsch, eng und sauber ausgerichtet.
+Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css`; Modus „Dunkel“ (`MODES.dark` in `app.js`) setzt dieselben Werte. Modi „Schwarz“/„Hell“ haben eigene Töne.
 
 ## Schrift und Maße
 - Inter; Zahlen `tabular-nums`. Größen: 11 · 11.5 · 12 · **12.5 (Menüs)** · 13 · 13.5 (Sidebar) · 14 (Zeilentitel) · 15 (Abschnitt/Kalender-Kopf) · 18 (Seitentitel Chats/Bibliothek/Aufgaben). Stärke 400/500/600, nie 700+.
