@@ -10887,8 +10887,8 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .lb2-sel { flex: 1; display: flex; align-items: center; gap: 4px; min-width: 0; }
 .lb2-sel[hidden], .lb2-all[hidden] { display: none; }
 .lb2-sel b { font-weight: 500; font-size: 13px; color: var(--text); margin-right: 6px; white-space: nowrap; }
-.lb2-btn, .lb2-filter, .lb2-chip { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--menu-border); border-radius: 8px; background: none; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, border-color 120ms ease; }
-.lb2-btn:hover, .lb2-filter:hover, .lb2-chip:hover, .lb2-chip.on, .lb2-filter.on { color: var(--text); border-color: #444; }
+.lb2-btn, .lb2-filter { display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 9px; border: 1px solid var(--menu-border); border-radius: 8px; background: none; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, border-color 120ms ease; }
+.lb2-btn:hover, .lb2-filter:hover, .lb2-filter.on { color: var(--text); border-color: #444; }
 .lb2-danger, .lb2-danger:hover { color: #f07a6e; }
 .lb2-btn.lb2-danger.confirm { background: rgba(239,107,95,.13); border-color: transparent; }
 .lb2-list, .lb2 .cl-list { gap: 0; }
@@ -10905,9 +10905,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .lb2-acts { display: none; flex: none; align-items: center; gap: 6px; }
 .lb2-row:hover .lb2-acts, .lb2-row:focus-within .lb2-acts { display: flex; }
 .lb2-row:hover .lb2-time, .lb2-row:focus-within .lb2-time { display: none; }
-.lb2-chip { height: 24px; padding: 0 7px; gap: 4px; max-width: 150px; }
-.lb2-chip span { overflow: hidden; text-overflow: ellipsis; }
-.lb2-chip svg:last-child { opacity: .7; }
 .lb2-more { display: grid; place-items: center; width: 26px; height: 26px; border: 0; border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .lb2-more:hover, .lb2-more.on { color: var(--text); }
 /* Auswahl-Kästchen links neben der Zeile (beim Darüberfahren bzw. sobald etwas ausgewählt ist) */
@@ -10926,16 +10923,13 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .lb2-mi.lb2-danger, .lb2-mi.lb2-danger > svg { color: #f07a6e; }
 .lb2-mi.confirm { background: rgba(239,107,95,.13); }
 .lb2-tick { display: grid; color: var(--accent); }
-.lb2-dot { width: 8px; height: 8px; border-radius: 50%; flex: none; margin: 0 3px; }
 .lb2-sep { height: 1px; margin: 4px 6px; background: var(--menu-border); }
-.lb2-none { padding: 8px; color: var(--text-4); font-size: 12px; }
 /* schmal (iPad hochkant/Handy): Kästchen in die Zeile statt daneben, Chips ohne Text */
 @media (max-width: 760px) {
   .lb2-picking .lb2-row { padding-left: 34px; }
   .lb2-check { left: 10px; }
   .lb2-row:hover .lb2-check:not(:hover) { opacity: 0; }
   .lb2-picking .lb2-row .lb2-check { opacity: 1; }
-  .lb2-chip span { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .lb2-row, .lb2-menu { animation: none; } }
 .lb2 .cl-label { color: var(--text-4); font-size: 12px; font-weight: 500; }
@@ -10944,11 +10938,9 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .lb2-pin.on { color: var(--text); }
 @media (hover: none) {
   .lb2-acts { display: flex; } .lb2-time, .lb2-row:hover .lb2-time { display: none; }
-  .lb2-chip { display: inline-flex; padding: 0 6px; } .lb2-chip span, .lb2-chip svg:last-child { display: none; }
 }
 .lb2-page { width: 16px !important; height: 20px !important; fill: rgba(255,255,255,.03); stroke: var(--text-4); stroke-width: 1.2; stroke-linecap: round; }
 .lb2-page path { fill: none; stroke: color-mix(in srgb, var(--text-4) 70%, transparent); }
 .lb2-row:hover .lb2-page { stroke: var(--text-3); }
-/* Ordner/Tag-Chips, Filter und Auswahl-Knöpfe als runde Pillen (Wunsch 04.11.: weniger eckig) */
-.lb2-chip, .lb2-filter, .lb2-btn { border-radius: 999px; }
-.lb2-chip { padding: 0 9px 0 8px; }
+/* Filter und Auswahl-Knöpfe als runde Pillen (Wunsch 04.11.: weniger eckig) */
+.lb2-filter, .lb2-btn { border-radius: 999px; }

@@ -613,7 +613,7 @@ const Docs = (() => {
 
   /* ---------- Ansicht „Bibliothek“: Chats UND Dokumente in einer Liste (Wunsch 04.11., Vorbild „Pocket“-Liste) ----------
      Gruppen nach Tag (Heute, Gestern …), Zeile: Icon, Titel, darunter Beschreibung (NUR Dokumente), rechts Uhrzeit/Datum.
-     Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit „Ordner“/„Tag“ (nur Dokumente) und „⋯“. Ab einer Auswahl
+     Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
      stehen alle Kästchen da und oben eine Leiste (Anheften, Löschen mit 2. Klick, Abbrechen). Filter: Alle · Chats · Dokumente. */
   const panel = () => document.querySelector('.panel');
   const list = (() => {
@@ -644,13 +644,8 @@ const Docs = (() => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
         .map((d) => ({ kind: 'doc', id: d.id, title: d.title || 'Ohne Titel', desc: descOf(d), updated: d.updated || 0, pinned: !!d.pinned, d }));
       const cs = filter === 'doc' ? [] : (window.LibChats?.items() || []).filter((c) => !q || c.title.toLowerCase().includes(q))
-        .map((c) => ({ kind: 'chat', id: c.id, title: c.title, desc: '', updated: c.updated, pinned: c.pinned, av: c.av, d: { projectId: c.projectId, tags: c.tags } }));
+        .map((c) => ({ kind: 'chat', id: c.id, title: c.title, desc: '', updated: c.updated, pinned: c.pinned, av: c.av }));
       return [...ds, ...cs].sort((a, b) => b.updated - a.updated);
-    };
-    const chipOf = (x) => {
-      const pr = projOf(x.d.projectId), tg = loadTags().filter((t) => (x.d.tags || []).includes(t.id));
-      return `<button type="button" class="lb2-chip" data-row="folder">${fi('folder', 12)}<span>${esc(pr?.name || 'Ordner')}</span>${fi('chevron-down', 10)}</button>`
-        + `<button type="button" class="lb2-chip" data-row="tag">${fi('tag', 12)}<span>${tg.length ? esc(tg[0].name) + (tg.length > 1 ? ` +${tg.length - 1}` : '') : 'Tag'}</span>${fi('chevron-down', 10)}</button>`;
     };
     const row = (x, i) => {
       const k = `${x.kind}:${x.id}`;
@@ -659,7 +654,7 @@ const Docs = (() => {
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
         ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>
         <span class="lb2-time">${when(x.updated)}</span>
-        <span class="lb2-acts">${chipOf(x)}<button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
+        <span class="lb2-acts"><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
     };
     const syncBar = () => {
       selBox.hidden = !sel.size; bar.querySelector('.lb2-all').hidden = !!sel.size;
@@ -710,32 +705,9 @@ const Docs = (() => {
       keys.forEach((k) => { const [kind, id] = k.split(':'); if (kind === 'doc') { const d = docOf(id); if (d && !!d.pinned !== on) d.pinned = on; } else { const c = (window.LibChats?.items() || []).find((x) => x.id === id); if (c && c.pinned !== on) window.LibChats.pin(id); } });
       save(); renderSide(); api.render();
     });
-    // Ordner (Projekt) und Tags – für Dokumente UND Chats
-    const metaOf = (kind, id) => (kind === 'doc' ? docOf(id) : (window.LibChats?.items() || []).find((c) => c.id === id));
-    const setMeta = (kind, id, patch) => {
-      if (kind === 'doc') { Object.assign(docOf(id), patch); save(); }
-      else { if ('projectId' in patch) window.LibChats?.setProject(id, patch.projectId); if ('tags' in patch) window.LibChats?.setTags(id, patch.tags); }
-    };
-    function folderMenu(btn, kind, id) {
-      const m = metaOf(kind, id); if (!m) return;
-      openMenu(btn, item('', 'Kein Ordner', !m.projectId, fi('folder', 14)) + projects.map((p) => item(p.id, p.name, m.projectId === p.id, `<svg width="14" height="14" style="color:${esc(p.c)}"><use href="#f-folder"/></svg>`)).join(''),
-        (v) => { setMeta(kind, id, { projectId: v }); closeMenu(); renderSide(); api.render(); });
-    }
-    function tagMenu(btn, kind, id, k) {
-      const all = loadTags(), m = metaOf(kind, id); if (!m) return;
-      let cur = [...(m.tags || [])];
-      if (!all.length) { openMenu(btn, '<div class="lb2-none">Noch keine Tags – im Dokument anlegen</div>', () => {}); return; }
-      openMenu(btn, all.map((t) => item(t.id, t.name, cur.includes(t.id), `<i class="lb2-dot" style="background:${esc(t.c)}"></i>`)).join(''), (v, b) => {
-        cur = cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v];
-        setMeta(kind, id, { tags: cur });
-        b.querySelector('.lb2-tick')?.remove(); if (cur.includes(v)) b.insertAdjacentHTML('beforeend', `<i class="lb2-tick">${fi('check', 13)}</i>`);
-        const chip = rows.querySelector(`[data-k="${k}"] [data-row="tag"] span`); const tg = all.filter((t) => cur.includes(t.id));
-        if (chip) chip.textContent = tg.length ? tg[0].name + (tg.length > 1 ? ` +${tg.length - 1}` : '') : 'Tag';
-      });
-    }
     search.addEventListener('input', () => api.render());
     search.addEventListener('keydown', (e) => e.stopPropagation());
-    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-chip, .lb2-filter')) closeMenu(); });
+    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-filter')) closeMenu(); });
     view.addEventListener('scroll', closeMenu, true);
     view.addEventListener('click', (e) => {
       if (e.target.closest('[data-act="new"]')) { create(''); return; }
@@ -755,8 +727,6 @@ const Docs = (() => {
       const act = e.target.closest('[data-row]')?.dataset.row;
       if (act === 'pick' || (!act && sel.size)) { sel.has(k) ? sel.delete(k) : sel.add(k); r.classList.toggle('picked', sel.has(k)); r.querySelector('.lb2-check').setAttribute('aria-checked', String(sel.has(k))); syncBar(); return; }
       const btn = e.target.closest('[data-row]');
-      if (act === 'folder') { folderMenu(btn, kind, id); return; }
-      if (act === 'tag') { tagMenu(btn, kind, id, k); return; }
       if (act === 'pin') { const x = entries('').find((y) => y.kind === kind && y.id === id); if (x) pinKeys([k], !x.pinned); return; }
       if (act === 'del') {
         // Löschen: erster Klick färbt rot, zweiter löscht (wie vorher)

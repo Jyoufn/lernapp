@@ -5508,9 +5508,6 @@ const libTab = (id) => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data
 window.LibChats = {
   items: () => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
     .map((t) => { const c = chatOf(t); return { id: chatId(t), title: c.title || 'Neuer Chat', updated: c.updated || 0, pinned: !!c.pinned, projectId: c.projectId || '', tags: c.tags || [], av: chatAvatar(t, 'cl-av') }; }),
-  // Ordner (Projekt) und Tags auch für Chats (Wunsch 04.11.) – werden mit dem Chat gespeichert
-  setProject: (id, v) => { const t = libTab(id); if (t) { chatOf(t).projectId = v; saveChats(); } },
-  setTags: (id, tags) => { const t = libTab(id); if (t) { chatOf(t).tags = tags; saveChats(); } },
   open: (id) => { const t = libTab(id); if (t) { t.hidden = false; activateTab(t); } },
   pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
   del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
