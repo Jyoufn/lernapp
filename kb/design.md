@@ -4,6 +4,9 @@
 - Dunkel und ruhig; Kontrast über Helligkeit von Text/Icons, nicht über Farbe. Nicht „KI-haft“: keine Deko-Verläufe, kein Glow, kein Lila, keine Emojis.
 - **Blau nur als Akzent**: Hauptknopf, Haken einer Auswahl, Wichtigstes im Diagramm. Alles andere grau.
 - **Auswahl = blauer Haken, keine Fläche** (weder grau noch blau hinterlegt). Beim Antippen nichts grau (`-webkit-tap-highlight-color: transparent`), beim Fokus kein Rand, nichts wird heller, nichts schrumpft beim Drücken. Gilt auch für Auswahl-Knöpfe, Antwort-Optionen und Eingabefelder (z. B. im Lernset): Antippen/Öffnen ändert weder Rand noch Fläche.
+- **Keine Schatten** (verbindlich, 04.11.): kein `box-shadow` mit Versatz/Unschärfe, kein `drop-shadow` – nirgends (Fenster, Menüs, Karten, Knöpfe). Erlaubt sind nur Ringe ohne Unschärfe (`0 0 0 1px …`, `inset`).
+- **Ränder nur leicht sichtbar**: immer `var(--line)` (#242424) oder schwächer; keine hellen Grau-Ränder.
+- **Auswahl-Menüs** (alles mit `--menu-bg`, Aufklapp-Listen, `<select>`): Fläche = Hauptteil #141414, Rand `var(--line)`, Hover #181818.
 - Keine Browser-Tooltips (`title` wird von `app.js` automatisch entfernt).
 - Eng statt luftig, alles sauber auf gleicher Höhe/Kante ausgerichtet. Texte auf **Deutsch**.
 
@@ -13,7 +16,7 @@ Nur drei Grautöne für Flächen, Prinzip wie die Vorlage „Thought for 3s“-K
 |---|---|---|
 | Hauptteil | `--main-bg` = `--sidebar-bg` #141414 | Sidebar, Hauptbereich |
 | Fenster | `--win-bg` = `--field-bg` = `--card` #181818 | Karten, Eingabefeld, Fenster, Inhalts-Kästen, Kacheln |
-| Ausklappbar | `--pop-bg` = `--menu-bg` #212121 | Menüs, Aufklapp-Kästen, Köpfe, Hover-Flächen, Leisten |
+| Ausklappbar | `--pop-bg` #212121 | Aufklapp-Köpfe, Hover-Flächen, Leisten (Auswahl-Menüs dagegen im Hauptteil-Ton, `--menu-bg` #141414) |
 | Rand | `--menu-border` = `--line` #242424 | alle Ränder/Trennlinien |
 Gewählt/aktiv in einer Leiste = eine Stufe dunkler (Fenster-Ton auf Ausklappbar-Fläche, z. B. `--menu-hover` #181818). Keine anderen Grautöne erfinden – neue Flächen nehmen eine der drei Variablen. Block „DREI FLÄCHEN“ am Ende von `style.css`; Modus „Dunkel“ setzt dieselben Werte (`MODES.dark` in `app.js`).
 | Text (exakt Vorlage) | `--text` #f7f7f7 (Titel) · `--text-2` #ededed · `--text-3` #bbbbbb (Fließtext) · `--text-4` #909090 (leise) |

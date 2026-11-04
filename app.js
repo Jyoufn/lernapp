@@ -2696,7 +2696,7 @@ function messageFooter(msgEl, text) {
   toDoc.setAttribute('aria-label', 'Antwort als Dokument speichern');
   toDoc.addEventListener('click', () => importAnswer(msgEl));
   bar.append(copy, redo, toDoc);
-  if (msgEl._model) { const m = el('span', 'msg-model'); m.textContent = msgEl._model; m.title = 'Diese Antwort hat geschrieben: ' + msgEl._model; bar.append(m); }
+  // kein Modellname unter der Antwort (Wunsch 04.11.)
   return bar;
 }
 
