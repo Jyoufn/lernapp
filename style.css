@@ -10949,3 +10949,6 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .lb2-page { width: 16px !important; height: 20px !important; fill: rgba(255,255,255,.03); stroke: var(--text-4); stroke-width: 1.2; stroke-linecap: round; }
 .lb2-page path { fill: none; stroke: color-mix(in srgb, var(--text-4) 70%, transparent); }
 .lb2-row:hover .lb2-page { stroke: var(--text-3); }
+/* Ordner/Tag-Chips, Filter und Auswahl-Knöpfe als runde Pillen (Wunsch 04.11.: weniger eckig) */
+.lb2-chip, .lb2-filter, .lb2-btn { border-radius: 999px; }
+.lb2-chip { padding: 0 9px 0 8px; }
