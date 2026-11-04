@@ -17,3 +17,6 @@ konten/
 
 # lokales Testmaterial (Fotos aus Buch) – nicht hochladen
 testmaterial/
+
+# Eval-Ergebnisse (echte KI)
+tests/eval/out/
