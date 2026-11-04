@@ -14,9 +14,9 @@ Nur drei Grautöne für Flächen, Prinzip wie die Vorlage „Thought for 3s“-K
 | Hauptteil | `--main-bg` = `--sidebar-bg` #141414 | Sidebar, Hauptbereich |
 | Fenster | `--win-bg` = `--field-bg` = `--card` #181818 | Karten, Eingabefeld, Fenster, Inhalts-Kästen, Kacheln |
 | Ausklappbar | `--pop-bg` = `--menu-bg` #212121 | Menüs, Aufklapp-Kästen, Köpfe, Hover-Flächen, Leisten |
-| Rand | `--menu-border` = `--line` #262626 | alle Ränder/Trennlinien |
+| Rand | `--menu-border` = `--line` #242424 | alle Ränder/Trennlinien |
 Gewählt/aktiv in einer Leiste = eine Stufe dunkler (Fenster-Ton auf Ausklappbar-Fläche, z. B. `--menu-hover` #181818). Keine anderen Grautöne erfinden – neue Flächen nehmen eine der drei Variablen. Block „DREI FLÄCHEN“ am Ende von `style.css`; Modus „Dunkel“ setzt dieselben Werte (`MODES.dark` in `app.js`).
-| Text | `--text` #f2f2f2 · `--text-2` #e6e6e6 · `--text-3` #a3a3a3 · `--text-4` #6e6e6e |
+| Text (exakt Vorlage) | `--text` #f7f7f7 (Titel) · `--text-2` #ededed · `--text-3` #bbbbbb (Fließtext) · `--text-4` #909090 (leise) |
 |---|---|
 | Akzent | `--accent` #2f86ff (heller Text-Akzent #6aa8ff) |
 | Gefahr | #f07a6e / #e5705f, Fläche `rgba(239,107,95,.12–.14)` |
@@ -43,7 +43,7 @@ Gewählt/aktiv in einer Leiste = eine Stufe dunkler (Fenster-Ton auf Ausklappbar
 ## Bausteine (so sehen sie heute aus)
 - **Hauptknopf**: blau gefüllt, Radius 8, weißer Text („Neue Aufgabe“, „Neues Dokument“, „Neuer Chat“). Nebenknopf: Rand, keine Fläche. Löschen: rot transparent.
 - **Bibliotheks-Liste** (`.lb2-*`): Zeilen ohne Kasten, feine Trennlinie (6 % Weiß), Hover `--menu-hover`; Kästchen 16 px Radius 5 links außerhalb der Zeile, gewählt = blauer Rand + Haken (keine Fläche); Filter und Auswahl-Knöpfe als runde Pillen (Radius 999, Rand `--menu-border`); Menüs wie `.tk-box`.
-- **Seitenköpfe** Chats/Bibliothek/Aufgaben: Titel 18 px links, blauer Knopf rechts, darunter Suchfeld (40 px, Radius 12, Fläche `--main-bg`, Icon 14).
+- **Seitenköpfe** Chats/Bibliothek/Aufgaben: Titel 18 px links, blauer Knopf rechts, darunter Suchfeld (40 px, Radius 12, Fläche `--win-bg`, Icon 14).
 - **Kalender-Kopf**: auf Höhe des Sidebar-Knopfs oben links, Trennstrich, „Oktober 2026“ 15 px; rechts „‹ Heute ›“ und „Neu“ gleich hoch.
 - **Menüs/Aufklapp-Kästen** (`.tk-box`): `--menu-bg`, Rand `--menu-border`, Radius 10, Zeilen 30 px, Auswahl nur blauer Haken.
 - **Fenster Aufgabe/Termin**: ohne × und ohne Kopftext; Titel, „Beschreibung hinzufügen“ (wächst, höchstens ~6 Zeilen, dann scrollt sie; das ganze Fenster höchstens Bildschirmhöhe und scrollbar), darunter Pillen-Zeilen (Icon + Text), die bündig einen Kasten aufklappen. Knopf unten rechts „Aufgabe erstellen“.
