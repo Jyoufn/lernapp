@@ -173,3 +173,30 @@ test('Rettungs-Kopien: höchstens 5, gleiche Kopie nicht doppelt (füllte sonst 
   assert.equal(chk.probeSchreiben, 'ok');
   assert.match(chk.rettungsKopien, /^5 /);
 });
+
+test('Redis: große Hashes werden in Paketen gelesen (Upstash-Grenze 10 MB je Anfrage)', async () => {
+  const big = 'x'.repeat(4 * 1024 * 1024);
+  const data = { c1: big, c2: big, c3: '{"id":"c3"}' };
+  const calls = [];
+  const orig = globalThis.fetch;
+  globalThis.fetch = async (url, init) => {
+    const body = JSON.parse(init.body);
+    calls.push(String(url).endsWith('/pipeline') ? 'PIPELINE' : body[0]);
+    const json = (x) => new Response(JSON.stringify(x), { status: 200 });
+    if (String(url).endsWith('/pipeline')) return json(body.map(([, , k]) => ({ result: data[k].length })));
+    if (body[0] === 'HKEYS') return json({ result: Object.keys(data) });
+    if (body[0] === 'HMGET') {
+      const ks = body.slice(2);
+      assert.ok(ks.reduce((n, k) => n + data[k].length, 0) <= 7 * 1024 * 1024, 'Paket zu groß');
+      return json({ result: ks.map((k) => data[k]) });
+    }
+    if (body[0] === 'HGETALL') throw new Error('HGETALL darf nicht mehr am Stück laufen');
+    return json({ result: null });
+  };
+  try {
+    const s = require('../lib/store').redisStore('https://redis.example', 't');
+    const all = await s.hgetall('u:x:chats');
+    assert.deepEqual(Object.keys(all).sort(), ['c1', 'c2', 'c3']);
+    assert.equal(calls.filter((c) => c === 'HMGET').length, 2);
+  } finally { globalThis.fetch = orig; }
+});

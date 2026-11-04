@@ -9,3 +9,4 @@
 - Börsen-Radar hat eigenen Cron-Endpunkt `/api/boerse/radar-cron`.
 - Löschen ist endgültig (kein Papierkorb); gelöschte IDs bleiben gemerkt, damit andere Geräte sie nicht zurückbringen.
 - **Speichern geht nicht?** Angemeldet `https://<app>/api/speicher-check` öffnen: Probe-Schreiben, Größe der Chat-/Dokument-Antwort (Vercel ≤ ~4,5 MB), Zahl der Rettungs-Kopien, Schlüssel in Upstash. Speicherfehler stehen im Vercel-Log als `[speicher]`.
+- **Upstash gibt höchstens 10 MB je Anfrage heraus** → `redisStore.hgetall` liest Hashes in Paketen (HKEYS → HSTRLEN-Pipeline → HMGET ≤ 7 MB, Feld > 9 MB übersprungen). Nie wieder `HGETALL` am Stück auf Chats/Dokumente. Vercel-Projekt der App: **`lernapp-6p99`** (hat Upstash + Login); `lernapp` (lernapp-pearl) hat keine Umgebungsvariablen und speichert nichts.
