@@ -11157,3 +11157,46 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .st-role { margin-top: 10px; }
 .lb2-page.sb-page { width: 13px !important; height: 16px !important; flex: none; margin: 0 1px; }
 .nav-item:hover .lb2-page.sb-page, .nav-item.active .lb2-page.sb-page { stroke: var(--text-3); }
+
+/* =====================================================================
+   LEISTE OBEN (05.11.): Agent · Musik · Timer als EIGENE Kästchen nebeneinander (gleiche Gesamtbreite wie der Agent allein,
+   der Agent rückt nach links). Zu: Agent = Gesicht + Stumm + Beenden · Musik = Cover + Zurück/Play/Weiter · Timer = Zeit + Beenden.
+   Ein Klick auf ein Kästchen öffnet sein Fenster als eigenen Kasten DARUNTER (volle Breite, mit Abstand – nicht angewachsen).
+   ===================================================================== */
+#topStack#topStack#topStack { gap: 8px; padding: 0 !important; border: 0 !important; background: transparent !important; border-radius: 0 !important;
+  width: min(460px, calc(100% - 32px)) !important; max-width: none !important; height: 50px !important; align-items: stretch; overflow: visible; }
+#topStack#topStack#topStack > .voice-agent:not([hidden]), #topStack#topStack#topStack > .mu-mini:not([hidden]), #topStack#topStack#topStack > .ft:not([hidden]) {
+  display: flex !important; align-items: center; position: static; height: 50px !important; min-width: 0; box-sizing: border-box;
+  padding: 0 7px 0 8px !important; border: 1px solid #242424 !important; border-radius: 18px !important; background: #181818 !important;
+  transition: flex-grow 420ms var(--out), background-color 160ms ease !important; cursor: pointer; }
+#topStack#topStack#topStack > .voice-agent:not([hidden]) { flex: 1 1 0 !important; }
+#topStack#topStack#topStack > .voice-agent .va-head { display: flex !important; align-items: center; gap: 6px; width: 100%; height: 100%; padding: 0 !important; }
+#topStack#topStack#topStack > .voice-agent .va-actions { display: flex !important; align-items: center; gap: 2px; margin-left: auto !important; }
+#topStack#topStack#topStack #vaToggle, #topStack#topStack#topStack #vaMusic { display: none !important; } /* Aufklappen per Klick aufs Kästchen; Musik hat ihr eigenes */
+#topStack#topStack#topStack > .mu-mini:not([hidden]) { flex: 1 1 0 !important; gap: 8px; }
+#topStack#topStack#topStack > .ft:not([hidden]) { flex: 1 1 0 !important; }
+#topStack#topStack#topStack > .ft .ft-bar { display: flex !important; align-items: center; gap: 7px !important; width: 100%; height: 100% !important; padding: 0 0 0 6px !important; }
+#topStack#topStack#topStack > .ft .ft-time { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; margin: 0 !important; color: var(--text); }
+#topStack#topStack#topStack > .ft .ft-actions { display: flex !important; margin-left: auto !important; }
+#topStack#topStack#topStack > .ft .ft-expand { display: none !important; }
+#topStack#topStack#topStack .mu-mini [data-mini="expand"] { display: none !important; }
+#topStack#topStack#topStack .mu-mini [data-mini="prev"], #topStack#topStack#topStack .mu-mini [data-mini="next"] { display: grid !important; }
+#topStack#topStack#topStack .mu-mini-actions { display: flex !important; align-items: center; gap: 2px; margin-left: auto !important; }
+#topStack#topStack#topStack .mu-mini-cover { flex: none; width: 34px; height: 34px; border-radius: 9px; }
+/* mehrere Kästchen: alles Überflüssige weg – Agent nur Gesicht + Knöpfe, Musik Cover + Steuerung, Timer nur die Zeit (+ Beenden) */
+#topStack#topStack#topStack:has(> :is(.mu-mini, .ft):not([hidden])) > .voice-agent:not([hidden]) { flex: 0 0 auto !important; }
+#topStack#topStack#topStack:has(> :is(.mu-mini, .ft):not([hidden])) .va-text { display: none !important; }
+#topStack#topStack#topStack:has(> :is(.voice-agent, .ft):not([hidden])) .mu-mini-text { display: none !important; }
+#topStack#topStack#topStack:has(> :is(.voice-agent, .mu-mini):not([hidden])) > .ft:not([hidden]) { flex: 0 0 auto !important; }
+#topStack#topStack#topStack:has(> :is(.voice-agent, .mu-mini):not([hidden])) > .ft [data-ft="toggle"] { display: none !important; }
+#topStack#topStack#topStack:has(> .voice-agent:not([hidden])):has(> .ft:not([hidden])):not(:has(> .mu-mini:not([hidden]))) > .ft:not([hidden]) { flex: 1 1 0 !important; }
+#topStack#topStack#topStack > :is(.voice-agent, .mu-mini, .ft):not([hidden]):hover { background: #1c1c1c !important; }
+#topStack#topStack#topStack > .voice-agent.expanded, #topStack#topStack#topStack > .ft.expanded, #topStack#topStack#topStack > .mu-mini:has(+ .music:not([hidden])) { background: #212121 !important; }
+/* Fenster darunter: eigener Kasten mit Abstand, volle Breite der Leiste */
+#topStack#topStack#topStack .va-panel, #topStack#topStack#topStack .ft-more, #topStack#topStack#topStack > .music {
+  position: absolute !important; left: 0 !important; right: 0 !important; top: calc(100% + 8px) !important; width: auto !important;
+  border: 1px solid #242424 !important; border-radius: 18px !important; background: #181818 !important; box-sizing: border-box; }
+#topStack#topStack#topStack .va-panel::before, #topStack#topStack#topStack .ft-more::before, #topStack#topStack#topStack > .music::before { display: none !important; }
+@media (max-width: 480px) { #topStack#topStack#topStack { width: calc(100% - 24px) !important; gap: 6px; } }
+#topStack#topStack#topStack > .ft [data-ft="close"] { display: grid !important; }
+#topStack#topStack#topStack > .ft .ft-count:not([hidden]) { display: inline-grid; }

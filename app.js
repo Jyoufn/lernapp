@@ -5230,7 +5230,7 @@ function appStateText() {
       || (window.Music && !Music.root.hidden && Music.root.isConnected && !Music.root.classList.contains('closing')));
     if (dock.classList.contains('dock-open') !== opened) dock.classList.toggle('dock-open', opened);
     const p = h ? openPanel() : null;
-    const extra = p ? p.offsetHeight + 8 : 0;
+    const extra = p ? p.offsetHeight + 16 : 0; // Fenster steht als eigener Kasten 8px unter der Leiste
     scroller.style.setProperty('--dock-space', h ? `${h + extra + 16}px` : '0px');
   };
   const ro = new ResizeObserver(sync);
