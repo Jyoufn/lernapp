@@ -626,7 +626,7 @@ const Docs = (() => {
         <button type="button" class="lb2-btn" data-bulk="pin">${fi('pin', 13)}<span>Anheften</span></button>
         <button type="button" class="lb2-btn lb2-danger" data-bulk="del">${fi('trash', 13)}<span>Löschen</span></button>
         <button type="button" class="lb2-btn" data-bulk="none">Abbrechen</button></span>
-        <button type="button" class="lb2-filter" data-act="filter">${fi('filter', 13)}<span>Alle</span></button></div>
+        <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 14)}</button></div>
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
@@ -661,7 +661,7 @@ const Docs = (() => {
       selBox.querySelector('b').textContent = `${sel.size} ausgewählt`;
       view.classList.toggle('lb2-picking', sel.size > 0);
       bar.querySelector('[data-bulk="del"]').classList.remove('confirm');
-      bar.querySelector('.lb2-filter span').textContent = FILTERS[filter];
+      bar.querySelector('.lb2-filter').classList.toggle('set', filter !== 'all'); // gefiltert → Icon hell
     };
     const api = {
       open: false,

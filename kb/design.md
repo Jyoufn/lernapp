@@ -7,6 +7,8 @@
 - **Keine Schatten** (verbindlich, 04.11.): kein `box-shadow` mit Versatz/Unschärfe, kein `drop-shadow` – nirgends (Fenster, Menüs, Karten, Knöpfe). Erlaubt sind nur Ringe ohne Unschärfe (`0 0 0 1px …`, `inset`).
 - **Ränder nur leicht sichtbar**: immer `var(--line)` (#242424) oder schwächer; keine hellen Grau-Ränder.
 - **Auswahl-Menüs** (alles mit `--menu-bg`, Aufklapp-Listen, `<select>`): Fläche = Hauptteil #141414, Rand `var(--line)`, Hover #181818.
+- **Kein Schwarz**: nichts darf dunkler als #141414 sein. Aufklapp-Kästen/Menüs INNERHALB eines Fensters = #212121 (nie dunkler als das Fenster). Abdunkelung hinter Fenstern/Overlays = Hauptteil-Ton halbdurchsichtig (`color-mix(var(--main-bg) 72%, transparent)`), nie `rgba(0,0,0,…)`.
+- Bibliothek: Knopf „Neues Dokument“ in `--pop-bg` mit leisem Rand (nicht blau); Filter nur als Icon (gefiltert = Icon hell).
 - Keine Browser-Tooltips (`title` wird von `app.js` automatisch entfernt).
 - Eng statt luftig, alles sauber auf gleicher Höhe/Kante ausgerichtet. Texte auf **Deutsch**.
 

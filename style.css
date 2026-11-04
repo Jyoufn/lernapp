@@ -10965,3 +10965,17 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 :root { --menu-bg: #141414; --menu-hover: #181818; --menu-border: var(--line); }
 select { background-color: var(--main-bg); color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
 [role="menu"], [role="listbox"], .tk-box, .lb2-menu { background: var(--menu-bg); border-color: var(--line); box-shadow: none; }
+
+/* ===== Nur Farben der Palette (04.11.): kein Schwarz in Fenstern, keine schwarzen Abdunkelungen =====
+   Aufklapp-Kästen IN einem Fenster: Ausklappbar-Ton (#212121) statt dunkler als das Fenster.
+   Abdunkelung hinter Fenstern/Overlays: Hauptteil-Ton halbdurchsichtig statt Schwarz. */
+.tk-modal .tk-box, .cal-modal .tk-box, .tk-sheet .tk-box, .tk-modal [role="menu"], .cal-modal [role="menu"],
+.tk-modal [role="listbox"], .cal-modal [role="listbox"] { background: var(--pop-bg); }
+.tk-modal .tk-box button:hover, .cal-modal .tk-box button:hover { background: var(--win-bg); }
+.oi-more, .lb-backdrop, .src-modal, .cal-modal, .tk-modal, .tk-modal:has(.tk-sheet), .cal-dv-wrap, .dc-set-ov, .cmdk, .wi-overlay.open,
+.pz-ed-wrap, .ls-modal, .cbx-overlay, .app.agent-setup::after, .agp-ov, .pv-backdrop, .dcb-light { background: color-mix(in srgb, var(--main-bg) 72%, transparent); }
+/* Bibliothek: Knopf oben rechts in der Palette (nicht blau), Filter nur als Icon */
+.lb2 .cl-new { background: var(--pop-bg); color: var(--text); border: 1px solid var(--line); }
+.lb2 .cl-new:hover { background: var(--pop-bg); color: var(--text); }
+.lb2-filter { width: 30px; height: 30px; padding: 0; justify-content: center; color: var(--text-4); }
+.lb2-filter.set { color: var(--text); }
