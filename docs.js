@@ -616,7 +616,7 @@ const Docs = (() => {
   /* ---------- Ansicht „Bibliothek“: Chats UND Dokumente in einer Liste (Wunsch 04.11., Vorbild „Pocket“-Liste) ----------
      Gruppen nach Tag (Heute, Gestern …), Zeile: Icon, Titel, darunter Beschreibung (NUR Dokumente), rechts Uhrzeit/Datum.
      Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
-     stehen alle Kästchen da und oben eine Leiste (Anheften, Löschen mit 2. Klick, Abbrechen). Filter: Alle · Chats · Dokumente. */
+     stehen alle Kästchen da, oben „N ausgewählt · Abbrechen“, unten mittig eine Icon-Pille (Anheften, Löschen mit 2. Tipp); nicht gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
   const panel = () => document.querySelector('.panel');
   const list = (() => {
     const view = el('section', 'dc-view dc-list');
@@ -625,13 +625,15 @@ const Docs = (() => {
       <div class="cl-head"><h2>Bibliothek</h2></div>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b>
-        <button type="button" class="lb2-btn" data-bulk="pin">${fi('pin', 13)}<span>Anheften</span></button>
-        <button type="button" class="lb2-btn lb2-danger" data-bulk="del">${fi('trash', 13)}<span>Löschen</span></button>
         <button type="button" class="lb2-btn" data-bulk="none">Abbrechen</button></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 14)}</button></div>
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
+    // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“, nur Icons – Anheften und Löschen (2. Tipp löscht).
+    // Hängt am Panel, weil die Ansicht selbst scrollt.
+    const dock = el('div', 'lb2-dock'); dock.setAttribute('role', 'toolbar'); dock.setAttribute('aria-label', 'Auswahl');
+    dock.innerHTML = `<div class="lb2-dock-pill"><button type="button" data-bulk="pin" aria-label="Anheften">${fi('pin', 15)}</button><button type="button" class="lb2-dock-del" data-bulk="del" aria-label="Löschen">${fi('trash', 15)}</button></div>`;
     const sel = new Set(); // Schlüssel „doc:ID“ / „chat:ID“
     let filter = localStorage.getItem('docs.libFilter') || 'all';
     const FILTERS = { all: 'Alle', chat: 'Chats', doc: 'Dokumente' };
@@ -662,7 +664,11 @@ const Docs = (() => {
       selBox.hidden = !sel.size; bar.querySelector('.lb2-all').hidden = !!sel.size;
       selBox.querySelector('b').textContent = `${sel.size} ausgewählt`;
       view.classList.toggle('lb2-picking', sel.size > 0);
-      bar.querySelector('[data-bulk="del"]').classList.remove('confirm');
+      dock.classList.toggle('on', api.open && sel.size > 0);
+      const all = sel.size ? entries('') : [];
+      const allPinned = sel.size > 0 && [...sel].every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned);
+      const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.setAttribute('aria-label', allPinned ? 'Lösen' : 'Anheften');
+      dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
       bar.querySelector('.lb2-filter').classList.toggle('set', filter !== 'all'); // gefiltert → Icon hell
     };
     const api = {
@@ -681,10 +687,11 @@ const Docs = (() => {
       },
       show() {
         if (!view.isConnected) panel()?.append(view);
+        if (!dock.isConnected) panel()?.append(dock);
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         api.render();
       },
-      hide() { if (!api.open) return; api.open = false; view.hidden = true; closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
+      hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
     };
     // Menüs (Ordner, Tag, ⋯, Filter): Kasten wie .tk-box unter dem Knopf, Auswahl = blauer Haken
     let menuFor = null;
@@ -707,6 +714,17 @@ const Docs = (() => {
       keys.forEach((k) => { const [kind, id] = k.split(':'); if (kind === 'doc') { const d = docOf(id); if (d && !!d.pinned !== on) d.pinned = on; } else { const c = (window.LibChats?.items() || []).find((x) => x.id === id); if (c && c.pinned !== on) window.LibChats.pin(id); } });
       save(); renderSide(); api.render();
     });
+    let delTimer = 0;
+    function doBulk(bulk) {
+      const keys = [...sel];
+      if (bulk.dataset.bulk === 'none') { sel.clear(); api.render(); }
+      else if (bulk.dataset.bulk === 'pin') { const all = entries(''); sel.clear(); pinKeys(keys, !keys.every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned)); }
+      else if (!bulk.classList.contains('confirm')) { // erster Tipp färbt rot, zweiter löscht
+        bulk.classList.add('confirm'); bulk.setAttribute('aria-label', 'Wirklich löschen?');
+        clearTimeout(delTimer); delTimer = setTimeout(() => { bulk.classList.remove('confirm'); bulk.setAttribute('aria-label', 'Löschen'); }, 2500);
+      } else { clearTimeout(delTimer); bulk.setAttribute('aria-label', 'Löschen'); delKeys(keys); }
+    }
+    dock.addEventListener('click', (e) => { const b = e.target.closest('[data-bulk]'); if (b) doBulk(b); });
     search.addEventListener('input', () => api.render());
     search.addEventListener('keydown', (e) => e.stopPropagation());
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-filter')) closeMenu(); });
@@ -716,14 +734,7 @@ const Docs = (() => {
       const fb = e.target.closest('[data-act="filter"]');
       if (fb) { openMenu(fb, Object.entries(FILTERS).map(([v, l]) => item(v, l, filter === v)).join(''), (v) => { filter = v; localStorage.setItem('docs.libFilter', v); closeMenu(); api.render(); }); return; }
       const bulk = e.target.closest('[data-bulk]');
-      if (bulk) {
-        const keys = [...sel];
-        if (bulk.dataset.bulk === 'none') { sel.clear(); api.render(); }
-        else if (bulk.dataset.bulk === 'pin') { const all = entries(''); pinKeys(keys, !keys.every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned)); sel.clear(); }
-        else if (!bulk.classList.contains('confirm')) { bulk.classList.add('confirm'); bulk.querySelector('span').textContent = 'Wirklich löschen?'; setTimeout(() => { bulk.classList.remove('confirm'); bulk.querySelector('span').textContent = 'Löschen'; }, 2500); }
-        else delKeys(keys);
-        return;
-      }
+      if (bulk) { doBulk(bulk); return; }
       const r = e.target.closest('.lb2-row'); if (!r) return;
       const k = r.dataset.k, [kind, id] = k.split(':');
       const act = e.target.closest('[data-row]')?.dataset.row;

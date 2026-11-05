@@ -11231,3 +11231,22 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .punch-burst { right: 10px; top: 56%; }
 .punch-burst .pb-flash { display: none; }
 .punch-burst i { animation: pb-fly 480ms steps(5, end) var(--d) both !important; }
+
+/* ===== Bibliothek: Auswahl-Leiste unten (06.11.) =====
+   Ab einer Auswahl unten mittig eine Pille im Stil von „Agenten · Dokumente“ (Fenster-Ton, leiser Rand, Radius 12),
+   nur Icons: Anheften, Löschen (erster Tipp rot getönt, zweiter löscht). Nicht gewählte Zeilen werden blass. */
+.lb2-dock { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 25; opacity: 0; transform: translate(-50%, 14px); pointer-events: none; transition: opacity 180ms ease, transform 320ms var(--spring); }
+.lb2-dock.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.lb2-dock-pill { display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--win-bg); }
+.lb2-dock-pill button { display: grid; place-items: center; width: 40px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-3); cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; transition: color 140ms ease, background-color 160ms ease; }
+.lb2-dock-pill button svg { width: 15px; height: 15px; }
+.lb2-dock-pill button:hover, .lb2-dock-pill button:focus-visible { background: var(--pop-bg); color: var(--text); }
+.lb2-dock-pill button.set { color: var(--text); }
+.lb2-dock-pill .lb2-dock-del:hover { color: #f07a6e; }
+.lb2-dock-pill .lb2-dock-del.confirm { background: rgba(239,107,95,.14); color: #f07a6e; }
+.lb2-picking.dc-list .lb2 { padding-bottom: 100px; } /* letzte Zeile nicht unter der Leiste */
+/* nicht gewählte Zeilen: Icon, Titel, Zeit blass – Kästchen bleibt voll sichtbar */
+.lb2-row > :not(.lb2-check) { transition: opacity 160ms ease; }
+.lb2-picking .lb2-row:not(.picked) > :not(.lb2-check) { opacity: .4; }
+.lb2-picking .lb2-row:not(.picked):hover > :not(.lb2-check) { opacity: .65; }
+@media (prefers-reduced-motion: reduce) { .lb2-dock { transition: opacity 120ms ease; transform: translate(-50%, 0); } }
