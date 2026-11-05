@@ -277,8 +277,8 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
     // Modell-Leiter (bestes verfügbares zuerst, bei Limit das nächste); das letzte nach kurzer Pause noch einmal
     // Kontingent schonen (04.11.: viele 429 bei den besten Modellen, Antworten wurden dadurch schwächer): Bild-Hilfsaufgaben zuerst mit den
     // Lite-Modellen (eigenes Kontingent), erst danach das schwächste Text-Modell – die besten Modelle bleiben für die Antworten
-    const lite = (await P.ladder(env, 'lite')).slice(0, 3), text = await P.ladder(env, 'text');
-    const lad = [...lite, ...text.slice(-2)].filter((m, i, a) => m && a.indexOf(m) === i);
+    const lite = (await P.ladder(env, 'lite')).slice(0, 3), textLad = await P.ladder(env, 'text'); // nicht „text“ nennen: das ist die Frage an Gemini (sonst ging eine Liste mit → HTTP 400)
+    const lad = [...lite, ...textLad.slice(-2)].filter((m, i, a) => m && a.indexOf(m) === i);
     for (const [model, wait] of [...lad.map((m) => [m, 0]), [lad[lad.length - 1], 4000]]) {
       if (P.isCooling(model) && wait === 0 && lad.length > 1) continue;
       const t0 = Date.now();
