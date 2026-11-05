@@ -62,13 +62,17 @@ const Praesentation = (() => {
       image: img(s?.image), notes: str(s?.notes, 1200), ...(['links', 'rechts', 'karten', 'liste'].includes(s?.layout) ? { layout: s.layout } : {}),
     })).filter((s) => s.title || s.text || s.points.length);
     if (!slides.length) return null;
-    // Bilder sind Pflicht: hat die KI zu wenige gesetzt, bekommen Titel und passende Folien ein Bild zum Folientitel (Foto, sonst KI-Bild)
     const topic = plain(str(o.title || slides[0].title, 80));
+    // Rahmen (Wunsch 05.11.): vorne eine Titelfolie nur mit dem Thema (mittig, ohne Bild), hinten eine Schlussfolie
+    if (slides[0].type !== 'titel') slides.unshift({ type: 'titel', title: topic, text: plain(str(o.subtitle, 160)), points: [], left: null, right: null, image: null, notes: '' });
+    slides[0].image = null;
+    if (!slides.some((x) => x.type === 'ende')) slides.push({ type: 'ende', title: 'Vielen Dank für eure Aufmerksamkeit!', text: 'Fragen?', points: [], left: null, right: null, image: null, notes: '' });
+    // Bilder sind Pflicht: hat die KI zu wenige gesetzt, bekommen passende Inhaltsfolien ein Bild zum Folientitel (geprüftes Foto, sonst KI-Bild)
     let have = slides.filter((x) => x.image).length;
-    const wantImgs = Math.min(6, Math.max(3, Math.round(slides.length / 3)));
+    const wantImgs = Math.min(6, Math.max(4, Math.round(slides.length / 3)));
     for (const x of slides) {
       if (have >= wantImgs) break;
-      if (x.image || !['titel', 'bild', 'frage', 'abschnitt', 'punkte', 'definition'].includes(x.type) || (x.type === 'punkte' && x.points.length > 4)) continue;
+      if (x.image || !['bild', 'abschnitt', 'punkte', 'definition'].includes(x.type) || (x.type === 'punkte' && x.points.length > 4)) continue;
       x.image = { query: '', prompt: `Foto passend zur Folie „${x.title || topic}“ einer Schulpräsentation über ${topic}, sachlich, Motiv gut erkennbar` };
       have++;
     }
@@ -377,12 +381,17 @@ const Praesentation = (() => {
         if (!col.length) return;
         let y = top;
         const avail = H - top - 0.9, each = avail / per;
-        col.forEach((x) => {
-          const href = (/https?:\/\/\S+/.exec(String(x)) || [])[0];
-          const f = text(x, { x: M + c * (colW + 0.5) + 0.3, y, w: colW - 0.3, h: Math.max(0.35, each - 0.08), max: 15, min: 9, color: T.text, lh: 1.25, maxLines: 3 });
-          if (href) out[out.length - 1].href = href.replace(/[).,;]+$/, ''); // Quelle als Link (Vorschau)
-          out.push({ k: 'ellipse', x: M + c * (colW + 0.5) + 0.04, y: y + f.size * 1.25 * PT / 2 - 0.045, w: 0.09, h: 0.09, fill: T.accent });
-          y = Math.max(f.bottom + 0.12, y + 0.3);
+        col.forEach((x, k) => {
+          // je Quelle: Nummer, Titel/Herausgeber, darunter klein die Website (Link) – statt einer langen Zeile mit URL (Wunsch 05.11.)
+          const raw = String(x), href = ((/https?:\/\/\S+/.exec(raw) || [])[0] || '').replace(/[).,;]+$/, '');
+          const label = raw.replace(/\s*·?\s*https?:\/\/\S+/, '').trim() || raw;
+          let host = ''; try { host = href ? new URL(href).hostname.replace(/^www\./, '') : ''; } catch {}
+          const x0 = M + c * (colW + 0.5);
+          numDot(x0 + 0.16, y + 0.14, 0.3, (c ? per : 0) + k + 1, 9);
+          const f = text(label, { x: x0 + 0.45, y, w: colW - 0.45, h: Math.max(0.3, each - (host ? 0.3 : 0.08)), max: 14, min: 9, color: T.text, lh: 1.22, maxLines: 2 });
+          let bottom = f.bottom;
+          if (host) { const g = text(host, { x: x0 + 0.45, y: f.bottom + 0.03, w: colW - 0.45, h: 0.26, max: 10, min: 8, color: T.accent, lh: 1.2, maxLines: 1 }); out[out.length - 1].href = href; bottom = g.bottom; }
+          y = Math.max(bottom + 0.16, y + 0.42);
         });
       });
       footer();
@@ -724,14 +733,14 @@ const Praesentation = (() => {
   // eigene Datei-Icons (Blatt mit Eselsohr in der Farbe der Dateiart + Zeichen) – keine Nachbildung fremder Logos
   const sheet = (c, glyph) => `<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><path d="M8 3h10.5L25 9.5V25a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" fill="${c}"/><path d="M18.5 3v4.5a2 2 0 0 0 2 2H25Z" fill="#fff" fill-opacity=".35"/>${glyph}</svg>`;
   const FILE_ICON = {
-    pptx: sheet('#E5673E', '<rect x="9.5" y="12" width="12" height="8" rx="1.2" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M12.5 17.5v-2M15.5 17.5v-3.5M18.5 17.5v-1.2M15.5 20v2.6M13 22.8h5" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
-    key: sheet('#3D8BFF', '<path d="M11 13.5h9l-1.4 4.5h-6.2Z" fill="#fff"/><path d="M15.5 18v4.6M12.8 22.8h5.4M15.5 13.5v-2.2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'),
+    pptx: sheet('#E5673E', '<rect x="9.8" y="11.6" width="11.4" height="8" rx="1.6" fill="#fff"/><path d="M12.6 22.6h5.8" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>'), // Folie auf Ständer, schlicht wie das PDF-Icon
+    key: sheet('#3D8BFF', '<circle cx="15.5" cy="16.6" r="4.7" fill="none" stroke="#fff" stroke-width="1.7"/><path d="M15.5 16.6V11.9a4.7 4.7 0 0 1 4.7 4.7Z" fill="#fff"/>'), // Diagramm-Kreis
     pdf: sheet('#E5534B', '<path d="M10.5 13h10M10.5 16.5h10M10.5 20h6.5" stroke="#fff" stroke-width="1.7" stroke-linecap="round"/>'),
   };
   const OUTS = [
-    { id: 'pptx', label: 'PowerPoint', hint: 'Bearbeitbar', badge: 'PPTX' },
-    { id: 'key', label: 'Keynote', hint: 'iPad & Mac', badge: 'KEY' },
-    { id: 'pdf', label: 'PDF', hint: 'Zum Teilen', badge: 'PDF' },
+    { id: 'pptx', label: 'PowerPoint', hint: '', badge: 'PPTX' },
+    { id: 'key', label: 'Keynote', hint: '', badge: 'KEY' },
+    { id: 'pdf', label: 'PDF', hint: '', badge: 'PDF' },
   ];
   // Änderungen (Bearbeiten, Design, Bilder) je Präsentation im Konto gemerkt – Schlüssel aus dem Inhalt des Blocks
   const hash = (t) => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0; return h.toString(36); };
@@ -793,7 +802,7 @@ const Praesentation = (() => {
         <span class="pz-count"></span></div>
       <div class="pz-strip"></div>
       <div class="pz-bar">
-        <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${FILE_ICON[o.id]}</span><span class="pz-ol"><b>${o.label}</b><small>${o.hint}</small></span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
+        <div class="pz-outs">${OUTS.map((o) => `<button type="button" class="pz-out" data-out="${o.id}"><span class="pz-badge ${o.id}">${FILE_ICON[o.id]}</span><span class="pz-ol"><b>${o.label}</b>${o.hint ? `<small>${o.hint}</small>` : ''}</span><span class="pz-oi">${fi('download', 13)}</span></button>`).join('')}</div>
       </div>
       <div class="pz-msg" aria-live="polite"></div>`;
     let cur = 0;

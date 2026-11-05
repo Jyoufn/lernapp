@@ -11200,3 +11200,7 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 @media (max-width: 480px) { #topStack#topStack#topStack { width: calc(100% - 24px) !important; gap: 6px; } }
 #topStack#topStack#topStack > .ft [data-ft="close"] { display: grid !important; }
 #topStack#topStack#topStack > .ft .ft-count:not([hidden]) { display: inline-grid; }
+
+/* Präsentation (05.11.): Ausgabe-Kacheln nur mit Namen; Download-Knopf wird beim Antippen nicht blau */
+.pz-out .pz-ol small { display: none; }
+.pz-out:hover .pz-oi, .pz-out:active .pz-oi, .pz-out.working .pz-oi { background: #2e2e2e !important; color: var(--text) !important; }
