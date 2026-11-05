@@ -481,7 +481,8 @@ function updateAttachment(a) {
   node.classList.toggle('loading', a.status === 'loading');
   node.classList.toggle('failed', a.status === 'error');
   const meta = node.querySelector('.pdf-meta');
-  if (meta) meta.textContent = a.status === 'loading' ? (`Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}`) : a.meta || 'PDF';
+  if (meta) meta.textContent = a.status === 'loading' ? (`Wird gelesen${a.progress > 0.02 ? ` · ${Math.round(a.progress * 100)} %` : ' …'}`) : a.status === 'error' ? (a.meta || 'Fehler') : '';
+  node.classList.toggle('no-meta', a.status !== 'loading' && a.status !== 'error'); // fertig: nur der Name (Wunsch 05.11.)
   node.querySelector('.pdf-meta')?.classList.toggle('shimmer', a.status === 'loading');
 }
 
@@ -522,7 +523,51 @@ function renderAttachments() {
     updateAttachment(a);
     return el;
   }));
+  fitAttachments();
 }
+/* Anhänge in EINER Reihe (Wunsch 05.11.): Karten gleich breit, Name mit „…“; passt nicht alles, steht rechts „+N“ –
+   ein Klick zeigt alle Dateien mit Namen (zum Ansehen bzw. Entfernen). Kein Verschieben/Scrollen. */
+let attMore = null, attPop = null;
+function fitAttachments() {
+  attMore?.remove(); attMore = null;
+  const kids = [...attachmentsEl.children];
+  kids.forEach((k) => { k.hidden = false; });
+  if (kids.length < 2 || !attachmentsEl.clientWidth) return;
+  const right = () => attachmentsEl.getBoundingClientRect().right;
+  if (kids[kids.length - 1].getBoundingClientRect().right <= right() + 1) return;
+  attMore = document.createElement('button');
+  attMore.type = 'button'; attMore.className = 'att-more';
+  attMore.addEventListener('click', (e) => { e.stopPropagation(); openAttPop(); });
+  attachmentsEl.append(attMore);
+  let shown = kids.length;
+  const upd = () => { attMore.textContent = `+${kids.length - shown}`; attMore.setAttribute('aria-label', `${kids.length - shown} weitere Dateien anzeigen`); };
+  upd();
+  while (shown > 1 && attMore.getBoundingClientRect().right > right() + 1) { kids[--shown].hidden = true; upd(); }
+}
+function openAttPop() {
+  closeAttPop();
+  attPop = document.createElement('div');
+  attPop.className = 'att-pop'; attPop.setAttribute('role', 'menu');
+  const name = (a) => a.mention ? a.mention.title : a.file?.name || 'Datei';
+  attPop.innerHTML = `<div class="att-pop-h">${attachments.length} Dateien</div>` + attachments.map((a, i) => `<div class="att-pop-row" data-i="${i}">
+    <span class="att-pop-ic">${a.pdf || a.mention ? FadeIcons.svg(a.mention?.kind === 'chat' ? 'chat' : 'file', 13) : `<img src="${escapeHtml(a.url || '')}" alt="">`}</span>
+    <span class="att-pop-n">${escapeHtml(name(a))}</span><button type="button" class="att-pop-x" data-rm="${i}" aria-label="Entfernen"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 2l6 6M8 2L2 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></button></div>`).join('');
+  attPop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const rm = e.target.closest('[data-rm]');
+    if (rm) { const a = attachments[+rm.dataset.rm]; if (a?.url) URL.revokeObjectURL(a.url); attachments.splice(+rm.dataset.rm, 1); renderAttachments(); attachments.length > 1 && attMore ? openAttPop() : closeAttPop(); return; }
+    const row = e.target.closest('[data-i]'); const a = row && attachments[+row.dataset.i];
+    if (a?.pdf && isPdf(a.file)) { closeAttPop(); openPdfView({ file: a.file, name: a.file.name }); }
+  });
+  document.body.append(attPop);
+  const r = attMore.getBoundingClientRect();
+  attPop.style.left = `${Math.max(8, Math.min(innerWidth - 288, r.right - 280))}px`;
+  attPop.style.bottom = `${innerHeight - r.top + 8}px`;
+  setTimeout(() => document.addEventListener('pointerdown', outsideAttPop), 0);
+}
+function outsideAttPop(e) { if (attPop && !attPop.contains(e.target) && e.target !== attMore) closeAttPop(); }
+function closeAttPop() { attPop?.remove(); attPop = null; document.removeEventListener('pointerdown', outsideAttPop); }
+new ResizeObserver(() => fitAttachments()).observe(attachmentsEl);
 
 /* ---------- Spracheingabe ----------
    Läuft, bis man selbst stoppt. Chrome/Edge beenden nach Stille von sich aus –

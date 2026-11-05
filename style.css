@@ -11204,3 +11204,24 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 /* Präsentation (05.11.): Ausgabe-Kacheln nur mit Namen; Download-Knopf wird beim Antippen nicht blau */
 .pz-out .pz-ol small { display: none; }
 .pz-out:hover .pz-oi, .pz-out:active .pz-oi, .pz-out.working .pz-oi { background: #2e2e2e !important; color: var(--text) !important; }
+
+/* Anhänge im Eingabefeld (05.11.): eine Reihe, gleich breite Karten, Name mit „…“, rechts „+N“ mit Liste aller Dateien */
+.attachments { flex-wrap: nowrap !important; overflow: hidden; }
+.attachments > [hidden] { display: none !important; }
+.attachments > .thumb.thumb-pdf { flex: none; width: 200px !important; max-width: 200px !important; }
+.attachments > .thumb { flex: none; }
+.thumb-pdf .pdf-txt { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; }
+.thumb-pdf .pdf-name { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.thumb-pdf.no-meta .pdf-meta { display: none; }
+.att-more { flex: none; align-self: center; height: 34px; min-width: 42px; padding: 0 10px; border: 1px solid #242424; border-radius: 11px; background: #212121; color: var(--text-2); font: 500 13px Inter, sans-serif; cursor: pointer; }
+.att-more:hover { background: #262626; color: var(--text); }
+.att-pop { position: fixed; z-index: 900; width: 280px; max-height: 320px; overflow-y: auto; padding: 4px; border: 1px solid #242424; border-radius: 12px; background: #181818; animation: lb2-pop 160ms var(--spring) both; }
+.att-pop-h { padding: 8px 10px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.att-pop-row { display: flex; align-items: center; gap: 9px; height: 36px; padding: 0 6px 0 8px; border-radius: 8px; cursor: pointer; }
+.att-pop-row:hover { background: #212121; }
+.att-pop-ic { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 6px; background: rgba(240, 98, 84, .15); color: #f47c6e; overflow: hidden; }
+.att-pop-ic img { width: 100%; height: 100%; object-fit: cover; }
+.att-pop-n { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-2); font-size: 12.5px; }
+.att-pop-x { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
+.att-pop-x:hover { background: #262626; color: var(--text); }
+.thumb-pdf .pdf-meta { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
