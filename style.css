@@ -11225,3 +11225,9 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .att-pop-x { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
 .att-pop-x:hover { background: #262626; color: var(--text); }
 .thumb-pdf .pdf-meta { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+/* Boxhieb (05.11., Feedback): Handschuh kleiner in Hunde-Pixelgröße; Aufprall nur aus Pixeln (kein Kreis), ruckelt pixelig */
+.dh-dog .punch-glove { right: -22px; top: 56%; }
+.dog-peek .punch-glove { right: -10px; top: 55%; }
+.punch-burst { right: 10px; top: 56%; }
+.punch-burst .pb-flash { display: none; }
+.punch-burst i { animation: pb-fly 480ms steps(5, end) var(--d) both !important; }
