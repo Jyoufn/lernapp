@@ -2479,16 +2479,18 @@ function webImageFigure(raw) {
   fig.append(a);
   return fig;
 }
+const R0domain = (u) => { try { return new URL(u).hostname.replace(/^www\./, ''); } catch { return '#'; } };
 function linksFigure(raw, sources) {
   let data = null;
   try { data = JSON.parse(String(raw).trim()); } catch { return null; }
   const list = (Array.isArray(data) ? data : data?.links || []).map((x) => {
     const s = Number.isInteger(+x?.n) ? (sources[+x.n - 1]?.n === +x.n ? sources[+x.n - 1] : sources.find((q) => q?.n === +x.n)) : null;
-    const url = s?.url || (/^https?:\/\//i.test(x?.url || '') ? x.url : '');
+    const own = /^https?:\/\//i.test(x?.url || '') ? x.url : ''; // eigene Adresse des Fundes geht vor (Artikel nennt viele Beispiele)
+    const url = own || s?.url || '';
     if (!url || /vertexaisearch/.test(url)) return null;
     let domain = s?.domain || '';
     try { domain ||= new URL(url).hostname; } catch { return null; }
-    return { url, domain: domain.replace(/^www\./, ''), title: String(x.titel || x.title || s?.title || domain).slice(0, 90), text: String(x.text || '').slice(0, 200), image: s?.thumb || s?.image || '' };
+    return { url, domain: domain.replace(/^www\./, ''), title: String(x.titel || x.title || s?.title || domain).slice(0, 90), text: String(x.text || '').slice(0, 200), image: own && s?.url && !own.includes(R0domain(s.url)) ? '' : s?.thumb || s?.image || '' };
   }).filter(Boolean).filter((x, i, a) => a.findIndex((y) => y.url === x.url) === i).slice(0, 30);
   if (!list.length) return null;
   const fig = el('figure', 'lk');
@@ -2557,10 +2559,10 @@ function srcFold(step) {
 }
 function srcStack(step, items) {
   const list = [...new Map((items || []).filter((x) => x && (x.domain || x.url)).map((x) => [x.domain || x.url, x])).values()];
-  let st = step.querySelector(':scope > .src-stack');
+  let st = step.querySelector(':scope > .step-srcs');
   if (!list.length) { st?.remove(); return; }
   if (!st) {
-    st = el('button', 'src-stack'); st.type = 'button'; st.title = 'Suchanfragen und Quellen anzeigen';
+    st = el('button', 'step-srcs'); st.type = 'button'; st.title = 'Suchanfragen und Quellen anzeigen';
     st.addEventListener('click', (e) => { e.stopPropagation(); step.classList.toggle('open'); });
     step.append(st);
   }
@@ -3280,12 +3282,11 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const k = st.gathering ? 'gather' : st.key;
       if (!n) { st.step.remove(); return; } // nichts gefunden → kein Schritt (kein „keine Quellen“)
       if (!st.news) { const box = srcFold(st.step); srcQueries(box, st.queries); box.append(st.chips); srcStack(st.step, st.pages); }
-      line.innerHTML = `${P(k).sub} <span class="ph-x">· ${n} ${st.news ? 'Artikel' : (n === 1 ? 'Quelle' : 'Quellen')}</span> ${dur}`;
+      line.innerHTML = st.news ? `${P(k).sub} <span class="ph-x">· ${n} Artikel</span> ${dur}` : P(k).sub; // statt „· 7 Quellen 2s“ stehen rechts die Website-Logos (Wunsch 05.11.)
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
       if (!used.length) { st.step.remove(); return; } // nichts Brauchbares → Schritt verschwindet
-      line.innerHTML = doneLine('search', '', dur.replace(/<[^>]+>/g, ''));
-      line.innerHTML = doneLine('search', `${used.length} ${used.length === 1 ? 'Quelle' : 'Quellen'}`, dur.replace(/<[^>]+>/g, ''));
+      line.innerHTML = P('search').sub; // Anzahl/Dauer nicht als Text – die Logos rechts zeigen die Quellen
       const box = srcFold(st.step), chips = el('div', 'chips');
       srcQueries(box, st.queries);
       box.append(chips);
@@ -3393,7 +3394,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st = stages.web = { step, chips: el('div', 'chips'), ended: true };
         srcFold(step).append(st.chips);
       }
-      st.step.querySelector('.web-line').innerHTML = `Quellen analysiert · <strong>${r.sources.length} ${r.sources.length === 1 ? 'Quelle' : 'Quellen'}</strong>`;
+      st.step.querySelector('.web-line').textContent = 'Quellen analysiert';
       fillChips(st.chips, r.sources, () => openSourcesModal(r.sources, null));
       srcStack(st.step, r.sources);
       groundSrc = r.sources; // für unten an der Antwort, wenn es keine nummerierten Belege gibt
