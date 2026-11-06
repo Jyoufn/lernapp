@@ -11233,20 +11233,34 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .punch-burst i { animation: pb-fly 480ms steps(5, end) var(--d) both !important; }
 
 /* ===== Bibliothek: Auswahl-Leiste unten (06.11.) =====
-   Ab einer Auswahl unten mittig eine Pille im Stil von „Agenten · Dokumente“ (Fenster-Ton, leiser Rand, Radius 12),
-   nur Icons: Anheften, Löschen (erster Tipp rot getönt, zweiter löscht). Nicht gewählte Zeilen werden blass. */
+   Ab einer Auswahl unten mittig eine Pille im Stil von „Agenten · Dokumente“ (Fenster-Ton, leiser Rand, Radius 12):
+   Anheften | Löschen | Abbrechen mit Icon + Text und Trennstrichen. Löschen: 1. Tipp schiebt „Wirklich“ weich davor und
+   tönt rot, 2. Tipp löscht. Sind alle gewählten angeheftet: „Lösen“ in Akzentfarbe. Gewählte Zeilen werden blass. */
 .lb2-dock { position: absolute; left: 50%; bottom: calc(22px + env(safe-area-inset-bottom, 0px)); z-index: 25; opacity: 0; transform: translate(-50%, 14px); pointer-events: none; transition: opacity 180ms ease, transform 320ms var(--spring); }
 .lb2-dock.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
-.lb2-dock-pill { display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--win-bg); }
-.lb2-dock-pill button { display: grid; place-items: center; width: 40px; height: 32px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-3); cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; transition: color 140ms ease, background-color 160ms ease; }
-.lb2-dock-pill button svg { width: 15px; height: 15px; }
+.lb2-dock-pill { display: flex; align-items: center; gap: 2px; height: 36px; padding: 0 3px; border: 1px solid var(--line); border-radius: 12px; background: var(--win-bg); }
+.lb2-dock-pill button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 0; border-radius: 9px; background: none; color: var(--text-3); font: 500 13px Inter, sans-serif; white-space: nowrap; cursor: pointer; outline: none; -webkit-tap-highlight-color: transparent; transition: color 160ms ease, background-color 200ms ease; }
+.lb2-dock-pill button svg { width: 14px; height: 14px; flex: none; }
 .lb2-dock-pill button:hover, .lb2-dock-pill button:focus-visible { background: var(--pop-bg); color: var(--text); }
-.lb2-dock-pill button.set { color: var(--text); }
-.lb2-dock-pill .lb2-dock-del:hover { color: #f07a6e; }
-.lb2-dock-pill .lb2-dock-del.confirm { background: rgba(239,107,95,.14); color: #f07a6e; }
+.lb2-dk-sep { flex: none; width: 1px; height: 16px; margin: 0 2px; background: var(--line); }
+.lb2-dk-pin.set, .lb2-dk-pin.set:hover { color: var(--accent); }
+.lb2-dk-del:hover { color: #f07a6e; }
+.lb2-dk-del.confirm, .lb2-dk-del.confirm:hover { background: rgba(239,107,95,.14); color: #f07a6e; }
+.lb2-dk-l { display: inline-flex; align-items: center; }
+/* „Wirklich“ fährt weich auf (Breite + Deckkraft), „löschen“ steht sonst groß als „Löschen“ */
+.lb2-dk-pre { display: inline-block; max-width: 0; overflow: hidden; opacity: 0; transition: max-width 320ms var(--spring), opacity 200ms ease; }
+.lb2-dk-del.confirm .lb2-dk-pre { max-width: 80px; opacity: 1; }
+.lb2-dk-del:not(.confirm) .lb2-dk-w { text-transform: capitalize; }
 .lb2-picking.dc-list .lb2 { padding-bottom: 100px; } /* letzte Zeile nicht unter der Leiste */
-/* nicht gewählte Zeilen: Icon, Titel, Zeit blass – Kästchen bleibt voll sichtbar */
+/* gewählte Zeilen: Icon, Titel, Zeit blass – Kästchen bleibt voll sichtbar */
 .lb2-row > :not(.lb2-check) { transition: opacity 160ms ease; }
-.lb2-picking .lb2-row:not(.picked) > :not(.lb2-check) { opacity: .4; }
-.lb2-picking .lb2-row:not(.picked):hover > :not(.lb2-check) { opacity: .65; }
-@media (prefers-reduced-motion: reduce) { .lb2-dock { transition: opacity 120ms ease; transform: translate(-50%, 0); } }
+.lb2-picking .lb2-row.picked > :not(.lb2-check) { opacity: .4; }
+@media (prefers-reduced-motion: reduce) { .lb2-dock { transition: opacity 120ms ease; transform: translate(-50%, 0); } .lb2-dk-pre { transition: none; } }
+/* Dokument-Icon (06.11.): Blatt mit Eselsohr – Umriss leise, Falz und Zeilen etwas zurückgenommen, runde Enden/Ecken */
+.lb2-page { fill: none; stroke: var(--text-4); stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; transition: stroke 120ms ease; }
+.lb2-page .pg-out { fill: rgba(255,255,255,.035); }
+.lb2-page .pg-fold { fill: none; }
+.lb2-page .pg-ln { fill: none; stroke: color-mix(in srgb, var(--text-4) 72%, transparent); }
+.lb2-row:hover .lb2-page, .nav-item:hover .lb2-page.sb-page, .nav-item.active .lb2-page.sb-page { stroke: var(--text-3); }
+.lb2-row:hover .lb2-page .pg-ln, .nav-item:hover .lb2-page .pg-ln, .nav-item.active .lb2-page .pg-ln { stroke: color-mix(in srgb, var(--text-3) 72%, transparent); }
+.sb-sec[hidden] { display: none !important; } /* leere Sidebar-Abschnitte (Chats/Dokumente/Angepinnt) ganz weg (06.11.) */

@@ -569,8 +569,9 @@ const Docs = (() => {
   side.classList.toggle('closed', !!window.sbSectionClosed?.('docs'));
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
-  // gleiches Seiten-Icon wie in der Bibliothek (Wunsch 05.11.)
-  const SIDE_PAGE_ICON = '<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="17" rx="2.5"/><path d="M4.5 6h7M4.5 9h7M4.5 12h4.5"/></svg>';
+  // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
+  const PAGE_SHAPE = '<path class="pg-out" d="M3.6 1.5h6.3l4.6 4.6v10.3a2.1 2.1 0 0 1-2.1 2.1H3.6a2.1 2.1 0 0 1-2.1-2.1V3.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-fold" d="M9.9 1.5v3a1.6 1.6 0 0 0 1.6 1.6h3"/><path class="pg-ln" d="M4.6 10h6.8M4.6 13h6.8M4.6 16h4"/>';
+  const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
   function renderSide() {
     const mine = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated);
     const link = (d) => `<a class="nav-item dc-loose" href="#" data-open-doc="${d.id}">${docIcon(d) ? DocIcons.of(d.icon, 15) : SIDE_PAGE_ICON}<span>${esc(d.title || 'Unbenannt')}</span></a>`;
@@ -616,7 +617,7 @@ const Docs = (() => {
   /* ---------- Ansicht „Bibliothek“: Chats UND Dokumente in einer Liste (Wunsch 04.11., Vorbild „Pocket“-Liste) ----------
      Gruppen nach Tag (Heute, Gestern …), Zeile: Icon, Titel, darunter Beschreibung (NUR Dokumente), rechts Uhrzeit/Datum.
      Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
-     stehen alle Kästchen da, oben „N ausgewählt · Abbrechen“, unten mittig eine Icon-Pille (Anheften, Löschen mit 2. Tipp); nicht gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
+     stehen alle Kästchen da, oben „N ausgewählt · Abbrechen“, unten mittig eine Pille (Anheften | Löschen mit 2. Tipp | Abbrechen); gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
   const panel = () => document.querySelector('.panel');
   const list = (() => {
     const view = el('section', 'dc-view dc-list');
@@ -630,10 +631,14 @@ const Docs = (() => {
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
-    // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“, nur Icons – Anheften und Löschen (2. Tipp löscht).
+    // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“ – Anheften | Löschen | Abbrechen, mit Trennstrichen.
+    // Löschen: 1. Tipp schiebt „Wirklich“ davor und färbt rot, 2. Tipp löscht. Alle gewählten schon angeheftet → „Lösen“ in Akzentfarbe.
     // Hängt am Panel, weil die Ansicht selbst scrollt.
     const dock = el('div', 'lb2-dock'); dock.setAttribute('role', 'toolbar'); dock.setAttribute('aria-label', 'Auswahl');
-    dock.innerHTML = `<div class="lb2-dock-pill"><button type="button" data-bulk="pin" aria-label="Anheften">${fi('pin', 15)}</button><button type="button" class="lb2-dock-del" data-bulk="del" aria-label="Löschen">${fi('trash', 15)}</button></div>`;
+    dock.innerHTML = `<div class="lb2-dock-pill">
+      <button type="button" class="lb2-dk-pin" data-bulk="pin">${fi('pin', 14)}<span class="lb2-dk-l">Anheften</span></button><i class="lb2-dk-sep"></i>
+      <button type="button" class="lb2-dk-del" data-bulk="del">${fi('trash', 14)}<span class="lb2-dk-l"><span class="lb2-dk-pre">Wirklich&nbsp;</span><span class="lb2-dk-w">löschen</span></span></button><i class="lb2-dk-sep"></i>
+      <button type="button" class="lb2-dk-none" data-bulk="none"><span class="lb2-dk-l">Abbrechen</span></button></div>`;
     const sel = new Set(); // Schlüssel „doc:ID“ / „chat:ID“
     let filter = localStorage.getItem('docs.libFilter') || 'all';
     const FILTERS = { all: 'Alle', chat: 'Chats', doc: 'Dokumente' };
@@ -641,8 +646,8 @@ const Docs = (() => {
     document.body.append(menu);
     const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
     const when = (t) => { const day0 = new Date(); day0.setHours(0, 0, 0, 0); return t >= day0.getTime() - 86400000 ? hhmm(t) : relTime(t); };
-    // Dokument-Icon wie die Vorlage (04.11.): hochkantes Blatt mit runden Ecken und drei Textzeilen, hell umrandet
-    const PAGE_ICON = '<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><rect x="1.5" y="1.5" width="13" height="17" rx="2.5"/><path d="M4.5 6h7M4.5 9h7M4.5 12h4.5"/></svg>';
+    // Dokument-Icon: Blatt mit Eselsohr und drei Textzeilen (PAGE_SHAPE oben)
+    const PAGE_ICON = `<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
@@ -667,7 +672,7 @@ const Docs = (() => {
       dock.classList.toggle('on', api.open && sel.size > 0);
       const all = sel.size ? entries('') : [];
       const allPinned = sel.size > 0 && [...sel].every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned);
-      const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.setAttribute('aria-label', allPinned ? 'Lösen' : 'Anheften');
+      const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.querySelector('.lb2-dk-l').textContent = allPinned ? 'Lösen' : 'Anheften';
       dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
       bar.querySelector('.lb2-filter').classList.toggle('set', filter !== 'all'); // gefiltert → Icon hell
     };
@@ -719,10 +724,10 @@ const Docs = (() => {
       const keys = [...sel];
       if (bulk.dataset.bulk === 'none') { sel.clear(); api.render(); }
       else if (bulk.dataset.bulk === 'pin') { const all = entries(''); sel.clear(); pinKeys(keys, !keys.every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned)); }
-      else if (!bulk.classList.contains('confirm')) { // erster Tipp färbt rot, zweiter löscht
-        bulk.classList.add('confirm'); bulk.setAttribute('aria-label', 'Wirklich löschen?');
-        clearTimeout(delTimer); delTimer = setTimeout(() => { bulk.classList.remove('confirm'); bulk.setAttribute('aria-label', 'Löschen'); }, 2500);
-      } else { clearTimeout(delTimer); bulk.setAttribute('aria-label', 'Löschen'); delKeys(keys); }
+      else if (!bulk.classList.contains('confirm')) { // erster Tipp: „Wirklich löschen“ in Rot, zweiter löscht
+        bulk.classList.add('confirm');
+        clearTimeout(delTimer); delTimer = setTimeout(() => bulk.classList.remove('confirm'), 3000);
+      } else { clearTimeout(delTimer); bulk.classList.remove('confirm'); delKeys(keys); }
     }
     dock.addEventListener('click', (e) => { const b = e.target.closest('[data-bulk]'); if (b) doBulk(b); });
     search.addEventListener('input', () => api.render());

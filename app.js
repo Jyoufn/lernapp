@@ -5745,7 +5745,7 @@ window.renderSideChats = () => {
     const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
       .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => b.c.updated - a.c.updated);
     const pinnedItems = all.filter((x) => x.c.pinned), items = all.filter((x) => !x.c.pinned).slice(0, 8);
-    // „Chats“ steht immer da (auch ohne Chats, dann ohne Hinweis darunter); rechts ein Plus für einen neuen Chat – nur beim Darüberfahren
+    // „Chats“ nur, wenn es (nicht angeheftete) Chats gibt – sonst keine leere Überschrift (Wunsch 06.11., wie „Dokumente“); rechts ein Plus beim Darüberfahren
     const body = el('div', 'sb-sec-body');
     const inner = el('div', 'sb-sec-in');
     body.append(inner);
@@ -5778,6 +5778,7 @@ window.renderSideChats = () => {
     inner.append(...items.map(mk));
     sbChats.innerHTML = `<div class="sb-sec-row">${window.sbSectionHead('Chats', 'chats')}<button type="button" class="sb-sec-add" aria-label="Neuer Chat" title="Neuer Chat"><svg width="14" height="14"><use href="#o-plus"/></svg></button></div>`;
     sbChats.append(body);
+    sbChats.hidden = !items.length;
   });
 };
 // Übersicht aller Chats auch aus Kalender, Aufgaben, Bibliothek … öffnen: vorher in einen Chat-Tab wechseln

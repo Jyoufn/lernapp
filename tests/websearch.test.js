@@ -77,3 +77,32 @@ test('Tavily: kommt zuerst, liefert echte Treffer samt Text – die Seite wird n
     assert.equal(calls.filter((u) => !u.includes('tavily')).length, 0, 'Seite kam aus dem Tavily-Text, kein eigener Abruf');
   } finally { globalThis.fetch = orig; }
 });
+
+test('Tavily für die Börse: nur aktuelle Nachrichten (topic news, 7 Tage) und nur die genannten Finanzseiten', async () => {
+  const orig = globalThis.fetch;
+  let sent = null;
+  globalThis.fetch = async (url, init) => {
+    if (String(url).startsWith('https://api.tavily.com/search')) { sent = JSON.parse(init.body); return new Response(JSON.stringify({ results: [{ url: 'https://www.wsj.com/a', title: 'Apple stock news', content: 'Apple stock rises', raw_content: 'Apple stock rises on earnings. '.repeat(20) }] }), { status: 200 }); }
+    throw new Error('keine andere Anfrage erwartet: ' + url);
+  };
+  try {
+    await WEB.searchWeb('Apple stock news', { env: { TAVILY_API_KEY: 'tvly-abc' }, min: 1, news: true, domains: ['wsj.com', 'reuters.com'] });
+    assert.equal(sent.topic, 'news');
+    assert.equal(sent.days, 7);
+    assert.deepStrictEqual(sent.include_domains, ['wsj.com', 'reuters.com']);
+    await WEB.searchWeb('Linear alternatives', { env: { TAVILY_API_KEY: 'tvly-abc' }, min: 1 });
+    assert.equal(sent.topic, undefined, 'normale Suche ohne Nachrichten-Modus');
+    assert.equal(sent.include_domains, undefined);
+  } finally { globalThis.fetch = orig; }
+});
+
+test('Lern-Agent: Recherche ohne Wikipedia (noWiki) – keine Anfrage an wikipedia.org', async () => {
+  const R = require('../lib/research');
+  const orig = globalThis.fetch, calls = [];
+  globalThis.fetch = async (url) => { calls.push(String(url)); return new Response('{}', { status: 200 }); };
+  try {
+    const res = await R.research({ topic: 'Photosynthese', queriesDe: ['Photosynthese', 'Lichtreaktion'], queriesEn: [] }, { maxQueries: 4, maxSources: 4, timeMs: 3000, germanOnly: true, noWiki: true });
+    assert.equal(calls.filter((u) => u.includes('wikipedia.org')).length, 0);
+    assert.equal(res.status, 'insufficient');
+  } finally { globalThis.fetch = orig; }
+});

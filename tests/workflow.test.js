@@ -782,8 +782,13 @@ test('Präsentation (Lernen): recherchiert immer und hängt die echten Quellen a
     ...researchRoutes(),
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Hier ist deine Präsentation.\n\n', block])) },
   ]);
-  const r = await run({ ...msg('Erstelle eine Präsentation über Photosynthese'), agent: 'learn' });
+  // Lern-Agent nutzt keine Wikipedia (06.11.) – die Quellen kommen von Lernseiten (hier serlo)
+  const WEB = require('../lib/web'), browse = WEB.browse;
+  WEB.browse = async () => ({ pages: [{ url: 'https://de.serlo.org/biologie/photosynthese', title: 'Photosynthese – serlo', domain: 'serlo.org', description: '', passage: '', text: WIKI_TEXT }], failures: [], visited: 1 });
+  let r;
+  try { r = await run({ ...msg('Erstelle eine Präsentation über Photosynthese'), agent: 'learn' }); } finally { WEB.browse = browse; }
   assert.ok(r.stages().includes('searching_sources:active'));
+  assert.ok(!fx.calls.some((c) => c.url.includes('wikipedia.org')), 'Lernen fragt keine Wikipedia ab');
   const m = /```belege\n(.*)\n```/.exec(r.result.answer);
   assert.ok(m, 'belege-Block fehlt');
   const list = JSON.parse(m[1]);
