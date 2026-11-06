@@ -11264,3 +11264,6 @@ select { background-color: var(--main-bg); color: var(--text); border: 1px solid
 .lb2-row:hover .lb2-page, .nav-item:hover .lb2-page.sb-page, .nav-item.active .lb2-page.sb-page { stroke: var(--text-3); }
 .lb2-row:hover .lb2-page .pg-ln, .nav-item:hover .lb2-page .pg-ln, .nav-item.active .lb2-page .pg-ln { stroke: color-mix(in srgb, var(--text-3) 72%, transparent); }
 .sb-sec[hidden] { display: none !important; } /* leere Sidebar-Abschnitte (Chats/Dokumente/Angepinnt) ganz weg (06.11.) */
+/* Bibliothek: Auswahl-Leiste etwas tiefer (06.11., Wunsch) */
+.lb2-dock { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+.lb2-picking.dc-list .lb2 { padding-bottom: 88px; }

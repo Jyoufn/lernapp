@@ -617,7 +617,7 @@ const Docs = (() => {
   /* ---------- Ansicht „Bibliothek“: Chats UND Dokumente in einer Liste (Wunsch 04.11., Vorbild „Pocket“-Liste) ----------
      Gruppen nach Tag (Heute, Gestern …), Zeile: Icon, Titel, darunter Beschreibung (NUR Dokumente), rechts Uhrzeit/Datum.
      Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
-     stehen alle Kästchen da, oben „N ausgewählt · Abbrechen“, unten mittig eine Pille (Anheften | Löschen mit 2. Tipp | Abbrechen); gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
+     stehen alle Kästchen da, oben nur „N ausgewählt“, unten mittig eine Pille (Anheften | Löschen mit 2. Tipp | Abbrechen); gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
   const panel = () => document.querySelector('.panel');
   const list = (() => {
     const view = el('section', 'dc-view dc-list');
@@ -625,8 +625,7 @@ const Docs = (() => {
     view.innerHTML = `<div class="cl-wrap lb2">
       <div class="cl-head"><h2>Bibliothek</h2></div>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
-      <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b>
-        <button type="button" class="lb2-btn" data-bulk="none">Abbrechen</button></span>
+      <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 14)}</button></div>
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
