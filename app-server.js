@@ -46,7 +46,7 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['TAVILY_API_KEY', 'GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'GROQ_API_KEY', 'OPENROUTER_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['TAVILY_API_KEY', 'GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'DEEPSEEK_API_KEY', 'KIMI_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
 // mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
 const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
@@ -227,7 +227,7 @@ const IMAGE_MODELS = [
 ];
 // Keys: FLUX3_API_KEY zuerst, danach die übrigen NVIDIA-Keys – lehnt NVIDIA einen Key ab (401/403), wird automatisch der nächste probiert
 // derselbe NVIDIA-Zugang (build.nvidia.com) malt auch Bilder → auch der MiniMax-Schlüssel zählt
-const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY, env.MINIMAX_API_KEY, env.MISTRAL_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
+const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY, env.MINIMAX_API_KEY, env.DEEPSEEK_API_KEY, env.KIMI_API_KEY, env.MISTRAL_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
 const badImageKeys = new Set(); // abgelehnte Keys bis zum Neustart überspringen
 let lastImageFiltered = false; // letzter Versuch scheiterte nur am Inhaltsfilter
 const imageModelDownUntil = new Map(); // Bildmodell → übersprungen bis (nach HTTP 5xx/Zeitüberschreitung; spart das Warten auf den Fehler)
@@ -304,7 +304,7 @@ async function visionJson(env, system, text, images = [], budget = 1024) { // bu
     }
     console.warn('[Bild] Gemini nicht erreichbar – NVIDIA übernimmt');
   }
-  // Gemini nicht erreichbar: ohne Bilder beim nächsten Anbieter (Groq/OpenRouter); Bilder kann nur Gemini lesen. Kein Nemotron.
+  // Gemini nicht erreichbar: beim nächsten Anbieter (MiniMax/DeepSeek/Kimi über NVIDIA). Kein Nemotron.
   if (images.length) return null;
   try { return P.parseJsonLoose(await P.textTask({ ...env, __family: undefined }, { system, user: text, maxTokens: 4000, timeoutMs: 60000, json: true })); } catch { return null; }
 }
@@ -1201,7 +1201,7 @@ async function handleDocIntent(req, res) {
       try { return sendJson(res, 200, { create: ask(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: DOC_INTENT_SYSTEM, user: text, maxTokens: 60, thinking, signal: AbortSignal.timeout(8000) })) }); } catch {}
     }
   }
-  if (text) { try { return sendJson(res, 200, { create: ask(await P.textTask(env, { system: DOC_INTENT_SYSTEM, user: text, maxTokens: 800, timeoutMs: 15000 })) }); } catch {} } // Groq/OpenRouter, wenn Gemini aufgebraucht
+  if (text) { try { return sendJson(res, 200, { create: ask(await P.textTask(env, { system: DOC_INTENT_SYSTEM, user: text, maxTokens: 800, timeoutMs: 15000 })) }); } catch {} } // MiniMax/DeepSeek/Kimi, wenn Gemini aufgebraucht
   sendJson(res, 200, { create: null }); // keine KI erreichbar → die App entscheidet selbst (nur eindeutige Bitten)
 }
 
@@ -1330,7 +1330,7 @@ async function handleTitle(req, res) {
       } catch (e) { if (e.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000; }
     }
   }
-  try { const t = clean(await P.textTask(env, { system: TITLE_SYSTEM, user: text, maxTokens: 200, timeoutMs: 12000 })); if (t) return sendJson(res, 200, { title: t }); } catch {} // Groq/OpenRouter, wenn Gemini aufgebraucht
+  try { const t = clean(await P.textTask(env, { system: TITLE_SYSTEM, user: text, maxTokens: 200, timeoutMs: 12000 })); if (t) return sendJson(res, 200, { title: t }); } catch {} // MiniMax/DeepSeek/Kimi, wenn Gemini aufgebraucht
   sendJson(res, 200, { title: '' });
 }
 

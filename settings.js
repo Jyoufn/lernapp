@@ -11,8 +11,10 @@
     // fam = Text-Anbieter (Haupt-KI wählbar); image = malt Bilder
     { id: 'GEMINI_API_KEY', name: 'Google Gemini', logo: 'gemini', where: 'aistudio.google.com', multi: true, fam: 'gemini' },
     { id: 'MINIMAX_API_KEY', name: 'MiniMax (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'minimax' },
-    { id: 'GROQ_API_KEY', name: 'Groq', logo: 'groq', where: 'console.groq.com/keys', multi: true, fam: 'groq' },
-    { id: 'OPENROUTER_API_KEY', name: 'OpenRouter', logo: 'openrouter', where: 'openrouter.ai/keys', multi: true, fam: 'openrouter' },
+    // DeepSeek V4.1 und Kimi K3.1 Pro: kostenlos über NVIDIA (06.11.; Groq und OpenRouter sind raus). Ein NVIDIA-Schlüssel reicht für alle drei –
+    // eigene Schlüssel je Modell verteilen nur das Limit (ca. 40 Anfragen/Minute je Schlüssel).
+    { id: 'DEEPSEEK_API_KEY', name: 'DeepSeek V4.1 (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'deepseek' },
+    { id: 'KIMI_API_KEY', name: 'Kimi K3.1 Pro (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'kimi' },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
     { id: 'TAVILY_API_KEY', name: 'Tavily (Websuche)', logo: 'tavily', where: 'app.tavily.com', multi: true }, // Recherche: echte Treffer samt Text
     { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true, image: true },
@@ -29,6 +31,13 @@
   // Mistral ist raus (03.11.): „Mistral zuerst“ → MiniMax zuerst; ein dort eingetragener NVIDIA-Schlüssel gilt für MiniMax
   if (deviceKeys.AI_ORDER === 'mistral') deviceKeys.AI_ORDER = 'minimax';
   if (deviceKeys.MISTRAL_API_KEY && !deviceKeys.MINIMAX_API_KEY) { deviceKeys.MINIMAX_API_KEY = deviceKeys.MISTRAL_API_KEY; delete deviceKeys.MISTRAL_API_KEY; write(KEYS_KEY, deviceKeys); }
+  // Groq und OpenRouter sind raus (06.11.): alte Schlüssel und Rollen aufräumen (Haupt-KI fällt dann auf Gemini zurück)
+  if (['groq', 'openrouter'].includes(deviceKeys.AI_ORDER) || deviceKeys.GROQ_API_KEY || deviceKeys.OPENROUTER_API_KEY || /groq|openrouter/.test(deviceKeys.AI_OFF || '')) {
+    if (['groq', 'openrouter'].includes(deviceKeys.AI_ORDER)) delete deviceKeys.AI_ORDER;
+    delete deviceKeys.GROQ_API_KEY; delete deviceKeys.OPENROUTER_API_KEY;
+    if (deviceKeys.AI_OFF) deviceKeys.AI_OFF = String(deviceKeys.AI_OFF).split(',').filter((f) => f && !['groq', 'openrouter'].includes(f)).join(',');
+    write(KEYS_KEY, deviceKeys);
+  }
   const keyHeader = () => {
     const list = Object.entries(deviceKeys).filter(([, v]) => v);
     return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
@@ -107,7 +116,7 @@
   }
   /* Rolle des Anbieters (unter seinen Schlüsseln): Haupt-KI – wird für ALLES zuerst genutzt (auch Coden, Agenten, Hintergründe);
      Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
-  const FAMS = ['gemini', 'minimax', 'groq', 'openrouter'];
+  const FAMS = ['gemini', 'minimax', 'deepseek', 'kimi'];
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
   const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
   function rolesHtml(p, has) {

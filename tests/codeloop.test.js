@@ -196,41 +196,19 @@ test('Agenten-Schleife: kaputter Werkzeug-Aufruf (400 tool_use_failed) → Hinwe
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 
-/* OpenRouter (gratis) zuerst, NVIDIA direkt als Ersatz */
-const isOR = (c) => c.url.includes('openrouter.ai') && Array.isArray(c.body?.tools);
-const ENV_OR = { OPENROUTER_API_KEY: 'test-or-key', NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT_FILES: 'on' };
-
-test('OpenRouter: Nemotron 3 Ultra (free) wird zuerst benutzt, mit eigenem Schlüssel', async () => {
+/* MiniMax-Coding: ohne eigenen MiniMax-Schlüssel gilt ein DeepSeek-/Kimi-Schlüssel (gleicher NVIDIA-Zugang); OpenRouter ist raus */
+test('Coding: MiniMax nimmt den DeepSeek-Schlüssel, wenn kein MiniMax-Schlüssel da ist', async () => {
+  const isNv = (c) => c.url.includes('integrate.api.nvidia.com') && Array.isArray(c.body?.tools);
   let n = 0;
-  const fx = M.installFetch([{ match: isOR, respond: () => [reply('', [['write_file', { path: 'a.txt', content: 'Hallo' }]]), reply('Fertig.')][n++] }]);
+  const fx = M.installFetch([{ match: isNv, respond: () => [reply('', [['write_file', { path: 'a.txt', content: 'Hallo' }]]), reply('Fertig.')][n++] }]);
   try {
     const c = M.collect();
-    const result = await W.runChat({ env: ENV_OR, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Leg a.txt an' }] }, send: c.send, signal: new AbortController().signal });
-    const call = fx.calls.find(isOR);
-    assert.equal(call.body.model, 'nvidia/nemotron-3-ultra-550b-a55b:free');
-    assert.equal(call.init.headers.Authorization, 'Bearer test-or-key');
-    assert.ok(!fx.calls.some(isCode), 'NVIDIA direkt wird nicht gebraucht');
+    const result = await W.runChat({ env: { DEEPSEEK_API_KEY: 'nvapi-ds', APPTEST: 'off', CODE_AGENT_FILES: 'on' }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Leg a.txt an' }] }, send: c.send, signal: new AbortController().signal });
+    const call = fx.calls.find(isNv);
+    assert.equal(call.body.model, 'minimaxai/minimax-m3.1-flash');
+    assert.equal(call.init.headers.Authorization, 'Bearer nvapi-ds');
+    assert.ok(!fx.calls.some((x) => x.url.includes('openrouter.ai')));
     assert.match(result.answer, /````file:a\.txt\nHallo\n````/);
-  } finally { fx.restore(); W.cooldowns.clear(); }
-});
-
-test('OpenRouter-Tageslimit (429 free-models-per-day) → mitten in der Arbeit weiter über NVIDIA direkt', async () => {
-  const daily = () => M.json({ error: { message: 'Rate limit exceeded: free-models-per-day. Add 10 credits to unlock 1000 free model requests per day', code: 429 } }, 429);
-  let o = 0, v = 0;
-  const thoughts = [];
-  const fx = M.installFetch([
-    { match: isOR, respond: () => [reply('', [['write_file', { path: 'a.txt', content: 'Hallo' }]]), daily()][o++] },
-    { match: isCode, respond: () => [reply('', [['write_file', { path: 'b.txt', content: 'Welt' }]]), reply('Fertig.')][v++] },
-  ]);
-  try {
-    const c = M.collect();
-    const result = await W.runChat({ env: { ...ENV_OR, CODE_RETRY_SCALE: 0 }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Leg zwei Dateien an' }] }, send: (e, d) => { if (e === 'thought') thoughts.push(d.text); c.send(e, d); }, signal: new AbortController().signal });
-    assert.equal(o, 2, 'OpenRouter: ein Schritt, dann Tageslimit (ohne Warten)');
-    assert.equal(v, 2, 'danach NVIDIA direkt');
-    assert.match(fx.calls.filter(isCode)[0].body.model, /nemotron-3-ultra-550b-a55b$/);
-    assert.ok(JSON.stringify(fx.calls.filter(isCode)[0].body.messages).includes('a.txt'), 'NVIDIA macht mit dem bisherigen Verlauf weiter');
-    assert.match(result.answer, /file:a\.txt[\s\S]*file:b\.txt[\s\S]*Fertig\./);
-    assert.ok(thoughts.some((t) => /Tageslimit erreicht – weiter über NVIDIA/.test(t)));
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 

@@ -220,7 +220,7 @@ const chip = $('modelChip');
 const modelList = $('modelList');
 const effortList = $('effortList');
 
-// Kein Modell mehr zum Auswählen: die App nimmt automatisch das beste freie Modell (Gemini-Leiter über alle Schlüssel → Flash-Lite → Groq → OpenRouter; kein Nemotron)
+// Kein Modell mehr zum Auswählen: die App nimmt automatisch das beste freie Modell (Gemini-Leiter über alle Schlüssel → Flash-Lite → MiniMax → DeepSeek → Kimi über NVIDIA; kein Nemotron)
 MODELS.filter(() => false).forEach((m) => {
   const item = document.createElement('button');
   item.type = 'button';
@@ -1819,7 +1819,7 @@ function makeRenderer(target, opts = {}) {
 
 /* ---------- Fotos fürs Modell vorbereiten (verkleinern, als Base64) ---------- */
 /* PDF-Text im Gerät auslesen (pdf.js, erst beim ersten PDF geladen): geht mit, wenn das PDF selbst nicht mehr in die Anfrage passt
-   oder ein Ersatzmodell (Groq/OpenRouter) antwortet, das keine PDFs öffnen kann */
+   oder ein Ersatzmodell (MiniMax/DeepSeek/Kimi) antwortet, das keine PDFs öffnen kann */
 const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
 let pdfLib = null;
 const loadPdfJs = () => (pdfLib ||= new Promise((ok, fail) => {
