@@ -83,7 +83,7 @@ window.markDrafts = markDrafts;
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
-  docs: { title: 'Bibliothek', icon: 'f-file', view: () => window.Docs?.list },
+  docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
 function openViewTab(kind) {
@@ -105,7 +105,15 @@ window.setTabIcon = (tab, ic) => {
   old.outerHTML = ic ? docTabIcon(ic) : '<svg class="tab-noicon" width="0" height="14" aria-hidden="true"></svg>'; // ohne Icon: kein Symbol
 };
 window.setTabTitle = (tab, title) => { if (!tab) return; tab.querySelector('.tab-title').textContent = title; snapToPixels([tab]); };
-// Sidebar: Neuer Chat, Chatverlauf (Übersicht aller Chats), Bibliothek (Dokumente), Aufgaben, Kalender.
+/* Weicher Wechsel zwischen Ansichten (07.11.): wo der Browser View Transitions kann, blendet der alte Inhalt kurz über
+   (Klasse vt-on schaltet solange die eigenen Einblend-Animationen der Ansichten ab, damit nichts doppelt läuft) */
+window.softSwitch = (fn) => {
+  if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { fn(); return; }
+  document.documentElement.classList.add('vt-on');
+  const t = document.startViewTransition(fn);
+  t.finished.finally(() => document.documentElement.classList.remove('vt-on'));
+};
+// Sidebar: Neuer Chat, Home (Chats + Dokumente), Aufgaben, Kalender.
 // Die Lupe oben öffnet den Chatverlauf (Suchfeld bekommt den Fokus).
 document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault();
@@ -116,7 +124,7 @@ document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) 
     chatsView.hide();
     setTimeout(() => $('input')?.focus(), 50);
   } else if (k === 'history') openChatsFromAnywhere();
-  else if (VIEW_TABS[k]) openViewTab(k);
+  else if (VIEW_TABS[k]) window.softSwitch(() => openViewTab(k));
 }));
 // Lupe oben: Suchfeld (search.js)
 

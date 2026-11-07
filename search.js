@@ -51,7 +51,7 @@ const AppSearch = (() => {
     { group: 'Aktionen', icon: oi('plus'), label: 'Neuer Chat', keys: 'chat neu', run: newChat },
     { group: 'Aktionen', icon: oi('doc-new'), label: 'Neues Dokument', keys: 'dokument neu notiz', run: () => window.Docs?.create() },
     { group: 'Aktionen', icon: oi('tasks'), label: 'Neue Aufgabe', keys: 'aufgabe neu task', run: () => { openViewTab('tasks'); setTimeout(() => document.querySelector('.tk-view:not([hidden]) .tk-new')?.click(), 120); } },
-    { group: 'Gehe zu', icon: oi('library'), label: 'Bibliothek', keys: 'dokumente bibliothek library chats verlauf alle', run: () => openViewTab('docs') },
+    { group: 'Gehe zu', icon: oi('home'), label: 'Home', keys: 'home start übersicht dokumente bibliothek library chats verlauf alle', run: () => openViewTab('docs') },
     { group: 'Gehe zu', icon: oi('tasks'), label: 'Aufgaben', keys: 'aufgaben board tasks', run: () => openViewTab('tasks') },
     { group: 'Gehe zu', icon: oi('calendar'), label: 'Kalender', keys: 'kalender termine', run: () => openViewTab('calendar') },
   ];

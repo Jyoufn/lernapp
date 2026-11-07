@@ -614,7 +614,7 @@ const Docs = (() => {
     }
   });
 
-  /* ---------- Ansicht „Bibliothek“: Chats UND Dokumente in einer Liste (Wunsch 04.11., Vorbild „Pocket“-Liste) ----------
+  /* ---------- Ansicht „Home“ (früher „Bibliothek“, 07.11.): oben „Als Nächstes“ (home.js), darunter Chats UND Dokumente in einer Liste ----------
      Gruppen nach Tag (Heute, Gestern …), Zeile: Icon, Titel, darunter Beschreibung (NUR Dokumente), rechts Uhrzeit/Datum.
      Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
      stehen alle Kästchen da, oben nur „N ausgewählt“, unten mittig eine Pille (Anheften | Löschen mit 2. Tipp | Abbrechen); gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
@@ -623,7 +623,8 @@ const Docs = (() => {
     const view = el('section', 'dc-view dc-list');
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
-      <div class="cl-head"><h2>Bibliothek</h2></div>
+      <div class="cl-head hm-top"><h2>Home</h2><p class="hm-sub"></p></div>
+      <section class="hm-next" aria-label="Als Nächstes" hidden></section>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 14)}</button></div>
@@ -647,6 +648,8 @@ const Docs = (() => {
     const when = (t) => { const day0 = new Date(); day0.setHours(0, 0, 0, 0); return t >= day0.getTime() - 86400000 ? hhmm(t) : relTime(t); };
     // Dokument-Icon: Blatt mit Eselsohr und drei Textzeilen (PAGE_SHAPE oben)
     const PAGE_ICON = `<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
+    // Chats in der Liste (07.11.): Sprechblase im selben Strich-Stil wie das Blatt statt Agenten-Gesicht
+    const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
@@ -657,7 +660,7 @@ const Docs = (() => {
     };
     const row = (x, i) => {
       const k = `${x.kind}:${x.id}`;
-      const ic = x.kind === 'chat' ? x.av : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : PAGE_ICON}</span>`;
+      const ic = x.kind === 'chat' ? `<span class="cl-av">${CHAT_ICON}</span>` : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : PAGE_ICON}</span>`;
       return `<div class="lb2-row${sel.has(k) ? ' picked' : ''}" data-k="${k}" data-key="${k}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
         ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>
@@ -694,8 +697,9 @@ const Docs = (() => {
         if (!dock.isConnected) panel()?.append(dock);
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         api.render();
+        window.Home?.render(view.querySelector('.hm-next'), view.querySelector('.hm-sub'));
       },
-      hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
+      hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); window.Home?.leave(); closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
     };
     // Menüs (Ordner, Tag, ⋯, Filter): Kasten wie .tk-box unter dem Knopf, Auswahl = blauer Haken
     let menuFor = null;
