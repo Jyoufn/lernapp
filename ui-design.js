@@ -4,11 +4,6 @@
    - Unter jedem Baustein: Name + Klasse, damit man ihn im Gespräch genau benennen kann („ändere .st-seg“).
    - Farben/Schrift werden live aus den CSS-Variablen gelesen, Icons aus den vorhandenen <symbol>s.
    - Neue Bausteine der App IMMER auch hier eintragen (kb/design.md → „UI Design“).
-   - Oben mittig ein Umschalter wie „Agenten | Dokumente“ (.cs-pill): „Aktuell“ = heutiger Stil der App,
-     „Glas“ = neuer Stil als Vorschau (Vorbild: drittes Nutzer-Bild, Mac-Widget; Sidebar wie im zweiten Bild):
-     Milchglas über neutral-grauem Hintergrund, Karten wie Kacheln mit Kopf in der Karte, oben frei, SF-Schrift.
-     Der Glas-Stil gilt NUR, solange diese Ansicht mit „Glas“ offen ist: .ud-glass an der Ansicht + body.gl-shell
-     (Fenster/Sidebar). Regeln im Block „STIL GLAS“ am Ende von style.css, gemerkt in ud.style.v1.
    app.js: VIEW_TABS.uidesign → window.UIDesign (show/hide wie die anderen Ansichten).
    =================================================================== */
 const UIDesign = (() => {
@@ -31,8 +26,6 @@ const UIDesign = (() => {
   const SURFACES = [['Hauptteil', '--main-bg', 'Sidebar, Hauptbereich'], ['Fenster', '--win-bg', 'Eingabefeld, Karten, Menüs'], ['Ausklappbar', '--pop-bg', 'Hover, Köpfe, aktive Zeile'], ['Rand', '--line', 'alle Ränder']];
   const TEXTS = [['Titel', '--text'], ['Text 2', '--text-2'], ['Fließtext', '--text-3'], ['Leise', '--text-4']];
   const ACCENTS = [['Akzent', '--accent', '#2f86ff'], ['Gefahr', '--g-red', '#f07a6e'], ['Grün', '--g-green', '#3fb57d']];
-  const SIZES_GLASS = [[28, 700, 'Seitentitel'], [28, 600, 'Große Zahl'], [15, 600, 'Abschnitt'], [13.5, 600, 'Kartenkopf'], [13, 400, 'Text, Sidebar, Menü'], [12.5, 400, 'Klein'], [11.5, 500, 'Etikett']];
-  const SURFACES_GLASS = [['Sidebar', '--gl-side', ''], ['Hauptteil', '--gl-main', ''], ['Karte', '--gl-card', ''], ['Angehoben', '--gl-card-2', ''], ['Gewählt', '--gl-card-3', ''], ['Rand', '--gl-edge', ''], ['Menü', '--gl-menu', '']];
   const SIZES = [[18, 600, 'Seitentitel'], [15, 600, 'Abschnitt'], [14, 400, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 400, 'Knopf'], [12.5, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
 
   const swatch = ([label, v, fixed]) => `<div class="ud-sw"><i data-var="${v}" style="background:${v ? `var(${v}${fixed ? `, ${fixed}` : ''})` : fixed}"></i><b>${esc(label)}</b><code data-hex="${v}" data-fix="${fixed || ''}">${fixed || ''}</code></div>`;
@@ -41,24 +34,21 @@ const UIDesign = (() => {
     const colors = window.UIKit?.COLORS || [];
     const icons = [...document.querySelectorAll('symbol[id^="f-"]')].map((s) => s.id.slice(2));
     const sideIcons = [...document.querySelectorAll('symbol[id^="o-"]')].map((s) => s.id.slice(2)).filter((n) => n !== 'chev');
-    return `<div class="ud-top"><div class="cs-pill" role="tablist" aria-label="Stil">
-        <button type="button" role="tab" data-udstyle="cur">Aktuell</button><button type="button" role="tab" data-udstyle="glass">Glas</button></div>
+    return `<div class="ud-top">
         <div class="ud-top-in"><nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['chat', 'Chat'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav></div></div>
       <div class="ud-wrap">
       <div class="cl-head ud-head"><h2>UI Design</h2></div>
       <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Vorschau auf den neuen Stil: dieselben Bausteine wie am Mac. Gilt nur hier – in die App kommt er erst nach deiner Freigabe.')}</p>
 
       ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Milchglas über neutralem Grau.'], [
-        item('Flächen', '', `<div class="ud-sws ud-cur-b">${SURFACES.map(swatch).join('')}</div><div class="ud-sws ud-gl-b">${SURFACES_GLASS.map(swatch).join('')}</div>`, ['--main-bg · --win-bg · --pop-bg · --line', '--gl-window · --gl-side · --gl-fill … --gl-menu'], true),
+        item('Flächen', '', `<div class="ud-sws">${SURFACES.map(swatch).join('')}</div>`, ['--main-bg · --win-bg · --pop-bg · --line', '--gl-window · --gl-side · --gl-fill … --gl-menu'], true),
         item('Text', '--text … --text-4', `<div class="ud-sws">${TEXTS.map(swatch).join('')}</div>`, '', true),
         item('Akzente', '--accent', `<div class="ud-sws">${ACCENTS.map(swatch).join('')}</div>`),
         item('Fach-/Termin-Farben', 'UIKit.COLORS', `<div class="ud-dots">${colors.map((c) => `<i style="background:${c}" title=""></i>`).join('')}</div>`),
       ])}
 
-      <section class="ud-sec ud-gl-only" id="ud-hintergrund" data-sec="hintergrund"><h3>Hintergrund und Akzent</h3><div class="ud-look">${lookHtml()}</div></section>
-
       ${section('schrift', 'Schrift', ['Inter, Stärke 400/500/600 – nie fetter.', 'Systemschrift des Mac (SF Pro), Grundgröße 13 px; Titel und große Zahlen 700.'], [
-        item('Größen', '', [[SIZES, 'ud-cur-b'], [SIZES_GLASS, 'ud-gl-b']].map(([list, cls]) => `<div class="ud-type ${cls}">${list.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`).join(''), '', true),
+        item('Größen', '', [[SIZES, '']].map(([list, cls]) => `<div class="ud-type ${cls}">${list.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`).join(''), '', true),
       ])}
 
       ${section('knoepfe', 'Knöpfe', '', [
@@ -147,7 +137,7 @@ const UIDesign = (() => {
         item('Farbwähler', 'UIKit.colorPicker', '<div class="ud-picker"></div>', 'Eigene Farbe'),
       ])}
 
-      ${section('icons', 'Icons', 'Gefüllt, 16er-Raster, Farbe = Textfarbe. Keine Emojis.', [
+      ${section('icons', 'Icons', 'Runde Linien-Icons (line-icons.js), Farbe = Textfarbe. Keine Emojis.', [
         item('Sidebar', '#o-…', `<div class="ud-icons">${sideIcons.map((n) => `<span title="">${oi(n, 16)}<code>${esc(n)}</code></span>`).join('')}</div>`, '', true),
         item('Allgemein', '#f-…', `<div class="ud-icons">${icons.map((n) => `<span>${fi(n, 16)}<code>${esc(n)}</code></span>`).join('')}</div>`, '', true),
       ])}
@@ -161,198 +151,28 @@ const UIDesign = (() => {
     const c = getComputedStyle(view || document.documentElement).getPropertyValue(v).trim();
     return c || '';
   };
-  const STYLE_KEY = 'ud.style.v1';
-  /* Glas-Stil = zweites Dashboard IN „UI Design“: Stil „Glas“ zeigt dort die ganze App noch einmal als eingebettete
-     Seite (iframe „/?glas=1“) – mit eigener Sidebar, Home, Erstellen, Aufgaben, Kalender, Einstellungen, alles echt und bedienbar.
-     Nur in dieser eingebetteten App (EMBED) ist der Glas-Stil an; die App selbst bleibt im aktuellen Stil.
-     Normale Sidebar einklappen → das Glas-Dashboard füllt den Hauptteil. In EMBED zeigt „UI Design“ nur die Bausteine im Glas-Stil. */
-  const EMBED = new URLSearchParams(location.search).has('glas');
-  if (EMBED) document.documentElement.classList.add('gl-embed');
-  // eingebettetes Dashboard startet immer auf Home (nicht auf der zuletzt offenen Ansicht der App)
-  // (eigene Sidebar: der Ein-/Ausklapp-Zustand wird getrennt gemerkt, app.js → STORAGE_KEY)
-  // die App stellt beim Start die zuletzt offene Ansicht wieder her (oft „UI Design“): öffnet sich „UI Design“ im Dashboard,
-  // ohne dass dort schon getippt wurde (erste 10 s), geht es stattdessen auf Home
-  let acted = false;
-  if (EMBED) addEventListener('pointerdown', () => { acted = true; }, true);
-  const autoHome = () => EMBED && !acted && performance.now() < 10000;
-  const syncShell = () => {
-    const on = EMBED;
-    if (on) { glassify(); applyLook(); }
-    swapIcons(on);
-    document.body.classList.toggle('gl-shell', on);
-    document.documentElement.classList.toggle('gl-on', on); // ohne Überblenden beim Wechseln (durchsichtige Flächen würden doppelt erscheinen)
-    if (on) requestAnimationFrame(() => document.querySelectorAll('.cs-pill, .st-seg').forEach(placeThumb));
-  };
-  let dash = null;
-  function showDash(on) {
-    if (!view || EMBED) return;
-    view.classList.toggle('ud-dash-on', on);
-    if (on && !dash) {
-      dash = document.createElement('div'); dash.className = 'ud-dash';
-      dash.innerHTML = '<iframe src="/?glas=1" title="Glas-Dashboard (Vorschau)" loading="eager"></iframe>';
-      view.append(dash);
-    }
-  }
-
-  /* Umschalter im Glas-Stil: der helle Teil gleitet weich zum gewählten Knopf (wie „Now | Stats“) */
+  /* Umschalter (.cs-pill, z. B. „Agenten | Dokumente“): der helle Teil gleitet weich zum gewählten Knopf (Wunsch 09.11.) */
   function placeThumb(pill) {
-    if (!document.body.classList.contains('gl-shell') || !pill.isConnected) return;
+    if (!pill.isConnected) return;
     const on = pill.querySelector(':scope > button.on');
-    let t = pill.querySelector(':scope > .gl-thumb');
-    if (!on || !on.offsetWidth) { t?.remove(); return; }
-    if (!t) { t = document.createElement('i'); t.className = 'gl-thumb'; t.style.transition = 'none'; pill.prepend(t); requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; })); }
-    t.style.width = `${on.offsetWidth}px`; t.style.transform = `translateX(${on.offsetLeft}px)`;
+    let t = pill.querySelector(':scope > .cs-thumb');
+    if (!on || !on.offsetWidth) { if (t) t.style.opacity = '0'; return; }
+    if (!t) { t = document.createElement('i'); t.className = 'cs-thumb'; t.style.transition = 'none'; pill.prepend(t); requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; })); }
+    t.style.opacity = '1'; t.style.width = `${on.offsetWidth}px`; t.style.transform = `translateX(${on.offsetLeft}px)`;
   }
+  // sichtbar werden (z. B. „Erstellen“ geöffnet) ändert die Größe → neu setzen
+  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => es.forEach((e) => placeThumb(e.target))) : null;
+  const watch = (pill) => { if (ro && !pill._csWatch) { pill._csWatch = true; ro.observe(pill); } };
+  const placeAll = () => document.querySelectorAll('.cs-pill').forEach((p) => { watch(p); placeThumb(p); });
+  addEventListener('chat-tab-switched', () => requestAnimationFrame(placeAll));
   new MutationObserver((ms) => {
-    if (!document.body.classList.contains('gl-shell')) return;
-    const pills = new Set(ms.map((m) => m.target.closest?.('.cs-pill, .st-seg')).filter(Boolean));
-    pills.forEach(placeThumb);
+    const pills = new Set(ms.map((m) => m.target.closest?.('.cs-pill')).filter(Boolean));
+    pills.forEach((p) => { watch(p); placeThumb(p); });
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+  addEventListener('resize', placeAll);
+  requestAnimationFrame(placeAll);
 
-  /* Icons: im Glas-Stil den Inhalt der Symbole #f-…/#i-… gegen runde Linien-Icons im Stil der Sidebar tauschen (glass-icons.js), sonst zurück */
-  const iconBackup = new Map();
-  let iconsOn = false;
-  function swapIcons(on) {
-    const G = window.GlassIcons; if (!G || on === iconsOn) return;
-    iconsOn = on;
-    for (const [pre, set] of [['f', G.f || {}], ['i', G.i || {}]]) {
-      for (const [name, [vb, body]] of Object.entries(set)) {
-        const sym = document.getElementById(`${pre}-${name}`); if (!sym) continue;
-        if (on) {
-          if (!iconBackup.has(sym)) iconBackup.set(sym, [sym.getAttribute('viewBox'), sym.innerHTML]);
-          sym.setAttribute('viewBox', vb);
-          sym.innerHTML = body;
-        } else if (iconBackup.has(sym)) {
-          const [vb, html] = iconBackup.get(sym);
-          if (vb) sym.setAttribute('viewBox', vb); sym.innerHTML = html;
-        }
-      }
-    }
-  }
-
-  /* Farben der Glas-Vorschau (Einstellungen → Aussehen): Hintergrundfarbe + Stärke, Akzentfarbe.
-     Palette = die Farbpunkte aus dem Nutzer-Bild „Appearance“. Standard: Neutral (Grau) – kein Blau. */
-  const LOOK_KEY = 'gl.look.v1';
-  const PALETTE = [['Neutral', '#d1d1d1'], ['Rosa', '#cb88ab'], ['Lachs', '#d38b7d'], ['Orange', '#ce965b'], ['Oliv', '#a1af60'], ['Grün', '#7db993'], ['Blau', '#6bb0d7'], ['Lavendel', '#9799ec']];
-  const readLook = () => { let v = {}; try { v = JSON.parse(localStorage.getItem(LOOK_KEY) || '{}') || {}; } catch {} return { bg: v.bg || '#d1d1d1', amt: Number.isFinite(v.amt) ? v.amt : 50, accent: v.accent || '' }; };
-  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-  const rgbHsl = ([r, g, b]) => { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
-    if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return [h, s * 100, l * 100]; };
-  function applyLook() {
-    const L = readLook(), b = document.body.style;
-    const [h, sat] = rgbHsl(hexRgb(L.bg)), k = Math.max(0, Math.min(100, L.amt)) / 100;
-    // drei Farbpunkte wie im Bild (Ton −28°, Ton, Ton +28°); Stärke = wie kräftig die Farbe ist
-    const pt = (dh, l, a) => `hsla(${(h + dh + 360) % 360}, ${Math.round(sat * (0.35 + k * 0.75))}%, ${l}%, ${(0.30 + k * 0.45).toFixed(2)})`;
-    b.setProperty('--gl-c1', pt(-28, 62, 1)); b.setProperty('--gl-c2', pt(0, 58, 1)); b.setProperty('--gl-c3', pt(28, 60, 1));
-    if (L.accent) b.setProperty('--gl-accent', L.accent); else b.removeProperty('--gl-accent');
-  }
-  const lookRow = (label, attr, cur, withDefault) => `<div class="st-row"><span class="st-name">${label}</span><span class="grow"></span><span class="st-swatches gl-sws">${
-    (withDefault ? `<button type="button" class="st-sw gl-sw-def${!cur ? ' on' : ''}" ${attr}="" aria-label="Standard"></button>` : '')
-    + PALETTE.map(([n, c]) => `<button type="button" class="st-sw${cur === c ? ' on' : ''}" style="--sw:${c}" ${attr}="${c}" aria-label="${n}"></button>`).join('')}</span></div>`;
-  function lookHtml() {
-    const L = readLook();
-    return `<div class="gl-look"><h2>Glas (Vorschau)</h2><div class="st-card">
-      ${lookRow('Hintergrundfarbe', 'data-gl-bg', L.bg, false)}
-      <div class="st-row"><span class="st-name">Stärke</span><span class="grow"></span><input class="gl-range" type="range" min="0" max="100" step="5" value="${L.amt}" data-gl-amt aria-label="Stärke der Hintergrundfarbe" /><span class="st-muted gl-amt">${L.amt} %</span></div>
-      ${lookRow('Akzentfarbe', 'data-gl-accent', L.accent, true)}</div></div>`;
-  }
-  const saveLook = (patch) => { const L = { ...readLook(), ...patch }; try { localStorage.setItem(LOOK_KEY, JSON.stringify(L)); } catch {} applyLook(); return L; };
-  document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-gl-bg], [data-gl-accent]'); if (!t) return;
-    const k = t.hasAttribute('data-gl-bg') ? 'bg' : 'accent';
-    saveLook({ [k]: t.getAttribute(k === 'bg' ? 'data-gl-bg' : 'data-gl-accent') });
-    t.parentElement.querySelectorAll('.st-sw').forEach((x) => x.classList.toggle('on', x === t));
-  });
-  document.addEventListener('input', (e) => {
-    const r = e.target.closest?.('[data-gl-amt]'); if (!r) return;
-    saveLook({ amt: +r.value }); const o = r.parentElement.querySelector('.gl-amt'); if (o) o.textContent = `${r.value} %`;
-  });
-
-  /* Glas-Umrechnung: style.css enthält viele fest eingetragene Grautöne (#141414, #181818, #212121 …).
-     Für die Vorschau wird direkt HINTER jede solche Regel eine gleich spezifische Regel eingefügt
-     (:where(body.gl-shell) zählt nicht zur Spezifität), die das Grau durch die passende Glasfläche ersetzt.
-     So bleibt die Reihenfolge der Regeln erhalten und neue Regeln werden automatisch mit umgestellt.
-     Grau, das frei schwebt (position absolute/fixed), wird zu Milchglas mit Weichzeichner. */
-  let glassDone = false;
-  function glassify() {
-    if (glassDone) return; glassDone = true;
-    const sheet = [...document.styleSheets].find((sh) => /style\.css/.test(sh.href || ''));
-    if (!sheet) return;
-    const grey = (v) => {
-      v = (v || '').trim();
-      let r, g, b;
-      const h = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
-      if (h) { const x = h[1].length === 3 ? h[1].replace(/./g, '$&$&') : h[1]; [r, g, b] = [0, 2, 4].map((k) => parseInt(x.slice(k, k + 2), 16)); }
-      else {
-        const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(v);
-        if (!m || (m[4] !== undefined && +m[4] < 1)) return -1;
-        [r, g, b] = [+m[1], +m[2], +m[3]];
-      }
-      return Math.max(r, g, b) - Math.min(r, g, b) <= 6 && r <= 60 ? r : -1;
-    };
-    const blue = (v) => {
-      const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec((v || '').trim());
-      if (!m) { const h = /^#([0-9a-f]{6})$/i.exec((v || '').trim()); if (!h) return null; return blue(`rgb(${hexRgb('#' + h[1]).join(', ')})`); }
-      const [r, g, b] = [+m[1], +m[2], +m[3]];
-      return b > 200 && b - r > 90 && g > 100 && g < 200 ? (m[4] === undefined ? 1 : +m[4]) : null;
-    };
-    const fill = (l, float) => (float ? 'var(--gl-float)' : l <= 22 ? 'transparent' : l <= 31 ? 'var(--gl-card)' : l <= 40 ? 'var(--gl-card-2)' : 'var(--gl-card-3)');
-    const prefix = (sel) => {
-      const parts = []; let depth = 0, cur = '';
-      for (const ch of sel) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
-      parts.push(cur);
-      return parts.map((x) => {
-        x = x.trim();
-        if (/^(html|:root)/.test(x)) { const i = x.search(/\s/); return i < 0 ? '' : `${x.slice(0, i)} :where(body.gl-shell) ${x.slice(i + 1)}`; }
-        if (/^body\b/.test(x)) return x.replace(/^body/, 'body:where(.gl-shell)');
-        return `:where(body.gl-shell) ${x}`;
-      }).filter(Boolean).join(', ');
-    };
-    const walk = (list, insert) => {
-      for (let i = list.length - 1; i >= 0; i--) {
-        const r = list[i];
-        if (r.cssRules && !r.selectorText) { try { walk(r.cssRules, (t, at) => r.insertRule(t, at)); } catch {} continue; }
-        if (!r.selectorText || !r.style || /gl-shell|ud-glass/.test(r.selectorText)) continue;
-        const st = r.style; const out = [];
-        const pos = st.getPropertyValue('position');
-        const float = pos === 'absolute' || pos === 'fixed';
-        // fest eingetragenes App-Blau (#2f86ff und Verwandte) → Akzent der Glas-Vorschau (Standard neutral)
-        for (const p of ['color', 'background-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color']) {
-          const a = blue(st.getPropertyValue(p)); if (a !== null) out.push(`${p}: ${a === 1 ? 'var(--accent)' : `color-mix(in srgb, var(--accent) ${Math.round(a * 100)}%, transparent)`}${st.getPropertyPriority(p) ? ' !important' : ''}`);
-        }
-        // weiße Schrift auf Akzent-Fläche → Schrift passend zum (hellen) Akzent
-        if (/var\(--accent\)/.test(st.getPropertyValue('background-color') + st.getPropertyValue('background')) && /^(#fff(fff)?|white|rgb\(255, 255, 255\))$/i.test(st.getPropertyValue('color').trim())) out.push('color: var(--gl-on-accent)');
-        let bg = st.getPropertyValue('background-color');
-        if (!bg) { const m = /background(?:-color)?:\s*([^;]+)/.exec(st.cssText); const c = m && /(#[0-9a-f]{3,6}|rgba?\([^)]*\))\s*(?:!important)?\s*$/i.exec(m[1].trim()); if (c) bg = c[1]; }
-        const imp = (p) => (st.getPropertyPriority(p) ? ' !important' : '');
-        const l = grey(bg);
-        if (l >= 0) {
-          out.push(`background-color: ${fill(l, float)}${imp('background-color')}`);
-          if (float) out.push('-webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur)');
-        } else if (/var\(--menu-bg\)/.test(bg + st.getPropertyValue('background'))) {
-          out.push('-webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur)');
-        }
-        for (const side of ['top', 'right', 'bottom', 'left']) {
-          const p = `border-${side}-color`;
-          const bl = grey(st.getPropertyValue(p));
-          if (bl >= 18) out.push(`${p}: var(--gl-edge)${imp(p)}`);
-        }
-        if (!out.length) continue;
-        const sel = prefix(r.selectorText);
-        if (sel) { try { insert(`${sel} { ${out.join('; ')} }`, i + 1); } catch {} }
-      }
-    };
-    try { walk(sheet.cssRules, (t, at) => sheet.insertRule(t, at)); } catch {}
-  }
   const paintHex = () => view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex) || c.dataset.fix; });
-  function setStyle(st) {
-    const glass = EMBED || st === 'glass';
-    view.classList.toggle('ud-glass', EMBED);  // Bausteine im Glas-Stil nur im eingebetteten Dashboard
-    showDash(!EMBED && glass);
-    view.querySelectorAll('[data-udstyle]').forEach((b) => { const on = b.dataset.udstyle === (glass ? 'glass' : 'cur'); b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
-    if (!EMBED) try { localStorage.setItem(STYLE_KEY, glass ? 'glass' : 'cur'); } catch {}
-    paintHex();
-  }
   function wire() {
     // echte Bausteine zum Leben erwecken
     const chatIc = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
@@ -373,8 +193,6 @@ const UIDesign = (() => {
     if (sheet && window.UIKit?.foldRows) window.UIKit.foldRows(sheet);
 
     view.addEventListener('click', (e) => {
-      const stb = e.target.closest('[data-udstyle]');
-      if (stb) { (window.softSwitch || ((f) => f()))(() => setStyle(stb.dataset.udstyle)); return; }
       const j = e.target.closest('[data-jump]');
       if (j) { view.querySelector(`#ud-${j.dataset.jump}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       const seg = e.target.closest('.st-seg button, .cs-pill button');
@@ -413,8 +231,6 @@ const UIDesign = (() => {
 
   const api = {
     open: false,
-    applyStored: () => syncShell(),
-    lookHtml,
     show() {
       const p = panel(); if (!p) return;
       if (!view) {
@@ -423,12 +239,9 @@ const UIDesign = (() => {
         view.setAttribute('aria-label', 'UI Design');
         view.innerHTML = build();
         wire();
-        let st = 'cur'; try { st = localStorage.getItem(STYLE_KEY) || 'cur'; } catch {}
-        setStyle(st);
       }
       if (!view.isConnected) p.append(view);
       api.open = true; view.hidden = false; paintHex();
-      if (autoHome()) setTimeout(() => document.querySelector('.sidebar .sb-main [data-nav="docs"]')?.click());
       p.classList.add('view-docs', 'view-ud');
     },
     hide() {
@@ -443,4 +256,3 @@ const UIDesign = (() => {
   return api;
 })();
 window.UIDesign = UIDesign;
-UIDesign.applyStored();

@@ -11470,367 +11470,67 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .ud-glass .ud-gl-b { display: flex !important; }
 .ud-glass .ud-cur-b { display: none !important; }
 
-/* ===================================================================
-   09.11. (2. Fassung): STIL „GLAS“ – Vorbild ist das DRITTE Nutzer-Bild (Mac-Widget „Mizu Pro“), dazu Sidebar wie im
-   zweiten Bild (Einstellungs-Fenster). Nur VORSCHAU: body.gl-shell + .ud-view.ud-glass sind nur gesetzt, solange
-   „UI Design“ mit Stil „Glas“ offen ist (ui-design.js → syncShell). Die App selbst bleibt unverändert.
-   - Hinter allem liegt ein ruhiger, neutral-grauer Hintergrund (body::before). Sidebar = helles Milchglas darüber
-     (Weichzeichner, man sieht den Hintergrund weich durch), Hauptteil = dunkleres Glas, bündig bis an den Rand (kein Kasten).
-   - Inhalt wie die Kacheln im Bild: Karten mit Weiß ~6 %, haarfeiner heller Rand, Radius 16, Kopfzeile IN der Karte
-     (Name links, Klasse rechts leise), großzügige Abstände. Oben frei: nur der Umschalter, keine Leiste.
-   - Schrift: Systemschrift des Mac (SF Pro), 13 px; Titel 28/700, Kartenkopf 13,5/600, große Zahlen 28/600.
-   - Später als Desktop-App: Hintergrund weglassen und Fenster durchscheinend machen → echter Schreibtisch statt body::before.
-   =================================================================== */
-body.gl-shell {
-  --gl-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter, system-ui, sans-serif;
-  --gl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-  --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  /* Töne wie im dritten Bild: kühles Schiefergrau, Kacheln heller, Text leicht kühl */
-  --gl-side: rgba(255, 255, 255, 0.025);     /* Sidebar: klares Glas direkt auf dem Fenster – Hintergrund scheint durch */
-  --gl-main: rgba(13, 13, 15, 0.94);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
-  --gl-card: rgba(255, 255, 255, 0.03);      /* Karte / Kachel (wie „Connect your AI agent“: fast so dunkel wie der Hauptteil) */
-  --gl-card-2: rgba(255, 255, 255, 0.10);    /* angehoben: Knöpfe, Felder, aktive Zeile */
-  --gl-card-3: rgba(255, 255, 255, 0.16);    /* gewählt */
-  --gl-hover: rgba(255, 255, 255, 0.07);
-  --gl-edge: rgba(255, 255, 255, 0.08);      /* haarfeiner Rand */
-  --gl-sep: rgba(255, 255, 255, 0.07);
-  --gl-float: rgba(28, 28, 31, 0.97);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
-  --gl-menu: var(--gl-float);
-  --gl-menu-edge: rgba(255, 255, 255, 0.14);
-  --gl-blur: blur(40px) saturate(170%);
-  --gl-lift: 0 18px 50px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(0, 0, 0, 0.4);
-  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(235, 235, 245, 0.80); --gl-t3: rgba(235, 235, 245, 0.56); --gl-t4: rgba(235, 235, 245, 0.34);
-  --gl-accent: #d1d1d6;    /* Standard: neutral (hell) – Akzentfarbe nur über Einstellungen → Aussehen → Glas */
-  --gl-on-accent: rgba(0, 0, 0, 0.86); /* Schrift/Haken auf Akzent-Flächen (alle Akzente sind hell) */
-  --gl-green: #7db993; --gl-red: #e8837a; --gl-orange: #ce965b;
-  --gl-c1: rgba(150, 150, 158, 0.52); --gl-c2: rgba(120, 120, 128, 0.46); --gl-c3: rgba(140, 140, 148, 0.44); /* Farbpunkte des Hintergrunds (ui-design.js → applyLook) */
-  /* die Variablen der ganzen App zeigen auf Glas – alles, was sie nutzt, zieht mit (fest eingetragene Grautöne rechnet ui-design.js → glassify um) */
-  --main-bg: transparent; --sidebar-bg: transparent; --win-bg: var(--gl-card); --pop-bg: var(--gl-card-2);
-  --field-bg: var(--gl-card); --field-border: var(--gl-edge); --card: var(--gl-card); --card-2: var(--gl-card-2); --card-border: var(--gl-edge);
-  --menu-bg: var(--gl-float); --menu-border: var(--gl-menu-edge); --menu-hover: rgba(255, 255, 255, 0.10);
-  --hover: var(--gl-hover); --active: var(--gl-card-2); --tab: var(--gl-card-2); --tab-active: var(--gl-card); --line: var(--gl-edge); --divider: var(--gl-sep);
-  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4); --icon: var(--gl-t2); --accent: var(--gl-accent);
-  background: #1b1f25; color: var(--gl-t1);
-}
-body.gl-shell :not(code, pre, kbd, samp, .katex, .katex *) { font-family: var(--gl-font) !important; }
-body.gl-shell { -webkit-font-smoothing: antialiased; }
-/* Fenster-Hintergrund hinter dem Glas: kühles Grau mit weichen hellen und dunklen Flächen */
-body.gl-shell::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(circle at 34% -38%, transparent 61%, rgba(255, 255, 255, 0.10) 63%, transparent 67%),
-    radial-gradient(circle at 104% 120%, transparent 52%, rgba(255, 255, 255, 0.08) 54%, transparent 58%),
-    linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.06) 38%, transparent 44%),
-    linear-gradient(118deg, transparent 58%, rgba(255, 255, 255, 0.04) 64%, transparent 70%),
-    radial-gradient(38% 48% at 6% 10%, var(--gl-c1), transparent 70%),
-    radial-gradient(34% 44% at 16% 86%, var(--gl-c3), transparent 72%),
-    radial-gradient(44% 54% at 58% 4%, var(--gl-c2), transparent 70%),
-    radial-gradient(40% 50% at 96% 44%, var(--gl-c3), transparent 70%),
-    radial-gradient(44% 50% at 60% 100%, var(--gl-c1), transparent 72%),
-    radial-gradient(32% 38% at 44% 52%, rgba(0, 0, 0, 0.38), transparent 70%),
-    #1c1c20; }
-body.gl-shell .app { z-index: 1; }
-
-/* ---------- Fenster: Sidebar Milchglas, Hauptteil abgerundete Glasfläche mit etwas Abstand ---------- */
-body.gl-shell .sidebar { background: linear-gradient(var(--gl-side), var(--gl-side)) !important; -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); }
-body.gl-shell .panel { margin: 8px 8px 8px 0 !important; border: 1px solid rgba(255, 255, 255, 0.10) !important; border-radius: 16px !important;
-  background: var(--gl-noise), linear-gradient(var(--gl-main), var(--gl-main)) !important;
-  box-shadow: var(--gl-rim), 0 20px 60px rgba(0, 0, 0, 0.30) !important;
-  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-body.gl-shell .app.collapsed .panel { margin-left: 8px !important; }
-
-/* Sidebar wie im Einstellungs-Fenster (zweites Bild): Kopf schlicht (Avatar + Name, Lupe rechts), Zeilen mit
-   schlichten Linien-Icons ohne Kachel, aktive Zeile hell gefüllt */
-body.gl-shell .sb-ws { gap: 8px; border-radius: 8px; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 600; }
-body.gl-shell :is(.sb-ws, .sb-head-btn):hover { background: var(--gl-hover); }
-body.gl-shell .sb-ws-chev { color: var(--gl-t3); }
-body.gl-shell .sb-head-btn { border-radius: 8px; color: var(--gl-t3); }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 30px; padding: 0 9px; gap: 10px; border-radius: 8px; background: none; color: var(--gl-t2); font-size: 13.5px; font-weight: 400; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item > svg { width: 16px; height: 16px; color: var(--gl-t3); }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item:hover { background: var(--gl-hover); }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.10); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active > svg { color: #fff; }
-body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 12px; font-weight: 500; }
-body.gl-shell .ws-menu { background: rgba(40, 45, 53, 0.97) !important; }
-
-/* Lichtkante wie bei Apple „Liquid Glass“: oben/links heller, unten/rechts schwächer */
-body.gl-shell { --gl-rim: inset 1px 1px 0 rgba(255, 255, 255, 0.10), inset -1px -1px 0 rgba(255, 255, 255, 0.03); }
-
-/* schwebende Leisten/Menüs der App: Milchglas mit Schatten */
-body.gl-shell :is(.chat-pop, .model-popover, .ws-menu, .tk-menu, .lb2-menu) { border-color: var(--gl-menu-edge) !important; border-radius: 13px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift) !important; }
-
-/* ---------- Ansicht ---------- */
-.ud-view.ud-glass {
-  --main-bg: var(--gl-card); --win-bg: var(--gl-card); --card: var(--gl-card); --field-bg: var(--gl-card-2);
-  --pop-bg: var(--gl-card-2); --line: var(--gl-edge); --field-border: var(--gl-edge);
-  --menu-bg: var(--gl-menu); --menu-border: var(--gl-menu-edge); --menu-hover: rgba(255, 255, 255, 0.1);
-  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4);
-  --accent: var(--gl-accent); --g-green: var(--gl-green); --g-red: var(--gl-red);
-  background: transparent; color: var(--gl-t1); font-size: 13px; -webkit-font-smoothing: antialiased;
-}
-.ud-view.ud-glass *:not(code) { font-family: var(--gl-font) !important; }
-.ud-view.ud-glass code { color: var(--gl-t4); font-family: var(--gl-mono) !important; font-size: 10.5px; }
-
-/* Oben frei: nur der Umschalter (wie „Now | Stats“), keine Leiste, keine Sprungknöpfe */
-body.gl-shell .ud-top { position: static; padding: 16px 0 0; background: none; box-shadow: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
-body.gl-shell .ud-top-in { display: none; }
-body.gl-shell .ud-wrap { max-width: 900px; padding: 44px 32px 96px; }
-body.gl-shell .ud-head { margin-bottom: 4px; }
-body.gl-shell .ud-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.6px; }
-body.gl-shell .ud-lead { margin: 0; color: var(--gl-t3); font-size: 13px; }
-body.gl-shell .ud-sec { padding-top: 36px; }
-body.gl-shell .ud-sec h3 { margin: 0 0 12px 2px; color: var(--gl-t1); font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
-body.gl-shell .ud-note { display: none; }
-body.gl-shell .ud-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
-
-/* Karten wie die Kacheln im Bild: Kopf IN der Karte (Name links, Klasse rechts), Inhalt darunter */
-body.gl-shell :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker) { border: 1px solid var(--gl-edge); border-radius: 16px;
-  background: var(--gl-card); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035); }
-body.gl-shell .ud-item { padding: 14px 16px 16px; }
-body.gl-shell .ud-item figcaption { order: -1; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 0 12px; border: 0; }
-body.gl-shell .ud-item figcaption b { color: var(--gl-t1); font-size: 13.5px; font-weight: 600; letter-spacing: -0.1px; }
-body.gl-shell .ud-item figcaption code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-body.gl-shell .ud-item figcaption span { display: none; }
-body.gl-shell .ud-stage { justify-content: flex-start; min-height: 56px; padding: 0; border-radius: 0; }
-body.gl-shell .ud-stage:has(.ud-pop) { min-height: 150px; }
-body.gl-shell .ud-stage .tk-sheet, body.gl-shell .ud-stage :is(.ud-box, .ud-note-card, .ud-hm) { max-width: none; }
-
-/* Farben */
-body.gl-shell .ud-sws { gap: 12px 18px; }
-body.gl-shell .ud-sw { min-width: 180px; }
-body.gl-shell .ud-sw i { width: 32px; height: 32px; border-color: rgba(255, 255, 255, 0.12); border-radius: 9px; }
-body.gl-shell .ud-sw b { color: var(--gl-t1); font-size: 13px; }
-/* Schrift */
-body.gl-shell .ud-type { gap: 10px; }
-body.gl-shell .ud-type div { padding-bottom: 10px; border-bottom-color: var(--gl-sep); }
-
-/* Umschalter: Spur mit feinem Rand, gewählter Teil hell (wie „Now | Stats“) */
-body.gl-shell :is(.cs-pill, .st-seg) { box-sizing: border-box; display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px;
-  background: rgba(0, 0, 0, 0.18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2); }
-body.gl-shell :is(.cs-pill, .st-seg) button { height: 26px; padding: 0 16px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--gl-t2); font-size: 13.5px; font-weight: 500; }
-body.gl-shell :is(.cs-pill, .st-seg) button:hover { color: #fff; }
-body.gl-shell :is(.cs-pill, .st-seg) button.on { background: rgba(255, 255, 255, 0.17) !important; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.25) !important; }
-
-/* Knöpfe */
-body.gl-shell .ud-btn, body.gl-shell .tk-view.tk-listmode .tk-new { height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 13px; font-weight: 500;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-body.gl-shell .ud-btn:hover, body.gl-shell .tk-view.tk-listmode .tk-new:hover { background: var(--gl-card-3); }
-body.gl-shell .tk-view.tk-listmode .tk-new svg { color: var(--gl-t2); }
-body.gl-shell .ud-btn.primary { background: var(--gl-accent); color: var(--gl-on-accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-body.gl-shell .ud-btn.primary:hover { background: color-mix(in srgb, var(--gl-accent) 88%, #fff); }
-body.gl-shell .ud-btn.danger { background: rgba(255, 105, 97, 0.15); color: var(--gl-red); box-shadow: none; }
-body.gl-shell .ud-btn.danger:hover { background: rgba(255, 105, 97, 0.23); }
-/* runde Knöpfe wie im Bild (Stopp/Öffnen) */
-body.gl-shell :is(.icon-btn, .hm-plus) { width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--gl-t2); box-shadow: none; }
-body.gl-shell :is(.icon-btn, .hm-plus):hover { background: var(--gl-hover); color: var(--gl-t1); }
-body.gl-shell .ud-box-head .icon-btn { width: 28px; height: 28px; background: none; box-shadow: none; color: var(--gl-t3); }
-body.gl-shell .tk-pill { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); font-size: 12.5px; font-weight: 500; box-shadow: none; }
-body.gl-shell .tk-pill:hover { background: var(--gl-card-3); color: #fff; }
-body.gl-shell .hm-go { height: 28px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 12.5px; font-weight: 500; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-body.gl-shell .hm-go:hover { background: var(--gl-card-3); }
-
-/* Eingaben (wie das Suchfeld unten im Bild) */
-body.gl-shell .cl-search { height: 38px; padding: 0 14px; border: 1px solid var(--gl-edge); border-radius: 13px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
-body.gl-shell .cl-search input { font-size: 14px; }
-body.gl-shell :is(.ud-input, .ud-select) { border: 1px solid var(--gl-edge); border-radius: 10px; background: rgba(255, 255, 255, 0.07); color: var(--gl-t1); font-size: 13px; box-shadow: none; }
-body.gl-shell .ud-input { padding: 7px 11px; }
-body.gl-shell .ud-select { height: 30px; }
-body.gl-shell :is(.cl-search, .ud-select):focus-within, body.gl-shell .ud-input:focus { border-color: color-mix(in srgb, var(--gl-accent) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gl-accent) 25%, transparent); }
-body.gl-shell .ud-select option { background: #2c2c2e; }
-
-/* Auswahl */
-body.gl-shell .ce-switch { width: 38px; height: 22px; background: rgba(255, 255, 255, 0.16); }
-body.gl-shell .ce-switch i { top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
-body.gl-shell .ce-switch.on { background: var(--gl-accent); }
-body.gl-shell .ce-switch.on i { transform: translateX(16px); }
-body.gl-shell .lb2-check { border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 5px; background: transparent; }
-body.gl-shell .lb2-row.picked .lb2-check { border-color: var(--gl-accent); background: var(--gl-accent); color: var(--gl-on-accent); }
-body.gl-shell .lb2-row.picked .lb2-check svg { stroke: var(--gl-on-accent); }
-body.gl-shell .lb2-row.picked, body.gl-shell .lb2-row.picked:hover { background: transparent; }
-body.gl-shell .tk-colors button.on { box-shadow: 0 0 0 2px #26262a, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
-
-/* Menüs: Milchglas über Inhalt */
-body.gl-shell :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--gl-menu-edge); border-radius: 13px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 7px; color: var(--gl-t1); font-size: 13px; }
-body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button):hover { background: rgba(255, 255, 255, 0.1); }
-body.gl-shell :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t3); }
-body.gl-shell :is(.lb2-mi.lb2-danger, .chat-pop button.danger), body.gl-shell :is(.lb2-mi.lb2-danger, .chat-pop button.danger) > svg { color: var(--gl-red); }
-body.gl-shell .cm-sep { background: var(--gl-sep); }
-body.gl-shell :is(.lb2-tick, .ud-pop .tk-mi svg) { color: var(--gl-t1); }
-/* Fenster mit Aufklapp-Zeilen */
-body.gl-shell .tk-sheet { width: 100%; max-width: 460px; }
-body.gl-shell .tk-sheet-rows .tk-pill { height: 42px; padding: 0 16px; border-radius: 0; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 400; }
-body.gl-shell .tk-sheet-rows .tk-pill.empty { color: var(--gl-t3); }
-body.gl-shell .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 16px 16px 0 0; }
-body.gl-shell .tk-sheet-rows .tk-pill:hover { background: var(--gl-hover); }
-body.gl-shell .tk-sheet .tk-menu { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-body.gl-shell .tk-sheet .tk-box { margin: 0 8px 8px; border: 1px solid var(--gl-sep) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.04) !important; }
-/* Uhrzeit-Rad, Mini-Kalender, Farbwähler */
-body.gl-shell .tk-wh-band { border-radius: 8px; background: var(--gl-card-2); }
-body.gl-shell .tk-wh-item.on { color: #fff; }
-body.gl-shell .ud-cal2 { padding: 10px; }
-body.gl-shell .tk-cal-head span { color: var(--gl-t1); font-weight: 600; }
-body.gl-shell .tk-cal-grid button { border-radius: 999px; }
-body.gl-shell .tk-cal-grid button:hover { background: var(--gl-card-2); }
-body.gl-shell .tk-cal-grid button.on { background: var(--gl-accent); color: var(--gl-on-accent); }
-body.gl-shell .tk-cal-grid button.today:not(.on) { color: var(--gl-accent); }
-body.gl-shell .tk-picker { padding: 10px; }
-body.gl-shell .tk-sv, body.gl-shell .tk-hue { border-radius: 9px; }
-
-/* Listen (wie „Live“ im Bild) */
-body.gl-shell .cl-label { padding-left: 8px; color: var(--gl-t3); font-size: 12px; font-weight: 500; }
-body.gl-shell .lb2-row { border-radius: 10px; }
-body.gl-shell .lb2-row + .lb2-row::before { background: var(--gl-sep); }
-body.gl-shell .lb2-row:hover { background: var(--gl-hover); }
-body.gl-shell .lb2-title { color: var(--gl-t1); font-size: 14px; font-weight: 500; }
-body.gl-shell .lb2-time { color: var(--gl-t3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-body.gl-shell .lb2-dock-pill { height: 40px; padding: 0 4px; border: 1px solid var(--gl-menu-edge); border-radius: 999px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-body.gl-shell .lb2-dock-pill button { height: 30px; border-radius: 999px; color: var(--gl-t2); font-size: 13px; }
-body.gl-shell .lb2-dock-pill button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-body.gl-shell .lb2-dk-sep { background: var(--gl-sep); }
-
-/* Karten im Inhalt: Kachel-Look, Zustand über Farbe von Icon/Text */
-body.gl-shell .hm-card { min-height: 62px; padding: 12px 12px 12px 14px; background: rgba(255, 255, 255, 0.05); }
-body.gl-shell .hm-card:is(.hm-soon, .hm-warn) { border-color: var(--gl-edge); }
-body.gl-shell .hm-ic { border: 0; border-radius: 10px; background: var(--gl-card-2); color: var(--gl-t2); }
-body.gl-shell .hm-title { color: var(--gl-t1); font-size: 14px; font-weight: 600; }
-body.gl-shell .hm-desc { color: var(--gl-t3); font-size: 12.5px; }
-body.gl-shell .hm-soon :is(.hm-desc b, .hm-ic) { color: var(--gl-green); }
-body.gl-shell .hm-warn :is(.hm-desc b, .hm-ic) { color: var(--gl-red); }
-body.gl-shell .hm-x { color: var(--gl-t4); }
-body.gl-shell :is(.ud-box, .ud-note-card) { background: rgba(255, 255, 255, 0.05); }
-body.gl-shell .ud-box-head b { font-size: 14px; font-weight: 600; }
-body.gl-shell .ud-box p { color: var(--gl-t2); font-size: 13.5px; }
-body.gl-shell .ud-nc-txt b { font-size: 13.5px; font-weight: 600; }
-body.gl-shell .ud-nc-txt span { color: var(--gl-t3); font-size: 12.5px; }
-
-/* Etiketten */
-body.gl-shell .tk-tag { border-radius: 999px; }
-body.gl-shell .ud-badge { height: 22px; padding: 0 9px; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); }
-body.gl-shell .ud-badge.accent { background: color-mix(in srgb, var(--gl-accent) 22%, transparent); color: #9ccbff; }
-body.gl-shell .ud-badge.danger { background: rgba(255, 105, 97, 0.18); color: #ffa19b; }
-
-/* Icons */
-body.gl-shell .ud-icons span { border-radius: 10px; color: var(--gl-t2); }
-body.gl-shell .ud-icons span:hover { background: var(--gl-card-2); color: #fff; }
-/* Glas: Kalender-Stundenlinien und Startseiten-Karten (Farben stehen dort als Verlauf) */
-body.gl-shell .cal-week .cw-body { background-image: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 56px); }
-body.gl-shell .hm-card { border-color: var(--gl-edge) !important; border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
-
-/* Glas (3. Runde): Filter-/Leisten-Knöpfe nur als Icon, Einstellungen „Glas“ nur in der Vorschau, Farbpunkte + Regler */
-body.gl-shell :is(.lb2-filter, .lb2-btn) { border: 0 !important; background: none !important; color: var(--gl-t3); }
-body.gl-shell :is(.lb2-filter, .lb2-btn):hover, body.gl-shell .lb2-filter:is(.on, .set) { background: var(--gl-hover) !important; color: var(--gl-t1); }
-.gl-look { display: none; }
-body.gl-shell .gl-look { display: block; }
-body.gl-shell .gl-sws .st-sw { width: 20px; height: 20px; }
-body.gl-shell .gl-sw-def { background: conic-gradient(from 45deg, #d1d1d1 0 50%, #6a6a70 50% 100%) !important; }
-body.gl-shell .gl-range { width: 160px; height: 4px; accent-color: var(--accent); }
-body.gl-shell .gl-amt { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
-/* Linien-Icons: nicht fett nachzeichnen */
-body.gl-shell svg use { stroke-width: inherit; }
-/* Glas: Einstellungen liegen über den anderen Ansichten – darunterliegende Ansichten ausblenden (Hintergrund ist durchsichtig) */
-body.gl-shell .app.settings-open .panel > :not(.st-view, .panel-toggle) { visibility: hidden !important; }
 /* UI Design – Chat-Bausteine als ruhende Kopie (keine Animation, nicht schwebend) */
 .ud-chat { width: 100%; }
 .ud-chat :is(.msg-out, .msg-ai) { margin: 0 !important; animation: none !important; opacity: 1 !important; transform: none !important; }
 .ud-composer { position: static !important; width: 100% !important; max-width: 640px; margin: 0 !important; padding: 0 !important; transform: none !important; opacity: 1 !important; }
 .ud-composer .composer { position: relative; }
-/* Einstellungen im Glas-Stil: alte Karte „Modus/Akzentfarbe“ gilt hier nicht → ausblenden, Glas-Karte mit Abstand */
-body.gl-shell .gl-look { margin-bottom: 26px; }
-body.gl-shell .gl-look + h2, body.gl-shell .gl-look + h2 + .st-card { display: none; }
-body.gl-shell .ce-switch.on i { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
-body.gl-shell :is(.send-btn) { color: var(--gl-on-accent); }
 
 /* ===================================================================
-   09.11. (4. Runde): Glas = ZWEITES DASHBOARD in „UI Design“. Die App bleibt im aktuellen Stil; „UI Design → Glas“
-   bettet die ganze App als iframe „/?glas=1“ ein (html.gl-embed), nur dort gilt body.gl-shell.
-   Vorbild jetzt v. a. das Nutzer-Bild „Agents“ (Glass-App): Sidebar = Glas über dem Hintergrund, Hauptteil = fast
-   deckendes Dunkel, Karten mit haarfeinem Rand und Zeilen mit Trennlinien, Knöpfe klein (hell gefüllt / mit Rand),
-   Stufen-Umschalter eckig-rund mit Rand. Keine Überblendungen beim Wechseln, keine Lichtkanten an Menüs.
+   09.11. (abends): Feinschliff nach Nutzer-Wunsch – gilt in der ganzen App
+   - Beim Antippen/Anklicken kein Rahmen und kein Leuchten (auch nicht mit Tastatur-Fokus).
+   - „Abgerundet“ statt „ganz rund“: Knöpfe, Pillen, Etiketten mit Radius 8 (Kalender, Aufgaben, Home, Dokumente).
+   - Aufgaben: „Neue Aufgabe“ im leeren Zustand wie der Knopf oben rechts; Filter-Menü ruhiger und luftiger.
    =================================================================== */
-/* in der App: Dashboard-Rahmen in „UI Design“ */
-.ud-dash { display: none; }
-.ud-view.ud-dash-on { overflow: hidden; }
-.ud-view.ud-dash-on .ud-wrap, .ud-view.ud-dash-on .ud-top-in { display: none; }
-.ud-view.ud-dash-on .ud-top { position: absolute; left: 0; right: 0; top: 0; padding: 12px 0 0; background: none; }
-.ud-view.ud-dash-on .ud-dash { position: absolute; inset: 62px 12px 12px; display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #1c1c1f; }
-.ud-dash iframe { display: block; width: 100%; height: 100%; border: 0; }
-/* im eingebetteten Dashboard: kein Stil-Umschalter in „UI Design“, keine Glas-Karte in den Einstellungen-Aussehen-Duplikaten */
-html.gl-embed .ud-top { display: none !important; }
-html.gl-embed .ud-view.ud-glass .ud-wrap { padding-top: 40px; }
-/* ohne Überblendung beim Wechseln (durchsichtige Flächen erschienen sonst doppelt – „Holo-Effekt“) */
-html.gl-on::view-transition-old(*), html.gl-on::view-transition-new(*) { animation: none !important; }
-html.gl-on::view-transition-group(*) { animation: none !important; }
-
-/* Fenster */
-body.gl-shell .panel { border-color: rgba(255, 255, 255, 0.08) !important; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35) !important; border-radius: 12px !important; }
-body.gl-shell .sidebar { background: linear-gradient(rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.035)) !important; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 28px; font-size: 13px; border-radius: 7px; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.10); box-shadow: none; }
-/* keine Lichtkanten/Ringe beim Antippen */
-body.gl-shell * { -webkit-tap-highlight-color: transparent; }
-body.gl-shell :is(button, a, [role="button"]):focus:not(:focus-visible) { outline: none; box-shadow: none; }
-
-/* Karten wie „Connect your AI agent“ */
-body.gl-shell :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker, .st-card) { border: 1px solid var(--gl-edge) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.025) !important; box-shadow: none !important; }
-body.gl-shell .st-card > * + * { border-top: 1px solid var(--gl-sep); }
-
-/* Knöpfe: hell gefüllt (wie „Connect“) bzw. mit feinem Rand (wie „Copy address“), klein, Radius 7 */
-body.gl-shell :is(.ud-btn.primary, .st-btn:not(.dark)) { height: 26px; padding: 0 12px; border: 0; border-radius: 7px; background: #e9e9ec !important; color: #111 !important; font-size: 12.5px; font-weight: 500; box-shadow: none; }
-body.gl-shell :is(.ud-btn.primary, .st-btn:not(.dark)):hover { background: #fff !important; }
-body.gl-shell :is(.ud-btn:not(.primary):not(.danger), .tk-view.tk-listmode .tk-new, .cal-new, .hm-go, .cl-new, .st-btn.dark) { height: 28px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 7px; background: transparent !important; color: var(--gl-t1) !important; font-size: 12.5px; font-weight: 500; box-shadow: none !important; }
-body.gl-shell :is(.ud-btn:not(.primary):not(.danger), .tk-view.tk-listmode .tk-new, .cal-new, .hm-go, .cl-new, .st-btn.dark):hover { background: rgba(255, 255, 255, 0.06) !important; }
-body.gl-shell :is(.tk-new, .cal-new, .cl-new) svg { color: var(--gl-t2); }
-body.gl-shell .ud-btn.danger { height: 28px; border: 1px solid rgba(232, 131, 122, 0.35); border-radius: 7px; background: transparent; color: var(--gl-red); }
-/* Kalender: „‹ Heute ›“ und „Neu“ im selben Stil (Rand, gleiche Höhe) */
-body.gl-shell .cal-seg { display: inline-flex; height: 28px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 7px; background: transparent !important; box-shadow: none !important; }
-body.gl-shell .cal-seg button { height: 100%; padding: 0 9px; border: 0 !important; border-radius: 0; background: none !important; color: var(--gl-t1) !important; font-size: 12.5px; font-weight: 500; }
-body.gl-shell .cal-seg button + button { border-left: 1px solid rgba(255, 255, 255, 0.10) !important; }
-body.gl-shell .cal-seg button:hover { background: rgba(255, 255, 255, 0.06) !important; }
-
-/* Stufen-Umschalter wie „Allow · Ask me · Block“ */
-body.gl-shell .st-seg { position: relative; height: 26px; padding: 0; gap: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 7px; background: transparent; box-shadow: none; }
-body.gl-shell .st-seg button { position: relative; z-index: 1; height: 100%; padding: 0 10px; border-radius: 0; color: var(--gl-t2); font-size: 12px; }
-body.gl-shell .st-seg button + button { border-left: 1px solid rgba(255, 255, 255, 0.10) !important; }
-body.gl-shell .st-seg button.on { background: none !important; color: #fff; box-shadow: none !important; }
-/* Leisten-Umschalter (Agenten | Dokumente, Aktuell | Glas): Pille, heller Teil gleitet weich (ui-design.js → placeThumb) */
-body.gl-shell .cs-pill { position: relative; }
-body.gl-shell .cs-pill button { position: relative; z-index: 1; transition: color 220ms ease; }
-body.gl-shell .cs-pill button.on { background: none !important; box-shadow: none !important; }
-body.gl-shell .gl-thumb { position: absolute; z-index: 0; left: 0; top: 50%; height: 24px; margin-top: -12px; border-radius: 999px; background: rgba(255, 255, 255, 0.15); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: transform 380ms var(--spring, cubic-bezier(0.2, 0.9, 0.25, 1.06)), width 380ms var(--spring, ease); pointer-events: none; }
-body.gl-shell .st-seg > .gl-thumb { top: 0; height: 100%; margin: 0; border-radius: 0; background: rgba(255, 255, 255, 0.12); box-shadow: none; }
-
-/* Menüs: fast deckend, feiner Rand, weicher Schatten, keine Lichtkante */
-body.gl-shell :is(.tk-menu, .lb2-menu, .chat-pop, .model-popover, .ws-menu) { border: 1px solid rgba(255, 255, 255, 0.09) !important; border-radius: 10px; background: var(--gl-float) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
-body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 6px; font-size: 13px; }
-body.gl-shell :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t2); }
-
-/* Eingabefeld der Agenten: deckend wie bisher (nicht durchsichtig) */
-body.gl-shell .composer { background: #1a1a1d !important; border: 1px solid rgba(255, 255, 255, 0.09) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
-
-/* Etiketten wie „✓ Connected“: feiner Rand, keine farbige Fläche, Farbe nur als Punkt bzw. Schrift */
-body.gl-shell .ud-badge { height: 20px; padding: 0 7px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: transparent; color: var(--gl-t2); font-size: 11.5px; font-weight: 500; }
-body.gl-shell .ud-badge.accent { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--gl-t1); background: transparent; }
-body.gl-shell .ud-badge.danger { border-color: rgba(232, 131, 122, 0.4); color: var(--gl-red); background: transparent; }
-body.gl-shell .tk-tag { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: transparent !important; color: var(--gl-t1) !important; }
-body.gl-shell .tk-tag .tag-dot { background: var(--c) !important; }
-
-/* Hintergrund und Akzent in „UI Design“ (eingebettet) */
-body.gl-shell .ud-look .gl-look h2 { display: none; }
-body.gl-shell .ud-look .st-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; }
-body.gl-shell .ud-look .st-name { color: var(--gl-t1); font-size: 13px; }
-body.gl-shell .ud-look .grow { flex: 1; }
-.ud-gl-only { display: none; }
-body.gl-shell .ud-gl-only { display: block; }
-
-/* „Erstellen“ in der App (aktueller Stil): Pfeil für Optionen rechts in der Zeile */
-.sb-main .nav-item[data-nav="new"] { position: relative; }
-.sb-new-more { display: grid; place-items: center; width: 22px; height: 22px; margin-left: auto; border-radius: 6px; color: var(--text-4); opacity: 0; transition: opacity 140ms ease, background-color 120ms ease; }
-.nav-item[data-nav="new"]:hover .sb-new-more, .sb-new-more.on { opacity: 1; }
-.sb-new-more:hover, .sb-new-more.on { background: var(--pop-bg); color: var(--text); }
-@media (hover: none) { .sb-new-more { opacity: 1; } }
-.sb-new-menu[hidden] { display: none; }
+:is(button, a, [tabindex], input, textarea, select):focus-visible { outline: none !important; }
+.mp-slider:focus-visible .mp-thumb { box-shadow: none; }
+:is(.cal-new, .cal-week .cal-new, .cal-seg, .cal-week .cal-seg, .hm-go, .lb2-filter, .lb2-btn, .tk-pill, .tk-tag, .dc-prio, .dc-proj-pill, .dc-tag, .dc-meta-hint, .ft-chip, .ap-pill, .tk-empty-new, .cl-new, .tk-new) { border-radius: 8px !important; }
+.cal-week .cal-seg button { border-radius: 6px; }
+.lb2-dock-pill { border-radius: 12px; }
+.tk-empty-new { height: 30px; margin-top: 14px; padding: 0 13px 0 10px; border: 1px solid #242424; background: #212121; color: #ededed; font-size: 13px; font-weight: 500; }
+.tk-empty-new:hover { background: #262626; }
+.tk-empty-new svg { color: #bbbbbb; }
+/* Filter-Menü (Aufgaben): etwas breiter, Zeilen 30 hoch, Überschriften leiser, Haken in Textfarbe statt Blau */
+.tk-filter { width: 244px; padding: 5px; border-radius: 12px; }
+.tk-filter .tk-fl { padding: 8px 9px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.tk-filter .tk-fi { height: 30px; padding: 0 9px; border-radius: 7px; font-size: 13px; }
+.tk-filter .tk-fi > svg:last-child { color: var(--text); }
+.tk-filter .tk-fi i { width: 8px; height: 8px; }
+.tk-filter .tk-fsep { margin: 5px 4px; }
+/* „Agenten | Dokumente“ (und alle .cs-pill): heller Teil gleitet weich zum gewählten Knopf (ui-design.js → placeThumb);
+   Farben wie die Kacheln im Bild „Mizu Pro“ – Spur dunkel mit feinem Rand, gewählter Teil eine Stufe heller mit Rand */
+.cs-pill { position: relative; isolation: isolate; height: 36px; padding: 0 3px; border: 1px solid #242424; border-radius: 12px; background: #181818; }
+.cs-pill > button { position: relative; z-index: 1; height: 28px; padding: 0 13px; border: 0 !important; border-radius: 9px; background: none !important; color: var(--text-4); transition: color 200ms ease; }
+.cs-pill > button:hover { color: var(--text-2); }
+.cs-pill > button.on { color: var(--text); background: none !important; }
+.cs-thumb { position: absolute; z-index: 0; left: 0; top: 50%; height: 28px; margin-top: -14px; border: 1px solid #303033; border-radius: 9px; background: #262628; pointer-events: none;
+  transition: transform 380ms var(--spring, cubic-bezier(0.2, 0.9, 0.25, 1.06)), width 380ms var(--spring, ease), opacity 160ms ease; box-sizing: border-box; }
+@media (prefers-reduced-motion: reduce) { .cs-thumb { transition: none; } }
+/* Farbauswahl (Tags, Projekte, Termine) wie im Bild „Appearance“: größere Farbpunkte mit Luft, gewählter Punkt mit hellem Ring;
+   eigene Farbe: Fläche mit runden Ecken, große Anfasser, schmale Farbton-Leiste, Knopf abgerundet */
+.tk-colors { gap: 9px; padding: 8px 10px 10px; }
+.tk-colors button { width: 20px; height: 20px; }
+.tk-colors button.on, .tk-custom.on { box-shadow: 0 0 0 2px var(--menu-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+.tk-picker { gap: 10px; margin: 2px 8px 8px; padding: 10px; border: 1px solid #2a2a2a; border-radius: 14px; background: #1c1c1e; }
+.tk-sv { height: 128px; border-radius: 11px; }
+.tk-sv b, .tk-hue b { width: 18px; height: 18px; border-width: 3px; }
+.tk-hue { height: 8px; border-radius: 4px; }
+.tk-picker-foot .tk-mini { border-radius: 8px; }
+/* Eigenschaften eines Dokuments (Erstellt, Bearbeitet, Projekt, Priorität …) als ruhige Karte mit Rand und Zeilen */
+.dc-ptable { overflow: hidden; border: 1px solid #242424; border-radius: 12px; background: #161616; }
+.dc-ptable .dc-mrow { min-height: 38px; padding: 0 12px; border-bottom: 1px solid #222; }
+.dc-ptable .dc-mrow:last-child { border-bottom: 0; }
+.dc-ptable .dc-mlabel { border-right: 0; }
+.dc-ptable .dc-mval { padding-left: 0; }
+/* Projekt-Knopf über dem Titel: ruhig statt blau, abgerundet */
+.dc-pchip { border: 1px solid #2a2a2a !important; border-radius: 8px !important; background: #1c1c1c !important; color: var(--text-2) !important; }
+.dc-pchip:hover { background: #212121 !important; color: var(--text) !important; }
+.dc-pchip svg { color: var(--text-3) !important; }
+/* Filter-Knopf (Home, Aufgaben): nur das Icon, ohne Kasten; Fläche nur beim Darüberfahren bzw. wenn offen */
+.lb2-filter, .tk-ib { border: 0 !important; background: none; }
+.lb2-filter:hover, .lb2-filter.on, .tk-ib:hover, .tk-filter-wrap.open .tk-ib { background: #212121; color: var(--text); }
+/* Kalender: „Neu“ wie „Neue Aufgabe“ (grau, feiner Rand) – passt zu „‹ Heute ›“; Sprungleiste in UI Design abgerundet statt rund */
+.cal-new, .cal-week .cal-new { height: 28px; border: 1px solid #242424 !important; background: #212121 !important; color: #ededed !important; font-weight: 500; }
+.cal-new:hover { background: #262626 !important; }
+.cal-new svg { color: #bbbbbb; }
+.ud-jump button { border-radius: 8px; }

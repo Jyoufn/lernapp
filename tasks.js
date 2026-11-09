@@ -68,7 +68,6 @@ const Tasks = (() => {
   }
 
   // Filter-Symbol: drei Linien, die nach unten kürzer werden (wie in macOS)
-  const SLIDERS = '<svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><g stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M2.5 4.5h11M4.5 8h7M6.5 11.5h3"/></g></svg>';
 
   /* ---------- Fenster: flach, oben in der Mitte (eins für alle Boards) ---------- */
   const modal = document.createElement('div');
@@ -118,7 +117,7 @@ const Tasks = (() => {
       <div class="tk-tools">
         <label class="tk-search">${fi('search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" /></label>
         <div class="tk-filter-wrap">
-          <button type="button" class="tk-ib" data-act="filter" aria-haspopup="menu" aria-label="Filter" title="Filter">${SLIDERS}<b class="tk-fcount" hidden></b></button>
+          <button type="button" class="tk-ib" data-act="filter" aria-haspopup="menu" aria-label="Filter" title="Filter">${fi('filter', 15)}<b class="tk-fcount" hidden></b></button>
           <div class="tk-filter" role="menu"></div>
         </div>
         <button type="button" class="tk-new" data-act="new" title="Neue Aufgabe">${fi('plus', 13)}<span>Neue Aufgabe</span></button>

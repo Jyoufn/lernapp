@@ -114,6 +114,6 @@
 
 
 ## Sidebar „Erstellen“ (Stand 09.11.)
-- „Erstellen“ ist eine Aktion, kein Ort: nie markiert. Offenes Dokument → sein Eintrag unter „Dokumente“ in der Sidebar ist markiert (sonst Home).
-- Pfeil rechts in der Zeile (beim Darüberfahren, auf dem iPad immer) öffnet ein Menü: Neuer Chat, Neues Dokument, Neue Aufgabe, Neuer Termin (`app.js`, `.sb-new-menu`).
+- „Erstellen“ ist eine Aktion, kein Ort: nie markiert; beim Öffnen ist oben „Agenten“ gewählt. Offenes Dokument → sein Eintrag unter „Dokumente“ in der Sidebar ist markiert (sonst Home).
 - Chats-Symbol oben rechts im Chat: zeigt die Liste der KI-Chats im Hauptteil (`chatsView`), kein Sprung nach Home.
+- Chat-Titel: KI (`/api/title`, zwei Versuche); klappt es nicht, macht `titleFromText` (app.js) aus der Anfrage das Thema (Anrede/Bitte/Fragewort und Artikel weg, max. 5 Wörter).

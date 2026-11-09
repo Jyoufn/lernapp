@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------- Sidebar ein-/ausklappen: ein Knopf, immer oben links ---------- */
 const toggle = $('sidebarToggle');
-const STORAGE_KEY = /[?&]glas\b/.test(location.search) ? 'sidebarCollapsed.glas' : 'sidebarCollapsed'; // eingebettetes Glas-Dashboard (UI Design) merkt sich seine Sidebar getrennt
+const STORAGE_KEY = 'sidebarCollapsed';
 
 function setCollapsed(collapsed) {
   app.classList.toggle('collapsed', collapsed);
@@ -123,47 +123,13 @@ document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) 
     const act = tabsEl.querySelector('.tab.active');
     if (!(act && !act.dataset.view && isDraft(act))) createTab('Neuer Chat'); // schon im leeren Chat → dort bleiben
     chatsView.hide();
+    createSwitch.update();
     setTimeout(() => $('input')?.focus(), 50);
   } else if (k === 'history') openChatsFromAnywhere();
   else if (VIEW_TABS[k]) window.softSwitch(() => openViewTab(k));
 }));
 // Lupe oben: Suchfeld (search.js)
 
-/* „Erstellen“ mit Optionen (Wunsch 09.11.): der Pfeil rechts in der Zeile öffnet ein Menü – Neuer Chat, Neues Dokument,
-   Neue Aufgabe, Neuer Termin. Ein Klick auf die Zeile selbst öffnet wie bisher den leeren Chat. */
-(() => {
-  const row = document.querySelector('.sidebar .sb-main [data-nav="new"]'); if (!row) return;
-  const more = el('span', 'sb-new-more');
-  more.setAttribute('role', 'button'); more.setAttribute('aria-label', 'Optionen'); more.setAttribute('aria-haspopup', 'menu');
-  more.innerHTML = '<svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-down"/></svg>';
-  row.append(more);
-  const menu = el('div', 'lb2-menu sb-new-menu');
-  menu.setAttribute('role', 'menu'); menu.hidden = true;
-  const ITEMS = [['chat', 'chat', 'Neuer Chat'], ['doc', 'file-plus', 'Neues Dokument'], ['task', 'tasks', 'Neue Aufgabe'], ['event', 'calendar', 'Neuer Termin']];
-  menu.innerHTML = ITEMS.map(([k, ic, l]) => `<button type="button" class="lb2-mi" role="menuitem" data-new="${k}"><svg width="14" height="14" aria-hidden="true"><use href="#f-${ic}"/></svg><span>${l}</span></button>`).join('');
-  document.body.append(menu);
-  const close = () => { menu.hidden = true; more.classList.remove('on'); };
-  more.addEventListener('click', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    if (!menu.hidden) { close(); return; }
-    const r = row.getBoundingClientRect();
-    menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 4)}px`; menu.style.minWidth = `${Math.round(r.width)}px`;
-    menu.hidden = false; more.classList.add('on');
-  });
-  const later = (fn) => setTimeout(fn, 120);
-  menu.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-new]'); if (!b) return;
-    close();
-    const k = b.dataset.new;
-    if (k === 'chat') row.click();
-    else if (k === 'doc') document.querySelector('.create-switch [data-cs="docs"]')?.click();
-    else if (k === 'task') { window.softSwitch(() => openViewTab('tasks')); later(() => document.querySelector('.tk-new')?.click()); }
-    else if (k === 'event') { window.softSwitch(() => openViewTab('calendar')); later(() => document.querySelector('[data-cal="new"]')?.click()); }
-  });
-  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !more.contains(e.target)) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) close(); });
-  window.addEventListener('resize', close);
-})();
 
 /* „Erstellen“: oben mittig zwei Wörter im Stil der alten Agenten-Leiste – Agenten (leerer KI-Chat) | Dokumente (neues leeres Dokument).
    Steht im leeren Chat und im frisch über „Dokumente“ angelegten, noch leeren Dokument; das Wechseln selbst verwirft den leeren Vorgänger
@@ -195,6 +161,7 @@ const createSwitch = (() => {
   });
   window.addEventListener('chat-tab-switched', () => requestAnimationFrame(update));
   document.addEventListener('input', () => { if (panel?.classList.contains('create-doc')) { update(); window.renderSideChats?.(); } }, true);
+  requestAnimationFrame(update); // gleich beim Start „Agenten“ markieren (sonst war anfangs keiner der beiden gewählt)
   return { update, isCreate: (t) => !!createDoc(t) || (!!t && !t.dataset.view && isDraft(t)) };
 })();
 
@@ -5432,13 +5399,24 @@ function renderChatBar() {
 }
 
 /* Titel aus der ersten Anfrage erzeugen (nur, solange der Nutzer ihn nicht selbst gesetzt hat) */
+/* Ersatz-Titel, wenn keine KI antwortet (09.11.): statt der ersten fünf Wörter („Kannst du mir die …“) das Thema –
+   Anrede, Bitten und Fragewörter vorne weg, Artikel weg, höchstens fünf Wörter, großer Anfang. */
+function titleFromText(text) {
+  let t = String(text || '').replace(/\s+/g, ' ').replace(/[„“"»«]/g, '').trim();
+  const LEAD = /^(hey|hallo|hi|servus|moin|okay|ok|also|bitte|kurz|mal|nochmal|kannst du( mir)?|könntest du( mir)?|würdest du( mir)?|kann man|erklär(e)?( mir)?|erkläre|sag(e)? mir|zeig(e)? mir|gib mir|hilf mir( bei| mit)?|mach(e)?( mir)?|schreib(e)?( mir)?|erstell(e)?( mir)?|fass(e)?|ich (brauche|möchte|will|hätte gern|habe)( eine?n? )?( ?frage)?( zu| zur| zum)?|frage zu|was (ist|sind|bedeutet|heißt)|wie (funktioniert|funktionieren|geht|gehen|macht man|berechnet man|löst man)|wer (war|ist|waren)|warum|wieso|weshalb)\b[\s,:!.-]*/i;
+  for (let i = 0; i < 6 && LEAD.test(t); i++) t = t.replace(LEAD, '');
+  t = t.replace(/^(der|die|das|den|dem|des|ein|eine|einen|einem|einer|mir|mich|uns)\s+/i, '').replace(/\s*\b(bitte|danke)\b\s*/gi, ' ').trim();
+  t = t.split(/[.!?\n,]|\s+(?:und|aber|weil)\s+(?=warum|wieso|wie|was|wer)/i)[0].trim().replace(/\s+genau$/i, '').split(' ').slice(0, 5).join(' ').replace(/[?!.,:;-]+$/, '');
+  if (!t) t = String(text || '').trim().split(/\s+/).slice(0, 4).join(' ');
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
 async function autoTitle(text) {
   const tab = activeTab();
   const c = chatOf(tab);
   if (!c) return;
   c.updated = Date.now();
   if (!c.auto || !String(text || '').trim()) return;
-  const fallback = String(text).replace(/\s+/g, ' ').trim().split(' ').slice(0, 5).join(' ').replace(/[?!.,:;]+$/, '');
+  const fallback = titleFromText(text);
   // KI-Titel; klappt es nicht (Modelle gerade ausgelastet), nach kurzer Pause ein zweiter Versuch – erst dann die ersten Wörter
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt) await new Promise((r) => setTimeout(r, 4000));

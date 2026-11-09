@@ -8,7 +8,8 @@ const UIKit = (() => {
   const pad2 = (n) => String(n).padStart(2, '0');
   const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   const fi = (n, s = 13) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
-  const COLORS = ['#6aa8ff', '#b49cff', '#f472b6', '#f07a6e', '#f0913a', '#facc15', '#4fcf8a', '#2dd4bf', '#a3a3a3'];
+  // Farbpunkte wie im Nutzer-Bild „Appearance“ (09.11.): ruhige Pastelltöne; alte Farben bleiben gültig (gelten dann als eigene Farbe)
+  const COLORS = ['#d1d1d1', '#cb88ab', '#d38b7d', '#ce965b', '#a1af60', '#7db993', '#6bb0d7', '#9799ec'];
 
   /* ---------- Farbe ---------- */
   const hexToHsv = (hex) => {
