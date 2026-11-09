@@ -4,6 +4,9 @@
    - Unter jedem Baustein: Name + Klasse, damit man ihn im Gespräch genau benennen kann („ändere .st-seg“).
    - Farben/Schrift werden live aus den CSS-Variablen gelesen, Icons aus den vorhandenen <symbol>s.
    - Neue Bausteine der App IMMER auch hier eintragen (kb/design.md → „UI Design“).
+   - Oben mittig ein Umschalter wie „Agenten | Dokumente“ (.cs-pill): „Aktuell“ = heutiger Stil der App,
+     „Glas“ = neuer Stil im Aufbau (macOS-artig: durchscheinende Flächen, Weichzeichner, SF-Schrift, runde Formen).
+     Der Glas-Stil gilt vorerst NUR hier (Klasse .ud-glass an der Ansicht, Regeln am Ende von style.css), gemerkt in ud.style.v1.
    app.js: VIEW_TABS.uidesign → window.UIDesign (show/hide wie die anderen Ansichten).
    =================================================================== */
 const UIDesign = (() => {
@@ -13,45 +16,50 @@ const UIDesign = (() => {
   const dog = (id, s = 20) => (window.PixelDogs?.svg ? window.PixelDogs.svg(id, s) : '');
   const panel = () => document.querySelector('.panel');
 
+  // Satz je Stil: [Aktuell, Glas]
+  const two = (cur, glass) => `<span class="ud-cur">${esc(cur)}</span><span class="ud-gl">${esc(glass)}</span>`;
   // Ein Baustein: Bühne + Name + Klasse (+ kurzer Satz, wo er benutzt wird)
   const item = (name, cls, stage, note = '', wide = false) => `<figure class="ud-item${wide ? ' ud-wide' : ''}">
       <div class="ud-stage">${stage}</div>
-      <figcaption><b>${esc(name)}</b>${cls ? `<code>${esc(cls)}</code>` : ''}${note ? `<span>${esc(note)}</span>` : ''}</figcaption></figure>`;
+      <figcaption><b>${esc(name)}</b>${cls ? `<code>${esc(cls)}</code>` : ''}${note ? `<span>${Array.isArray(note) ? two(...note) : esc(note)}</span>` : ''}</figcaption></figure>`;
   const section = (id, title, note, items) => `<section class="ud-sec" id="ud-${id}" data-sec="${id}">
-      <h3>${esc(title)}</h3>${note ? `<p class="ud-note">${esc(note)}</p>` : ''}<div class="ud-grid">${items.join('')}</div></section>`;
+      <h3>${esc(title)}</h3>${note ? `<p class="ud-note">${Array.isArray(note) ? two(...note) : esc(note)}</p>` : ''}<div class="ud-grid">${items.join('')}</div></section>`;
 
   /* ---------- Inhalte ---------- */
   const SURFACES = [['Hauptteil', '--main-bg', 'Sidebar, Hauptbereich'], ['Fenster', '--win-bg', 'Eingabefeld, Karten, Menüs'], ['Ausklappbar', '--pop-bg', 'Hover, Köpfe, aktive Zeile'], ['Rand', '--line', 'alle Ränder']];
   const TEXTS = [['Titel', '--text'], ['Text 2', '--text-2'], ['Fließtext', '--text-3'], ['Leise', '--text-4']];
-  const ACCENTS = [['Akzent', '--accent', '#2f86ff'], ['Gefahr', '', '#f07a6e'], ['Grün', '', '#3fb57d']];
+  const ACCENTS = [['Akzent', '--accent', '#2f86ff'], ['Gefahr', '--g-red', '#f07a6e'], ['Grün', '--g-green', '#3fb57d']];
+  const SIZES_GLASS = [[24, 700, 'Seitentitel'], [17, 600, 'Abschnitt'], [14, 500, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 500, 'Knopf'], [13, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
   const SIZES = [[18, 600, 'Seitentitel'], [15, 600, 'Abschnitt'], [14, 400, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 400, 'Knopf'], [12.5, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
 
-  const swatch = ([label, v, fixed]) => `<div class="ud-sw"><i data-var="${v}" style="background:${v ? `var(${v})` : fixed}"></i><b>${esc(label)}</b><code data-hex="${v}">${fixed || ''}</code></div>`;
+  const swatch = ([label, v, fixed]) => `<div class="ud-sw"><i data-var="${v}" style="background:${v ? `var(${v}${fixed ? `, ${fixed}` : ''})` : fixed}"></i><b>${esc(label)}</b><code data-hex="${v}" data-fix="${fixed || ''}">${fixed || ''}</code></div>`;
 
   function build() {
     const colors = window.UIKit?.COLORS || [];
     const icons = [...document.querySelectorAll('symbol[id^="f-"]')].map((s) => s.id.slice(2));
     const sideIcons = [...document.querySelectorAll('symbol[id^="o-"]')].map((s) => s.id.slice(2)).filter((n) => n !== 'chev');
-    return `<div class="ud-wrap">
+    return `<div class="ud-top"><div class="cs-pill" role="tablist" aria-label="Stil">
+        <button type="button" role="tab" data-udstyle="cur">Aktuell</button><button type="button" role="tab" data-udstyle="glass">Glas</button></div>
+        <div class="ud-top-in"><nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav></div></div>
+      <div class="ud-wrap">
       <div class="cl-head ud-head"><h2>UI Design</h2></div>
-      <p class="ud-lead">Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.</p>
-      <nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav>
+      <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Neuer Stil im Aufbau: dieselben Bausteine im Glas-Look. Gilt vorerst nur hier – erst wenn er fertig ist, kommt er in die App.')}</p>
 
-      ${section('farben', 'Farben', 'Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', [
+      ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Durchscheinende Flächen über einem ruhigen Hintergrund, helle Ränder, Weiß in vier Stufen.'], [
         item('Flächen', '--main-bg · --win-bg · --pop-bg · --line', `<div class="ud-sws">${SURFACES.map(swatch).join('')}</div>`, '', true),
         item('Text', '--text … --text-4', `<div class="ud-sws">${TEXTS.map(swatch).join('')}</div>`, '', true),
         item('Akzente', '--accent', `<div class="ud-sws">${ACCENTS.map(swatch).join('')}</div>`),
         item('Fach-/Termin-Farben', 'UIKit.COLORS', `<div class="ud-dots">${colors.map((c) => `<i style="background:${c}" title=""></i>`).join('')}</div>`),
       ])}
 
-      ${section('schrift', 'Schrift', 'Inter, Stärke 400/500/600 – nie fetter.', [
-        item('Größen', '', `<div class="ud-type">${SIZES.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`, '', true),
+      ${section('schrift', 'Schrift', ['Inter, Stärke 400/500/600 – nie fetter.', 'Systemschrift wie am Mac (SF Pro), Stärke 400/500/600, große Zahlen 700.'], [
+        item('Größen', '', [[SIZES, 'ud-cur-b'], [SIZES_GLASS, 'ud-gl-b']].map(([list, cls]) => `<div class="ud-type ${cls}">${list.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`).join(''), '', true),
       ])}
 
       ${section('knoepfe', 'Knöpfe', '', [
         item('Hauptknopf', '.ud-btn.primary', '<button type="button" class="ud-btn primary">Aufgabe erstellen</button>', 'Blau nur für das Wichtigste'),
         item('Grauer Knopf', '.tk-new', `<span class="tk-view tk-listmode ud-inline"><button type="button" class="tk-new">${fi('plus', 13)}<span>Neue Aufgabe</span></button></span>`, 'Seitenköpfe (Aufgaben)'),
-        item('Nebenknopf', '.ud-btn', '<button type="button" class="ud-btn">Abbrechen</button>', 'Rand, keine Fläche'),
+        item('Nebenknopf', '.ud-btn', '<button type="button" class="ud-btn">Abbrechen</button>', ['Rand, keine Fläche', 'Leicht gefüllt, Lichtkante oben']),
         item('Löschen', '.ud-btn.danger', `<button type="button" class="ud-btn danger">${fi('trash', 13)}Löschen</button>`, 'Erst rot, zweiter Tipp löscht'),
         item('Icon-Knopf', '.icon-btn', `<span class="ud-row"><button type="button" class="icon-btn">${fi('pin', 15)}</button><button type="button" class="icon-btn">${fi('sliders', 15)}</button><button type="button" class="icon-btn">${fi('more', 15)}</button></span>`, 'Werkzeug-Knöpfe nur als Icon'),
         item('Plus-Knopf', '.hm-plus', `<button type="button" class="hm-plus">${fi('plus', 14)}</button>`, 'Rechts neben „Home“'),
@@ -66,7 +74,7 @@ const UIDesign = (() => {
         item('System-Auswahl', 'select', '<select class="ud-select"><option>Automatisch</option><option>Gemini</option><option>MiniMax</option></select>', 'Nur wo nötig – sonst eigenes Menü'),
       ])}
 
-      ${section('auswahl', 'Auswahl', 'Kein Blau und kein Grau als Auswahl-Fläche – nur Haken oder heller Teil.', [
+      ${section('auswahl', 'Auswahl', ['Kein Blau und kein Grau als Auswahl-Fläche – nur Haken oder heller Teil.', 'Gewählter Teil hell durchscheinend, Schalter und Kästchen im Akzent-Blau.'], [
         item('Stufen-Umschalter', '.st-seg', '<span class="st-seg" role="radiogroup"><button type="button" class="on">Haupt-KI</button><button type="button">Ersatz</button><button type="button">Aus</button></span>', 'Einstellungen'),
         item('Leiste oben mittig', '.cs-pill', '<div class="cs-pill"><button type="button" class="on">Agenten</button><button type="button">Dokumente</button></div>', 'Erstellen'),
         item('Schalter', '.ce-switch', '<span class="ud-row"><button type="button" class="ce-switch on" role="switch"><i></i></button><button type="button" class="ce-switch" role="switch"><i></i></button></span>', 'An = Akzent'),
@@ -76,7 +84,7 @@ const UIDesign = (() => {
         item('Farbreihe', '.tk-colors', `<div class="ud-colors">${window.UIKit?.colorRow ? window.UIKit.colorRow(colors[2], 'data-udc') : ''}</div>`, 'Termine, Tags'),
       ])}
 
-      ${section('menues', 'Menüs', 'Fläche Fenster-Ton, Rand leise, Radius 10, Auswahl nur Haken.', [
+      ${section('menues', 'Menüs', ['Fläche Fenster-Ton, Rand leise, Radius 10, Auswahl nur Haken.', 'Glas mit Weichzeichner, Radius 14, Zeilen Radius 8, Auswahl nur Haken.'], [
         item('Auswahl-Menü', '.tk-pop · .tk-menu · .tk-mi', `<div class="tk-pop ud-pop"><button type="button" class="tk-pill" data-udopen>${fi('filter', 12)}<span data-udval>Alle</span>${fi('chevron-down', 10)}</button>
             <div class="tk-menu">${['Alle', 'Chats', 'Dokumente'].map((v, i) => `<button type="button" class="tk-mi${i === 0 ? ' on' : ''}" data-udpick="${v}"><span>${v}</span>${fi('check', 12)}</button>`).join('')}</div></div>`, 'Zum Ausprobieren antippen'),
         item('Menü (offen)', '.lb2-menu · .lb2-mi', `<div class="lb2-menu ud-static" role="menu">
@@ -135,16 +143,25 @@ const UIDesign = (() => {
   let view = null;
   const hexOf = (v) => {
     if (!v) return '';
-    const c = getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const c = getComputedStyle(view || document.documentElement).getPropertyValue(v).trim();
     return c || '';
   };
+  const STYLE_KEY = 'ud.style.v1';
+  const paintHex = () => view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex) || c.dataset.fix; });
+  function setStyle(st) {
+    const glass = st === 'glass';
+    view.classList.toggle('ud-glass', glass);
+    view.querySelectorAll('[data-udstyle]').forEach((b) => { const on = b.dataset.udstyle === (glass ? 'glass' : 'cur'); b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    try { localStorage.setItem(STYLE_KEY, glass ? 'glass' : 'cur'); } catch {}
+    paintHex();
+  }
   function wire() {
     // echte Bausteine zum Leben erwecken
     const chatIc = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
     view.querySelector('[data-udchat]')?.insertAdjacentHTML('beforeend', window.Docs?.CHAT_ICON || chatIc);
     const page = window.Docs?.PAGE_SHAPE ? `<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true">${window.Docs.PAGE_SHAPE}</svg>` : fi('file', 16);
     view.querySelector('[data-udpage]')?.insertAdjacentHTML('beforeend', page);
-    view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex); });
+    paintHex();
     let day = new Date().toISOString().slice(0, 10);
     for (const box of view.querySelectorAll('.ud-cal, .ud-cal2')) {
       const cal = window.UIKit?.miniCalendar(box, () => day, (d) => { day = d; });
@@ -158,6 +175,8 @@ const UIDesign = (() => {
     if (sheet && window.UIKit?.foldRows) window.UIKit.foldRows(sheet);
 
     view.addEventListener('click', (e) => {
+      const stb = e.target.closest('[data-udstyle]');
+      if (stb) { (window.softSwitch || ((f) => f()))(() => setStyle(stb.dataset.udstyle)); return; }
       const j = e.target.closest('[data-jump]');
       if (j) { view.querySelector(`#ud-${j.dataset.jump}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       const seg = e.target.closest('.st-seg button, .cs-pill button');
@@ -204,6 +223,8 @@ const UIDesign = (() => {
         view.setAttribute('aria-label', 'UI Design');
         view.innerHTML = build();
         wire();
+        let st = 'cur'; try { st = localStorage.getItem(STYLE_KEY) || 'cur'; } catch {}
+        setStyle(st);
       }
       if (!view.isConnected) p.append(view);
       api.open = true; view.hidden = false;

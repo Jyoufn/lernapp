@@ -11446,3 +11446,193 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .lb2-row .lb2-page.lb2-chat .pg-ln { stroke: color-mix(in srgb, var(--accent) 55%, var(--text-3)); }
 .lb2-row:hover .lb2-page.lb2-chat { stroke: color-mix(in srgb, var(--accent) 72%, #fff); }
 .lb2-row:hover .lb2-page.lb2-chat .pg-ln { stroke: color-mix(in srgb, var(--accent) 64%, #fff); }
+
+/* ===================================================================
+   09.11.: Umschalter oben in „UI Design“ (Aktuell | Glas) + Sätze je Stil
+   =================================================================== */
+.ud-top { position: sticky; top: 0; z-index: 5; display: flex; justify-content: center; padding: 12px 0 0; pointer-events: none; }
+.ud-top .cs-pill { pointer-events: auto; }
+.ud-wrap { padding-top: 22px; }
+.ud-gl { display: none; }
+.ud-glass .ud-gl { display: inline; }
+.ud-glass .ud-cur { display: none; }
+
+/* ===================================================================
+   09.11.: NEUER STIL „GLAS“ (im Aufbau, gilt vorerst NUR in .ud-view.ud-glass)
+   Vorbild: macOS-Fenster/Widgets (Nutzer-Bilder 09.11.): durchscheinende Flächen mit Weichzeichner über einem
+   ruhigen dunkelblauen Hintergrund, helle 1-px-Ränder mit Lichtkante oben, Systemschrift (SF Pro), runde Formen,
+   großzügige Abstände. Grundwerte als --g-*; alle Bausteine nutzen NUR diese Werte.
+   Radien: Fenster 22 · Karte 18 · Menü 14 · Feld/Knopf 10 · Zeile 8–10 · Pille 999.
+   =================================================================== */
+.ud-view.ud-glass {
+  --g-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter, sans-serif;
+  --g-fill: rgba(255, 255, 255, 0.06);       /* Glasfläche (Karten, Felder) */
+  --g-fill-2: rgba(255, 255, 255, 0.10);     /* angehoben (Knöpfe, Kacheln, Hover in Leisten) */
+  --g-fill-3: rgba(255, 255, 255, 0.16);     /* gewählt */
+  --g-hover: rgba(255, 255, 255, 0.07);
+  --g-edge: rgba(255, 255, 255, 0.11);       /* Rand */
+  --g-sep: rgba(255, 255, 255, 0.07);        /* Trennlinie */
+  --g-menu: rgba(32, 40, 62, 0.72);          /* Menüs/Fenster über Inhalt */
+  --g-blur: blur(24px) saturate(170%);
+  --g-light: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --g-lift: 0 10px 30px rgba(4, 10, 24, 0.28);
+  --g-green: #30d158; --g-red: #ff6961;
+  /* die Variablen der App auf Glas umgestellt – Bausteine, die sie nutzen, ziehen automatisch mit */
+  --main-bg: var(--g-fill); --win-bg: var(--g-fill); --card: var(--g-fill); --field-bg: var(--g-fill);
+  --pop-bg: var(--g-fill-2); --line: var(--g-edge); --field-border: var(--g-edge);
+  --menu-bg: var(--g-menu); --menu-border: rgba(255, 255, 255, 0.13); --menu-hover: var(--g-hover);
+  --text: #ffffff; --text-2: rgba(255, 255, 255, 0.88); --text-3: rgba(235, 240, 255, 0.66); --text-4: rgba(235, 240, 255, 0.44);
+  --accent: #0a84ff;
+  background:
+    radial-gradient(1100px 700px at 8% -12%, rgba(60, 112, 230, 0.42), transparent 62%),
+    radial-gradient(900px 720px at 105% 18%, rgba(118, 84, 214, 0.30), transparent 60%),
+    radial-gradient(1000px 760px at 38% 112%, rgba(28, 112, 196, 0.34), transparent 62%),
+    #0b1322;
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+.ud-view.ud-glass *:not(code) { font-family: var(--g-font) !important; }
+.ud-view.ud-glass code { color: var(--text-4); }
+
+/* Glasflächen: Karten, Kästen, Fenster */
+.ud-view.ud-glass :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet) {
+  border: 1px solid var(--g-edge); background: var(--g-fill); box-shadow: var(--g-light);
+  -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur);
+}
+.ud-view.ud-glass .ud-item { border-radius: 18px; }
+.ud-view.ud-glass .ud-stage { border-radius: 18px 18px 0 0; padding: 22px 18px; }
+.ud-view.ud-glass .ud-item figcaption { padding: 11px 14px 12px; border-top-color: var(--g-sep); }
+.ud-view.ud-glass .ud-item figcaption b { color: var(--text); font-weight: 500; font-size: 13px; }
+
+/* Kopf, Sprungleiste, Abschnitte */
+.ud-view.ud-glass .ud-head h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.4px; }
+.ud-view.ud-glass .ud-lead { color: var(--text-3); }
+.ud-view.ud-glass .ud-sec h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.2px; }
+.ud-view.ud-glass .ud-note { color: var(--text-3); }
+.ud-view.ud-glass .ud-jump { background: transparent; }
+.ud-view.ud-glass .ud-jump button { height: 30px; padding: 0 13px; border: 1px solid var(--g-edge); background: var(--g-fill); color: var(--text-2); font-size: 13px; font-weight: 500;
+  -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); box-shadow: var(--g-light); }
+.ud-view.ud-glass .ud-jump button:hover { background: var(--g-fill-2); color: var(--text); }
+
+/* Leisten-Umschalter (oben, „Agenten | Dokumente“, Stufen): Pille, gewählter Teil hell durchscheinend */
+.ud-view.ud-glass :is(.cs-pill, .st-seg) { display: inline-flex; align-items: center; gap: 2px; height: 36px; padding: 0 3px; border: 1px solid var(--g-edge); border-radius: 999px;
+  background: var(--g-fill); box-shadow: var(--g-light); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button { height: 28px; padding: 0 14px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--text-3); font-size: 13px; font-weight: 500; }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button:hover { color: var(--text); }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button.on { background: var(--g-fill-3) !important; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10) !important; }
+.ud-view.ud-glass .ud-top .cs-pill { background: rgba(20, 30, 52, 0.55); }
+
+/* Knöpfe */
+.ud-view.ud-glass .ud-btn, .ud-view.ud-glass .tk-view.tk-listmode .tk-new { height: 30px; padding: 0 13px; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;
+  background: var(--g-fill-2); color: var(--text); font-size: 13px; font-weight: 500; box-shadow: var(--g-light); }
+.ud-view.ud-glass .ud-btn:hover, .ud-view.ud-glass .tk-view.tk-listmode .tk-new:hover { background: var(--g-fill-3); }
+.ud-view.ud-glass .tk-view.tk-listmode .tk-new svg { color: var(--text-2); }
+.ud-view.ud-glass .ud-btn.primary { border-color: transparent; background: var(--accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.ud-view.ud-glass .ud-btn.primary:hover { background: color-mix(in srgb, var(--accent) 86%, #fff); }
+.ud-view.ud-glass .ud-btn.danger { border-color: transparent; background: rgba(255, 69, 58, 0.18); color: var(--g-red); }
+.ud-view.ud-glass :is(.icon-btn, .hm-plus) { width: 30px; height: 30px; border-radius: 8px; color: var(--text-2); }
+.ud-view.ud-glass :is(.icon-btn, .hm-plus):hover { background: var(--g-fill-2); color: var(--text); }
+.ud-view.ud-glass .tk-pill { height: 28px; padding: 0 12px; border: 1px solid var(--g-edge); border-radius: 999px; background: var(--g-fill); color: var(--text-2); font-size: 12.5px; box-shadow: var(--g-light); }
+.ud-view.ud-glass .tk-pill:hover { background: var(--g-fill-2); color: var(--text); }
+.ud-view.ud-glass .hm-go { height: 28px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--g-fill-2); color: var(--text); font-size: 12.5px; font-weight: 500; box-shadow: var(--g-light); }
+.ud-view.ud-glass .hm-go:hover { background: var(--g-fill-3); }
+
+/* Eingaben */
+.ud-view.ud-glass .cl-search { height: 40px; border: 1px solid var(--g-edge); border-radius: 12px; background: var(--g-fill); box-shadow: var(--g-light); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+.ud-view.ud-glass :is(.ud-input, .ud-select) { border: 1px solid var(--g-edge); border-radius: 10px; background: var(--g-fill); color: var(--text); box-shadow: var(--g-light); }
+.ud-view.ud-glass :is(.cl-search, .ud-input, .ud-select):focus-within, .ud-view.ud-glass .ud-input:focus { border-color: color-mix(in srgb, var(--accent) 60%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.ud-view.ud-glass .ud-select option { background: #1c2438; }
+
+/* Auswahl */
+.ud-view.ud-glass .ce-switch { width: 38px; height: 22px; background: rgba(255, 255, 255, 0.18); }
+.ud-view.ud-glass .ce-switch i { top: 2px; left: 2px; width: 18px; height: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+.ud-view.ud-glass .ce-switch.on { background: var(--accent); }
+.ud-view.ud-glass .ce-switch.on i { transform: translateX(16px); }
+.ud-view.ud-glass .lb2-check { border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 6px; background: transparent; }
+.ud-view.ud-glass .lb2-row.picked .lb2-check { border-color: var(--accent); background: var(--accent); color: #fff; }
+.ud-view.ud-glass .tk-colors button.on { box-shadow: 0 0 0 2px #0b1322, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+
+/* Menüs: Glas über Inhalt, Radius 14, Zeilen Radius 8, Auswahl nur Haken */
+.ud-view.ud-glass :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--menu-border); border-radius: 14px; background: var(--g-menu);
+  box-shadow: var(--g-light), var(--g-lift); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); }
+.ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 30px; border-radius: 8px; color: var(--text); font-size: 13px; }
+.ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button):hover { background: var(--g-fill-2); }
+.ud-view.ud-glass :is(.lb2-mi, .chat-pop button) > svg { color: var(--text-3); }
+.ud-view.ud-glass :is(.lb2-mi.lb2-danger, .chat-pop button.danger), .ud-view.ud-glass :is(.lb2-mi.lb2-danger, .chat-pop button.danger) > svg { color: var(--g-red); }
+.ud-view.ud-glass .cm-sep { background: var(--g-sep); }
+.ud-view.ud-glass :is(.lb2-tick, .ud-pop .tk-mi svg) { color: var(--accent); }
+/* Fenster mit Aufklapp-Zeilen */
+.ud-view.ud-glass .tk-sheet { border-radius: 22px; }
+.ud-view.ud-glass .tk-sheet-rows .tk-pill { height: 46px; padding: 0 18px; border: 0; border-radius: 0; background: none; box-shadow: none; color: var(--text); font-size: 14px; }
+.ud-view.ud-glass .tk-sheet-rows .tk-pill.empty { color: var(--text-4); }
+.ud-view.ud-glass .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 22px 22px 0 0; }
+.ud-view.ud-glass .tk-sheet-rows .tk-pill:hover { background: var(--g-hover); }
+.ud-view.ud-glass .tk-sheet .tk-menu { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ud-view.ud-glass .tk-sheet .tk-box { margin: 0 10px 10px; border: 1px solid var(--g-sep) !important; border-radius: 14px; background: var(--g-fill) !important; }
+/* Uhrzeit-Rad, Mini-Kalender, Farbwähler */
+.ud-view.ud-glass .tk-wh-band { border-radius: 8px; background: var(--g-fill-2); }
+.ud-view.ud-glass .tk-wh-item.on { color: #fff; }
+.ud-view.ud-glass .ud-cal2 { border-radius: 14px; padding: 8px; }
+.ud-view.ud-glass .tk-cal-head span { color: var(--text); font-weight: 600; }
+.ud-view.ud-glass .tk-cal-grid button { border-radius: 999px; }
+.ud-view.ud-glass .tk-cal-grid button:hover { background: var(--g-fill-2); }
+.ud-view.ud-glass .tk-cal-grid button.on { background: var(--accent); color: #fff; }
+.ud-view.ud-glass .tk-cal-grid button.today:not(.on) { color: var(--accent); }
+.ud-view.ud-glass .tk-picker { padding: 8px; border: 1px solid var(--g-edge); border-radius: 14px; background: var(--g-fill); }
+.ud-view.ud-glass .tk-sv, .ud-view.ud-glass .tk-hue { border-radius: 10px; }
+
+/* Listen */
+.ud-view.ud-glass .cl-label { color: var(--text-3); font-size: 12px; font-weight: 600; }
+.ud-view.ud-glass .lb2-row { border-radius: 10px; }
+.ud-view.ud-glass .lb2-row + .lb2-row::before { background: var(--g-sep); }
+.ud-view.ud-glass .lb2-row:hover { background: var(--g-hover); }
+.ud-view.ud-glass .lb2-title { color: var(--text); }
+.ud-view.ud-glass .lb2-time { color: var(--text-4); }
+.ud-view.ud-glass .ud-nav .nav-item { border-radius: 8px; color: var(--text-2); }
+.ud-view.ud-glass .ud-nav .nav-item.active { background: var(--g-fill-2); color: #fff; }
+.ud-view.ud-glass .ud-nav .nav-item:hover:not(.active) { background: var(--g-hover); }
+.ud-view.ud-glass .lb2-dock-pill { height: 40px; padding: 0 4px; border: 1px solid var(--g-edge); border-radius: 999px; background: var(--g-menu);
+  box-shadow: var(--g-light), var(--g-lift); -webkit-backdrop-filter: var(--g-blur); backdrop-filter: var(--g-blur); }
+.ud-view.ud-glass .lb2-dock-pill button { height: 30px; border-radius: 999px; color: var(--text-2); }
+.ud-view.ud-glass .lb2-dock-pill button:hover { background: var(--g-fill-2); color: #fff; }
+.ud-view.ud-glass .lb2-dk-sep { background: var(--g-sep); }
+
+/* Karten */
+.ud-view.ud-glass .hm-card { min-height: 66px; padding: 13px 12px 13px 14px; border-radius: 18px; background: var(--g-fill); }
+.ud-view.ud-glass .hm-card.hm-soon { border-color: rgba(48, 209, 88, 0.30); }
+.ud-view.ud-glass .hm-card.hm-warn { border-color: rgba(255, 105, 97, 0.34); }
+.ud-view.ud-glass .hm-ic { border: 0; border-radius: 10px; background: var(--g-fill-2); box-shadow: var(--g-light); }
+.ud-view.ud-glass .hm-title { color: var(--text); font-weight: 600; }
+.ud-view.ud-glass .hm-soon .hm-desc b { color: var(--g-green); }
+.ud-view.ud-glass .hm-warn .hm-desc b, .ud-view.ud-glass .hm-warn .hm-ic { color: var(--g-red); }
+.ud-view.ud-glass .hm-x { color: var(--text-4); }
+.ud-view.ud-glass :is(.ud-box, .ud-note-card) { border-radius: 18px; }
+.ud-view.ud-glass .ud-box-head b { font-weight: 600; }
+.ud-view.ud-glass .ud-box p { color: var(--text-2); }
+.ud-view.ud-glass .ud-nc-txt b { font-weight: 600; }
+
+/* Etiketten */
+.ud-view.ud-glass .tk-tag { border-radius: 999px; }
+.ud-view.ud-glass .ud-badge { height: 22px; padding: 0 9px; border-radius: 999px; background: var(--g-fill-2); color: var(--text-2); }
+.ud-view.ud-glass .ud-badge.accent { background: color-mix(in srgb, var(--accent) 22%, transparent); color: #9ccbff; }
+.ud-view.ud-glass .ud-badge.danger { background: rgba(255, 69, 58, 0.2); color: #ff9a94; }
+
+/* Farben, Schrift, Icons */
+.ud-view.ud-glass .ud-sw i { border-color: rgba(255, 255, 255, 0.16); border-radius: 10px; }
+.ud-view.ud-glass .ud-type div { border-bottom-color: var(--g-sep); }
+.ud-view.ud-glass .ud-icons span { border-radius: 10px; color: var(--text-2); }
+.ud-view.ud-glass .ud-icons span:hover { background: var(--g-fill-2); color: #fff; }
+.ud-jump { top: 52px; }
+.ud-sec { scroll-margin-top: 110px; }
+/* Kopf von „UI Design“: Umschalter + Sprungleiste in EINEM klebenden Streifen (volle Breite, darunter scrollt der Inhalt) */
+.ud-top { flex-direction: column; align-items: center; gap: 10px; padding: 12px 0 10px; background: var(--main-bg); pointer-events: auto; }
+.ud-top-in { box-sizing: border-box; width: 100%; max-width: 860px; padding: 0 24px; }
+.ud-top .ud-jump { position: static; margin: 0; padding: 0; background: none; }
+.ud-wrap { padding-top: 18px; }
+.ud-sec { scroll-margin-top: 104px; }
+.ud-view.ud-glass .ud-top { background: rgba(11, 19, 34, 0.55); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+@media (max-width: 600px) { .ud-top-in { padding: 0 14px; } }
+.ud-gl-b { display: none !important; }
+.ud-glass .ud-gl-b { display: flex !important; }
+.ud-glass .ud-cur-b { display: none !important; }
