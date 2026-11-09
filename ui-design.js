@@ -5,8 +5,10 @@
    - Farben/Schrift werden live aus den CSS-Variablen gelesen, Icons aus den vorhandenen <symbol>s.
    - Neue Bausteine der App IMMER auch hier eintragen (kb/design.md → „UI Design“).
    - Oben mittig ein Umschalter wie „Agenten | Dokumente“ (.cs-pill): „Aktuell“ = heutiger Stil der App,
-     „Glas“ = neuer Stil im Aufbau (macOS-artig: durchscheinende Flächen, Weichzeichner, SF-Schrift, runde Formen).
-     Der Glas-Stil gilt vorerst NUR hier (Klasse .ud-glass an der Ansicht, Regeln am Ende von style.css), gemerkt in ud.style.v1.
+     „Glas“ = neuer Stil als Vorschau (wie die Mac-Fenster aus den Nutzer-Bildern: ein Fenster in neutralem Grau, Sidebar als
+     hellere Spalte, durchscheinende Flächen, feine Ränder, SF-Schrift 13 px).
+     Der Glas-Stil gilt NUR, solange diese Ansicht mit „Glas“ offen ist: .ud-glass an der Ansicht + body.gl-shell
+     (Fenster/Sidebar). Regeln im Block „STIL GLAS“ am Ende von style.css, gemerkt in ud.style.v1.
    app.js: VIEW_TABS.uidesign → window.UIDesign (show/hide wie die anderen Ansichten).
    =================================================================== */
 const UIDesign = (() => {
@@ -29,7 +31,8 @@ const UIDesign = (() => {
   const SURFACES = [['Hauptteil', '--main-bg', 'Sidebar, Hauptbereich'], ['Fenster', '--win-bg', 'Eingabefeld, Karten, Menüs'], ['Ausklappbar', '--pop-bg', 'Hover, Köpfe, aktive Zeile'], ['Rand', '--line', 'alle Ränder']];
   const TEXTS = [['Titel', '--text'], ['Text 2', '--text-2'], ['Fließtext', '--text-3'], ['Leise', '--text-4']];
   const ACCENTS = [['Akzent', '--accent', '#2f86ff'], ['Gefahr', '--g-red', '#f07a6e'], ['Grün', '--g-green', '#3fb57d']];
-  const SIZES_GLASS = [[24, 700, 'Seitentitel'], [17, 600, 'Abschnitt'], [14, 500, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 500, 'Knopf'], [13, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
+  const SIZES_GLASS = [[34, 700, 'Große Zahl'], [26, 700, 'Seitentitel'], [15, 600, 'Abschnitt'], [13, 600, 'Knopf, Kartentitel'], [13, 400, 'Text, Sidebar, Menü'], [12, 400, 'Klein'], [11.5, 500, 'Etikett']];
+  const SURFACES_GLASS = [['Fenster', '--gl-window', 'neutrales Grau'], ['Sidebar', '--gl-side', 'hellere Spalte'], ['Fläche', '--gl-fill', 'Karten, Felder'], ['Angehoben', '--gl-fill-2', 'Knöpfe, aktive Zeile'], ['Gewählt', '--gl-fill-3', 'Teil im Umschalter'], ['Rand', '--gl-edge', 'alle Ränder'], ['Menü', '--gl-menu', 'über Inhalt, weichgezeichnet']];
   const SIZES = [[18, 600, 'Seitentitel'], [15, 600, 'Abschnitt'], [14, 400, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 400, 'Knopf'], [12.5, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
 
   const swatch = ([label, v, fixed]) => `<div class="ud-sw"><i data-var="${v}" style="background:${v ? `var(${v}${fixed ? `, ${fixed}` : ''})` : fixed}"></i><b>${esc(label)}</b><code data-hex="${v}" data-fix="${fixed || ''}">${fixed || ''}</code></div>`;
@@ -43,23 +46,23 @@ const UIDesign = (() => {
         <div class="ud-top-in"><nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav></div></div>
       <div class="ud-wrap">
       <div class="cl-head ud-head"><h2>UI Design</h2></div>
-      <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Neuer Stil im Aufbau: dieselben Bausteine im Glas-Look. Gilt vorerst nur hier – erst wenn er fertig ist, kommt er in die App.')}</p>
+      <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Vorschau auf den neuen Stil: dieselben Bausteine wie am Mac. Gilt nur hier – in die App kommt er erst nach deiner Freigabe.')}</p>
 
-      ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Durchscheinende Flächen über einem ruhigen Hintergrund, helle Ränder, Weiß in vier Stufen.'], [
-        item('Flächen', '--main-bg · --win-bg · --pop-bg · --line', `<div class="ud-sws">${SURFACES.map(swatch).join('')}</div>`, '', true),
+      ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Ein Fenster in neutralem Grau, darauf durchscheinendes Weiß in drei Stufen und feine helle Ränder.'], [
+        item('Flächen', '', `<div class="ud-sws ud-cur-b">${SURFACES.map(swatch).join('')}</div><div class="ud-sws ud-gl-b">${SURFACES_GLASS.map(swatch).join('')}</div>`, ['--main-bg · --win-bg · --pop-bg · --line', '--gl-window · --gl-side · --gl-fill … --gl-menu'], true),
         item('Text', '--text … --text-4', `<div class="ud-sws">${TEXTS.map(swatch).join('')}</div>`, '', true),
         item('Akzente', '--accent', `<div class="ud-sws">${ACCENTS.map(swatch).join('')}</div>`),
         item('Fach-/Termin-Farben', 'UIKit.COLORS', `<div class="ud-dots">${colors.map((c) => `<i style="background:${c}" title=""></i>`).join('')}</div>`),
       ])}
 
-      ${section('schrift', 'Schrift', ['Inter, Stärke 400/500/600 – nie fetter.', 'Systemschrift wie am Mac (SF Pro), Stärke 400/500/600, große Zahlen 700.'], [
+      ${section('schrift', 'Schrift', ['Inter, Stärke 400/500/600 – nie fetter.', 'Systemschrift des Mac (SF Pro), Grundgröße 13 px; Titel und große Zahlen 700.'], [
         item('Größen', '', [[SIZES, 'ud-cur-b'], [SIZES_GLASS, 'ud-gl-b']].map(([list, cls]) => `<div class="ud-type ${cls}">${list.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`).join(''), '', true),
       ])}
 
       ${section('knoepfe', 'Knöpfe', '', [
         item('Hauptknopf', '.ud-btn.primary', '<button type="button" class="ud-btn primary">Aufgabe erstellen</button>', 'Blau nur für das Wichtigste'),
         item('Grauer Knopf', '.tk-new', `<span class="tk-view tk-listmode ud-inline"><button type="button" class="tk-new">${fi('plus', 13)}<span>Neue Aufgabe</span></button></span>`, 'Seitenköpfe (Aufgaben)'),
-        item('Nebenknopf', '.ud-btn', '<button type="button" class="ud-btn">Abbrechen</button>', ['Rand, keine Fläche', 'Leicht gefüllt, Lichtkante oben']),
+        item('Nebenknopf', '.ud-btn', '<button type="button" class="ud-btn">Abbrechen</button>', ['Rand, keine Fläche', 'Leicht gefüllt, ohne Rand']),
         item('Löschen', '.ud-btn.danger', `<button type="button" class="ud-btn danger">${fi('trash', 13)}Löschen</button>`, 'Erst rot, zweiter Tipp löscht'),
         item('Icon-Knopf', '.icon-btn', `<span class="ud-row"><button type="button" class="icon-btn">${fi('pin', 15)}</button><button type="button" class="icon-btn">${fi('sliders', 15)}</button><button type="button" class="icon-btn">${fi('more', 15)}</button></span>`, 'Werkzeug-Knöpfe nur als Icon'),
         item('Plus-Knopf', '.hm-plus', `<button type="button" class="hm-plus">${fi('plus', 14)}</button>`, 'Rechts neben „Home“'),
@@ -74,7 +77,7 @@ const UIDesign = (() => {
         item('System-Auswahl', 'select', '<select class="ud-select"><option>Automatisch</option><option>Gemini</option><option>MiniMax</option></select>', 'Nur wo nötig – sonst eigenes Menü'),
       ])}
 
-      ${section('auswahl', 'Auswahl', ['Kein Blau und kein Grau als Auswahl-Fläche – nur Haken oder heller Teil.', 'Gewählter Teil hell durchscheinend, Schalter und Kästchen im Akzent-Blau.'], [
+      ${section('auswahl', 'Auswahl', ['Kein Blau und kein Grau als Auswahl-Fläche – nur Haken oder heller Teil.', 'Gewählter Teil hell durchscheinend, Schalter und Kästchen im Akzent.'], [
         item('Stufen-Umschalter', '.st-seg', '<span class="st-seg" role="radiogroup"><button type="button" class="on">Haupt-KI</button><button type="button">Ersatz</button><button type="button">Aus</button></span>', 'Einstellungen'),
         item('Leiste oben mittig', '.cs-pill', '<div class="cs-pill"><button type="button" class="on">Agenten</button><button type="button">Dokumente</button></div>', 'Erstellen'),
         item('Schalter', '.ce-switch', '<span class="ud-row"><button type="button" class="ce-switch on" role="switch"><i></i></button><button type="button" class="ce-switch" role="switch"><i></i></button></span>', 'An = Akzent'),
@@ -84,7 +87,7 @@ const UIDesign = (() => {
         item('Farbreihe', '.tk-colors', `<div class="ud-colors">${window.UIKit?.colorRow ? window.UIKit.colorRow(colors[2], 'data-udc') : ''}</div>`, 'Termine, Tags'),
       ])}
 
-      ${section('menues', 'Menüs', ['Fläche Fenster-Ton, Rand leise, Radius 10, Auswahl nur Haken.', 'Glas mit Weichzeichner, Radius 14, Zeilen Radius 8, Auswahl nur Haken.'], [
+      ${section('menues', 'Menüs', ['Fläche Fenster-Ton, Rand leise, Radius 10, Auswahl nur Haken.', 'Glas mit Weichzeichner, Radius 12, Zeilen Radius 7, Auswahl nur Haken.'], [
         item('Auswahl-Menü', '.tk-pop · .tk-menu · .tk-mi', `<div class="tk-pop ud-pop"><button type="button" class="tk-pill" data-udopen>${fi('filter', 12)}<span data-udval>Alle</span>${fi('chevron-down', 10)}</button>
             <div class="tk-menu">${['Alle', 'Chats', 'Dokumente'].map((v, i) => `<button type="button" class="tk-mi${i === 0 ? ' on' : ''}" data-udpick="${v}"><span>${v}</span>${fi('check', 12)}</button>`).join('')}</div></div>`, 'Zum Ausprobieren antippen'),
         item('Menü (offen)', '.lb2-menu · .lb2-mi', `<div class="lb2-menu ud-static" role="menu">
@@ -147,10 +150,13 @@ const UIDesign = (() => {
     return c || '';
   };
   const STYLE_KEY = 'ud.style.v1';
+  // Glas-Vorschau: Fenster + Sidebar der App nur umstellen, solange diese Ansicht mit „Glas“ offen ist
+  const syncShell = () => document.body.classList.toggle('gl-shell', !!(view && api.open && view.classList.contains('ud-glass')));
   const paintHex = () => view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex) || c.dataset.fix; });
   function setStyle(st) {
     const glass = st === 'glass';
     view.classList.toggle('ud-glass', glass);
+    syncShell();
     view.querySelectorAll('[data-udstyle]').forEach((b) => { const on = b.dataset.udstyle === (glass ? 'glass' : 'cur'); b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
     try { localStorage.setItem(STYLE_KEY, glass ? 'glass' : 'cur'); } catch {}
     paintHex();
@@ -227,12 +233,12 @@ const UIDesign = (() => {
         setStyle(st);
       }
       if (!view.isConnected) p.append(view);
-      api.open = true; view.hidden = false;
+      api.open = true; view.hidden = false; syncShell(); paintHex();
       p.classList.add('view-docs', 'view-ud');
     },
     hide() {
       if (!api.open) return;
-      api.open = false;
+      api.open = false; syncShell();
       if (view) view.hidden = true;
       const p = panel(); if (!p) return;
       p.classList.remove('view-ud');
