@@ -11471,57 +11471,69 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .ud-glass .ud-cur-b { display: none !important; }
 
 /* ===================================================================
-   09.11.: STIL „GLAS“ – NEU AUFGEBAUT (ersetzt den ersten Entwurf). Nur VORSCHAU:
-   body.gl-shell ist nur gesetzt, solange „UI Design“ mit Stil „Glas“ offen ist (ui-design.js) – die App selbst bleibt unverändert.
-   Vorbild: die drei Mac-Fenster aus den Nutzer-Bildern (Statistik-Widget, Einstellungs-Fenster, Monitor-Widget):
-   - EIN Fenster in neutralem Grau: Sidebar als leicht hellere Spalte mit feiner Trennlinie, Hauptteil OHNE eigenen Kasten.
-     Auf jedem Gerät gleich (keine Geräte-Sonderfälle).
-   - Flächen = durchscheinendes Weiß in drei Stufen, feine helle 1-px-Ränder, keine Farbverläufe, keine Farbflecken.
-   - Weichzeichner nur dort, wo etwas ÜBER Inhalt liegt (Menüs, Kopfleiste, Auswahl-Leiste). Für die spätere Desktop-App
-     reicht es, --gl-window durchscheinend zu setzen – dann scheint der Schreibtisch durch.
-   - Schrift = Systemschrift des Mac (SF Pro), Grundgröße 13 px, Titel 26/700, Abschnitt 15/600, große Zahlen 700.
-   - Radien: Karte 14 · Menü 12 · Feld 10 · Knopf 8 · Zeile 7 · Umschalter/Pillen/runde Knöpfe 999.
-   Alle Werte als --gl-*; die Bausteine nutzen NUR diese Werte.
+   09.11. (2. Fassung): STIL „GLAS“ – Vorbild ist das DRITTE Nutzer-Bild (Mac-Widget „Mizu Pro“), dazu Sidebar wie im
+   zweiten Bild (Einstellungs-Fenster). Nur VORSCHAU: body.gl-shell + .ud-view.ud-glass sind nur gesetzt, solange
+   „UI Design“ mit Stil „Glas“ offen ist (ui-design.js → syncShell). Die App selbst bleibt unverändert.
+   - Hinter allem liegt ein ruhiger, neutral-grauer Hintergrund (body::before). Sidebar = helles Milchglas darüber
+     (Weichzeichner, man sieht den Hintergrund weich durch), Hauptteil = dunkleres Glas, bündig bis an den Rand (kein Kasten).
+   - Inhalt wie die Kacheln im Bild: Karten mit Weiß ~6 %, haarfeiner heller Rand, Radius 16, Kopfzeile IN der Karte
+     (Name links, Klasse rechts leise), großzügige Abstände. Oben frei: nur der Umschalter, keine Leiste.
+   - Schrift: Systemschrift des Mac (SF Pro), 13 px; Titel 28/700, Kartenkopf 13,5/600, große Zahlen 28/600.
+   - Später als Desktop-App: Hintergrund weglassen und Fenster durchscheinend machen → echter Schreibtisch statt body::before.
    =================================================================== */
 body.gl-shell {
   --gl-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter, system-ui, sans-serif;
   --gl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-  --gl-window: #232325;                      /* Fenster: neutrales Grau */
-  --gl-side: rgba(255, 255, 255, 0.04);      /* Sidebar-Spalte (etwas heller als das Fenster) */
-  --gl-fill: rgba(255, 255, 255, 0.05);      /* Fläche: Karten, Felder */
-  --gl-fill-2: rgba(255, 255, 255, 0.09);    /* angehoben: Knöpfe, aktive Zeile, Hover */
-  --gl-fill-3: rgba(255, 255, 255, 0.16);    /* gewählt: Teil im Umschalter */
-  --gl-hover: rgba(255, 255, 255, 0.055);
-  --gl-edge: rgba(255, 255, 255, 0.09);      /* Rand */
-  --gl-sep: rgba(255, 255, 255, 0.06);       /* Trennlinie */
-  --gl-menu: rgba(50, 50, 53, 0.72);         /* Menüs über Inhalt (mit Weichzeichner) */
-  --gl-menu-edge: rgba(255, 255, 255, 0.13);
-  --gl-blur: blur(30px) saturate(180%);
-  --gl-lift: 0 14px 40px rgba(0, 0, 0, 0.32), 0 0 0 0.5px rgba(0, 0, 0, 0.35);
-  --gl-t1: rgba(255, 255, 255, 0.96); --gl-t2: rgba(255, 255, 255, 0.82); --gl-t3: rgba(235, 235, 245, 0.58); --gl-t4: rgba(235, 235, 245, 0.36);
+  --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --gl-side: rgba(72, 72, 76, 0.38);         /* Sidebar: helles Milchglas */
+  --gl-main: rgba(30, 30, 33, 0.66);         /* Hauptteil: dunkles Glas */
+  --gl-card: rgba(255, 255, 255, 0.07);      /* Karte / Kachel */
+  --gl-card-2: rgba(255, 255, 255, 0.09);    /* angehoben: Knöpfe, Felder, aktive Zeile */
+  --gl-card-3: rgba(255, 255, 255, 0.15);    /* gewählt */
+  --gl-hover: rgba(255, 255, 255, 0.06);
+  --gl-edge: rgba(255, 255, 255, 0.085);     /* haarfeiner Rand */
+  --gl-sep: rgba(255, 255, 255, 0.06);
+  --gl-menu: rgba(46, 46, 50, 0.66);
+  --gl-menu-edge: rgba(255, 255, 255, 0.14);
+  --gl-blur: blur(40px) saturate(160%);
+  --gl-lift: 0 18px 50px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(0, 0, 0, 0.4);
+  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(255, 255, 255, 0.80); --gl-t3: rgba(235, 235, 245, 0.55); --gl-t4: rgba(235, 235, 245, 0.33);
   --gl-accent: #0a84ff; --gl-green: #30d158; --gl-red: #ff6961;
-  background: var(--gl-window);
+  background: #1c1c1e;
 }
+/* Hintergrund hinter dem Glas: neutrales Grau mit weichen hellen und dunklen Flächen (bereits weich, keine Farbe) */
+body.gl-shell::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(118deg, transparent 38%, rgba(255, 255, 255, 0.05) 47%, transparent 56%),
+    radial-gradient(42% 52% at 10% 14%, rgba(150, 150, 156, 0.55), transparent 70%),
+    radial-gradient(38% 46% at 22% 78%, rgba(110, 110, 116, 0.45), transparent 72%),
+    radial-gradient(46% 56% at 62% 8%, rgba(120, 120, 126, 0.45), transparent 70%),
+    radial-gradient(40% 50% at 92% 48%, rgba(140, 140, 146, 0.40), transparent 70%),
+    radial-gradient(44% 50% at 56% 96%, rgba(126, 126, 132, 0.38), transparent 72%),
+    radial-gradient(30% 36% at 44% 52%, rgba(0, 0, 0, 0.30), transparent 70%),
+    #232326; }
+body.gl-shell .app { z-index: 1; }
 
-/* ---------- Fenster: Sidebar-Spalte + Hauptteil ohne Kasten ---------- */
-body.gl-shell .panel { margin: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
-body.gl-shell .sidebar { background: var(--gl-side); box-shadow: inset -1px 0 0 var(--gl-sep);
-  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4); --pop-bg: var(--gl-fill-2); --line: var(--gl-edge); }
-body.gl-shell .sidebar, body.gl-shell .sidebar * { font-family: var(--gl-font) !important; -webkit-font-smoothing: antialiased; }
-body.gl-shell .sidebar .nav-item, body.gl-shell .ud-nav .nav-item { height: 28px; padding: 0 8px; gap: 8px; border-radius: 7px; background: none; color: var(--gl-t2); font-size: 13px; font-weight: 400; }
-body.gl-shell .sidebar .nav-item svg, body.gl-shell .ud-nav .nav-item svg { width: 15px; height: 15px; color: var(--gl-t3); }
-body.gl-shell .sidebar .nav-item:hover, body.gl-shell .ud-nav .nav-item:hover { background: var(--gl-hover); }
-body.gl-shell .sidebar .nav-item.active, body.gl-shell .ud-nav .nav-item.active { background: var(--gl-fill-2); color: #fff; font-weight: 500; }
-body.gl-shell .sidebar .nav-item.active svg, body.gl-shell .ud-nav .nav-item.active svg { color: var(--gl-t1); }
+/* ---------- Fenster: Sidebar Milchglas, Hauptteil dunkles Glas bündig (kein Kasten, kein Abstand) ---------- */
+body.gl-shell .sidebar { background: var(--gl-noise), linear-gradient(var(--gl-side), var(--gl-side));
+  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
+  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4); --pop-bg: var(--gl-card-2); --line: var(--gl-edge); }
+body.gl-shell .panel { margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.07) !important;
+  background: var(--gl-noise), linear-gradient(var(--gl-main), var(--gl-main)) !important; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+body.gl-shell .sidebar, body.gl-shell .sidebar *, body.gl-shell .panel-toggle { font-family: var(--gl-font) !important; -webkit-font-smoothing: antialiased; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 28px; padding: 0 9px; gap: 9px; border-radius: 7px; background: none; color: var(--gl-t2); font-size: 13px; font-weight: 400; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item svg { width: 15px; height: 15px; color: var(--gl-t3); }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item:hover { background: var(--gl-hover); }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 500; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active svg { color: #fff; }
 body.gl-shell .sidebar .sb-ws-name { font-size: 13px; font-weight: 600; }
 body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; font-weight: 500; }
 
 /* ---------- Ansicht ---------- */
 .ud-view.ud-glass {
-  /* die Variablen der App zeigen hier auf die Glas-Werte – Bausteine, die sie nutzen, ziehen automatisch mit */
-  --main-bg: var(--gl-fill); --win-bg: var(--gl-fill); --card: var(--gl-fill); --field-bg: var(--gl-fill);
-  --pop-bg: var(--gl-fill-2); --line: var(--gl-edge); --field-border: var(--gl-edge);
-  --menu-bg: var(--gl-menu); --menu-border: var(--gl-menu-edge); --menu-hover: var(--gl-fill-2);
+  --main-bg: var(--gl-card); --win-bg: var(--gl-card); --card: var(--gl-card); --field-bg: var(--gl-card-2);
+  --pop-bg: var(--gl-card-2); --line: var(--gl-edge); --field-border: var(--gl-edge);
+  --menu-bg: var(--gl-menu); --menu-border: var(--gl-menu-edge); --menu-hover: rgba(255, 255, 255, 0.1);
   --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4);
   --accent: var(--gl-accent); --g-green: var(--gl-green); --g-red: var(--gl-red);
   background: transparent; color: var(--gl-t1); font-size: 13px; -webkit-font-smoothing: antialiased;
@@ -11529,59 +11541,71 @@ body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; fo
 .ud-view.ud-glass *:not(code) { font-family: var(--gl-font) !important; }
 .ud-view.ud-glass code { color: var(--gl-t4); font-family: var(--gl-mono) !important; font-size: 10.5px; }
 
-/* Kopfleiste (klebt): Fenster-Ton durchscheinend mit Weichzeichner, feine Linie unten */
-.ud-view.ud-glass .ud-top { gap: 8px; padding: 10px 0 8px; background: color-mix(in srgb, var(--gl-window) 70%, transparent);
-  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); box-shadow: inset 0 -1px 0 var(--gl-sep); }
-.ud-view.ud-glass .ud-jump { gap: 2px; }
-.ud-view.ud-glass .ud-jump button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; background: none; color: var(--gl-t3); font-size: 13px; font-weight: 500; }
-.ud-view.ud-glass .ud-jump button:hover { background: var(--gl-fill-2); color: var(--gl-t1); }
+/* Oben frei: nur der Umschalter (wie „Now | Stats“), keine Leiste, keine Sprungknöpfe */
+.ud-view.ud-glass .ud-top { position: static; padding: 16px 0 0; background: none; box-shadow: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+.ud-view.ud-glass .ud-top-in { display: none; }
+.ud-view.ud-glass .ud-wrap { max-width: 900px; padding: 44px 32px 96px; }
+.ud-view.ud-glass .ud-head { margin-bottom: 4px; }
+.ud-view.ud-glass .ud-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.6px; }
+.ud-view.ud-glass .ud-lead { margin: 0; color: var(--gl-t3); font-size: 13px; }
+.ud-view.ud-glass .ud-sec { padding-top: 36px; }
+.ud-view.ud-glass .ud-sec h3 { margin: 0 0 12px 2px; color: var(--gl-t1); font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+.ud-view.ud-glass .ud-note { display: none; }
+.ud-view.ud-glass .ud-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
 
-/* Seite */
-.ud-view.ud-glass .ud-wrap { padding-top: 26px; }
-.ud-view.ud-glass .ud-head h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
-.ud-view.ud-glass .ud-lead { margin-bottom: 10px; color: var(--gl-t3); font-size: 13px; }
-.ud-view.ud-glass .ud-sec { padding-top: 30px; }
-.ud-view.ud-glass .ud-sec h3 { margin-bottom: 3px; font-size: 15px; font-weight: 600; letter-spacing: -0.1px; }
-.ud-view.ud-glass .ud-note { color: var(--gl-t3); font-size: 12.5px; }
-.ud-view.ud-glass .ud-sec h3:last-of-type + .ud-grid, .ud-view.ud-glass .ud-sec h3 + .ud-grid { margin-top: 10px; }
+/* Karten wie die Kacheln im Bild: Kopf IN der Karte (Name links, Klasse rechts), Inhalt darunter */
+.ud-view.ud-glass :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker) { border: 1px solid var(--gl-edge); border-radius: 16px;
+  background: var(--gl-card); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035); }
+.ud-view.ud-glass .ud-item { padding: 14px 16px 16px; }
+.ud-view.ud-glass .ud-item figcaption { order: -1; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 0 12px; border: 0; }
+.ud-view.ud-glass .ud-item figcaption b { color: var(--gl-t1); font-size: 13.5px; font-weight: 600; letter-spacing: -0.1px; }
+.ud-view.ud-glass .ud-item figcaption code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ud-view.ud-glass .ud-item figcaption span { display: none; }
+.ud-view.ud-glass .ud-stage { justify-content: flex-start; min-height: 56px; padding: 0; border-radius: 0; }
+.ud-view.ud-glass .ud-stage:has(.ud-pop) { min-height: 150px; }
+.ud-view.ud-glass .ud-stage .tk-sheet, .ud-view.ud-glass .ud-stage :is(.ud-box, .ud-note-card, .ud-hm) { max-width: none; }
 
-/* Flächen: Karten, Kästen, Fenster – Weiß 5 %, feiner Rand, Radius 14 */
-.ud-view.ud-glass :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker) { border: 1px solid var(--gl-edge); border-radius: 14px; background: var(--gl-fill); box-shadow: none; }
-.ud-view.ud-glass .ud-stage { padding: 22px 18px; border-radius: 14px 14px 0 0; }
-.ud-view.ud-glass .ud-item figcaption { padding: 9px 13px 10px; border-top-color: var(--gl-sep); }
-.ud-view.ud-glass .ud-item figcaption b { color: var(--gl-t1); font-size: 12.5px; font-weight: 500; }
-.ud-view.ud-glass .ud-item figcaption span { color: var(--gl-t3); font-size: 11.5px; }
+/* Farben */
+.ud-view.ud-glass .ud-sws { gap: 12px 18px; }
+.ud-view.ud-glass .ud-sw { min-width: 180px; }
+.ud-view.ud-glass .ud-sw i { width: 32px; height: 32px; border-color: rgba(255, 255, 255, 0.12); border-radius: 9px; }
+.ud-view.ud-glass .ud-sw b { color: var(--gl-t1); font-size: 13px; }
+/* Schrift */
+.ud-view.ud-glass .ud-type { gap: 10px; }
+.ud-view.ud-glass .ud-type div { padding-bottom: 10px; border-bottom-color: var(--gl-sep); }
 
-/* Umschalter (oben, „Agenten | Dokumente“, Stufen): Pille mit feinem Rand, gewählter Teil hell */
-.ud-view.ud-glass :is(.cs-pill, .st-seg) { box-sizing: border-box; display: inline-flex; align-items: center; gap: 1px; height: 30px; padding: 0 2px; border: 1px solid var(--gl-edge); border-radius: 999px; background: var(--gl-fill); box-shadow: none; }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button { height: 24px; padding: 0 14px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--gl-t3); font-size: 13px; font-weight: 500; }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button:hover { color: var(--gl-t1); }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button.on { background: var(--gl-fill-3) !important; color: #fff; }
+/* Umschalter: Spur mit feinem Rand, gewählter Teil hell (wie „Now | Stats“) */
+.ud-view.ud-glass :is(.cs-pill, .st-seg) { box-sizing: border-box; display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px;
+  background: rgba(0, 0, 0, 0.18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2); }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button { height: 26px; padding: 0 16px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--gl-t2); font-size: 13.5px; font-weight: 500; }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button:hover { color: #fff; }
+.ud-view.ud-glass :is(.cs-pill, .st-seg) button.on { background: rgba(255, 255, 255, 0.17) !important; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.25) !important; }
 
-/* Knöpfe: gefüllt ohne Rand, Radius 8, Schrift 13/600 */
-.ud-view.ud-glass .ud-btn, .ud-view.ud-glass .tk-view.tk-listmode .tk-new { height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: var(--gl-fill-2); color: var(--gl-t1); font-size: 13px; font-weight: 600; box-shadow: none; }
-.ud-view.ud-glass .ud-btn:hover, .ud-view.ud-glass .tk-view.tk-listmode .tk-new:hover { background: var(--gl-fill-3); }
+/* Knöpfe */
+.ud-view.ud-glass .ud-btn, .ud-view.ud-glass .tk-view.tk-listmode .tk-new { height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 13px; font-weight: 500;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.ud-view.ud-glass .ud-btn:hover, .ud-view.ud-glass .tk-view.tk-listmode .tk-new:hover { background: var(--gl-card-3); }
 .ud-view.ud-glass .tk-view.tk-listmode .tk-new svg { color: var(--gl-t2); }
-.ud-view.ud-glass .ud-btn.primary { background: var(--gl-accent); color: #fff; }
+.ud-view.ud-glass .ud-btn.primary { background: var(--gl-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 .ud-view.ud-glass .ud-btn.primary:hover { background: color-mix(in srgb, var(--gl-accent) 88%, #fff); }
-.ud-view.ud-glass .ud-btn.danger { background: rgba(255, 105, 97, 0.14); color: var(--gl-red); }
-.ud-view.ud-glass .ud-btn.danger:hover { background: rgba(255, 105, 97, 0.22); }
-.ud-view.ud-glass .icon-btn { width: 28px; height: 28px; border-radius: 7px; color: var(--gl-t2); }
-.ud-view.ud-glass .icon-btn:hover { background: var(--gl-fill-2); color: var(--gl-t1); }
-.ud-view.ud-glass .hm-plus { width: 26px; height: 26px; border: 0; border-radius: 50%; background: var(--gl-fill-2); color: var(--gl-t1); }
-.ud-view.ud-glass .hm-plus:hover { background: var(--gl-fill-3); }
-.ud-view.ud-glass .tk-pill { height: 26px; padding: 0 11px; border: 1px solid var(--gl-edge); border-radius: 999px; background: transparent; color: var(--gl-t2); font-size: 12.5px; font-weight: 500; box-shadow: none; }
-.ud-view.ud-glass .tk-pill:hover { background: var(--gl-fill-2); color: var(--gl-t1); }
-.ud-view.ud-glass .hm-go { height: 26px; padding: 0 11px; border: 0; border-radius: 8px; background: var(--gl-fill-2); color: var(--gl-t1); font-size: 12.5px; font-weight: 600; box-shadow: none; }
-.ud-view.ud-glass .hm-go:hover { background: var(--gl-fill-3); }
+.ud-view.ud-glass .ud-btn.danger { background: rgba(255, 105, 97, 0.15); color: var(--gl-red); box-shadow: none; }
+.ud-view.ud-glass .ud-btn.danger:hover { background: rgba(255, 105, 97, 0.23); }
+/* runde Knöpfe wie im Bild (Stopp/Öffnen) */
+.ud-view.ud-glass :is(.icon-btn, .hm-plus) { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--gl-card-2); color: var(--gl-t1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.ud-view.ud-glass :is(.icon-btn, .hm-plus):hover { background: var(--gl-card-3); }
+.ud-view.ud-glass .ud-box-head .icon-btn { width: 28px; height: 28px; background: none; box-shadow: none; color: var(--gl-t3); }
+.ud-view.ud-glass .tk-pill { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); font-size: 12.5px; font-weight: 500; box-shadow: none; }
+.ud-view.ud-glass .tk-pill:hover { background: var(--gl-card-3); color: #fff; }
+.ud-view.ud-glass .hm-go { height: 28px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 12.5px; font-weight: 500; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.ud-view.ud-glass .hm-go:hover { background: var(--gl-card-3); }
 
-/* Eingaben */
-.ud-view.ud-glass .cl-search { height: 32px; border: 1px solid var(--gl-edge); border-radius: 10px; background: var(--gl-fill); box-shadow: none; }
-.ud-view.ud-glass .cl-search input { font-size: 13px; }
-.ud-view.ud-glass :is(.ud-input, .ud-select) { border: 1px solid var(--gl-edge); border-radius: 8px; background: var(--gl-fill); color: var(--gl-t1); font-size: 13px; box-shadow: none; }
-.ud-view.ud-glass .ud-input { padding: 6px 10px; }
-.ud-view.ud-glass .ud-select { height: 28px; }
-.ud-view.ud-glass :is(.cl-search, .ud-select):focus-within, .ud-view.ud-glass .ud-input:focus { border-color: color-mix(in srgb, var(--gl-accent) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gl-accent) 26%, transparent); }
+/* Eingaben (wie das Suchfeld unten im Bild) */
+.ud-view.ud-glass .cl-search { height: 38px; padding: 0 14px; border: 1px solid var(--gl-edge); border-radius: 13px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+.ud-view.ud-glass .cl-search input { font-size: 14px; }
+.ud-view.ud-glass :is(.ud-input, .ud-select) { border: 1px solid var(--gl-edge); border-radius: 10px; background: rgba(255, 255, 255, 0.07); color: var(--gl-t1); font-size: 13px; box-shadow: none; }
+.ud-view.ud-glass .ud-input { padding: 7px 11px; }
+.ud-view.ud-glass .ud-select { height: 30px; }
+.ud-view.ud-glass :is(.cl-search, .ud-select):focus-within, .ud-view.ud-glass .ud-input:focus { border-color: color-mix(in srgb, var(--gl-accent) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gl-accent) 25%, transparent); }
 .ud-view.ud-glass .ud-select option { background: #2c2c2e; }
 
 /* Auswahl */
@@ -11589,13 +11613,15 @@ body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; fo
 .ud-view.ud-glass .ce-switch i { top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
 .ud-view.ud-glass .ce-switch.on { background: var(--gl-accent); }
 .ud-view.ud-glass .ce-switch.on i { transform: translateX(16px); }
-.ud-view.ud-glass .lb2-check { border: 1px solid rgba(255, 255, 255, 0.26); border-radius: 5px; background: transparent; }
+.ud-view.ud-glass .lb2-check { border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 5px; background: transparent; }
 .ud-view.ud-glass .lb2-row.picked .lb2-check { border-color: var(--gl-accent); background: var(--gl-accent); color: #fff; }
-.ud-view.ud-glass .tk-colors button.on { box-shadow: 0 0 0 2px #2d2d2f, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+.ud-view.ud-glass .lb2-row.picked .lb2-check svg { stroke: #fff; }
+.ud-view.ud-glass .lb2-row.picked, .ud-view.ud-glass .lb2-row.picked:hover { background: transparent; }
+.ud-view.ud-glass .tk-colors button.on { box-shadow: 0 0 0 2px #26262a, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
 
-/* Menüs: Glas über Inhalt (Weichzeichner), Radius 12, Zeilen Radius 7, Auswahl nur Haken */
-.ud-view.ud-glass :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--gl-menu-edge); border-radius: 12px; background: var(--gl-menu); box-shadow: var(--gl-lift);
-  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+/* Menüs: Milchglas über Inhalt */
+.ud-view.ud-glass :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--gl-menu-edge); border-radius: 13px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
 .ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 7px; color: var(--gl-t1); font-size: 13px; }
 .ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button):hover { background: rgba(255, 255, 255, 0.1); }
 .ud-view.ud-glass :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t3); }
@@ -11603,65 +11629,59 @@ body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; fo
 .ud-view.ud-glass .cm-sep { background: var(--gl-sep); }
 .ud-view.ud-glass :is(.lb2-tick, .ud-pop .tk-mi svg) { color: var(--gl-t1); }
 /* Fenster mit Aufklapp-Zeilen */
-.ud-view.ud-glass .tk-sheet-rows .tk-pill { height: 40px; padding: 0 14px; border: 0; border-radius: 0; background: none; color: var(--gl-t1); font-size: 13px; font-weight: 400; }
+.ud-view.ud-glass .tk-sheet { width: 100%; max-width: 460px; }
+.ud-view.ud-glass .tk-sheet-rows .tk-pill { height: 42px; padding: 0 16px; border-radius: 0; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 400; }
 .ud-view.ud-glass .tk-sheet-rows .tk-pill.empty { color: var(--gl-t3); }
-.ud-view.ud-glass .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 14px 14px 0 0; }
+.ud-view.ud-glass .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 16px 16px 0 0; }
 .ud-view.ud-glass .tk-sheet-rows .tk-pill:hover { background: var(--gl-hover); }
 .ud-view.ud-glass .tk-sheet .tk-menu { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.ud-view.ud-glass .tk-sheet .tk-box { margin: 0 8px 8px; border: 1px solid var(--gl-sep) !important; border-radius: 10px; background: var(--gl-fill) !important; }
+.ud-view.ud-glass .tk-sheet .tk-box { margin: 0 8px 8px; border: 1px solid var(--gl-sep) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.04) !important; }
 /* Uhrzeit-Rad, Mini-Kalender, Farbwähler */
-.ud-view.ud-glass .tk-wh-band { border-radius: 7px; background: var(--gl-fill-2); }
+.ud-view.ud-glass .tk-wh-band { border-radius: 8px; background: var(--gl-card-2); }
 .ud-view.ud-glass .tk-wh-item.on { color: #fff; }
-.ud-view.ud-glass .ud-cal2 { padding: 8px; }
+.ud-view.ud-glass .ud-cal2 { padding: 10px; }
 .ud-view.ud-glass .tk-cal-head span { color: var(--gl-t1); font-weight: 600; }
-.ud-view.ud-glass .tk-cal-grid button { border-radius: 7px; }
-.ud-view.ud-glass .tk-cal-grid button:hover { background: var(--gl-fill-2); }
+.ud-view.ud-glass .tk-cal-grid button { border-radius: 999px; }
+.ud-view.ud-glass .tk-cal-grid button:hover { background: var(--gl-card-2); }
 .ud-view.ud-glass .tk-cal-grid button.on { background: var(--gl-accent); color: #fff; }
 .ud-view.ud-glass .tk-cal-grid button.today:not(.on) { color: var(--gl-accent); }
-.ud-view.ud-glass .tk-picker { padding: 8px; }
-.ud-view.ud-glass .tk-sv, .ud-view.ud-glass .tk-hue { border-radius: 8px; }
+.ud-view.ud-glass .tk-picker { padding: 10px; }
+.ud-view.ud-glass .tk-sv, .ud-view.ud-glass .tk-hue { border-radius: 9px; }
 
-/* Listen */
-.ud-view.ud-glass .cl-label { color: var(--gl-t3); font-size: 11.5px; font-weight: 500; }
-.ud-view.ud-glass .lb2-row { border-radius: 8px; }
+/* Listen (wie „Live“ im Bild) */
+.ud-view.ud-glass .cl-label { padding-left: 8px; color: var(--gl-t3); font-size: 12px; font-weight: 500; }
+.ud-view.ud-glass .lb2-row { border-radius: 10px; }
 .ud-view.ud-glass .lb2-row + .lb2-row::before { background: var(--gl-sep); }
 .ud-view.ud-glass .lb2-row:hover { background: var(--gl-hover); }
-.ud-view.ud-glass .lb2-title { color: var(--gl-t1); font-size: 13px; }
-.ud-view.ud-glass .lb2-time { color: var(--gl-t3); font-size: 12px; font-variant-numeric: tabular-nums; }
-.ud-view.ud-glass .lb2-dock-pill { height: 38px; padding: 0 4px; border: 1px solid var(--gl-menu-edge); border-radius: 999px; background: var(--gl-menu); box-shadow: var(--gl-lift);
-  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-.ud-view.ud-glass .lb2-dock-pill button { height: 28px; border-radius: 999px; color: var(--gl-t2); font-size: 13px; }
+.ud-view.ud-glass .lb2-title { color: var(--gl-t1); font-size: 14px; font-weight: 500; }
+.ud-view.ud-glass .lb2-time { color: var(--gl-t3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.ud-view.ud-glass .lb2-dock-pill { height: 40px; padding: 0 4px; border: 1px solid var(--gl-menu-edge); border-radius: 999px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+.ud-view.ud-glass .lb2-dock-pill button { height: 30px; border-radius: 999px; color: var(--gl-t2); font-size: 13px; }
 .ud-view.ud-glass .lb2-dock-pill button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
 .ud-view.ud-glass .lb2-dk-sep { background: var(--gl-sep); }
 
-/* Karten: Zustand über Farbe von Icon und Text, nicht über den Rand */
-.ud-view.ud-glass .hm-card { min-height: 58px; padding: 10px 10px 10px 12px; }
+/* Karten im Inhalt: Kachel-Look, Zustand über Farbe von Icon/Text */
+.ud-view.ud-glass .hm-card { min-height: 62px; padding: 12px 12px 12px 14px; background: rgba(255, 255, 255, 0.05); }
 .ud-view.ud-glass .hm-card:is(.hm-soon, .hm-warn) { border-color: var(--gl-edge); }
-.ud-view.ud-glass .hm-ic { border: 0; border-radius: 8px; background: var(--gl-fill-2); color: var(--gl-t2); }
-.ud-view.ud-glass .hm-title { color: var(--gl-t1); font-size: 13px; font-weight: 600; }
-.ud-view.ud-glass .hm-desc { color: var(--gl-t3); font-size: 12px; }
+.ud-view.ud-glass .hm-ic { border: 0; border-radius: 10px; background: var(--gl-card-2); color: var(--gl-t2); }
+.ud-view.ud-glass .hm-title { color: var(--gl-t1); font-size: 14px; font-weight: 600; }
+.ud-view.ud-glass .hm-desc { color: var(--gl-t3); font-size: 12.5px; }
 .ud-view.ud-glass .hm-soon :is(.hm-desc b, .hm-ic) { color: var(--gl-green); }
 .ud-view.ud-glass .hm-warn :is(.hm-desc b, .hm-ic) { color: var(--gl-red); }
 .ud-view.ud-glass .hm-x { color: var(--gl-t4); }
-.ud-view.ud-glass .ud-box-head b { font-size: 13px; font-weight: 600; }
-.ud-view.ud-glass .ud-box p { color: var(--gl-t2); font-size: 13px; }
-.ud-view.ud-glass .ud-nc-txt b { font-size: 13px; font-weight: 600; }
-.ud-view.ud-glass .ud-nc-txt span { color: var(--gl-t3); font-size: 12px; }
+.ud-view.ud-glass :is(.ud-box, .ud-note-card) { background: rgba(255, 255, 255, 0.05); }
+.ud-view.ud-glass .ud-box-head b { font-size: 14px; font-weight: 600; }
+.ud-view.ud-glass .ud-box p { color: var(--gl-t2); font-size: 13.5px; }
+.ud-view.ud-glass .ud-nc-txt b { font-size: 13.5px; font-weight: 600; }
+.ud-view.ud-glass .ud-nc-txt span { color: var(--gl-t3); font-size: 12.5px; }
 
 /* Etiketten */
-.ud-view.ud-glass .tk-tag { border-radius: 6px; }
-.ud-view.ud-glass .ud-badge { height: 20px; padding: 0 7px; border-radius: 6px; background: var(--gl-fill-2); color: var(--gl-t2); }
+.ud-view.ud-glass .tk-tag { border-radius: 999px; }
+.ud-view.ud-glass .ud-badge { height: 22px; padding: 0 9px; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); }
 .ud-view.ud-glass .ud-badge.accent { background: color-mix(in srgb, var(--gl-accent) 22%, transparent); color: #9ccbff; }
 .ud-view.ud-glass .ud-badge.danger { background: rgba(255, 105, 97, 0.18); color: #ffa19b; }
 
-/* Farben, Schrift, Icons */
-.ud-view.ud-glass .ud-sw { min-width: 190px; }
-.ud-view.ud-glass .ud-sw i { border-color: rgba(255, 255, 255, 0.14); border-radius: 8px; }
-.ud-view.ud-glass .ud-sw b { color: var(--gl-t1); }
-.ud-view.ud-glass .ud-type div { border-bottom-color: var(--gl-sep); }
-.ud-view.ud-glass .ud-icons span { border-radius: 8px; color: var(--gl-t2); }
-.ud-view.ud-glass .ud-icons span:hover { background: var(--gl-fill-2); color: #fff; }
-/* Glas – Feinschliff: Kopfleiste dichter (Inhalt scheint nur noch als Schimmer durch), gewählte Zeile ohne graue Fläche */
-.ud-view.ud-glass .ud-top { background: color-mix(in srgb, var(--gl-window) 93%, transparent); }
-.ud-view.ud-glass .lb2-row.picked, .ud-view.ud-glass .lb2-row.picked:hover { background: transparent; }
-.ud-view.ud-glass .lb2-row.picked .lb2-check svg { stroke: #fff; }
+/* Icons */
+.ud-view.ud-glass .ud-icons span { border-radius: 10px; color: var(--gl-t2); }
+.ud-view.ud-glass .ud-icons span:hover { background: var(--gl-card-2); color: #fff; }

@@ -5,8 +5,8 @@
    - Farben/Schrift werden live aus den CSS-Variablen gelesen, Icons aus den vorhandenen <symbol>s.
    - Neue Bausteine der App IMMER auch hier eintragen (kb/design.md → „UI Design“).
    - Oben mittig ein Umschalter wie „Agenten | Dokumente“ (.cs-pill): „Aktuell“ = heutiger Stil der App,
-     „Glas“ = neuer Stil als Vorschau (wie die Mac-Fenster aus den Nutzer-Bildern: ein Fenster in neutralem Grau, Sidebar als
-     hellere Spalte, durchscheinende Flächen, feine Ränder, SF-Schrift 13 px).
+     „Glas“ = neuer Stil als Vorschau (Vorbild: drittes Nutzer-Bild, Mac-Widget; Sidebar wie im zweiten Bild):
+     Milchglas über neutral-grauem Hintergrund, Karten wie Kacheln mit Kopf in der Karte, oben frei, SF-Schrift.
      Der Glas-Stil gilt NUR, solange diese Ansicht mit „Glas“ offen ist: .ud-glass an der Ansicht + body.gl-shell
      (Fenster/Sidebar). Regeln im Block „STIL GLAS“ am Ende von style.css, gemerkt in ud.style.v1.
    app.js: VIEW_TABS.uidesign → window.UIDesign (show/hide wie die anderen Ansichten).
@@ -31,8 +31,8 @@ const UIDesign = (() => {
   const SURFACES = [['Hauptteil', '--main-bg', 'Sidebar, Hauptbereich'], ['Fenster', '--win-bg', 'Eingabefeld, Karten, Menüs'], ['Ausklappbar', '--pop-bg', 'Hover, Köpfe, aktive Zeile'], ['Rand', '--line', 'alle Ränder']];
   const TEXTS = [['Titel', '--text'], ['Text 2', '--text-2'], ['Fließtext', '--text-3'], ['Leise', '--text-4']];
   const ACCENTS = [['Akzent', '--accent', '#2f86ff'], ['Gefahr', '--g-red', '#f07a6e'], ['Grün', '--g-green', '#3fb57d']];
-  const SIZES_GLASS = [[34, 700, 'Große Zahl'], [26, 700, 'Seitentitel'], [15, 600, 'Abschnitt'], [13, 600, 'Knopf, Kartentitel'], [13, 400, 'Text, Sidebar, Menü'], [12, 400, 'Klein'], [11.5, 500, 'Etikett']];
-  const SURFACES_GLASS = [['Fenster', '--gl-window', 'neutrales Grau'], ['Sidebar', '--gl-side', 'hellere Spalte'], ['Fläche', '--gl-fill', 'Karten, Felder'], ['Angehoben', '--gl-fill-2', 'Knöpfe, aktive Zeile'], ['Gewählt', '--gl-fill-3', 'Teil im Umschalter'], ['Rand', '--gl-edge', 'alle Ränder'], ['Menü', '--gl-menu', 'über Inhalt, weichgezeichnet']];
+  const SIZES_GLASS = [[28, 700, 'Seitentitel'], [28, 600, 'Große Zahl'], [15, 600, 'Abschnitt'], [13.5, 600, 'Kartenkopf'], [13, 400, 'Text, Sidebar, Menü'], [12.5, 400, 'Klein'], [11.5, 500, 'Etikett']];
+  const SURFACES_GLASS = [['Sidebar', '--gl-side', ''], ['Hauptteil', '--gl-main', ''], ['Karte', '--gl-card', ''], ['Angehoben', '--gl-card-2', ''], ['Gewählt', '--gl-card-3', ''], ['Rand', '--gl-edge', ''], ['Menü', '--gl-menu', '']];
   const SIZES = [[18, 600, 'Seitentitel'], [15, 600, 'Abschnitt'], [14, 400, 'Zeilentitel'], [13.5, 400, 'Sidebar'], [13, 400, 'Knopf'], [12.5, 400, 'Menü'], [12, 400, 'Klein'], [11, 500, 'Etikett']];
 
   const swatch = ([label, v, fixed]) => `<div class="ud-sw"><i data-var="${v}" style="background:${v ? `var(${v}${fixed ? `, ${fixed}` : ''})` : fixed}"></i><b>${esc(label)}</b><code data-hex="${v}" data-fix="${fixed || ''}">${fixed || ''}</code></div>`;
@@ -48,7 +48,7 @@ const UIDesign = (() => {
       <div class="cl-head ud-head"><h2>UI Design</h2></div>
       <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Vorschau auf den neuen Stil: dieselben Bausteine wie am Mac. Gilt nur hier – in die App kommt er erst nach deiner Freigabe.')}</p>
 
-      ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Ein Fenster in neutralem Grau, darauf durchscheinendes Weiß in drei Stufen und feine helle Ränder.'], [
+      ${section('farben', 'Farben', ['Nur drei Flächen, ein Rand, vier Text-Töne. Farbe nur als Akzent.', 'Milchglas über neutralem Grau.'], [
         item('Flächen', '', `<div class="ud-sws ud-cur-b">${SURFACES.map(swatch).join('')}</div><div class="ud-sws ud-gl-b">${SURFACES_GLASS.map(swatch).join('')}</div>`, ['--main-bg · --win-bg · --pop-bg · --line', '--gl-window · --gl-side · --gl-fill … --gl-menu'], true),
         item('Text', '--text … --text-4', `<div class="ud-sws">${TEXTS.map(swatch).join('')}</div>`, '', true),
         item('Akzente', '--accent', `<div class="ud-sws">${ACCENTS.map(swatch).join('')}</div>`),
