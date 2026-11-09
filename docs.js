@@ -570,7 +570,7 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M5.6 16.3A6.7 6.7 0 1 0 2.75 13.4l-.75 3.4z"/><path class="pg-ln" d="M6.3 9h5.4M6.3 11.8h3.4"/></svg>';
   const PAGE_SHAPE = '<path class="pg-out" d="M3.6 1.5h6.3l4.6 4.6v10.3a2.1 2.1 0 0 1-2.1 2.1H3.6a2.1 2.1 0 0 1-2.1-2.1V3.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-fold" d="M9.9 1.5v3a1.6 1.6 0 0 0 1.6 1.6h3"/><path class="pg-ln" d="M4.6 10h6.8M4.6 13h6.8M4.6 16h4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
   function renderSide() {
@@ -629,7 +629,7 @@ const Docs = (() => {
       <section class="hm-next" aria-label="Als Nächstes" hidden></section>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
-        <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 14)}</button></div>
+        <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
       <div class="cl-list"></div></div>`;
     const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
@@ -642,8 +642,23 @@ const Docs = (() => {
       <button type="button" class="lb2-dk-del" data-bulk="del">${fi('trash', 14)}<span class="lb2-dk-l"><span class="lb2-dk-pre">Wirklich&nbsp;</span><span class="lb2-dk-w">löschen</span></span></button><i class="lb2-dk-sep"></i>
       <button type="button" class="lb2-dk-none" data-bulk="none"><span class="lb2-dk-l">Abbrechen</span></button></div>`;
     const sel = new Set(); // Schlüssel „doc:ID“ / „chat:ID“
+    /* Filter (Wunsch 09.11.): Art (Alle · Chats · Dokumente), Zeitraum, Tags (mehrere), nur Angeheftete – das Menü bleibt beim Wählen offen */
     let filter = localStorage.getItem('docs.libFilter') || 'all';
     const FILTERS = { all: 'Alle', chat: 'Chats', doc: 'Dokumente' };
+    const TIMES = { any: 'Jederzeit', today: 'Heute', week: 'Letzte 7 Tage', month: 'Letzte 30 Tage' };
+    const fx = (() => { try { const v = JSON.parse(localStorage.getItem('docs.libFilter2')) || {}; return { time: TIMES[v.time] ? v.time : 'any', tags: new Set(v.tags || []), pinned: !!v.pinned }; } catch { return { time: 'any', tags: new Set(), pinned: false }; } })();
+    const saveFx = () => { try { localStorage.setItem('docs.libFilter2', JSON.stringify({ time: fx.time, tags: [...fx.tags], pinned: fx.pinned })); } catch {} };
+    const filtered = () => filter !== 'all' || fx.time !== 'any' || fx.tags.size > 0 || fx.pinned;
+    const passFx = (x) => {
+      if (fx.pinned && !x.pinned) return false;
+      if (fx.tags.size && !(x.tags || []).some((id) => fx.tags.has(id))) return false;
+      if (fx.time !== 'any') {
+        const d0 = new Date(); d0.setHours(0, 0, 0, 0);
+        const from = fx.time === 'today' ? d0.getTime() : Date.now() - (fx.time === 'week' ? 7 : 30) * 86400000;
+        if ((x.updated || 0) < from) return false;
+      }
+      return true;
+    };
     const menu = el('div', 'lb2-menu'); menu.hidden = true; menu.setAttribute('role', 'menu');
     document.body.append(menu);
     const hhmm = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
@@ -654,17 +669,21 @@ const Docs = (() => {
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
-        .map((d) => ({ kind: 'doc', id: d.id, title: d.title || 'Ohne Titel', desc: '', updated: d.updated || 0, pinned: !!d.pinned, d })); // keine Beschreibung in der Liste (Wunsch 05.11.)
+        .map((d) => ({ kind: 'doc', id: d.id, title: d.title || 'Ohne Titel', desc: '', updated: d.updated || 0, pinned: !!d.pinned, tags: d.tags || [], d })); // keine Beschreibung in der Liste (Wunsch 05.11.)
       const cs = filter === 'doc' ? [] : (window.LibChats?.items() || []).filter((c) => !q || c.title.toLowerCase().includes(q))
-        .map((c) => ({ kind: 'chat', id: c.id, title: c.title, desc: '', updated: c.updated, pinned: c.pinned, av: c.av }));
-      return [...ds, ...cs].sort((a, b) => b.updated - a.updated);
+        .map((c) => ({ kind: 'chat', id: c.id, title: c.title, desc: '', updated: c.updated, pinned: c.pinned, tags: c.tags || [], av: c.av }));
+      return [...ds, ...cs].filter(passFx).sort((a, b) => b.updated - a.updated);
+    };
+    const tagChips = (ids) => {
+      const gs = (ids || []).map(tagOf).filter(Boolean); if (!gs.length) return '';
+      return `<span class="lb2-tags">${gs.slice(0, 2).map((g) => `<span class="lb2-tag"><i style="background:${esc(g.c)}"></i>${esc(g.name)}</span>`).join('')}${gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : ''}</span>`;
     };
     const row = (x, i) => {
       const k = `${x.kind}:${x.id}`;
       const ic = x.kind === 'chat' ? `<span class="cl-av">${CHAT_ICON}</span>` : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : PAGE_ICON}</span>`;
       return `<div class="lb2-row${sel.has(k) ? ' picked' : ''}" data-k="${k}" data-key="${k}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
-        ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>
+        ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>${tagChips(x.tags)}
         <span class="lb2-time">${when(x.updated)}</span>
         <span class="lb2-acts"><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
     };
@@ -677,7 +696,8 @@ const Docs = (() => {
       const allPinned = sel.size > 0 && [...sel].every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned);
       const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.querySelector('.lb2-dk-l').textContent = allPinned ? 'Lösen' : 'Anheften';
       dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
-      bar.querySelector('.lb2-filter').classList.toggle('set', filter !== 'all'); // gefiltert → Icon hell
+      bar.querySelector('.lb2-filter').classList.toggle('set', filtered()); // gefiltert → Icon hell
+      bar.querySelector('.lb2-all').textContent = filtered() ? 'Gefiltert' : 'Alle Einträge';
     };
     const api = {
       open: false,
@@ -751,7 +771,21 @@ const Docs = (() => {
         return;
       }
       const fb = e.target.closest('[data-act="filter"]');
-      if (fb) { openMenu(fb, Object.entries(FILTERS).map(([v, l]) => item(v, l, filter === v)).join(''), (v) => { filter = v; localStorage.setItem('docs.libFilter', v); closeMenu(); api.render(); }); return; }
+      if (fb) {
+        const html = () => `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v, fi(v === 'chat' ? 'chat' : v === 'doc' ? 'file' : 'stack', 14))).join('')}`
+          + `<div class="lb2-msep"></div><div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v, fi(v === 'any' ? 'clock' : 'calendar', 14))).join('')}`
+          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<i class="lb2-mdot" style="background:${esc(g.c)}"></i>`)).join('')}` : '')
+          + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned, fi('pin', 14))}${filtered() ? item('reset', 'Filter zurücksetzen', false, fi('x', 14), ' muted') : ''}`;
+        openMenu(fb, html(), (v) => {
+          if (v.startsWith('k:')) { filter = v.slice(2); localStorage.setItem('docs.libFilter', filter); }
+          else if (v.startsWith('t:')) fx.time = v.slice(2);
+          else if (v.startsWith('g:')) { const id = v.slice(2); fx.tags.has(id) ? fx.tags.delete(id) : fx.tags.add(id); }
+          else if (v === 'p') fx.pinned = !fx.pinned;
+          else if (v === 'reset') { filter = 'all'; localStorage.setItem('docs.libFilter', 'all'); fx.time = 'any'; fx.tags.clear(); fx.pinned = false; }
+          saveFx(); api.render(); menu.innerHTML = html(); // Menü bleibt offen
+        });
+        return;
+      }
       const bulk = e.target.closest('[data-bulk]');
       if (bulk) { doBulk(bulk); return; }
       const r = e.target.closest('.lb2-row'); if (!r) return;

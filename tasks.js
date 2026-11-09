@@ -322,7 +322,7 @@ const Tasks = (() => {
     if (!open.length && (!done.length || filtering)) { // alles erledigt → nur „Erledigt“, kein Leer-Hinweis
       const e = document.createElement('div');
       e.className = 'tk-empty';
-      e.innerHTML = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : `<b>Keine offenen Aufgaben</b><span>Leg eine an und gib sie an einen Agenten.</span><button type="button" class="tk-empty-new" data-act="new">${fi('plus', 12)}Neue Aufgabe</button>`;
+      e.innerHTML = tasks.some((t) => t.status !== 'done') ? 'Keine Aufgabe passt zum Filter.' : `<b>Keine offenen Aufgaben</b><span>Neue Aufgaben legst du oben rechts an.</span>`;
       parts.push(e);
     }
     if (done.length) parts.push(block('done', 'Erledigt', done, doneOpen ? ' open' : ''));

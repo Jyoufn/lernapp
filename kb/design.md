@@ -1,17 +1,13 @@
 # Design – verbindliche Regeln (aktueller Stand)
 
-## UI DESIGN – die Vorlage für ALLES (verbindlich seit 09.11., IMMER zuerst lesen)
-- In der App gibt es den Sidebar-Tab **„UI Design“** (`ui-design.js`). Dort stehen ALLE Bausteine der App mit ihren echten Klassen: Farben, Schrift, Knöpfe, Eingaben, Auswahl (Umschalter, Schalter, Kästchen, Farbreihe), Menüs (Auswahl-Menü, Menü, Chat-Menü, Aufklapp-Zeilen, Uhrzeit-Rad), Listen, Karten, Etiketten, Werkzeuge (Mini-Kalender, Farbwähler), Icons.
-- **Jede UI-Änderung und jedes neue Element nimmt die Bausteine aus „UI Design“** – nie einen eigenen Knopf/Menü/Schalter neu erfinden, sondern die dort gezeigte Klasse benutzen. Sieht dort etwas anders aus als hier beschrieben, gilt „UI Design“ (der Nutzer bearbeitet die Bausteine dort mit Claude).
-- Ändert der Nutzer einen Baustein („mach die Menüs runder“), wird die echte Klasse geändert (wirkt überall) und – falls nötig – die Bühne in `ui-design.js` angepasst. Die Beschreibung hier unten danach auf den neuen Stand bringen.
-- Oben in „UI Design“ ein Umschalter wie „Agenten | Dokumente“ (`.cs-pill`): **Aktuell** (heutiger Stil, gilt in der App) | **Glas** (neuer Stil als Vorschau, gemerkt in `ud.style.v1`).
-- **Glas-Stil: entfernt (09.11. abends, Wunsch des Nutzers)** – vorerst kein Glas/Weichzeichner; übernommen wurden nur die Icons (siehe **Icons**). „UI Design“ zeigt die Bausteine im aktuellen Stil (kein Umschalter mehr).
-- **Icons (seit 09.11.)**: `line-icons.js` ersetzt beim Laden den Inhalt aller Symbole `#f-…`, `#i-…` und `#d-…` durch runde Linien-Icons: Home, Aufgaben, Kalender, Chat, Dokument, Plus, Suche, Agent = die Formen der Sidebar-Icons `#o-…` (Strich 1,5, runde Enden); alle übrigen aus Hugeicons „Stroke Rounded“ (MIT), Strich 2 im 24er-Raster. `#o-…` (Sidebar) bleibt unverändert. Einklappen-Icon (`sidebar`): Rahmen + dickerer gefüllter Balken links mit etwas Luft. Neue Icons in `line-icons.js` nachtragen (gefüllte Formen in `icons.js` bleiben als Rückfall).
-- **Formen (seit 09.11.)**: Knöpfe/Pillen/Etiketten „abgerundet“ (Radius 8) statt „ganz rund“ – auch Kalender (‹ Heute ›, Neu), Aufgaben, Home. Kein Fokus-Rahmen beim Anklicken (auch nicht mit Tastatur), keine Schatten. Filter-Knöpfe nur als Icon ohne Kasten.
-- **Umschalter `.cs-pill`** (Agenten | Dokumente): Spur #181818 mit Rand #242424, Radius 12; gewählter Teil = gleitende Fläche `.cs-thumb` (#262628, Rand #303033, Radius 9), gesetzt von `ui-design.js` → `placeThumb` (beobachtet Klassen- und Größenänderungen).
-- **Farbauswahl** (`UIKit.COLORS`, Tags/Projekte/Termine): Farbpunkte aus dem Nutzer-Bild „Appearance“ – #d1d1d1, #cb88ab, #d38b7d, #ce965b, #a1af60, #7db993, #6bb0d7, #9799ec; Punkte 20 px, gewählt = heller Ring; eigene Farbe: Fläche Radius 11, große Anfasser, schmale Farbton-Leiste. Dokument-Eigenschaften (Erstellt, Bearbeitet, Projekt, Priorität …) als Karte mit Rand #242424, Radius 12, Zeilen mit Trennlinie.
-- **Neuer Baustein in der App → immer auch in `ui-design.js` eintragen** (`item(Name, Klasse, Bühne, Satz)` im passenden Abschnitt). Nur Rahmen/Bühnen haben eigene `.ud-*`-Stile; Muster-Knöpfe ohne bisherige Klasse: `.ud-btn` (primary/danger), `.ud-input`, `.ud-badge`, `.ud-box`, `.ud-note-card`.
-
+## BAUSTEINE (Stand 09.11. nachts)
+- Den Tab „UI Design“ gibt es nicht mehr (Wunsch 09.11.). Bausteine = die vorhandenen Klassen in der App wiederverwenden: Knöpfe wie `.tk-new` (grau #212121, Rand #242424, Radius 8), Menüs `.lb2-menu` (Abschnitte `.lb2-ml`, Trennlinie `.lb2-msep`, Haken `.lb2-tick`), Umschalter `.cs-pill`, Listenzeilen `.lb2-row`, Etiketten/Tags `.lb2-tag` / `.tk-tag`.
+- **Glas-Stil: entfernt** (09.11. abends) – vorerst kein Glas/Weichzeichner.
+- **Icons**: `line-icons.js` ersetzt beim Laden den Inhalt aller Symbole `#f-…`, `#i-…`, `#d-…` durch runde Linien-Icons: Home, Aufgaben, Kalender, Chat, Dokument, Plus, Suche, Agent = Formen der Sidebar-Icons `#o-…` (Strich 1,5, runde Enden); übrige aus Hugeicons „Stroke Rounded“ (MIT), Strich 2 im 24er-Raster. Ausnahmen: Sprachmodus (`voice`) bleibt gefüllt; Chats (`chats`) = zwei runde Sprechblasen; Einklappen (`sidebar`) = Rahmen + dickerer gefüllter Balken links. `#o-home` (Sidebar) mit weich gerundetem Dach. Neue Icons in `line-icons.js` nachtragen.
+- **Formen**: Knöpfe/Pillen/Etiketten „abgerundet“ (Radius 8) statt „ganz rund“ – auch Kalender, Aufgaben, Home. Kein Fokus-Rahmen beim Anklicken, keine Schatten. Filter-Knöpfe nur als Icon ohne Kasten.
+- **Umschalter `.cs-pill`** (Agenten | Dokumente): Spur #181818, Rand #242424, Radius 12; gewählter Teil = gleitende Fläche `.cs-thumb` (#262628, Rand #303033, Radius 9), gesetzt von `ui-kit.js` → `placeThumb` (beobachtet Klassen-/Größenänderungen, gilt für jedes `.cs-pill`).
+- **Farbauswahl** (`UIKit.COLORS`, Tags/Projekte/Termine): #d1d1d1, #cb88ab, #d38b7d, #ce965b, #a1af60, #7db993, #6bb0d7, #9799ec (Farbpunkte aus dem Nutzer-Bild „Appearance“); Punkte 20 px, gewählt = heller Ring. Dokument-Eigenschaften (Erstellt, Bearbeitet, Projekt, Priorität …) als Karte (Rand #242424, Radius 12, Zeilen mit Trennlinie).
+- **Home-Liste**: Chat-Icon = runde Sprechblase, neutral wie das Dokument-Icon (kein Blau); Tags der Einträge rechts als kleine Etiketten (Punkt + Name, max. 2, dann +N).
 
 ## DESIGNSCHEMA (verbindlich seit 04.11. – überall anwenden, vor jeder UI-Änderung prüfen)
 Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flach, wenig Kontrast über Flächen, Kontrast über Text.
@@ -50,8 +46,8 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 ## Icons
 - `icons.js`: gefüllt, 16er-Raster, Details ausgespart; nur Lupe und einfache Zeichen (Pfeile, Plus, ×, Haken) als Linie. Farbe `currentColor`.
 - HTML `<svg width="14" height="14"><use href="#f-NAME"/></svg>`, JS `fi('NAME', 14)` bzw. `FadeIcons.svg('NAME', 14)`.
-- Namen u. a.: Die vollständige, echte Liste steht im Tab „UI Design“ → Icons (liest die vorhandenen `<symbol>`s). NICHT vorhanden z. B. `hourglass`, `clipboard`, `notebook` (nur als Dokument-Icons `#d-…`) – vorher dort nachsehen.
-- Sidebar nutzt Linien-Icons `#o-…` aus `index.html` (Strich 1,5, runde Enden, Ecken weich wie `o-tasks`/`o-calendar`; `o-home` = abgerundetes Haus, `o-palette` = UI Design).
+- Namen u. a.: Die vollständige Liste: Schlüssel unter `f` / `i` / `d` in `line-icons.js` bzw. die `<symbol>`s in `icons.js`/`index.html`. NICHT vorhanden z. B. `hourglass`, `clipboard`, `notebook` (nur als Dokument-Icons `#d-…`) – vorher dort nachsehen.
+- Sidebar nutzt Linien-Icons `#o-…` aus `index.html` (Strich 1,5, runde Enden, Ecken weich wie `o-tasks`/`o-calendar`; `o-home` = Haus mit weich gerundetem Dach).
 
 ## Animation
 - **Flüssig auf dem iPad** (verbindlich, 04.11.): nur `transform` und `opacity` animieren – kein `filter: blur` in Keyframes/Übergängen, kein `backdrop-filter`, keine Schatten-Animation.

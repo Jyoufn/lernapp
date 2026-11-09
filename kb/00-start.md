@@ -5,7 +5,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 
 | Aufgabe | lesen |
 |---|---|
-| Aussehen ändern (Farben, Abstände, Menüs, Karten, Animation) | `design.md` (oben: „UI DESIGN“ – Bausteine aus dem Tab „UI Design“ / `ui-design.js` nehmen) |
+| Aussehen ändern (Farben, Abstände, Menüs, Karten, Animation, Icons) | `design.md` |
 | Wo steht was im Code? | `dateien.md` |
 | Wie funktioniert Feature X heute (Chat, Aufgaben, Kalender, Börse …) | `funktionen.md` |
 | KI-Verhalten, Prompts, Blöcke, Quellen, Denk-Schritte | `ki.md` |
@@ -21,7 +21,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 - **Oberfläche komplett auf Deutsch** (keine englischen Beschriftungen, auch nicht in der Denk-Zeitleiste).
 
 ## Arbeitsweise (verbindlich)
-1. Vor UI-Änderungen `design.md` lesen – zuerst den Abschnitt **„UI DESIGN“**: alle Elemente nur aus den Bausteinen im Tab „UI Design“ (`ui-design.js`) bauen; neue Bausteine dort eintragen. Neue Stile **nur ans Ende von `style.css`** (Block „FESTGELEGTER STIL“ reicht bis zum Dateiende; neuere Regeln weiter unten gewinnen). Jeder neue Block bekommt einen Kommentar-Kopf mit Datum.
+1. Vor UI-Änderungen `design.md` lesen; vorhandene Bausteine/Klassen wiederverwenden. Neue Stile **nur ans Ende von `style.css`** (Block „FESTGELEGTER STIL“ reicht bis zum Dateiende; neuere Regeln weiter unten gewinnen). Jeder neue Block bekommt einen Kommentar-Kopf mit Datum.
 2. Icons aus `icons.js` (`#f-<name>`, gefüllt), **keine Emojis**. Verfügbare Namen: siehe `design.md`.
 3. Neue Browser-Datei → in `app-server.js` bei `PUBLIC_FILES` eintragen.
 4. Neue Bausteine erst nach Absprache; danach kurz in `funktionen.md` / `design.md` eintragen (aktueller Stand, keine Chronik).

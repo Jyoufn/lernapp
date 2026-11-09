@@ -85,7 +85,6 @@ const VIEW_TABS = {
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
-  uidesign: { title: 'UI Design', icon: 'f-palette', view: () => window.UIDesign },
 };
 function openViewTab(kind) {
   if (!VIEW_TABS[kind]) return; // z. B. ein gemerkter Tab einer Ansicht, die es nicht mehr gibt (Inbox)
@@ -5449,6 +5448,7 @@ chatMenu.addEventListener('click', (e) => {
   const tab = activeTab();
   const c = chatOf(tab);
   if (b.dataset.cm === 'rename') { closeChatPops(); startRename(tab); }
+  else if (b.dataset.cm === 'tags') { closeChatPops(); ChatTags.open(tab, chatTitleBtn); }
   else if (b.dataset.cm === 'pin') {
     closeChatPops();
     togglePin(tab);
@@ -5458,6 +5458,66 @@ chatMenu.addEventListener('click', (e) => {
     deleteChat(tab);
   }
 });
+
+/* ---------- Tags für Chats (Wunsch 09.11.) ----------
+   Gleicher Tag-Vorrat wie Aufgaben und Dokumente (localStorage „tasks.tags.v1“, Ereignis „tags-changed“).
+   Öffnen über das Chat-Menü (Titel oben links) oder „⋯“ am Chat in der Sidebar: oben ein Feld zum Suchen bzw. Anlegen
+   (Enter = neuer Tag mit der nächsten Farbe), darunter alle Tags zum An-/Abwählen. Gespeichert am Chat (c.tags), angezeigt in Home. */
+const ChatTags = (() => {
+  const KEY = 'tasks.tags.v1';
+  const all = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+  const saveAll = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} window.dispatchEvent(new CustomEvent('tags-changed', { detail: 'chats' })); };
+  const box = el('div', 'lb2-menu ct-menu');
+  box.hidden = true; box.setAttribute('role', 'menu');
+  document.body.append(box);
+  let tab = null, q = '';
+  const changed = () => { saveChats(); renderChatList?.(); window.renderSideChats?.(); if (window.Docs?.list?.open) window.Docs.list.render(); };
+  function draw() {
+    const c = chatOf(tab); if (!c) return;
+    const on = new Set(c.tags || []);
+    const list = all().filter((g) => !q || g.name.toLowerCase().includes(q.toLowerCase()));
+    const exact = all().some((g) => g.name.toLowerCase() === q.trim().toLowerCase());
+    const listEl = box.querySelector('.ct-list');
+    listEl.innerHTML = list.map((g) => `<button type="button" class="lb2-mi" role="menuitemcheckbox" aria-checked="${on.has(g.id)}" data-tag="${escapeHtml(g.id)}"><i class="ct-dot" style="background:${escapeHtml(g.c)}"></i><span>${escapeHtml(g.name)}</span>${on.has(g.id) ? `<i class="lb2-tick">${icon('f-check', 13)}</i>` : ''}</button>`).join('')
+      + (q.trim() && !exact ? `<button type="button" class="lb2-mi ct-new" data-newtag>${icon('f-plus', 13)}<span>„${escapeHtml(q.trim())}“ anlegen</span></button>` : '')
+      + (!list.length && !q.trim() ? '<div class="ct-empty">Noch keine Tags – oben einen Namen eingeben.</div>' : '');
+  }
+  function create() {
+    const name = q.trim().slice(0, 24); if (!name) return;
+    const list = all();
+    const g = { id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, name, c: (window.UIKit?.COLORS || ['#d1d1d1'])[list.length % (window.UIKit?.COLORS.length || 1)] };
+    list.push(g); saveAll(list);
+    const c = chatOf(tab); (c.tags || (c.tags = [])).push(g.id); q = ''; box.querySelector('input').value = ''; changed(); draw();
+  }
+  box.innerHTML = `<div class="ct-head"><input class="ct-in" placeholder="Tag suchen oder anlegen" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="ct-list"></div>`;
+  const input = box.querySelector('input');
+  input.addEventListener('input', () => { q = input.value; draw(); });
+  input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const hit = all().find((g) => g.name.toLowerCase() === q.trim().toLowerCase()); if (hit) toggle(hit.id); else create(); } if (e.key === 'Escape') close(); });
+  function toggle(id) {
+    const c = chatOf(tab); if (!c) return;
+    const set = new Set(c.tags || []); set.has(id) ? set.delete(id) : set.add(id);
+    c.tags = [...set]; changed(); draw();
+  }
+  box.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const t = e.target.closest('[data-tag]'); if (t) { toggle(t.dataset.tag); return; }
+    if (e.target.closest('[data-newtag]')) create();
+  });
+  function close() { box.hidden = true; tab = null; }
+  function open(t, anchor) {
+    tab = t; q = ''; input.value = '';
+    draw(); box.hidden = false;
+    const r = anchor.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+    box.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
+    box.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? r.top - h - 6 : r.bottom + 6)}px`;
+    setTimeout(() => input.focus({ preventScroll: true }), 30);
+  }
+  document.addEventListener('click', (e) => { if (!box.hidden && !box.contains(e.target)) close(); });
+  addEventListener('resize', close);
+  window.addEventListener('tags-changed', (e) => { if (e.detail !== 'chats' && !box.hidden) draw(); });
+  return { open, close, all };
+})();
+window.ChatTags = ChatTags;
 
 function togglePin(tab) {
   const c = chatOf(tab);
@@ -5692,7 +5752,8 @@ sbChats.classList.toggle('closed', sbClosed.has('chats'));
 let sideChatsFrame = 0;
 /* Chat in der Sidebar: beim Darüberfahren rechts Anheften und „⋯“ (Umbenennen · Anheften · Löschen); zu lange Namen enden mit … */
 const sbChatMenu = el('div', 'chat-pop chat-menu sb-chat-menu', `<button type="button" role="menuitem" data-sbm="rename">${icon('f-pencil', 14)}<span>Umbenennen</span></button>`
-  + `<button type="button" role="menuitem" data-sbm="pin">${icon('f-pin', 14)}<span>Anheften</span></button><div class="cm-sep" role="separator"></div>`
+  + `<button type="button" role="menuitem" data-sbm="pin">${icon('f-pin', 14)}<span>Anheften</span></button>`
+  + `<button type="button" role="menuitem" data-sbm="tags">${icon('f-tag', 14)}<span>Tags</span></button><div class="cm-sep" role="separator"></div>`
   + `<button type="button" role="menuitem" data-sbm="delete" class="danger">${icon('f-trash', 14)}<span>Löschen</span></button>`);
 sbChatMenu.setAttribute('role', 'menu');
 document.body.append(sbChatMenu);
@@ -5749,6 +5810,7 @@ sbChatMenu.addEventListener('click', (e) => {
   }
   const row = sbChats.querySelector('.sb-chat.menu-open');
   closeSbChatMenu();
+  if (b.dataset.sbm === 'tags') { ChatTags.open(tab, row || b); return; }
   if (b.dataset.sbm === 'pin') togglePin(tab);
   else if (b.dataset.sbm === 'rename' && row) renameSideChat(tab, row);
 });

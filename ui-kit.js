@@ -190,6 +190,30 @@ const UIKit = (() => {
     return out.filter(([, list]) => list.length);
   }
 
+  /* Umschalter (.cs-pill, z. B. „Agenten | Dokumente“): der helle Teil gleitet weich zum gewählten Knopf (Wunsch 09.11.; setzt sich selbst, wo immer ein .cs-pill steht) */
+  function placeThumb(pill) {
+    if (!pill.isConnected) return;
+    const on = pill.querySelector(':scope > button.on');
+    let t = pill.querySelector(':scope > .cs-thumb');
+    if (!on || !on.offsetWidth) { if (t) t.style.opacity = '0'; return; }
+    if (!t) { t = document.createElement('i'); t.className = 'cs-thumb'; t.style.transition = 'none'; pill.prepend(t); requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; })); }
+    t.style.opacity = '1'; t.style.width = `${on.offsetWidth}px`; t.style.transform = `translateX(${on.offsetLeft}px)`;
+  }
+  // nur im Browser (Tests laden ui-kit.js ohne DOM)
+  if (typeof document !== 'undefined' && document.body && typeof MutationObserver === 'function' && typeof window !== 'undefined' && window.addEventListener) {
+    // sichtbar werden (z. B. „Erstellen“ geöffnet) ändert die Größe → neu setzen
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => es.forEach((e) => placeThumb(e.target))) : null;
+    const watch = (pill) => { if (ro && !pill._csWatch) { pill._csWatch = true; ro.observe(pill); } };
+    const placeAll = () => document.querySelectorAll('.cs-pill').forEach((p) => { watch(p); placeThumb(p); });
+    window.addEventListener('chat-tab-switched', () => requestAnimationFrame(placeAll));
+    new MutationObserver((ms) => {
+      const pills = new Set(ms.map((m) => m.target.closest?.('.cs-pill')).filter(Boolean));
+      pills.forEach((p) => { watch(p); placeThumb(p); });
+    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    window.addEventListener('resize', placeAll);
+    requestAnimationFrame(placeAll);
+  }
+
   return { pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

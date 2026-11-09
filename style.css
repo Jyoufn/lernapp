@@ -11332,149 +11332,7 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .hm-plus svg { width: 14px; height: 14px; }
 .hm-plus:focus { outline: none; }
 
-/* ===================================================================
-   09.11.: Ansicht „UI Design“ (ui-design.js) – Katalog aller Bausteine.
-   Nur Rahmen/Bühnen sind eigene Stile (.ud-*); die Bausteine selbst nutzen die echten Klassen.
-   =================================================================== */
-.panel.view-ud > .dog-modes, .panel.view-ud > .create-switch { opacity: 0 !important; pointer-events: none !important; }
-.ud-view { overflow-y: auto; }
-.ud-wrap { box-sizing: border-box; width: 100%; max-width: 860px; margin: 0 auto; padding: 58px 24px 80px; animation: cl-in 520ms var(--spring) both; }
-.ud-head { margin-bottom: 6px; }
-.ud-head h2 { font-size: 18px; }
-.ud-lead { margin: 0 0 18px; color: var(--text-4); font-size: 13px; line-height: 1.5; }
-.ud-jump { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; gap: 6px; margin: 0 -24px 6px; padding: 10px 24px; background: var(--main-bg); }
-.ud-jump button { height: 28px; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: none; color: var(--text-3); font: 500 12.5px Inter, sans-serif; cursor: pointer;
-  -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease, color 120ms ease; }
-.ud-jump button:hover { background: var(--pop-bg); color: var(--text); }
-.ud-sec { padding-top: 26px; scroll-margin-top: 50px; }
-.ud-sec h3 { margin: 0 0 4px; color: var(--text); font-size: 15px; font-weight: 600; }
-.ud-note { margin: 0 0 12px; color: var(--text-4); font-size: 12.5px; }
-.ud-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-.ud-item { display: flex; flex-direction: column; min-width: 0; margin: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--main-bg); }
-.ud-item.ud-wide { grid-column: 1 / -1; }
-.ud-stage { position: relative; display: flex; flex: 1; align-items: center; justify-content: center; min-height: 92px; padding: 18px 16px; border-radius: 12px 12px 0 0; }
-.ud-item figcaption { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 9px 12px 10px; border-top: 1px solid var(--line); }
-.ud-item figcaption b { color: var(--text-2); font-size: 12.5px; font-weight: 500; }
-.ud-item figcaption code, .ud-view code { color: var(--text-4); font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; }
-.ud-item figcaption span { flex-basis: 100%; color: var(--text-4); font-size: 11.5px; }
-.ud-row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.ud-inline { display: inline-flex; }
-.ud-full { width: 100%; }
-/* Farben */
-.ud-sws { display: flex; flex-wrap: wrap; gap: 14px; width: 100%; }
-.ud-sw { display: grid; grid-template-columns: 34px auto; grid-template-rows: auto auto; column-gap: 10px; align-items: center; min-width: 150px; }
-.ud-sw i { grid-row: 1 / 3; width: 34px; height: 34px; border: 1px solid #2a2a2a; border-radius: 9px; }
-.ud-sw b { color: var(--text-2); font-size: 12.5px; font-weight: 500; }
-.ud-dots { display: flex; flex-wrap: wrap; gap: 8px; }
-.ud-dots i { width: 18px; height: 18px; border-radius: 50%; }
-/* Schrift */
-.ud-type { display: flex; flex-direction: column; gap: 8px; width: 100%; }
-.ud-type div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,.04); color: var(--text); }
-.ud-type div:last-child { border-bottom: 0; padding-bottom: 0; }
-/* Knöpfe (Muster für neue Knöpfe) */
-.ud-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text-2);
-  font: 500 13px Inter, sans-serif; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease, color 120ms ease; }
-.ud-btn:hover { background: var(--pop-bg); color: var(--text); }
-.ud-btn.primary { border-color: transparent; background: var(--accent); color: #fff; }
-.ud-btn.primary:hover { background: color-mix(in srgb, var(--accent) 88%, #fff); }
-.ud-btn.danger { border-color: transparent; background: rgba(239,107,95,.13); color: #f07a6e; }
-.ud-btn.danger:hover { background: rgba(239,107,95,.2); }
-/* Eingaben */
-.ud-input { box-sizing: border-box; width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--win-bg); color: var(--text); font: 13px/1.45 Inter, sans-serif; resize: none; outline: none; }
-.ud-input::placeholder { color: var(--text-4); }
-.ud-select { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--main-bg); color: var(--text-2); font: 13px Inter, sans-serif; }
-/* Auswahl */
-.ud-check { position: static !important; opacity: 1 !important; transform: none !important; }
-.ud-colors .tk-colors { padding: 0; }
-.ud-colors .tk-picker-host { display: none; }
-/* Menüs: offen dargestellt statt schwebend */
-.ud-static { position: static !important; display: block; opacity: 1 !important; visibility: visible !important; transform: none !important; animation: none !important; width: 200px; }
-.ud-stage .chat-pop.ud-static { display: flex; flex-direction: column; }
-.ud-pop .tk-menu { left: 50%; transform: translate(-50%, -4px) scale(.98); transform-origin: top center; }
-.ud-pop.open .tk-menu { transform: translate(-50%, 0); }
-.ud-pop .tk-mi { display: flex; align-items: center; gap: 8px; width: 100%; padding: 0 8px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: 12.5px Inter, sans-serif; text-align: left; cursor: pointer; }
-.ud-pop .tk-mi span { flex: 1; }
-.ud-pop .tk-mi svg { color: var(--accent); opacity: 0; }
-.ud-pop .tk-mi.on svg { opacity: 1; }
-.ud-pop .tk-mi:hover { background: var(--menu-hover); }
-.ud-stage:has(.ud-pop) { min-height: 150px; align-items: flex-start; }
-.ud-sheet { width: 100%; max-width: 420px; }
-.ud-wheel { width: 200px; }
-/* Listen */
-.ud-list { max-width: none !important; width: 100%; margin: 0 !important; padding: 0 0 0 26px !important; animation: none !important; }
-.ud-nav { width: 200px; }
-.ud-nav .nav-item { cursor: default; }
-/* Karten */
-.ud-hm { display: block !important; width: 100%; max-width: 560px; }
-.ud-hm .hm-track { overflow: visible; }
-.ud-box { width: 100%; max-width: 560px; padding: 12px 14px 14px; border: 1px solid rgba(255,255,255,.065); border-radius: 14px; background: var(--win-bg); }
-.ud-box-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--text-4); }
-.ud-box-head b { color: var(--text); font-size: 15px; font-weight: 600; }
-.ud-box-head .grow { flex: 1; }
-.ud-box p { margin: 0; color: var(--text-3); font-size: 14px; }
-.ud-note-card { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 560px; padding: 12px 12px 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--win-bg); }
-.ud-note-card .ud-dog { display: grid; place-items: center; flex: none; }
-.ud-nc-txt { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
-.ud-nc-txt b { color: var(--text); font-size: 13.5px; font-weight: 500; }
-.ud-nc-txt span { color: var(--text-4); font-size: 12.5px; }
-/* Etiketten */
-.ud-badge { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; background: rgba(255,255,255,.06); color: var(--text-3); font-size: 11px; font-weight: 500; }
-.ud-badge.accent { background: color-mix(in srgb, var(--accent) 13%, transparent); color: color-mix(in srgb, var(--accent) 72%, #fff); }
-.ud-badge.danger { background: rgba(239,107,95,.13); color: color-mix(in srgb, #f07a6e 72%, #fff); }
-.ud-dogs svg { image-rendering: pixelated; }
-/* Werkzeuge */
-.ud-cal2 { position: static; width: 240px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; }
-.ud-picker { width: 220px; }
-/* Icons */
-.ud-icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 4px; width: 100%; }
-.ud-icons span { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px 8px; border-radius: 8px; color: var(--text-3); }
-.ud-icons span:hover { background: var(--pop-bg); color: var(--text); }
-.ud-icons code { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 600px) { .ud-wrap { padding: 54px 14px 60px; } .ud-jump { margin: 0 -14px 6px; padding: 10px 14px; } }
-@media (prefers-reduced-motion: reduce) { .ud-wrap { animation: none; } }
-/* UI Design – Feinschliff: Sprungleiste einzeilig, echte Aufgaben-Kopf-Knopf-Umgebung, Mini-Liste */
-.ud-jump { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-.ud-jump::-webkit-scrollbar { display: none; }
-.ud-jump button { flex: none; }
-.ud-stage .tk-view { position: static; display: contents; animation: none; }
-.ud-mini { padding-left: 26px !important; }
-.ud-mini .lb2-row { cursor: pointer; }
-.ud-stage:has(.lb2-dock-pill) { min-height: 76px; }
-/* Chat-Icon in der Home-Liste (09.11.): ruhiger Akzent-Ton statt Grau-in-Grau – Chats und Dokumente auf einen Blick unterscheidbar */
-.lb2-row .lb2-page.lb2-chat { stroke: color-mix(in srgb, var(--accent) 62%, var(--text-3)); }
-.lb2-row .lb2-page.lb2-chat .pg-out { fill: color-mix(in srgb, var(--accent) 12%, transparent); }
-.lb2-row .lb2-page.lb2-chat .pg-ln { stroke: color-mix(in srgb, var(--accent) 55%, var(--text-3)); }
-.lb2-row:hover .lb2-page.lb2-chat { stroke: color-mix(in srgb, var(--accent) 72%, #fff); }
-.lb2-row:hover .lb2-page.lb2-chat .pg-ln { stroke: color-mix(in srgb, var(--accent) 64%, #fff); }
-
-/* ===================================================================
-   09.11.: Umschalter oben in „UI Design“ (Aktuell | Glas) + Sätze je Stil
-   =================================================================== */
-.ud-top { position: sticky; top: 0; z-index: 5; display: flex; justify-content: center; padding: 12px 0 0; pointer-events: none; }
-.ud-top .cs-pill { pointer-events: auto; }
-.ud-wrap { padding-top: 22px; }
-.ud-gl { display: none; }
-.ud-glass .ud-gl { display: inline; }
-.ud-glass .ud-cur { display: none; }
-
-.ud-jump { top: 52px; }
-.ud-sec { scroll-margin-top: 110px; }
-/* Kopf von „UI Design“: Umschalter + Sprungleiste in EINEM klebenden Streifen (volle Breite, darunter scrollt der Inhalt) */
-.ud-top { flex-direction: column; align-items: center; gap: 10px; padding: 12px 0 10px; background: var(--main-bg); pointer-events: auto; }
-.ud-top-in { box-sizing: border-box; width: 100%; max-width: 860px; padding: 0 24px; }
-.ud-top .ud-jump { position: static; margin: 0; padding: 0; background: none; }
-.ud-wrap { padding-top: 18px; }
-.ud-sec { scroll-margin-top: 104px; }
-@media (max-width: 600px) { .ud-top-in { padding: 0 14px; } }
-.ud-gl-b { display: none !important; }
-.ud-glass .ud-gl-b { display: flex !important; }
-.ud-glass .ud-cur-b { display: none !important; }
-
-/* UI Design – Chat-Bausteine als ruhende Kopie (keine Animation, nicht schwebend) */
-.ud-chat { width: 100%; }
-.ud-chat :is(.msg-out, .msg-ai) { margin: 0 !important; animation: none !important; opacity: 1 !important; transform: none !important; }
-.ud-composer { position: static !important; width: 100% !important; max-width: 640px; margin: 0 !important; padding: 0 !important; transform: none !important; opacity: 1 !important; }
-.ud-composer .composer { position: relative; }
+/* Chat-Icon in der Home-Liste: runde Sprechblase, neutral wie das Dokument-Icon (kein Blau, Wunsch 09.11.) */
 
 /* ===================================================================
    09.11. (abends): Feinschliff nach Nutzer-Wunsch – gilt in der ganzen App
@@ -11529,8 +11387,41 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 /* Filter-Knopf (Home, Aufgaben): nur das Icon, ohne Kasten; Fläche nur beim Darüberfahren bzw. wenn offen */
 .lb2-filter, .tk-ib { border: 0 !important; background: none; }
 .lb2-filter:hover, .lb2-filter.on, .tk-ib:hover, .tk-filter-wrap.open .tk-ib { background: #212121; color: var(--text); }
-/* Kalender: „Neu“ wie „Neue Aufgabe“ (grau, feiner Rand) – passt zu „‹ Heute ›“; Sprungleiste in UI Design abgerundet statt rund */
+/* Kalender: „Neu“ wie „Neue Aufgabe“ (grau, feiner Rand) – passt zu „‹ Heute ›“ */
 .cal-new, .cal-week .cal-new { height: 28px; border: 1px solid #242424 !important; background: #212121 !important; color: #ededed !important; font-weight: 500; }
 .cal-new:hover { background: #262626 !important; }
 .cal-new svg { color: #bbbbbb; }
-.ud-jump button { border-radius: 8px; }
+
+/* ===================================================================
+   09.11. (nachts): Tags für Chats, Home-Filter, Chats-Kopf
+   =================================================================== */
+/* Home-Filter: Abschnitte wie im Aufgaben-Filter, Menü bleibt beim Wählen offen */
+.lb2-menu .lb2-ml { padding: 8px 9px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.lb2-menu .lb2-msep { height: 1px; margin: 5px 4px; background: #242424; }
+.lb2-menu .lb2-mdot { flex: none; width: 8px; height: 8px; margin: 0 3px; border-radius: 50%; }
+.lb2-menu .lb2-mi.muted { color: var(--text-3); }
+.lb2-menu .lb2-tick { color: var(--text); }
+.lb2-filter { width: 30px; height: 30px; color: var(--text-3); }
+.lb2-filter.set { color: var(--text); }
+/* Tags in den Zeilen von Home: Punkt + Name, leise */
+.lb2-tags { display: inline-flex; flex: none; gap: 5px; margin: 0 10px 0 8px; }
+.lb2-tag { display: inline-flex; align-items: center; gap: 5px; height: 20px; padding: 0 7px; border: 1px solid #262626; border-radius: 6px; color: var(--text-3); font-size: 11.5px; white-space: nowrap; }
+.lb2-tag i { width: 6px; height: 6px; border-radius: 50%; }
+.lb2-tag.more { padding: 0 6px; color: var(--text-4); }
+@media (max-width: 640px) { .lb2-tags { display: none; } }
+/* Tag-Auswahl für Chats */
+.ct-menu { width: 240px; padding: 5px; }
+.ct-menu[hidden] { display: none; }
+.ct-head { padding: 2px 2px 5px; border-bottom: 1px solid #242424; margin-bottom: 4px; }
+.ct-in { box-sizing: border-box; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text); font: inherit; font-size: 13px; outline: none; }
+.ct-in::placeholder { color: var(--text-4); }
+.ct-dot { flex: none; width: 8px; height: 8px; margin: 0 3px; border-radius: 50%; }
+.ct-menu .lb2-mi { height: 30px; font-size: 13px; }
+.ct-menu .lb2-tick { margin-left: auto; color: var(--text); }
+.ct-empty { padding: 8px 9px 6px; color: var(--text-4); font-size: 12.5px; }
+.ct-list { max-height: 260px; overflow-y: auto; }
+/* „Neuer Chat“ oben in der Chat-Liste wie „Neue Aufgabe“ (grau, feiner Rand, abgerundet) */
+:is(.chats-view, .dc-list) .cl-new { height: 28px; padding: 0 12px 0 10px; border: 1px solid #242424 !important; border-radius: 8px !important; background: #212121 !important; color: #ededed !important; font-size: 13px; font-weight: 500; }
+:is(.chats-view, .dc-list) .cl-new:hover { background: #262626 !important; }
+:is(.chats-view, .dc-list) .cl-new svg { color: #bbbbbb !important; }
+.lb2-menu { max-height: min(72vh, 560px); }
