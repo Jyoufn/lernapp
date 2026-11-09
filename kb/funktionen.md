@@ -116,6 +116,6 @@
 ## Sidebar „Erstellen“ (Stand 09.11.)
 - „Erstellen“ ist eine Aktion, kein Ort: nie markiert; beim Öffnen ist oben „Agenten“ gewählt. Offenes Dokument → sein Eintrag unter „Dokumente“ in der Sidebar ist markiert (sonst Home).
 - Chats-Symbol oben rechts im Chat: zeigt die Liste der KI-Chats im Hauptteil (`chatsView`), kein Sprung nach Home.
-- Tags für Chats: Chat-Menü (Titel oben links) bzw. „⋯“ am Chat in der Sidebar → „Tags“ (`ChatTags` in app.js): suchen/anlegen (Enter), an-/abwählen; gleicher Tag-Vorrat wie Aufgaben/Dokumente (`tasks.tags.v1`), gespeichert in `c.tags`, angezeigt in Home.
+- Tags für Chats: Chat-Menü (Titel oben links) bzw. „⋯“ am Chat in der Sidebar → „Tags“ (`ChatTags` in app.js): suchen/anlegen (Enter), an-/abwählen; gleicher Tag-Vorrat wie Aufgaben/Dokumente (`tasks.tags.v1`), gespeichert in `c.tags`, angezeigt in Home und im offenen Chat oben rechts neben dem Chats-Symbol (`#chatTags`, antippen = Tag-Auswahl).
 - Home-Filter (docs.js): Anzeigen (Alle · Chats · Dokumente), Zeitraum (Jederzeit · Heute · 7 · 30 Tage), Tags (mehrere), Nur angeheftete, Zurücksetzen; Menü bleibt beim Wählen offen; gemerkt in `docs.libFilter` / `docs.libFilter2`. Aufgaben ohne offene Einträge: nur Hinweis, „Neue Aufgabe“ steht oben rechts.
 - Chat-Titel: KI (`/api/title`, zwei Versuche); klappt es nicht, macht `titleFromText` (app.js) aus der Anfrage das Thema (Anrede/Bitte/Fragewort und Artikel weg, max. 5 Wörter).

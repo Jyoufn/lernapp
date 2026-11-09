@@ -11425,3 +11425,11 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 :is(.chats-view, .dc-list) .cl-new:hover { background: #262626 !important; }
 :is(.chats-view, .dc-list) .cl-new svg { color: #bbbbbb !important; }
 .lb2-menu { max-height: min(72vh, 560px); }
+/* Tags des Chats oben rechts (vor dem Chats-Symbol) */
+.chats-wrap { display: flex; align-items: center; gap: 6px; }
+.chat-tags { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 4px; border: 0; border-radius: 8px; background: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.chat-tags[hidden] { display: none; }
+.chat-tags:hover { background: #1c1c1c; }
+.chat-tags .lb2-tag { height: 22px; }
+/* Knöpfe unter den Antworten (Kopieren, Neu erzeugen, Ins Dokument): Icons etwas kleiner */
+.msg-btn svg { width: 14px; height: 14px; }

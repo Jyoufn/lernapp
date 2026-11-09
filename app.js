@@ -5395,7 +5395,20 @@ function renderChatBar() {
   if (chatTitleEl.textContent !== c.title) swapText(chatTitleEl, c.title);
   chatMenu.querySelector('[data-cm="pin"] span').textContent = c.pinned ? 'Lösen' : 'Anheften';
   closeChatPops();
+  renderChatTags();
 }
+/* Tags des offenen Chats oben rechts (neben dem Chats-Symbol, Wunsch 09.11.): Punkt + Name, antippen öffnet die Tag-Auswahl */
+function renderChatTags() {
+  const box = $('chatTags'); if (!box) return;
+  const tab = activeTab(), c = tab && !tab.dataset.view ? chatOf(tab) : null;
+  const all = window.ChatTags ? window.ChatTags.all() : [];
+  const gs = (c?.tags || []).map((id) => all.find((g) => g.id === id)).filter(Boolean);
+  box.hidden = !gs.length;
+  box.innerHTML = gs.slice(0, 3).map((g) => `<span class="lb2-tag"><i style="background:${escapeHtml(g.c)}"></i>${escapeHtml(g.name)}</span>`).join('') + (gs.length > 3 ? `<span class="lb2-tag more">+${gs.length - 3}</span>` : '');
+}
+$('chatTags')?.addEventListener('click', (e) => { e.stopPropagation(); const t = activeTab(); if (t && !t.dataset.view) ChatTags.open(t, $('chatTags')); });
+window.addEventListener('chat-tab-switched', () => renderChatTags());
+window.addEventListener('tags-changed', () => renderChatTags());
 
 /* Titel aus der ersten Anfrage erzeugen (nur, solange der Nutzer ihn nicht selbst gesetzt hat) */
 /* Ersatz-Titel, wenn keine KI antwortet (09.11.): statt der ersten fünf Wörter („Kannst du mir die …“) das Thema –
@@ -5471,7 +5484,7 @@ const ChatTags = (() => {
   box.hidden = true; box.setAttribute('role', 'menu');
   document.body.append(box);
   let tab = null, q = '';
-  const changed = () => { saveChats(); renderChatList?.(); window.renderSideChats?.(); if (window.Docs?.list?.open) window.Docs.list.render(); };
+  const changed = () => { saveChats(); renderChatList?.(); window.renderSideChats?.(); renderChatTags(); if (window.Docs?.list?.open) window.Docs.list.render(); };
   function draw() {
     const c = chatOf(tab); if (!c) return;
     const on = new Set(c.tags || []);
