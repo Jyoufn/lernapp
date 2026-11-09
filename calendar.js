@@ -12,11 +12,13 @@ const Calendar = (() => {
   const COLORS = ['#6d9fff', '#a78bfa', '#f472b6', '#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf'];
   // Vorschlagsfarben im Termin-Fenster: die App-Farben (UIKit.COLORS) + drei weitere, damit die Reihe bis ganz rechts reicht
   const EV_COLORS = [...((window.UIKit && UIKit.COLORS) || []), '#e0737a', '#d6bf5e', '#5db8b3'];
+  // gemeinsame Farbauswahl der App (Farbfeld · Farbkreise · Helligkeit) + die zusätzlichen Vorschlagsfarben in der Kreis-Reihe
   const evColorRow = (cur) => {
-    const custom = cur && !EV_COLORS.includes(cur);
-    return `<div class="tk-colors ce-colors">${EV_COLORS.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}`
-      + `<button type="button" class="tk-custom${custom ? ' on' : ''}" data-custom="data-color" ${custom ? `style="--c:${cur}"` : ''} aria-label="Eigene Farbe"></button></div><div class="tk-picker-host"></div>`;
+    const html = UIKit.colorRow(cur, 'data-color');
+    const extra = EV_COLORS.filter((c) => !UIKit.COLORS.includes(c)).map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('');
+    return html.replace(/(<div class="tk-colors">[\s\S]*?)(<\/div>)/, `$1${extra}$2`);
   };
+
   const ICONS = ['i-calendar', 'i-book', 'i-pencil', 'i-star', 'i-people', 'i-timer', 'i-music', 'i-heart', 'i-globe', 'i-bolt', 'i-file', 'i-check'];
   const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -332,7 +334,7 @@ const Calendar = (() => {
     if (!anchor || !anchor.isConnected) { emodal.classList.remove('anchored'); form.removeAttribute('style'); return; }
     const r = anchor.getBoundingClientRect(), fw = Math.min(340, innerWidth - 24), gap = 8;
     const fh = form.offsetHeight || 260;
-    const room = form.classList.contains('ce-view') ? 0 : 220; // Bearbeiten: Platz nach unten zum Aufklappen
+    const room = form.classList.contains('ce-view') ? 0 : 290; // Bearbeiten: Platz nach unten zum Aufklappen
     let left, top;
     if (anchor.closest('.cm-head')) { // „Neuer Termin“ oben rechts: klappt darunter auf, rechtsbündig
       left = Math.max(8, Math.min(innerWidth - fw - 8, r.right - fw));
@@ -365,7 +367,18 @@ const Calendar = (() => {
     </div>`;
     const card = emodal.firstElementChild;
     card.addEventListener('click', (x) => {
-      if (x.target.closest('[data-act="edit"]')) edit(ev, null, ev.time || '', ev.end || '', store, anchor);
+      if (!x.target.closest('[data-act="edit"]')) return;
+      // Ansicht → Bearbeiten: Karte bleibt an ihrem Platz und wächst weich nach unten auf (nur clip-path/transform/opacity – flüssig auf dem iPad)
+      const r = card.getBoundingClientRect();
+      edit(ev, null, ev.time || '', ev.end || '', store, anchor);
+      const f = emodal.querySelector('form');
+      if (!f) return;
+      const h = f.offsetHeight;
+      Object.assign(f.style, { left: `${r.left}px`, top: `${Math.max(12, Math.min(r.top, innerHeight - h - 290))}px` }); // Platz nach unten für die aufklappende Farbauswahl
+      if (reduced()) return;
+      const cut = Math.max(0, h - r.height);
+      f.animate([{ clipPath: `inset(0 0 ${cut}px 0 round 16px)` }, { clipPath: 'inset(0 0 0 0 round 16px)' }], { duration: 380, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+      [...f.children].forEach((c, i) => c.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 340, delay: 30 + i * 35, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' }));
     });
     emodal.hidden = false;
     place(card, anchor);
@@ -485,7 +498,7 @@ const Calendar = (() => {
       }
       if (x.target.closest('.tk-picker')) return;
       const co = x.target.closest('[data-color]');
-      if (co) { e.color = co.dataset.color; form.querySelector('.tk-custom').classList.remove('on'); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
+      if (co) { if (!co.dataset.color) return; e.color = co.dataset.color; form.querySelector('.tk-custom')?.classList.remove('on'); form.querySelectorAll('.tk-colors [data-color]').forEach((b) => b.classList.toggle('on', b === co)); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
       if (!x.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = x.target.closest('[data-act]')?.dataset.act;
       if (act === 'cover') { form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open')); form.querySelector('.ce-cover-in').click(); return; }

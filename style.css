@@ -11879,3 +11879,26 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .ce-card .ce-colors button { flex: none; width: 22px; height: 22px; }
 .ce-card .ce-colors button.on, .ce-card .ce-colors .tk-custom.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
 .ce-card .ce-colors .tk-custom.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px var(--c); }
+/* Kalender (10.11. nachts, 3): Schrift und Farben näher an der Vorlage – Titel mittelstark statt fett, Datum leise darunter,
+   Zeilen 13 px mittel; Termin-Chips mit kräftig gefärbter Schrift auf zarter Tönung; Bearbeiten nur als Icon (ohne Rahmen) */
+.ce-vtitle { font-size: 15px; font-weight: 500; letter-spacing: -0.1px; }
+.ce-vsub { margin-top: 3px; font-size: 13px; font-weight: 400; }
+.ce-vrow { min-height: 38px; font-size: 13px; font-weight: 500; }
+.ce-vrow .tk-si svg { width: 15px; height: 15px; }
+.ce-card .ce-arrow { color: var(--text-2); }
+.ce-card .ce-dur { height: 21px; padding: 0 7px; font-size: 11.5px; font-weight: 500; line-height: 21px; }
+.ce-card .ce-headbox .tk-f-title { font-size: 15px; font-weight: 500; }
+.ce-card .ce-headbox .tk-f-notes { font-size: 13px; }
+.ce-card .ce-rows .tk-pill { font-size: 13px; }
+.ce-vbtn { top: 8px; right: 8px; width: 28px; height: 28px; border: 0; border-radius: 8px; background: none; color: var(--text-4); transition: color 140ms ease, transform 200ms var(--spring); }
+.ce-vbtn svg { width: 15px; height: 15px; }
+@media (hover: hover) { .ce-vbtn:hover { background: none; color: var(--text); } }
+.ce-vbtn:active { transform: scale(0.9); }
+.cm-ev.cal-pill { background: color-mix(in srgb, var(--c) 17%, var(--win-bg)); color: color-mix(in srgb, var(--c) 90%, #fff); font-weight: 500; }
+@media (hover: hover) { .cm-ev.cal-pill:hover { background: color-mix(in srgb, var(--c) 25%, var(--win-bg)); } }
+.cm-ev-time { opacity: 0.75; }
+/* gemeinsame Farbauswahl in der Termin-Karte: Ring-Spalt und Regler-Knopf im Karten-Ton (nichts Schwarzes) */
+.ce-card .cp-panel { padding: 8px 4px 4px; }
+.ce-card .cp-panel .tk-colors button.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px rgba(255, 255, 255, 0.9); }
+.ce-card .cp-slider b { background: var(--ce-hi); }
+.ce-card .cp-slider::before { background: var(--ce-hi); }
