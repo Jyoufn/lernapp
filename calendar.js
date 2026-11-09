@@ -1,9 +1,9 @@
 /* ===================================================================
    Kalender
-   - Wochenansicht (Seitenleiste → „Kalender“): Mo–So nebeneinander, links die Uhrzeiten, oben ganztägige Termine,
-     rote Linie = jetzt; blättern wochenweise (Pfeile, „Heute“, Wischen auf dem iPad)
-   - Klick in eine Stunde oder „Neuer Termin“ → Menü: Titel, Beschreibung, Datum, Uhrzeit, Icon, Farbe
-   - Klick auf den Tageskopf → großes Tagesfenster
+   - Monatsansicht (Seitenleiste → „Kalender“): Raster Mo–So, Termine als Chips im Tag, „+N weitere“ wenn es nicht passt;
+     blättern monatsweise (Pfeile, „Heute“, Wischen auf dem iPad); schmal nur Farbpunkte
+   - „Neu“ → Termin-Fenster: Titel, Beschreibung, Datum, Uhrzeit, Icon, Farbe
+   - Klick auf einen Tag → großes Tagesfenster (wächst aus der Zelle)
    - Klick auf einen Termin → bearbeiten oder löschen
    - Gespeichert im Browser (localStorage); der Agent kann Termine anlegen (AppActions.add_event)
    =================================================================== */
@@ -20,107 +20,158 @@ const Calendar = (() => {
   const pad = (n) => String(n).padStart(2, '0');
   const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayIso = () => iso(new Date());
+  const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const icon = (id) => `<svg width="16" height="16" aria-hidden="true"><use href="#${id}"/></svg>`;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-  // angezeigte Woche: Montag 12 Uhr (12 Uhr, damit Zeitumstellungen das Datum nicht verschieben)
-  const mondayOf = (d) => { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(m.getDate() - ((m.getDay() + 6) % 7)); return m; };
-  let cursor = mondayOf(new Date());
+  // angezeigter Monat: 1. des Monats, 12 Uhr (12 Uhr, damit Zeitumstellungen das Datum nicht verschieben)
+  const monthOf = (d) => { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(1); return m; };
+  let cursor = monthOf(new Date());
   let open = false;
-  const WEEK_HOUR = 56; // Höhe einer Stunde in der Wochenansicht
-  // Kalenderwoche nach ISO 8601
-  const isoWeek = (d) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 86400000 + 1) / 7); };
   const minsOf = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  const MONTHS_SHORT = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
 
-  /* ---------- Ansicht: Woche (Mo–So) mit Uhrzeiten links, ganztägige Termine oben ---------- */
+  /* ---------- Ansicht: Monat (Raster Mo–So, 5–6 Wochen), Termine als Chips im Tag ---------- */
   const view = document.createElement('section');
-  view.className = 'cal-view cal-week';
+  view.className = 'cal-view cal-month-view';
   view.hidden = true;
   view.setAttribute('aria-label', 'Kalender');
   view.innerHTML = `
-    <header class="cal-head">
-      <div class="cal-title"><span class="cw-my"><span class="cal-month"></span> <span class="cal-year"></span></span></div>
-      <div class="cal-nav">
-        <div class="cal-seg">
-          <button type="button" data-cal="prev" aria-label="Vorherige Woche" title="Vorherige Woche">${icon('f-back')}</button>
-          <button type="button" class="cal-seg-today" data-cal="today">Heute</button>
-          <button type="button" data-cal="next" aria-label="Nächste Woche" title="Nächste Woche">${icon('f-forward')}</button>
+    <header class="cal-head cm-head">
+      <div class="cm-title"><span class="cm-m"></span><span class="cm-y"></span></div>
+      <div class="cal-nav cm-nav">
+        <button type="button" class="cm-today" data-cal="today">Heute</button>
+        <div class="cm-switch">
+          <button type="button" class="cm-arr" data-cal="prev" aria-label="Vorheriger Monat">${icon('f-back')}</button>
+          <button type="button" class="cm-label" data-cal="pick" aria-haspopup="dialog" aria-expanded="false"></button>
+          <button type="button" class="cm-arr" data-cal="next" aria-label="Nächster Monat">${icon('f-forward')}</button>
+          <div class="cm-pick" hidden><div class="tk-cal"></div></div>
         </div>
-        <button class="cal-new" type="button" data-cal="new" title="Neuer Termin">${icon('f-plus')}<span>Neu</span></button>
+        <button class="cal-new" type="button" data-cal="new" aria-label="Neuer Termin">${icon('f-plus')}<span>Neuer Termin</span></button>
       </div>
     </header>
-    <div class="cw">
-      <div class="cw-top"><div class="cw-days"><span class="cw-tz"></span></div></div>
-      <div class="cw-scroll"><div class="cw-body" style="height:${24 * WEEK_HOUR}px">
-        <div class="cw-hours">${Array.from({ length: 24 }, (_, h) => `<span style="top:${h * WEEK_HOUR}px">${h ? `${pad(h)}:00` : ''}</span>`).join('')}</div>
-        <div class="cw-cols"></div>
-      </div></div>
+    <div class="cm">
+      <div class="cm-wd">${DAYS.map((d, i) => `<span${i > 4 ? ' class="we"' : ''}>${d}</span>`).join('')}</div>
+      <div class="cm-grid"></div>
     </div>`;
-  const grid = view.querySelector('.cw'); // Ziel der Blätter-Animation
-  const daysBox = view.querySelector('.cw-days'), colsBox = view.querySelector('.cw-cols'), scroller = view.querySelector('.cw-scroll');
-  let scrolledOnce = false;
+  const box = view.querySelector('.cm'), grid = view.querySelector('.cm-grid');
+  // Klick auf den Monat im Umschalter: kleiner Kalender klappt darunter auf, ein Tag springt zu seinem Monat
+  const pickBox = view.querySelector('.cm-pick'), pickLabel = view.querySelector('.cm-label');
+  let pickFirst = false; // nur beim Öffnen den angezeigten Monat liefern – danach nichts markieren (sonst wäre der 1. „gewählt“)
+  const mini = UIKit.miniCalendar(pickBox.querySelector('.tk-cal'), () => { if (pickFirst) { pickFirst = false; return iso(cursor); } return ''; }, (k) => {
+    const was = +cursor; cursor = monthOf(new Date(`${k}T12:00:00`)); closePick(); render(Math.sign(+cursor - was));
+  });
+  function closePick() { if (pickBox.hidden) return; pickBox.hidden = true; pickLabel.setAttribute('aria-expanded', 'false'); }
+  function togglePick() {
+    if (!pickBox.hidden) { closePick(); return; }
+    pickFirst = true; mini.open(); pickBox.hidden = false; pickLabel.setAttribute('aria-expanded', 'true');
+  }
+  document.addEventListener('pointerdown', (ev) => { if (!pickBox.hidden && !ev.target.closest('.cm-switch')) closePick(); });
+  document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closePick(); });
 
-  // Termine eines Tages nebeneinander legen, wenn sie sich überschneiden
-  function layoutDay(list) {
-    const timed = list.filter((e) => minsOf(e.time) != null).map((e) => ({ e, s: minsOf(e.time), en: Math.max(minsOf(e.time) + 30, minsOf(e.end) ?? minsOf(e.time) + 60) })).sort((a, b) => a.s - b.s || b.en - a.en);
-    const out = []; let cluster = [], lanes = [], clusterEnd = -1;
-    const flush = () => { cluster.forEach((x) => { x.n = lanes.length; }); out.push(...cluster); cluster = []; lanes = []; };
-    timed.forEach((x) => {
-      if (x.s >= clusterEnd && cluster.length) flush();
-      let lane = lanes.findIndex((l) => l <= x.s);
-      if (lane < 0) { lane = lanes.length; lanes.push(x.en); } else lanes[lane] = x.en;
-      x.lane = lane; cluster.push(x); clusterEnd = Math.max(clusterEnd, x.en);
-    });
-    if (cluster.length) flush();
-    return out;
+  // Termine eines Tages: ganztägige zuerst, dann nach Uhrzeit
+  const dayEvents = (k) => events.filter((e) => e.date === k).sort((a, b) => (minsOf(a.time) ?? -1) - (minsOf(b.time) ?? -1) || String(a.title).localeCompare(String(b.title)));
+  function chip(e) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    const allDay = minsOf(e.time) == null;
+    b.className = `cal-pill cm-ev${allDay ? ' all' : ''}`;
+    b.dataset.id = e.id;
+    b.style.setProperty('--c', e.color || COLORS[0]);
+    b.setAttribute('aria-label', [e.time, e.title].filter(Boolean).join(' '));
+    b.innerHTML = `<i class="cm-dot"></i><span class="cm-ev-t">${esc(e.title)}</span>${allDay ? '' : `<span class="cm-ev-time">${esc(e.time)}</span>`}`;
+    return b;
   }
   function render(dir = 0) {
-    const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(cursor); d.setDate(cursor.getDate() + i); return d; });
-    const a = days[0], b = days[6];
-    // Monat wie in der Vorlage: der Monat, in dem der Donnerstag der Woche liegt (gehört nach ISO zu diesem Monat)
-    view.querySelector('.cal-month').textContent = MONTHS[days[3].getMonth()];
-    view.querySelector('.cal-year').textContent = days[3].getFullYear();
-    const off = -new Date().getTimezoneOffset() / 60;
-    view.querySelector('.cw-tz').textContent = `GMT${off >= 0 ? '+' : '−'}${Math.abs(off)}`;
-    const today = todayIso();
-    daysBox.querySelectorAll('.cw-day').forEach((x) => x.remove());
-    daysBox.insertAdjacentHTML('beforeend', days.map((d, i) => { const k = iso(d); return `<button type="button" class="cw-day${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}" data-day="${k}"><span class="cw-wd">${DAYS[i]}</span><span class="cw-dn">${d.getDate()}</span></button>`; }).join(''));
-    // Spalten mit Terminen
-    colsBox.replaceChildren(...days.map((d, i) => {
-      const k = iso(d), col = document.createElement('div');
-      col.className = `cw-col${k === today ? ' today' : ''}${i > 4 ? ' weekend' : ''}`;
-      col.dataset.date = k;
-      // ganztägig: keine eigene Zeile oben – der Termin zieht sich als Farbband von oben bis unten durch den Tag
-      const allDay = events.filter((e) => e.date === k && minsOf(e.time) == null);
-      allDay.forEach((e, j) => {
-        col.append(band(e, j, allDay.length));
-      });
-      layoutDay(events.filter((e) => e.date === k)).forEach(({ e, s, en, lane, n }) => {
-        const p = pill(e);
-        p.classList.add('cw-ev');
-        // wie in der Vorlage: Farbstrich links, oben Icon + Titel, darunter die Uhrzeit
-        p.innerHTML = `<i class="cw-bar"></i><span class="cal-pill-t">${icon(e.icon || 'i-calendar')}<span>${esc(e.title)}</span></span><span class="cal-pill-time">${esc(e.time)}</span>`;
-        if ((en - s) < 45) p.classList.add('short');
-        Object.assign(p.style, { top: `${(s / 60) * WEEK_HOUR + 1}px`, height: `${Math.max(20, ((en - s) / 60) * WEEK_HOUR - 3)}px`, left: `calc(${(lane / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` });
-        const t = p.querySelector('.cal-pill-time'); if (t && e.end && (en - s) >= 45) t.textContent = `${e.time} – ${e.end}`;
-        col.append(p);
-      });
-      return col;
-    }));
-    if (!scrolledOnce && !view.hidden) {
-      // beim ersten Öffnen: zur aktuellen Uhrzeit (bzw. 7 Uhr), damit der Tag sichtbar ist
-      const n = new Date(); scroller.scrollTop = Math.max(0, Math.min(n.getHours() - 2, 7)) * WEEK_HOUR; scrolledOnce = true;
+    view.querySelector('.cm-m').textContent = MONTHS[cursor.getMonth()];
+    view.querySelector('.cm-y').textContent = cursor.getFullYear();
+    pickLabel.textContent = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
+    view.querySelector('.cm-today').classList.toggle('dim', +cursor === +monthOf(new Date()));
+    // erster angezeigter Tag = Montag der Woche mit dem 1.; so viele Wochen wie nötig (5 oder 6, Februar evtl. 4)
+    const first = new Date(cursor); first.setDate(1 - ((cursor.getDay() + 6) % 7));
+    const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 12);
+    const weeks = Math.ceil((((last - first) / 86400000) + 1) / 7);
+    grid.style.setProperty('--weeks', weeks);
+    const today = todayIso(), month = cursor.getMonth();
+    const cells = [];
+    for (let i = 0; i < weeks * 7; i++) {
+      const d = new Date(first); d.setDate(first.getDate() + i);
+      const k = iso(d), other = d.getMonth() !== month;
+      const c = document.createElement('div');
+      c.className = `cm-cell${other ? ' other' : ''}${k === today ? ' today' : ''}${i % 7 > 4 ? ' we' : ''}${i % 7 === 6 ? ' end' : ''}${i >= (weeks - 1) * 7 ? ' last' : ''}`;
+      c.dataset.date = k;
+      c.setAttribute('role', 'button');
+      c.setAttribute('aria-label', `${d.getDate()}. ${MONTHS[d.getMonth()]}`);
+      const label = d.getDate() === 1 ? `${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}` : d.getDate();
+      c.innerHTML = `<div class="cm-cell-h"><span class="cm-dn">${label}</span></div><button type="button" class="cm-more" hidden></button><div class="cm-evs"></div>`;
+      const list = c.querySelector('.cm-evs');
+      dayEvents(k).forEach((e) => list.append(chip(e)));
+      cells.push(c);
     }
-    if (dir) { grid.classList.remove('slide-l', 'slide-r'); void grid.offsetWidth; grid.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
+    grid.replaceChildren(...cells);
+    fit();
+    if (dir && !reduced()) { grid.classList.remove('slide-l', 'slide-r'); void grid.offsetWidth; grid.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
   }
-  // ganztägiger Termin als Band (div statt button: ein Knopf zentriert den Titel senkrecht, das Band soll ihn oben halten)
+  // so viele Termine je Tag zeigen, wie hineinpassen; der Rest steht als „+N“ darunter (öffnet den Tag)
+  function fit() {
+    if (view.hidden) return;
+    const w = box.clientWidth, compact = w < 480;
+    box.classList.toggle('compact', compact);
+    box.classList.toggle('narrow', !compact && w < 760); // mittlere Breite (iPad hochkant): Chips ohne Uhrzeit
+    grid.querySelectorAll('.cm-cell').forEach((c) => {
+      const chips = [...c.querySelectorAll('.cm-ev')], more = c.querySelector('.cm-more');
+      chips.forEach((x) => { x.hidden = false; });
+      more.hidden = true;
+      if (!chips.length) return;
+      if (compact) { // schmal (Handy/iPad hochkant geteilt): nur Farbpunkte, höchstens 4
+        chips.forEach((x, i) => { x.hidden = i >= 4; });
+        return;
+      }
+      const room = c.clientHeight - c.querySelector('.cm-cell-h').offsetHeight - 10;
+      const ROW = 22; // Chip 20 + Abstand 2
+      let n = Math.max(0, Math.floor((room + 2) / ROW));
+      if (n >= chips.length) return;
+      n = Math.max(0, Math.floor((room - 16) / ROW)); // Platz für „+N weitere“ unter der Zahl
+      chips.forEach((x, i) => { x.hidden = i >= n; });
+      more.hidden = false;
+      more.textContent = `+${chips.length - n} weitere`;
+    });
+  }
+  new ResizeObserver(() => fit()).observe(box);
+  const shiftMonth = (n) => { cursor.setMonth(cursor.getMonth() + n); render(n); };
+
+  view.addEventListener('click', (ev) => {
+    const a = ev.target.closest('[data-cal]')?.dataset.cal;
+    if (a === 'pick') { togglePick(); return; }
+    if (ev.target.closest('.cm-pick')) return;
+    if (a) closePick();
+    if (a === 'prev') { shiftMonth(-1); return; }
+    if (a === 'next') { shiftMonth(1); return; }
+    if (a === 'today') { const was = +cursor; cursor = monthOf(new Date()); render(Math.sign(+cursor - was)); return; }
+    if (a === 'new') { edit(null, todayIso(), '', '', null, ev.target.closest('[data-cal]')); return; }
+    const cell = ev.target.closest('.cm-cell');
+    const p = ev.target.closest('.cm-ev');
+    // schmal sind die Chips nur Punkte → Antippen öffnet den Tag statt eines Termins
+    if (p && !box.classList.contains('compact')) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
+    if (cell) { openDay(cell.dataset.date, cell); }
+  });
+  // Wischen auf dem iPad: links/rechts = Monat vor/zurück
+  let swipe = null;
+  box.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; swipe = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null; }, { passive: true });
+  box.addEventListener('touchend', (ev) => {
+    if (!swipe) return;
+    const t = ev.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - swipe.at < 600) shiftMonth(dx < 0 ? 1 : -1);
+    swipe = null;
+  }, { passive: true });
+
+  // ganztägiger Termin als Band im Tagesfenster (div statt button: ein Knopf zentriert den Titel senkrecht, das Band soll ihn oben halten)
   function band(e, j, n) {
     const b = document.createElement('div');
     b.className = 'cal-pill cw-band';
     b.dataset.id = e.id;
     b.setAttribute('role', 'button'); b.tabIndex = 0;
     b.style.setProperty('--c', e.color || COLORS[0]);
-    b.title = [e.title, e.description].filter(Boolean).join(' · ');
     b.innerHTML = `<span class="cw-band-t">${icon(e.icon || 'i-calendar')}<span>${esc(e.title)}</span></span>`;
     Object.assign(b.style, { left: `calc(${(j / n) * 100}% + 2px)`, width: `calc(${100 / n}% - 4px)` });
     return b;
@@ -132,32 +183,8 @@ const Calendar = (() => {
     b.dataset.id = e.id;
     b.style.setProperty('--c', e.color || COLORS[0]);
     b.innerHTML = `${icon(e.icon || 'i-calendar')}<span class="cal-pill-t">${esc(e.title)}</span>${e.time ? `<span class="cal-pill-time">${esc(e.time)}</span>` : ''}`;
-    b.title = [e.time, e.title, e.description].filter(Boolean).join(' · ');
     return b;
   }
-  const shiftWeek = (n) => { cursor.setDate(cursor.getDate() + 7 * n); render(n); };
-
-  view.addEventListener('click', (ev) => {
-    const a = ev.target.closest('[data-cal]')?.dataset.cal;
-    if (a === 'prev') { shiftWeek(-1); return; }
-    if (a === 'next') { shiftWeek(1); return; }
-    if (a === 'today') { const was = +cursor; cursor = mondayOf(new Date()); render(Math.sign(+cursor - was)); const n = new Date(); scroller.scrollTo({ top: Math.max(0, n.getHours() - 2) * WEEK_HOUR, behavior: 'smooth' }); return; }
-    if (a === 'new') { edit(null, todayIso()); return; }
-    const p = ev.target.closest('.cal-pill');
-    if (p) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
-    const day = ev.target.closest('[data-day]');
-    if (day) { openDay(day.dataset.day, day); return; }
-    // Klick in ein leeres Feld legt nichts an – neue Termine nur über „Neu“
-  });
-  // Wischen auf dem iPad: links/rechts = Woche vor/zurück
-  let swipe = null;
-  scroller.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; swipe = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null; }, { passive: true });
-  scroller.addEventListener('touchend', (ev) => {
-    if (!swipe) return;
-    const t = ev.changedTouches[0], dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.6 && Date.now() - swipe.at < 600) shiftWeek(dx < 0 ? 1 : -1);
-    swipe = null;
-  }, { passive: true });
 
   /* ---------- Tagesansicht: Klick auf einen Tag → Tag wächst weich aus der Zelle, links die Uhrzeiten ---------- */
   const HOUR = 52; // Höhe einer Stunde in px
@@ -224,7 +251,6 @@ const Calendar = (() => {
     const r = cell.getBoundingClientRect(), w = dv.getBoundingClientRect();
     return `translate(${r.left + r.width / 2 - (w.left + w.width / 2)}px, ${r.top + r.height / 2 - (w.top + w.height / 2)}px) scale(${r.width / w.width}, ${r.height / w.height})`;
   };
-  const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   function openDay(date, cell) {
     dayDate = date;
     dvWrap.hidden = false;
@@ -238,10 +264,9 @@ const Calendar = (() => {
   function closeDay() {
     if (dv.hidden) return;
     const d = new Date(`${dayDate}T12:00:00`);
-    cursor = mondayOf(d);
-    render();
+    if (monthOf(d).getTime() !== cursor.getTime()) { cursor = monthOf(d); render(); }
     const done = () => { dv.hidden = true; dvWrap.hidden = true; };
-    const cell = view.querySelector(`.cw-day[data-day="${dayDate}"]`);
+    const cell = view.querySelector(`.cm-cell[data-date="${dayDate}"]`);
     if (reduced()) { done(); return; }
     const fade = dvWrap.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease', fill: 'forwards' });
     const shrink = dv.animate([{ transform: 'none', opacity: 1 }, { transform: cell ? fromCell(cell) : 'scale(0.96)', opacity: 0 }], { duration: 300, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' });
@@ -317,31 +342,39 @@ const Calendar = (() => {
     let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
     // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
+    // Karten-Stil wie die Vorlage: oben ein Kasten mit Titel + Beschreibung, darunter je Eigenschaft ein eigener Kasten,
+    // der seinen Inhalt in sich aufklappt (rechts ein kleiner Pfeil-Knopf)
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
-    emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet" autocomplete="off">
-      <div class="tk-sheet-main">
+    emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet ce-card" autocomplete="off">
+      <div class="tk-sheet-main ce-headbox">
         <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
-      <div class="tk-sheet-rows">
+      <div class="tk-sheet-rows ce-rows">
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<label class="ce-allday"><span>Ganztägig</span><button type="button" class="ce-switch" data-allday role="switch" aria-label="Ganztägig"><i></i></button></label>
           <div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${pill('color', UIKit.colorRow(e.color, 'data-color'), 'color')}
         ${pill('icon', `<div class="ce-icon-grid">${EV_ICONS.map((id) => `<button type="button" data-icon="${id}" aria-label="Icon">${icon(id)}</button>`).join('')}</div>`, 'icon')}
       </div>
-      <div class="tk-sheet-foot"><span class="grow"></span>${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen" title="Löschen">${icon('f-trash')}</button>` : ''}<button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
+      <div class="tk-sheet-foot ce-foot">${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen">${icon('f-trash')}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
     </form>`;
     const form = emodal.querySelector('form');
     UIKit.foldRows(form);
     const notes = form.querySelector('.tk-f-notes');
     const grow = UIKit.autoGrow(notes); // wächst nur mit dem Text, höchstens 4 Zeilen
 
+    const toMin = (v) => { const m = /^(\d{2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
+    const fromMin = (n) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
     const draw = () => {
       const d = new Date(`${e.date}T12:00:00`);
-      const set = (k, ic, text) => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>`; };
-      set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`);
-      set('time', icon('f-clock'), e.time ? `${e.time}${e.end ? ` – ${e.end}` : ''}` : 'Ganztägig');
+      const chev = `<span class="ce-chev">${icon('f-chevron-down')}</span>`;
+      const set = (k, ic, text, extra = '') => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>${extra}${chev}`; };
+      set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`);
+      // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
+      const s = toMin(e.time), en = toMin(e.end), dur = s != null && en != null && en > s ? en - s : null;
+      const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
+      set('time', icon('f-clock'), e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Ganztägig', durTxt ? `<span class="ce-dur">${durTxt}</span>` : '');
       set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
       set('icon', `<span style="color:${e.color}">${icon(e.icon)}</span>`, 'Icon');
       form.querySelector('[data-allday]').classList.toggle('on', !e.time);
@@ -352,8 +385,6 @@ const Calendar = (() => {
     // Datum: kleiner Kalender
     const cal = UIKit.miniCalendar(form.querySelector('.tk-cal'), () => e.date, (iso) => { e.date = iso; draw(); setTimeout(() => form.querySelector('.tk-pop[data-k="date"]').classList.remove('open'), 140); });
     // Zeit: zwei Räder (Beginn / Ende), Ende rückt mit, wenn der Beginn danach liegt
-    const toMin = (v) => { const m = /^(\d{2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
-    const fromMin = (n) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
     const wStart = UIKit.timeWheel(e.time || '09:00', (v) => {
       e.time = v;
       if (!e.end || toMin(e.end) <= toMin(v)) { e.end = fromMin(Math.min(23 * 60 + 55, toMin(v) + 60)); wEnd.setValue(e.end); }
@@ -397,7 +428,7 @@ const Calendar = (() => {
       if (act === 'delete') { if (store) store.onDelete(e.id); else { events = events.filter((y) => y.id !== e.id); save(); render(); if (!dv.hidden) drawDay(); } eclose(); }
     });
     form.addEventListener('keydown', (x) => {
-      x.stopPropagation();
+      if (x.key !== 'Escape') x.stopPropagation(); // Esc schließt das Fenster auch aus dem Titel-Feld heraus
       if (x.key === 'Enter' && (x.metaKey || x.ctrlKey)) { x.preventDefault(); form.requestSubmit(); }
       else if (x.key === 'Enter' && x.target.matches('.tk-f-title')) { x.preventDefault(); notes.focus(); }
     });
@@ -426,15 +457,20 @@ const Calendar = (() => {
     emodal.hidden = false;
     emodal.classList.toggle('anchored', !!anchor);
     if (anchor) {
-      const r = anchor.getBoundingClientRect(), fw = Math.min(380, innerWidth - 24), gap = 14;
-      const left = r.left - gap - fw >= 8 ? r.left - gap - fw : Math.min(innerWidth - fw - 8, r.right + gap);
-      const side = left < r.left ? 'right' : 'left'; // Spitze zeigt zum Termin
+      const r = anchor.getBoundingClientRect(), fw = Math.min(340, innerWidth - 24), gap = 8;
       const fh = form.offsetHeight || 260;
-      const room = 290; // Platz nach unten, damit Datum/Zeit/Icon aufklappen können, ohne dass das Fenster wandert
-      const top = Math.max(12, Math.min(innerHeight - fh - room - 12, r.top + r.height / 2 - 60));
-      Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${top}px`, width: `${fw}px` });
-      form.dataset.arrow = side;
-      form.style.setProperty('--ay', `${Math.max(18, Math.min(fh - 18, r.top + r.height / 2 - top))}px`);
+      const room = 260; // Platz nach unten, damit Datum/Zeit/Icon aufklappen können, ohne dass das Fenster wandert
+      let left, top;
+      if (anchor.closest('.cm-head')) { // „Neu“ oben rechts: Fenster klappt darunter auf, rechtsbündig
+        left = Math.max(8, Math.min(innerWidth - fw - 8, r.right - fw));
+        top = r.bottom + gap;
+      } else {
+        const cell = anchor.closest('.cm-cell') || anchor, cr = cell.getBoundingClientRect();
+        left = cr.right + gap + fw <= innerWidth - 8 ? cr.right + gap : cr.left - gap - fw >= 8 ? cr.left - gap - fw : Math.max(8, (innerWidth - fw) / 2);
+        top = Math.max(12, Math.min(innerHeight - fh - room - 12, cr.top));
+      }
+      Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px` });
+      delete form.dataset.arrow;
     } else { form.removeAttribute('style'); delete form.dataset.arrow; }
     requestAnimationFrame(grow);
     setTimeout(() => form.querySelector('.tk-f-title').focus(), 60);
@@ -462,11 +498,9 @@ const Calendar = (() => {
     save();
     if (open) {
       const d = new Date(`${item.date}T12:00:00`);
-      cursor = mondayOf(d);
+      cursor = monthOf(d);
       render();
-      const fresh = view.querySelector(`[data-id="${item.id}"]`);
-      fresh?.classList.add('fresh');
-      if (fresh?.classList.contains('cw-ev')) { const top = parseFloat(fresh.style.top) || 0; if (top < scroller.scrollTop || top > scroller.scrollTop + scroller.clientHeight - 40) scroller.scrollTo({ top: Math.max(0, top - WEEK_HOUR), behavior: 'smooth' }); }
+      view.querySelector(`.cm-ev[data-id="${item.id}"]`)?.classList.add('fresh');
       if (!dv.hidden) { dayDate = item.date; drawDay(); dv.querySelector(`[data-id="${item.id}"]`)?.classList.add('fresh'); }
     }
     return item;

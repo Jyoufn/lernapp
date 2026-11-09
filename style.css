@@ -11433,3 +11433,132 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .chat-tags .lb2-tag { height: 22px; }
 /* Knöpfe unter den Antworten (Kopieren, Neu erzeugen, Ins Dokument): Icons etwas kleiner */
 .msg-btn svg { width: 14px; height: 14px; }
+
+/* =====================================================================
+   KALENDER · MONATSANSICHT (10.11.) – ersetzt die Wochenansicht. Vorlage: Nutzer-Screenshots („August 2026“-Kalender),
+   übertragen aufs dunkle Designschema. Kopf auf Höhe des Ein-/Ausklapp-Knopfs, Titel rechts davon (links 54 px wie der
+   Chat-Titel – nichts überlappt, auch nicht auf dem iPad). Wochentage als Pillen, jeder Tag eine eigene Kachel
+   (Monat: #181818 mit Rand, andere Monate: leiser, ohne Fläche), Termine unten in der Kachel, „+N weitere“ unter der Zahl.
+   ===================================================================== */
+.cal-month-view.cal-view { gap: 12px; padding: 10px 16px 16px; }
+.cal-month-view > :is(.cal-head, .cm) { width: 100%; max-width: none; align-self: stretch; }
+.cal-month-view .cm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; padding-left: 38px; }
+.cm-title { display: flex; align-items: baseline; gap: 6px; min-width: 0; white-space: nowrap; overflow: hidden; }
+.cm-m { color: var(--text); font-size: 15px; font-weight: 600; letter-spacing: -0.1px; line-height: 28px; }
+.cm-y { color: var(--text-3); font-size: 15px; font-weight: 500; line-height: 28px; font-variant-numeric: tabular-nums; }
+.cal-month-view .cm-nav { display: flex; align-items: center; gap: 8px; flex: none; }
+.cm-today { height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease, opacity 160ms ease; }
+.cm-today.dim { opacity: 0.45; }
+@media (hover: hover) { .cm-today:hover { background: var(--pop-bg); } }
+/* Monats-Umschalter: ‹  November 2026  › – Klick auf den Monat klappt den kleinen Kalender auf */
+.cm-switch { position: relative; display: flex; align-items: center; width: 210px; height: 28px; padding: 0 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--win-bg); }
+.cm-arr { display: grid; place-items: center; flex: none; width: 24px; height: 22px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cm-arr svg { width: 12px; height: 12px; }
+.cm-label { flex: 1 1 auto; min-width: 0; height: 22px; padding: 0 6px; border: 0; border-radius: 6px; background: none; color: var(--text); font: inherit; font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) { :is(.cm-arr, .cm-label):hover { background: var(--pop-bg); color: var(--text); } }
+.cm-label[aria-expanded="true"] { background: var(--pop-bg); }
+.cm-pick { position: absolute; top: calc(100% + 6px); left: 50%; z-index: 30; width: 250px; margin-left: -125px; padding: 10px 10px 8px; border: 1px solid var(--menu-border, #242424); border-radius: 12px; background: var(--menu-bg, #181818); transform-origin: top center; animation: cm-pick-in 220ms var(--spring) both; }
+.cm-pick[hidden] { display: none; }
+@keyframes cm-pick-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+.cm-pick .tk-cal-head { padding: 0 0 0 4px; }
+.cm-pick .tk-cal-grid { margin-top: 4px; }
+.cal-month-view .cal-new { height: 28px; padding: 0 12px 0 10px; border-radius: 8px; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+/* Platz richtet sich nach der Breite des Kalenders (nicht des Bildschirms) – mit offener Sidebar auf dem iPad wird es eng */
+.cal-month-view { container-type: inline-size; container-name: calm; }
+@container calm (max-width: 760px) {
+  .cm-switch { width: 172px; }
+  .cm-today { display: none; }
+  .cal-month-view .cal-new { width: 28px; padding: 0; justify-content: center; }
+  .cal-month-view .cal-new span { display: none; }
+}
+@container calm (max-width: 470px) {
+  .cm-title { display: none; }
+  .cal-month-view .cm-head { justify-content: flex-end; }
+  .cm-switch { width: auto; flex: 1 1 auto; max-width: 230px; }
+  .cal-month-view .cm-nav { flex: 1 1 auto; justify-content: flex-end; }
+}
+.cm.narrow .cm-ev-time { display: none; }
+.cm.narrow .cm-ev.cal-pill { padding: 0 5px; }
+
+/* Raster */
+.cm { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.cm-wd { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; flex: none; }
+.cm-wd span { height: 22px; border-radius: 7px; background: var(--win-bg); color: var(--text-4); font-size: 11.5px; font-weight: 500; line-height: 22px; text-align: center; }
+.cm-grid {
+  --weeks: 6;
+  flex: 1 1 auto; min-height: 0; display: grid; gap: 6px; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: repeat(var(--weeks), minmax(92px, 1fr));
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+.cm-grid.slide-l { animation: cal-slide-l 380ms var(--spring); }
+.cm-grid.slide-r { animation: cal-slide-r 380ms var(--spring); }
+.cm-cell {
+  position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 6px 5px 5px; overflow: hidden;
+  border: 1px solid var(--line, #242424); border-radius: 10px; background: var(--win-bg);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease, border-color 120ms ease;
+}
+.cm-cell.other { background: none; border-color: #1d1d1d; }
+@media (hover: hover) { .cm-cell:hover { background: var(--pop-bg); } .cm-cell.other:hover { background: var(--win-bg); } }
+.cm-cell-h { display: flex; align-items: center; flex: none; height: 20px; padding: 0 2px; }
+.cm-dn { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; margin-left: -3px; border-radius: 10px; color: var(--text-2); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.cm-cell.other .cm-dn { color: var(--text-4); }
+.cm-cell.today .cm-dn { background: #f2545b; color: #fff; font-weight: 600; }
+.cm-evs { display: flex; flex-direction: column; gap: 2px; min-height: 0; margin-top: auto; }
+.cm-more { flex: none; align-self: flex-start; height: 16px; margin: 1px 0 0; padding: 0 3px; border: 0; border-radius: 5px; background: none; color: var(--text-4); font: inherit; font-size: 11px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+@media (hover: hover) { .cm-more:hover { color: var(--text-2); } }
+
+/* Termin-Chip wie Vorlage: getönte Fläche, Titel links, Uhrzeit rechts in derselben Farbe (leiser) */
+.cm-ev.cal-pill {
+  display: flex; align-items: center; gap: 6px; flex: none; width: 100%; height: 20px; padding: 0 6px; border-radius: 5px;
+  background: color-mix(in srgb, var(--c) 20%, transparent); color: color-mix(in srgb, var(--c) 72%, #fff); font-size: 11.5px; font-weight: 500; animation: none;
+}
+.cm-ev.cal-pill[hidden], .cm-more[hidden] { display: none; }
+@media (hover: hover) { .cm-ev.cal-pill:hover { background: color-mix(in srgb, var(--c) 26%, transparent); } }
+.cm-dot { display: none; }
+.cm-ev-t { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cm-ev-time { flex: none; opacity: 0.72; font-size: 11px; font-variant-numeric: tabular-nums; }
+.cm-cell.other .cm-ev { opacity: 0.6; }
+.cm-ev.fresh { animation: cal-pill-in 520ms cubic-bezier(0.2, 0.9, 0.25, 1.06) backwards; }
+
+/* schmal (Handy, iPad geteilt): Zahl mittig, Termine nur als Farbpunkte */
+.cm.compact, .cm.compact .cm-wd, .cm.compact .cm-grid { gap: 3px; }
+.cm.compact .cm-wd span { border-radius: 6px; font-size: 11px; }
+.cm.compact .cm-grid { grid-template-rows: repeat(var(--weeks), minmax(56px, 1fr)); }
+.cm.compact .cm-cell { align-items: center; padding: 4px 2px; border-radius: 8px; }
+.cm.compact .cm-cell-h { justify-content: center; padding: 0; }
+.cm.compact .cm-dn { margin: 0; }
+.cm.compact .cm-evs { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: 6px; }
+.cm.compact .cm-ev.cal-pill { width: 6px; height: 6px; padding: 0; border-radius: 50%; background: var(--c); }
+.cm.compact .cm-ev > * { display: none; }
+@media (prefers-reduced-motion: reduce) { .cm-grid.slide-l, .cm-grid.slide-r, .cm-ev.fresh, .cm-pick { animation: none; } }
+
+/* Termin-Fenster als Karte (Vorlage: Termin-Popover): Kasten mit Titel + Beschreibung, darunter je Eigenschaft ein
+   Kasten (#212121), der in sich aufklappt; rechts ein kleiner Pfeil-Knopf bzw. die Dauer. Gilt auch beim Erstellen. */
+.cal-emodal .tk-form.ce-card { width: 340px; max-width: calc(100vw - 24px); padding: 6px; border: 1px solid var(--line); border-radius: 16px; background: var(--win-bg); }
+.cal-emodal.anchored .tk-form.ce-card { border-radius: 16px; }
+.cal-emodal .ce-card[data-arrow]::after, .cal-emodal .ce-card::after { content: none !important; display: none !important; }
+.ce-card .tk-sheet-main.ce-headbox { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px 9px; border-radius: 11px; background: var(--pop-bg); }
+.ce-card .ce-headbox .tk-f-title { height: 22px; padding: 0; border: 0; background: none; color: var(--text); font: 600 14.5px Inter, sans-serif; outline: none; }
+.ce-card .ce-headbox .tk-f-title::placeholder { color: var(--text-4); }
+.ce-card .ce-headbox .tk-f-notes { min-height: 18px; color: var(--text-3); font: 400 12.5px/1.45 Inter, sans-serif; outline: none; resize: none; }
+.ce-card .ce-headbox .tk-f-notes::placeholder { color: var(--text-4); }
+.ce-card .tk-sheet-rows.ce-rows { display: flex; flex-direction: column; gap: 6px; margin: 6px 0 0; padding: 0; border: 0; }
+.ce-card .ce-rows .tk-pop { border-radius: 11px; background: var(--pop-bg); overflow: hidden; }
+.ce-card .ce-rows .tk-pill { display: flex; align-items: center; gap: 9px; width: 100%; height: 36px; padding: 0 7px 0 12px; border: 0; border-radius: 0; background: none; color: var(--text); font: 500 12.5px Inter, sans-serif; text-align: left; }
+.ce-card .ce-rows .tk-pill:hover, .ce-card .ce-rows .tk-pop.open > .tk-pill { background: none; }
+.ce-card .ce-rows .tk-si { display: grid; place-items: center; width: 14px; color: var(--text-3); }
+.ce-card .ce-rows .tk-si svg { width: 14px; height: 14px; }
+.ce-card .ce-rows .tk-rv { display: inline-flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); font-variant-numeric: tabular-nums; }
+.ce-card .ce-arrow { display: inline-grid; place-items: center; color: var(--text-3); }
+.ce-card .ce-arrow svg { width: 13px; height: 13px; }
+.ce-card .ce-today { margin-left: 2px; color: var(--text-4); font-weight: 500; }
+.ce-card .ce-dur { margin-left: auto; height: 20px; padding: 0 6px; border-radius: 6px; background: var(--win-bg); color: var(--text-4); font-size: 11px; line-height: 20px; white-space: nowrap; }
+.ce-card .ce-chev { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-left: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--win-bg); color: var(--text-3); }
+.ce-card .ce-dur + .ce-chev { margin-left: 6px; }
+.ce-card .ce-chev svg { width: 11px; height: 11px; transition: transform 260ms var(--spring); }
+.ce-card .tk-pop.open .ce-chev svg { transform: rotate(180deg); }
+.ce-card .ce-rows .tk-box { margin: 0 6px 6px; padding: 6px 2px 2px; border: 0; border-top: 1px solid var(--line); border-radius: 0; background: none; }
+.ce-card .ce-rows .tk-menu.date .tk-box { padding: 8px 4px 4px; }
+.ce-card .ce-foot { display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 0 0; border: 0; background: none; position: static; }
+.ce-card .ce-foot .grow { flex: 1; }
+.ce-card .ce-foot .tk-create { height: 30px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
+.ce-card .ce-foot .tk-sheet-ib { width: 30px; height: 30px; border-radius: 9px; }
