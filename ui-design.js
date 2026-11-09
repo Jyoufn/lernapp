@@ -55,6 +55,8 @@ const UIDesign = (() => {
         item('Fach-/Termin-Farben', 'UIKit.COLORS', `<div class="ud-dots">${colors.map((c) => `<i style="background:${c}" title=""></i>`).join('')}</div>`),
       ])}
 
+      <section class="ud-sec ud-gl-only" id="ud-hintergrund" data-sec="hintergrund"><h3>Hintergrund und Akzent</h3><div class="ud-look">${lookHtml()}</div></section>
+
       ${section('schrift', 'Schrift', ['Inter, Stärke 400/500/600 – nie fetter.', 'Systemschrift des Mac (SF Pro), Grundgröße 13 px; Titel und große Zahlen 700.'], [
         item('Größen', '', [[SIZES, 'ud-cur-b'], [SIZES_GLASS, 'ud-gl-b']].map(([list, cls]) => `<div class="ud-type ${cls}">${list.map(([px, w, l]) => `<div><span style="font-size:${px}px;font-weight:${w}">${l}</span><code>${String(px).replace('.', ',')} px · ${w}</code></div>`).join('')}</div>`).join(''), '', true),
       ])}
@@ -160,26 +162,66 @@ const UIDesign = (() => {
     return c || '';
   };
   const STYLE_KEY = 'ud.style.v1';
-  // Glas-Vorschau gilt app-weit (Home, Erstellen, Aufgaben, Kalender …), solange oben „Glas“ gewählt ist
+  /* Glas-Stil = zweites Dashboard IN „UI Design“: Stil „Glas“ zeigt dort die ganze App noch einmal als eingebettete
+     Seite (iframe „/?glas=1“) – mit eigener Sidebar, Home, Erstellen, Aufgaben, Kalender, Einstellungen, alles echt und bedienbar.
+     Nur in dieser eingebetteten App (EMBED) ist der Glas-Stil an; die App selbst bleibt im aktuellen Stil.
+     Normale Sidebar einklappen → das Glas-Dashboard füllt den Hauptteil. In EMBED zeigt „UI Design“ nur die Bausteine im Glas-Stil. */
+  const EMBED = new URLSearchParams(location.search).has('glas');
+  if (EMBED) document.documentElement.classList.add('gl-embed');
+  // eingebettetes Dashboard startet immer auf Home (nicht auf der zuletzt offenen Ansicht der App)
+  // (eigene Sidebar: der Ein-/Ausklapp-Zustand wird getrennt gemerkt, app.js → STORAGE_KEY)
+  // die App stellt beim Start die zuletzt offene Ansicht wieder her (oft „UI Design“): öffnet sich „UI Design“ im Dashboard,
+  // ohne dass dort schon getippt wurde (erste 10 s), geht es stattdessen auf Home
+  let acted = false;
+  if (EMBED) addEventListener('pointerdown', () => { acted = true; }, true);
+  const autoHome = () => EMBED && !acted && performance.now() < 10000;
   const syncShell = () => {
-    let st = 'cur'; try { st = localStorage.getItem(STYLE_KEY) || 'cur'; } catch {}
-    const on = view ? view.classList.contains('ud-glass') : st === 'glass';
+    const on = EMBED;
     if (on) { glassify(); applyLook(); }
     swapIcons(on);
     document.body.classList.toggle('gl-shell', on);
+    document.documentElement.classList.toggle('gl-on', on); // ohne Überblenden beim Wechseln (durchsichtige Flächen würden doppelt erscheinen)
+    if (on) requestAnimationFrame(() => document.querySelectorAll('.cs-pill, .st-seg').forEach(placeThumb));
   };
+  let dash = null;
+  function showDash(on) {
+    if (!view || EMBED) return;
+    view.classList.toggle('ud-dash-on', on);
+    if (on && !dash) {
+      dash = document.createElement('div'); dash.className = 'ud-dash';
+      dash.innerHTML = '<iframe src="/?glas=1" title="Glas-Dashboard (Vorschau)" loading="eager"></iframe>';
+      view.append(dash);
+    }
+  }
 
-  /* Icons: im Glas-Stil den Inhalt der Symbole #f-…/#o-… gegen dünne Linien-Icons tauschen (glass-icons.js), bei „Aktuell“ zurück */
+  /* Umschalter im Glas-Stil: der helle Teil gleitet weich zum gewählten Knopf (wie „Now | Stats“) */
+  function placeThumb(pill) {
+    if (!document.body.classList.contains('gl-shell') || !pill.isConnected) return;
+    const on = pill.querySelector(':scope > button.on');
+    let t = pill.querySelector(':scope > .gl-thumb');
+    if (!on || !on.offsetWidth) { t?.remove(); return; }
+    if (!t) { t = document.createElement('i'); t.className = 'gl-thumb'; t.style.transition = 'none'; pill.prepend(t); requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; })); }
+    t.style.width = `${on.offsetWidth}px`; t.style.transform = `translateX(${on.offsetLeft}px)`;
+  }
+  new MutationObserver((ms) => {
+    if (!document.body.classList.contains('gl-shell')) return;
+    const pills = new Set(ms.map((m) => m.target.closest?.('.cs-pill, .st-seg')).filter(Boolean));
+    pills.forEach(placeThumb);
+  }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+
+  /* Icons: im Glas-Stil den Inhalt der Symbole #f-…/#i-… gegen runde Linien-Icons im Stil der Sidebar tauschen (glass-icons.js), sonst zurück */
   const iconBackup = new Map();
+  let iconsOn = false;
   function swapIcons(on) {
-    const G = window.GlassIcons; if (!G) return;
-    for (const [pre, set] of [['f', G.f], ['o', G.o], ['i', G.i || {}]]) {
-      for (const [name, body] of Object.entries(set)) {
+    const G = window.GlassIcons; if (!G || on === iconsOn) return;
+    iconsOn = on;
+    for (const [pre, set] of [['f', G.f || {}], ['i', G.i || {}]]) {
+      for (const [name, [vb, body]] of Object.entries(set)) {
         const sym = document.getElementById(`${pre}-${name}`); if (!sym) continue;
         if (on) {
           if (!iconBackup.has(sym)) iconBackup.set(sym, [sym.getAttribute('viewBox'), sym.innerHTML]);
-          sym.setAttribute('viewBox', '0 0 24 24');
-          sym.innerHTML = `<g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${body}</g>`;
+          sym.setAttribute('viewBox', vb);
+          sym.innerHTML = body;
         } else if (iconBackup.has(sym)) {
           const [vb, html] = iconBackup.get(sym);
           if (vb) sym.setAttribute('viewBox', vb); sym.innerHTML = html;
@@ -304,11 +346,11 @@ const UIDesign = (() => {
   }
   const paintHex = () => view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex) || c.dataset.fix; });
   function setStyle(st) {
-    const glass = st === 'glass';
-    view.classList.toggle('ud-glass', glass);
-    syncShell();
+    const glass = EMBED || st === 'glass';
+    view.classList.toggle('ud-glass', EMBED);  // Bausteine im Glas-Stil nur im eingebetteten Dashboard
+    showDash(!EMBED && glass);
     view.querySelectorAll('[data-udstyle]').forEach((b) => { const on = b.dataset.udstyle === (glass ? 'glass' : 'cur'); b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
-    try { localStorage.setItem(STYLE_KEY, glass ? 'glass' : 'cur'); } catch {}
+    if (!EMBED) try { localStorage.setItem(STYLE_KEY, glass ? 'glass' : 'cur'); } catch {}
     paintHex();
   }
   function wire() {
@@ -386,6 +428,7 @@ const UIDesign = (() => {
       }
       if (!view.isConnected) p.append(view);
       api.open = true; view.hidden = false; paintHex();
+      if (autoHome()) setTimeout(() => document.querySelector('.sidebar .sb-main [data-nav="docs"]')?.click());
       p.classList.add('view-docs', 'view-ud');
     },
     hide() {

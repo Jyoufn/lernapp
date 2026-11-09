@@ -587,6 +587,7 @@ const Docs = (() => {
           <div class="sbp-kids"><div class="sbp-in">${l.slice(0, 12).map(link).join('')}</div></div></div>`).join('')}${loose.map(link).join('')}</div></div>`;
     if (side.querySelector('.dc-newp')) side.querySelector('.dc-newp input').focus();
     window.dispatchEvent(new Event('docs-changed'));
+    window.renderSideChats?.(); // Markierung des offenen Dokuments in der Sidebar erneuern
   }
   side.addEventListener('click', (e) => {
     const a = e.target.closest('[data-side], [data-open-doc]'); if (!a) return;

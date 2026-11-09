@@ -111,3 +111,9 @@
 - Leiste oben (`#topStack`): Agent, Musik (`.mu-mini`) und Timer (`.ft`) als **eigene Kästchen nebeneinander**, zusammen so breit wie der Agent allein (460 px). Zu: Agent = Gesicht + Stumm + Beenden (Text „Agent is on it“ nur allein) · Musik = Cover + Zurück/Play/Weiter · Timer = Zeit + Beenden. Klick aufs Kästchen öffnet sein Fenster (`.va-panel`, `.ft-more`, `.music`) als **eigenen Kasten 8 px darunter** (volle Breite); Rückfragen erscheinen dort ebenso.
 - Aktionen (`window.AppActions` in `app.js`, Prompt `VOICE_PROMPT`): Chat neu (auch mit `agent`), fragen, Aufwand, Ansicht öffnen, Tab schließen, Dokumente (öffnen/neu/löschen/Einstellungen/`move_doc`), Projekte (`new_project`), Aufgaben (anlegen/ändern/löschen), Termine (anlegen/ändern `update_event`/löschen), Chats (`open_chat`, `rename_chat`, `pin_chat`, `delete_chat`), `switch_agent`, `research` (neuer Chat mit Research-Agent), Timer, Musik. Der App-Stand (`appStateText`) nennt dafür Chats, Agent, Aufgaben, Termine, Dokumente.
 - Agentenwechsel: Pixel-Boxhandschuh von rechts, Aufprall-Blitz mit Pixel-Splittern, alter Agent fliegt nach links, neuer gleitet von rechts herein (`punchSwap` in `pixel-dogs.js`).
+
+
+## Sidebar „Erstellen“ (Stand 09.11.)
+- „Erstellen“ ist eine Aktion, kein Ort: nie markiert. Offenes Dokument → sein Eintrag unter „Dokumente“ in der Sidebar ist markiert (sonst Home).
+- Pfeil rechts in der Zeile (beim Darüberfahren, auf dem iPad immer) öffnet ein Menü: Neuer Chat, Neues Dokument, Neue Aufgabe, Neuer Termin (`app.js`, `.sb-new-menu`).
+- Chats-Symbol oben rechts im Chat: zeigt die Liste der KI-Chats im Hauptteil (`chatsView`), kein Sprung nach Home.

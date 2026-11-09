@@ -11487,14 +11487,14 @@ body.gl-shell {
   --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* Töne wie im dritten Bild: kühles Schiefergrau, Kacheln heller, Text leicht kühl */
   --gl-side: rgba(255, 255, 255, 0.025);     /* Sidebar: klares Glas direkt auf dem Fenster – Hintergrund scheint durch */
-  --gl-main: rgba(19, 19, 22, 0.86);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
-  --gl-card: rgba(255, 255, 255, 0.065);     /* Karte / Kachel */
+  --gl-main: rgba(13, 13, 15, 0.94);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
+  --gl-card: rgba(255, 255, 255, 0.03);      /* Karte / Kachel (wie „Connect your AI agent“: fast so dunkel wie der Hauptteil) */
   --gl-card-2: rgba(255, 255, 255, 0.10);    /* angehoben: Knöpfe, Felder, aktive Zeile */
   --gl-card-3: rgba(255, 255, 255, 0.16);    /* gewählt */
   --gl-hover: rgba(255, 255, 255, 0.07);
-  --gl-edge: rgba(255, 255, 255, 0.09);      /* haarfeiner Rand */
+  --gl-edge: rgba(255, 255, 255, 0.08);      /* haarfeiner Rand */
   --gl-sep: rgba(255, 255, 255, 0.07);
-  --gl-float: rgba(40, 40, 44, 0.90);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
+  --gl-float: rgba(28, 28, 31, 0.97);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
   --gl-menu: var(--gl-float);
   --gl-menu-edge: rgba(255, 255, 255, 0.14);
   --gl-blur: blur(40px) saturate(170%);
@@ -11517,6 +11517,8 @@ body.gl-shell { -webkit-font-smoothing: antialiased; }
 /* Fenster-Hintergrund hinter dem Glas: kühles Grau mit weichen hellen und dunklen Flächen */
 body.gl-shell::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
+    radial-gradient(circle at 34% -38%, transparent 61%, rgba(255, 255, 255, 0.10) 63%, transparent 67%),
+    radial-gradient(circle at 104% 120%, transparent 52%, rgba(255, 255, 255, 0.08) 54%, transparent 58%),
     linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.06) 38%, transparent 44%),
     linear-gradient(118deg, transparent 58%, rgba(255, 255, 255, 0.04) 64%, transparent 70%),
     radial-gradient(38% 48% at 6% 10%, var(--gl-c1), transparent 70%),
@@ -11740,3 +11742,95 @@ body.gl-shell .gl-look { margin-bottom: 26px; }
 body.gl-shell .gl-look + h2, body.gl-shell .gl-look + h2 + .st-card { display: none; }
 body.gl-shell .ce-switch.on i { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
 body.gl-shell :is(.send-btn) { color: var(--gl-on-accent); }
+
+/* ===================================================================
+   09.11. (4. Runde): Glas = ZWEITES DASHBOARD in „UI Design“. Die App bleibt im aktuellen Stil; „UI Design → Glas“
+   bettet die ganze App als iframe „/?glas=1“ ein (html.gl-embed), nur dort gilt body.gl-shell.
+   Vorbild jetzt v. a. das Nutzer-Bild „Agents“ (Glass-App): Sidebar = Glas über dem Hintergrund, Hauptteil = fast
+   deckendes Dunkel, Karten mit haarfeinem Rand und Zeilen mit Trennlinien, Knöpfe klein (hell gefüllt / mit Rand),
+   Stufen-Umschalter eckig-rund mit Rand. Keine Überblendungen beim Wechseln, keine Lichtkanten an Menüs.
+   =================================================================== */
+/* in der App: Dashboard-Rahmen in „UI Design“ */
+.ud-dash { display: none; }
+.ud-view.ud-dash-on { overflow: hidden; }
+.ud-view.ud-dash-on .ud-wrap, .ud-view.ud-dash-on .ud-top-in { display: none; }
+.ud-view.ud-dash-on .ud-top { position: absolute; left: 0; right: 0; top: 0; padding: 12px 0 0; background: none; }
+.ud-view.ud-dash-on .ud-dash { position: absolute; inset: 62px 12px 12px; display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: #1c1c1f; }
+.ud-dash iframe { display: block; width: 100%; height: 100%; border: 0; }
+/* im eingebetteten Dashboard: kein Stil-Umschalter in „UI Design“, keine Glas-Karte in den Einstellungen-Aussehen-Duplikaten */
+html.gl-embed .ud-top { display: none !important; }
+html.gl-embed .ud-view.ud-glass .ud-wrap { padding-top: 40px; }
+/* ohne Überblendung beim Wechseln (durchsichtige Flächen erschienen sonst doppelt – „Holo-Effekt“) */
+html.gl-on::view-transition-old(*), html.gl-on::view-transition-new(*) { animation: none !important; }
+html.gl-on::view-transition-group(*) { animation: none !important; }
+
+/* Fenster */
+body.gl-shell .panel { border-color: rgba(255, 255, 255, 0.08) !important; box-shadow: 0 16px 50px rgba(0, 0, 0, 0.35) !important; border-radius: 12px !important; }
+body.gl-shell .sidebar { background: linear-gradient(rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.035)) !important; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 28px; font-size: 13px; border-radius: 7px; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.10); box-shadow: none; }
+/* keine Lichtkanten/Ringe beim Antippen */
+body.gl-shell * { -webkit-tap-highlight-color: transparent; }
+body.gl-shell :is(button, a, [role="button"]):focus:not(:focus-visible) { outline: none; box-shadow: none; }
+
+/* Karten wie „Connect your AI agent“ */
+body.gl-shell :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker, .st-card) { border: 1px solid var(--gl-edge) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.025) !important; box-shadow: none !important; }
+body.gl-shell .st-card > * + * { border-top: 1px solid var(--gl-sep); }
+
+/* Knöpfe: hell gefüllt (wie „Connect“) bzw. mit feinem Rand (wie „Copy address“), klein, Radius 7 */
+body.gl-shell :is(.ud-btn.primary, .st-btn:not(.dark)) { height: 26px; padding: 0 12px; border: 0; border-radius: 7px; background: #e9e9ec !important; color: #111 !important; font-size: 12.5px; font-weight: 500; box-shadow: none; }
+body.gl-shell :is(.ud-btn.primary, .st-btn:not(.dark)):hover { background: #fff !important; }
+body.gl-shell :is(.ud-btn:not(.primary):not(.danger), .tk-view.tk-listmode .tk-new, .cal-new, .hm-go, .cl-new, .st-btn.dark) { height: 28px; padding: 0 11px; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 7px; background: transparent !important; color: var(--gl-t1) !important; font-size: 12.5px; font-weight: 500; box-shadow: none !important; }
+body.gl-shell :is(.ud-btn:not(.primary):not(.danger), .tk-view.tk-listmode .tk-new, .cal-new, .hm-go, .cl-new, .st-btn.dark):hover { background: rgba(255, 255, 255, 0.06) !important; }
+body.gl-shell :is(.tk-new, .cal-new, .cl-new) svg { color: var(--gl-t2); }
+body.gl-shell .ud-btn.danger { height: 28px; border: 1px solid rgba(232, 131, 122, 0.35); border-radius: 7px; background: transparent; color: var(--gl-red); }
+/* Kalender: „‹ Heute ›“ und „Neu“ im selben Stil (Rand, gleiche Höhe) */
+body.gl-shell .cal-seg { display: inline-flex; height: 28px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12) !important; border-radius: 7px; background: transparent !important; box-shadow: none !important; }
+body.gl-shell .cal-seg button { height: 100%; padding: 0 9px; border: 0 !important; border-radius: 0; background: none !important; color: var(--gl-t1) !important; font-size: 12.5px; font-weight: 500; }
+body.gl-shell .cal-seg button + button { border-left: 1px solid rgba(255, 255, 255, 0.10) !important; }
+body.gl-shell .cal-seg button:hover { background: rgba(255, 255, 255, 0.06) !important; }
+
+/* Stufen-Umschalter wie „Allow · Ask me · Block“ */
+body.gl-shell .st-seg { position: relative; height: 26px; padding: 0; gap: 0; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 7px; background: transparent; box-shadow: none; }
+body.gl-shell .st-seg button { position: relative; z-index: 1; height: 100%; padding: 0 10px; border-radius: 0; color: var(--gl-t2); font-size: 12px; }
+body.gl-shell .st-seg button + button { border-left: 1px solid rgba(255, 255, 255, 0.10) !important; }
+body.gl-shell .st-seg button.on { background: none !important; color: #fff; box-shadow: none !important; }
+/* Leisten-Umschalter (Agenten | Dokumente, Aktuell | Glas): Pille, heller Teil gleitet weich (ui-design.js → placeThumb) */
+body.gl-shell .cs-pill { position: relative; }
+body.gl-shell .cs-pill button { position: relative; z-index: 1; transition: color 220ms ease; }
+body.gl-shell .cs-pill button.on { background: none !important; box-shadow: none !important; }
+body.gl-shell .gl-thumb { position: absolute; z-index: 0; left: 0; top: 50%; height: 24px; margin-top: -12px; border-radius: 999px; background: rgba(255, 255, 255, 0.15); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: transform 380ms var(--spring, cubic-bezier(0.2, 0.9, 0.25, 1.06)), width 380ms var(--spring, ease); pointer-events: none; }
+body.gl-shell .st-seg > .gl-thumb { top: 0; height: 100%; margin: 0; border-radius: 0; background: rgba(255, 255, 255, 0.12); box-shadow: none; }
+
+/* Menüs: fast deckend, feiner Rand, weicher Schatten, keine Lichtkante */
+body.gl-shell :is(.tk-menu, .lb2-menu, .chat-pop, .model-popover, .ws-menu) { border: 1px solid rgba(255, 255, 255, 0.09) !important; border-radius: 10px; background: var(--gl-float) !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45) !important; -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 6px; font-size: 13px; }
+body.gl-shell :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t2); }
+
+/* Eingabefeld der Agenten: deckend wie bisher (nicht durchsichtig) */
+body.gl-shell .composer { background: #1a1a1d !important; border: 1px solid rgba(255, 255, 255, 0.09) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+
+/* Etiketten wie „✓ Connected“: feiner Rand, keine farbige Fläche, Farbe nur als Punkt bzw. Schrift */
+body.gl-shell .ud-badge { height: 20px; padding: 0 7px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: transparent; color: var(--gl-t2); font-size: 11.5px; font-weight: 500; }
+body.gl-shell .ud-badge.accent { border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--gl-t1); background: transparent; }
+body.gl-shell .ud-badge.danger { border-color: rgba(232, 131, 122, 0.4); color: var(--gl-red); background: transparent; }
+body.gl-shell .tk-tag { border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; background: transparent !important; color: var(--gl-t1) !important; }
+body.gl-shell .tk-tag .tag-dot { background: var(--c) !important; }
+
+/* Hintergrund und Akzent in „UI Design“ (eingebettet) */
+body.gl-shell .ud-look .gl-look h2 { display: none; }
+body.gl-shell .ud-look .st-row { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 14px; }
+body.gl-shell .ud-look .st-name { color: var(--gl-t1); font-size: 13px; }
+body.gl-shell .ud-look .grow { flex: 1; }
+.ud-gl-only { display: none; }
+body.gl-shell .ud-gl-only { display: block; }
+
+/* „Erstellen“ in der App (aktueller Stil): Pfeil für Optionen rechts in der Zeile */
+.sb-main .nav-item[data-nav="new"] { position: relative; }
+.sb-new-more { display: grid; place-items: center; width: 22px; height: 22px; margin-left: auto; border-radius: 6px; color: var(--text-4); opacity: 0; transition: opacity 140ms ease, background-color 120ms ease; }
+.nav-item[data-nav="new"]:hover .sb-new-more, .sb-new-more.on { opacity: 1; }
+.sb-new-more:hover, .sb-new-more.on { background: var(--pop-bg); color: var(--text); }
+@media (hover: none) { .sb-new-more { opacity: 1; } }
+.sb-new-menu[hidden] { display: none; }

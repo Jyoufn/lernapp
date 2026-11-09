@@ -3,7 +3,7 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------- Sidebar ein-/ausklappen: ein Knopf, immer oben links ---------- */
 const toggle = $('sidebarToggle');
-const STORAGE_KEY = 'sidebarCollapsed';
+const STORAGE_KEY = /[?&]glas\b/.test(location.search) ? 'sidebarCollapsed.glas' : 'sidebarCollapsed'; // eingebettetes Glas-Dashboard (UI Design) merkt sich seine Sidebar getrennt
 
 function setCollapsed(collapsed) {
   app.classList.toggle('collapsed', collapsed);
@@ -128,6 +128,42 @@ document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) 
   else if (VIEW_TABS[k]) window.softSwitch(() => openViewTab(k));
 }));
 // Lupe oben: Suchfeld (search.js)
+
+/* „Erstellen“ mit Optionen (Wunsch 09.11.): der Pfeil rechts in der Zeile öffnet ein Menü – Neuer Chat, Neues Dokument,
+   Neue Aufgabe, Neuer Termin. Ein Klick auf die Zeile selbst öffnet wie bisher den leeren Chat. */
+(() => {
+  const row = document.querySelector('.sidebar .sb-main [data-nav="new"]'); if (!row) return;
+  const more = el('span', 'sb-new-more');
+  more.setAttribute('role', 'button'); more.setAttribute('aria-label', 'Optionen'); more.setAttribute('aria-haspopup', 'menu');
+  more.innerHTML = '<svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-down"/></svg>';
+  row.append(more);
+  const menu = el('div', 'lb2-menu sb-new-menu');
+  menu.setAttribute('role', 'menu'); menu.hidden = true;
+  const ITEMS = [['chat', 'chat', 'Neuer Chat'], ['doc', 'file-plus', 'Neues Dokument'], ['task', 'tasks', 'Neue Aufgabe'], ['event', 'calendar', 'Neuer Termin']];
+  menu.innerHTML = ITEMS.map(([k, ic, l]) => `<button type="button" class="lb2-mi" role="menuitem" data-new="${k}"><svg width="14" height="14" aria-hidden="true"><use href="#f-${ic}"/></svg><span>${l}</span></button>`).join('');
+  document.body.append(menu);
+  const close = () => { menu.hidden = true; more.classList.remove('on'); };
+  more.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!menu.hidden) { close(); return; }
+    const r = row.getBoundingClientRect();
+    menu.style.left = `${Math.round(r.left)}px`; menu.style.top = `${Math.round(r.bottom + 4)}px`; menu.style.minWidth = `${Math.round(r.width)}px`;
+    menu.hidden = false; more.classList.add('on');
+  });
+  const later = (fn) => setTimeout(fn, 120);
+  menu.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-new]'); if (!b) return;
+    close();
+    const k = b.dataset.new;
+    if (k === 'chat') row.click();
+    else if (k === 'doc') document.querySelector('.create-switch [data-cs="docs"]')?.click();
+    else if (k === 'task') { window.softSwitch(() => openViewTab('tasks')); later(() => document.querySelector('.tk-new')?.click()); }
+    else if (k === 'event') { window.softSwitch(() => openViewTab('calendar')); later(() => document.querySelector('[data-cal="new"]')?.click()); }
+  });
+  document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !more.contains(e.target)) close(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) close(); });
+  window.addEventListener('resize', close);
+})();
 
 /* „Erstellen“: oben mittig zwei Wörter im Stil der alten Agenten-Leiste – Agenten (leerer KI-Chat) | Dokumente (neues leeres Dokument).
    Steht im leeren Chat und im frisch über „Dokumente“ angelegten, noch leeren Dokument; das Wechseln selbst verwirft den leeren Vorgänger
@@ -5543,7 +5579,7 @@ chatsBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   clearTimeout(hoverT);
   showChatsPop(false);
-  openViewTab('docs'); // Chats stehen jetzt in der Bibliothek
+  chatsView.show(); window.renderSideChats?.(); // nur die KI-Chats im Hauptteil (Wunsch 09.11.), kein Sprung nach Home
 });
 chatsPop.addEventListener('click', (e) => e.stopPropagation());
 document.addEventListener('click', () => closeChatPops());
@@ -5748,8 +5784,13 @@ window.renderSideChats = () => {
     closeSbChatMenu();
     // markiert: Bereich des offenen Tabs bzw. „Chatverlauf“, solange die Übersicht offen ist
     const v = activeTab()?.dataset.view;
-    const kind = chatsView.open ? 'history' : createSwitch.isCreate(activeTab()) ? 'new' : v === 'doc' ? 'docs' : v || '';
+    // „Erstellen“ ist eine Aktion, kein Ort: nie markiert (Wunsch 09.11.). Offenes Dokument → sein Eintrag in der Sidebar ist markiert;
+    // nur wenn es dort (noch) nicht steht, bleibt Home markiert.
+    const docId = v === 'doc' ? activeTab()?.dataset.doc : '';
+    const docLink = docId ? document.querySelector(`.dc-side [data-open-doc="${docId}"]`) : null;
+    const kind = chatsView.open || createSwitch.isCreate(activeTab()) ? '' : v === 'doc' ? (docLink ? '' : 'docs') : v || '';
     document.querySelectorAll('.sidebar .sb-main [data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === kind));
+    document.querySelectorAll('.dc-side [data-open-doc]').forEach((a) => a.classList.toggle('active', a === docLink));
     // angeheftete Chats immer alle (eigene Gruppe „Angeheftet“), darunter die 8 neuesten übrigen (Wunsch 04.11.)
     const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
       .map((tab) => ({ tab, c: chatOf(tab) })).sort((a, b) => b.c.updated - a.c.updated);
