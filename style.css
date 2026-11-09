@@ -11562,3 +11562,34 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .ce-card .ce-foot .grow { flex: 1; }
 .ce-card .ce-foot .tk-create { height: 30px; padding: 0 14px; border-radius: 9px; font-size: 12.5px; }
 .ce-card .ce-foot .tk-sheet-ib { width: 30px; height: 30px; border-radius: 9px; }
+
+/* =====================================================================
+   KALENDER · NACHBESSERUNG (10.11. nachts): heute ohne rote Pille, Umschalter ohne Kasten-Fläche, Monat nicht anklickbar,
+   kräftigere Termin-Farben, kein Abdunkeln hinter der Termin-Karte, nichts wird beim Darüberfahren/Antippen dunkler.
+   ===================================================================== */
+.cm-cell.today .cm-dn { background: none; color: var(--accent); font-weight: 600; }
+.cm-switch { background: none; }
+.cm-arr { border-radius: 6px; transition: color 120ms ease; }
+@media (hover: hover) { .cm-arr:hover { background: none; color: var(--text); } }
+.cm-arr:active { transform: none; }
+.cm-label { display: block; flex: 1 1 auto; min-width: 0; padding: 0 6px; color: var(--text); font-size: 12.5px; font-weight: 500; line-height: 22px; text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: default; user-select: none; -webkit-user-select: none; }
+/* Termin-Chips: kräftiger getönt, Text heller in der Terminfarbe (wie die Pastell-Chips der Vorlage, nur dunkel) */
+.cm-ev.cal-pill { background: color-mix(in srgb, var(--c) 24%, var(--win-bg)); color: color-mix(in srgb, var(--c) 58%, #fff); }
+@media (hover: hover) { .cm-ev.cal-pill:hover { background: color-mix(in srgb, var(--c) 32%, var(--win-bg)); } }
+.cm-ev-time { opacity: 0.8; }
+.cm-cell.other .cm-ev { opacity: 0.55; }
+/* Karte schwebt frei – kein dunkler Schleier dahinter (Klick daneben schließt sie trotzdem) */
+.tk-modal.cal-emodal.anchored, .tk-modal.cal-emodal.anchored:has(.tk-sheet) { background: transparent !important; }
+/* in der Karte: Darüberfahren/Auswahl heller statt dunkler, Farb-Ring ohne schwarzen Spalt */
+.ce-card .tk-box button:hover, .ce-card .ce-icon-grid button:hover { background: color-mix(in srgb, var(--pop-bg) 86%, #fff); color: var(--text); }
+.ce-card .ce-icon-grid button.on { background: color-mix(in srgb, var(--pop-bg) 80%, #fff); color: var(--text); }
+.ce-card .tk-colors button:hover { background: var(--c); }
+.ce-card .tk-colors button.on, .ce-card .tk-custom.on { box-shadow: 0 0 0 2px var(--pop-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+.ce-card .tk-pill:active { transform: none; }
+/* Cover-Bild (wie das Foto in der Vorlage) */
+.ce-cover { position: relative; margin: 6px 0 0; border-radius: 11px; overflow: hidden; background: var(--pop-bg); aspect-ratio: 2.1 / 1; animation: cm-pick-in 240ms var(--spring) both; }
+.ce-cover[hidden] { display: none; }
+.ce-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ce-cover-x { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--main-bg) 70%, transparent); color: #fff; cursor: pointer; }
+.ce-cover-x svg { width: 12px; height: 12px; }
+.ce-card .ce-cover-row .tk-pill .ce-chev svg { transform: none !important; }
