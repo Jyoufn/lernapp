@@ -1,5 +1,12 @@
 # Design – verbindliche Regeln (aktueller Stand)
 
+## UI DESIGN – die Vorlage für ALLES (verbindlich seit 09.11., IMMER zuerst lesen)
+- In der App gibt es den Sidebar-Tab **„UI Design“** (`ui-design.js`). Dort stehen ALLE Bausteine der App mit ihren echten Klassen: Farben, Schrift, Knöpfe, Eingaben, Auswahl (Umschalter, Schalter, Kästchen, Farbreihe), Menüs (Auswahl-Menü, Menü, Chat-Menü, Aufklapp-Zeilen, Uhrzeit-Rad), Listen, Karten, Etiketten, Werkzeuge (Mini-Kalender, Farbwähler), Icons.
+- **Jede UI-Änderung und jedes neue Element nimmt die Bausteine aus „UI Design“** – nie einen eigenen Knopf/Menü/Schalter neu erfinden, sondern die dort gezeigte Klasse benutzen. Sieht dort etwas anders aus als hier beschrieben, gilt „UI Design“ (der Nutzer bearbeitet die Bausteine dort mit Claude).
+- Ändert der Nutzer einen Baustein („mach die Menüs runder“), wird die echte Klasse geändert (wirkt überall) und – falls nötig – die Bühne in `ui-design.js` angepasst. Die Beschreibung hier unten danach auf den neuen Stand bringen.
+- **Neuer Baustein in der App → immer auch in `ui-design.js` eintragen** (`item(Name, Klasse, Bühne, Satz)` im passenden Abschnitt). Nur Rahmen/Bühnen haben eigene `.ud-*`-Stile; Muster-Knöpfe ohne bisherige Klasse: `.ud-btn` (primary/danger), `.ud-input`, `.ud-badge`, `.ud-box`, `.ud-note-card`.
+
+
 ## DESIGNSCHEMA (verbindlich seit 04.11. – überall anwenden, vor jeder UI-Änderung prüfen)
 Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flach, wenig Kontrast über Flächen, Kontrast über Text.
 
@@ -13,7 +20,7 @@ Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flac
 - Abdunkelung hinter Fenstern/Overlays: `color-mix(in srgb, var(--main-bg) 72%, transparent)` – nie `rgba(0,0,0,…)`.
 - Gewählt/aktiv in einer Leiste = eine Stufe tiefer (Fenster-Ton auf Ausklappbar-Fläche).
 
-**2. Ränder nur leicht sichtbar**: `--line` #242424 (bzw. `--menu-border`, `--field-border`). Keine helleren Grau-Ränder; farbige Ränder nur für Akzent/Gefahr.
+**2. Ränder nur leicht sichtbar**: `--line` #242424 (bzw. `--menu-border`, `--field-border`). Keine helleren Grau-Ränder; farbige Ränder nur für Akzent/Gefahr. Rand um den Hauptteil (`.panel`) noch leiser: #1d1d1d (09.11.).
 
 **3. Keine Schatten**: kein `box-shadow` mit Versatz/Unschärfe, kein `drop-shadow` – nirgends. Erlaubt: Ringe ohne Unschärfe (`0 0 0 1px …`, `inset`).
 
@@ -37,8 +44,8 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 ## Icons
 - `icons.js`: gefüllt, 16er-Raster, Details ausgespart; nur Lupe und einfache Zeichen (Pfeile, Plus, ×, Haken) als Linie. Farbe `currentColor`.
 - HTML `<svg width="14" height="14"><use href="#f-NAME"/></svg>`, JS `fi('NAME', 14)` bzw. `FadeIcons.svg('NAME', 14)`.
-- Namen u. a.: home inbox tasks calendar analytics chart search people user stack db settings file folder files file-plus book cap bulb sparkle bolt mic voice music volume clock timer bell star heart bookmark flag pencil pin trash copy chat chats image globe link terminal codewin list filter eye lock download tag cloud-up upload slides share refresh undo sidebar grip more target check-circle x-circle plus-circle alert play pause next prev stop power plus x check back forward chevron-down chevron-right arrow-up arrow-right send hash mindmap agent book-open sun moon coffee food gift briefcase leaf camera cart gamepad palette dumbbell car plane medical table divider list-num quote video callout gallery dashboard bars-h trend minus info sliders expand shrink kanban notebook pen clipboard calc sigma ruler. (Nicht vorhanden z. B. `hourglass` → `#d-hourglass` ist nur Dokument-Icon.)
-- Sidebar nutzt Linien-Icons `#o-…` aus `index.html`.
+- Namen u. a.: Die vollständige, echte Liste steht im Tab „UI Design“ → Icons (liest die vorhandenen `<symbol>`s). NICHT vorhanden z. B. `hourglass`, `clipboard`, `notebook` (nur als Dokument-Icons `#d-…`) – vorher dort nachsehen.
+- Sidebar nutzt Linien-Icons `#o-…` aus `index.html` (Strich 1,5, runde Enden, Ecken weich wie `o-tasks`/`o-calendar`; `o-home` = abgerundetes Haus, `o-palette` = UI Design).
 
 ## Animation
 - **Flüssig auf dem iPad** (verbindlich, 04.11.): nur `transform` und `opacity` animieren – kein `filter: blur` in Keyframes/Übergängen, kein `backdrop-filter`, keine Schatten-Animation.
@@ -49,7 +56,7 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 ## Bausteine (so sehen sie heute aus)
 - **Hauptknopf**: blau gefüllt, Radius 8, weißer Text („Neue Aufgabe“, „Neues Dokument“, „Neuer Chat“). Nebenknopf: Rand, keine Fläche. Löschen: rot transparent.
 - **Home-Liste** (`.lb2-*`): Zeilen ohne Kasten, feine Trennlinie (6 % Weiß), Hover `--menu-hover`; Kästchen 16 px Radius 5 links außerhalb der Zeile, gewählt = blauer Rand + Haken (keine Fläche); Filter und Auswahl-Knöpfe als runde Pillen (Radius 999, Rand `--menu-border`); Menüs wie `.tk-box`. Auswahl-Aktionen unten mittig (`.lb2-dock`) im Stil des Schalters „Agenten · Dokumente“: 36 px, Radius 12, `--win-bg`, Rand `--line`, Icon + Text, Trennstriche 1×16 px `--line`, Hover #212121; 10 px über dem Rand, gleitet mit Feder ein. Dokument-Icon ohne eigenes Icon: Blatt mit Eselsohr (`PAGE_SHAPE` in `docs.js`, Sidebar und Bibliothek).
-- **Seitenköpfe** Home/Aufgaben: Titel 18 px links, rechts höchstens ein grauer Knopf (#212121, kein Blau), darunter Suchfeld (40 px, Radius 12, Fläche `--win-bg`, Icon 14).
+- **Seitenköpfe** Home/Aufgaben: Titel 18 px links, KEINE Unterzeile, rechts höchstens ein Knopf (Home: Plus `.hm-plus` 30 px, Radius 8, ohne Fläche, Hover #212121 → Menü Neuer Chat | Neues Dokument; Aufgaben: grauer Knopf #212121, kein Blau), darunter Suchfeld (40 px, Radius 12, Fläche `--win-bg`, Icon 14).
 - **Kalender-Kopf**: auf Höhe des Sidebar-Knopfs oben links, Trennstrich, „Oktober 2026“ 15 px; rechts „‹ Heute ›“ und „Neu“ gleich hoch.
 - **Menüs/Aufklapp-Kästen** (`.tk-box`): `--menu-bg`, Rand `--menu-border`, Radius 10, Zeilen 30 px, Auswahl nur blauer Haken.
 - **Fenster Aufgabe/Termin**: ohne × und ohne Kopftext; Titel, „Beschreibung hinzufügen“ (wächst, höchstens ~6 Zeilen, dann scrollt sie; das ganze Fenster höchstens Bildschirmhöhe und scrollbar), darunter Pillen-Zeilen (Icon + Text), die bündig einen Kasten aufklappen. Knopf unten rechts „Aufgabe erstellen“.

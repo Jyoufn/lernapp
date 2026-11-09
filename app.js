@@ -85,6 +85,7 @@ const VIEW_TABS = {
   tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
+  uidesign: { title: 'UI Design', icon: 'f-palette', view: () => window.UIDesign },
 };
 function openViewTab(kind) {
   if (!VIEW_TABS[kind]) return; // z. B. ein gemerkter Tab einer Ansicht, die es nicht mehr gibt (Inbox)
@@ -113,7 +114,7 @@ window.softSwitch = (fn) => {
   const t = document.startViewTransition(fn);
   t.finished.finally(() => document.documentElement.classList.remove('vt-on'));
 };
-// Sidebar: Neuer Chat, Home (Chats + Dokumente), Aufgaben, Kalender.
+// Sidebar: Neuer Chat, Home (Chats + Dokumente), Aufgaben, Kalender, UI Design (alle Bausteine).
 // Die Lupe oben öffnet den Chatverlauf (Suchfeld bekommt den Fokus).
 document.querySelectorAll('.sidebar .sb-main a.nav-item[data-nav]').forEach((a) => a.addEventListener('click', (e) => {
   e.preventDefault();

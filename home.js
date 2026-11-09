@@ -1,16 +1,16 @@
 /* ===================================================================
    Home (Wunsch 07.11., Vorbild „Home · Up Next“): ersetzt den Kopf der Bibliothek.
-   - Unterzeile: „N neu seit deinem letzten Besuch“, sonst Tageszeit-Gruß mit Termin-/Aufgaben-Zahl.
+   - Keine Unterzeile unter „Home“ mehr (09.11. entfernt); rechts daneben das Plus-Menü (docs.js).
    - „Als Nächstes“: Karten nebeneinander zum Wischen (Scroll-Snap, Punkte + Pfeile), jede mit X zum Wegklicken
      (gemerkt in home.dismissed.v1). Karte = Icon-Kachel links, Titel + kurze Beschreibung, rechts ein Knopf.
      Quellen: nächster Termin (36 Std.), fällige/überfällige Aufgaben, Börse (nur bei starkem Ausschlag),
      „Weitermachen“ mit dem zuletzt bearbeiteten Dokument.
    - Börse wird NICHT ständig abgefragt: höchstens alle 3 Std. (home.boerse.v1), nur gespeicherter Radar + Depot.
      Alarm nur bei Auffälligkeit: Depot-Wert heute ≤ −4 % oder ≥ +8 %, bzw. Radar-Kaufsignal nach Rückgang ≥ 8 %.
-   docs.js ruft Home.render(slot, sub) beim Öffnen der Liste und Home.leave() beim Verlassen.
+   docs.js ruft Home.render(slot) beim Öffnen der Liste und Home.leave() beim Verlassen.
    =================================================================== */
 const Home = (() => {
-  const DISMISS_KEY = 'home.dismissed.v1', SEEN_KEY = 'home.seen.v1', BX_KEY = 'home.boerse.v1';
+  const DISMISS_KEY = 'home.dismissed.v1', BX_KEY = 'home.boerse.v1';
   const BX_EVERY = 3 * 3600 * 1000;
   const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
   const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -60,12 +60,12 @@ const Home = (() => {
       if (!soon) return null;
       const days = Math.round((new Date(`${soon.date}T12:00`) - new Date(`${today}T12:00`)) / 86400000);
       if (days > 2) return null;
-      return { id: `tk:${soon.id}:${soon.date}`, kind: 'task', icon: 'f-clipboard', title: soon.title || 'Aufgabe', when: days === 1 ? 'Morgen fällig' : 'Übermorgen fällig', desc: soon.time ? `bis ${soon.time}` : 'Noch Zeit zum Vorbereiten', act: 'Aufgaben', go: () => window.openViewTab?.('tasks') };
+      return { id: `tk:${soon.id}:${soon.date}`, kind: 'task', icon: 'f-tasks', title: soon.title || 'Aufgabe', when: days === 1 ? 'Morgen fällig' : 'Übermorgen fällig', desc: soon.time ? `bis ${soon.time}` : 'Noch Zeit zum Vorbereiten', act: 'Aufgaben', go: () => window.openViewTab?.('tasks') };
     }
     const late = due.filter((t) => t.date < today).length;
     const one = due.length === 1;
     return {
-      id: `tk:${today}:${due.length}`, kind: 'task', icon: 'f-clipboard', late: late > 0,
+      id: `tk:${today}:${due.length}`, kind: 'task', icon: 'f-tasks', late: late > 0,
       title: one ? (due[0].title || 'Aufgabe') : `${due.length} Aufgaben für heute`,
       when: late ? `${late} überfällig` : 'Heute fällig',
       desc: one ? (due[0].time ? `bis ${due[0].time}` : 'Eine Sache steht noch an') : due.slice(0, 2).map((t) => t.title).filter(Boolean).join(' · '),
@@ -78,7 +78,7 @@ const Home = (() => {
     if (!d || now.getTime() - (d.updated || 0) > 7 * 86400000) return null;
     const ago = now.getTime() - d.updated, h = Math.round(ago / 3600000);
     const when = ago < 3600000 ? 'Gerade eben' : h < 24 ? `Vor ${h} Std.` : `Vor ${Math.round(h / 24)} Tag${Math.round(h / 24) === 1 ? '' : 'en'}`;
-    return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-notebook', title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
+    return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-file', title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
   }
   // Börse: aus dem Zwischenspeicher (höchstens alle 3 Std. neu geholt)
   function boerseCards() {
@@ -113,7 +113,7 @@ const Home = (() => {
   }
 
   /* ---------- Darstellung ---------- */
-  let slot = null, sub = null, index = 0;
+  let slot = null, index = 0;
   const dismissed = () => new Set(read(DISMISS_KEY, []));
   function cards() {
     const now = new Date(), gone = dismissed();
@@ -174,36 +174,14 @@ const Home = (() => {
     if (c) (window.softSwitch || ((f) => f()))(() => c.go());
   }
 
-  /* Unterzeile: Neues seit dem letzten Besuch, sonst Gruß mit Tageszahlen */
-  function subline() {
-    if (!sub) return;
-    const seen = read(SEEN_KEY, 0), now = new Date();
-    const D = window.Docs;
-    const items = [...(D ? D.docs.filter((d) => D.inWs(d) && !D.isEmpty(d.id)) : []), ...(window.LibChats?.items() || [])];
-    const fresh = seen ? items.filter((x) => (x.updated || 0) > seen).length : 0;
-    let text;
-    if (fresh) text = `${fresh} neu seit deinem letzten Besuch`;
-    else {
-      const h = now.getHours(), hi = h < 5 ? 'Gute Nacht' : h < 11 ? 'Guten Morgen' : h < 17 ? 'Hallo' : h < 22 ? 'Guten Abend' : 'Gute Nacht';
-      const today = isoOf(now);
-      const ev = (window.Calendar?.events || []).filter((e) => e.date === today).length;
-      const tk = (window.Tasks?.tasks || []).filter((t) => t.status !== 'done' && t.date && t.date <= today && !t.repeat).length;
-      const bits = [ev ? `${ev} Termin${ev === 1 ? '' : 'e'} heute` : '', tk ? `${tk} Aufgabe${tk === 1 ? '' : 'n'} offen` : ''].filter(Boolean);
-      text = [hi, ...(bits.length ? bits : ['heute ist nichts geplant'])].join(' · ');
-    }
-    sub.textContent = text;
-  }
-
   return {
-    render(slotEl, subEl) {
+    render(slotEl) {
       if (slot !== slotEl) { slot = slotEl; slot.addEventListener('click', onClick); }
-      sub = subEl;
-      subline(); draw();
+      draw();
       refreshBoerse().then((changed) => { if (changed && slot?.isConnected) draw(); });
     },
-    redraw() { subline(); draw(); },
-    // beim Verlassen: ab jetzt zählt „neu seit deinem letzten Besuch“
-    leave() { write(SEEN_KEY, Date.now()); },
+    redraw() { draw(); },
+    leave() {},
     refreshBoerse, cards, // Tests / Konsole
   };
 })();

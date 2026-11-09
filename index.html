@@ -85,8 +85,9 @@
     <symbol id="o-plus" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"/></g></symbol>
     <symbol id="o-search" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></g></symbol>
     <symbol id="o-chat" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5.25 13.25A5.75 5.75 0 1 0 2.75 10.75L2.25 13.75z"/></g></symbol>
-    <symbol id="o-home" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 7.1 8 2.6l5.5 4.5v5.65a1.25 1.25 0 0 1-1.25 1.25H3.75a1.25 1.25 0 0 1-1.25-1.25z"/><path d="M6.25 14v-3.25a.75.75 0 0 1 .75-.75h2a.75.75 0 0 1 .75.75V14"/></g></symbol>
+    <symbol id="o-home" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 7.45c0-.53.24-1.03.65-1.36l3.8-3.08a2.05 2.05 0 0 1 2.6 0l3.8 3.08c.41.33.65.83.65 1.36v4.3a2.5 2.5 0 0 1-2.5 2.5H4.75a2.5 2.5 0 0 1-2.5-2.5z"/><path d="M6.4 14.25v-2.1a1.6 1.6 0 0 1 3.2 0v2.1"/></g></symbol><!-- Home: weich abgerundetes Haus (Ecken wie Kalender/Aufgaben), runde Tür -->
     <symbol id="o-library" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 2.75v10.5M6 4.75v8.5M9.25 4.75v8.5M11.5 4.75l2.25 8.5"/></g></symbol>
+    <symbol id="o-palette" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M8 1.75a6.25 6.25 0 0 0 0 12.5c.9 0 1.4-.6 1.4-1.3 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.3 1.4-1.3h1.3a2.9 2.9 0 0 0 2.95-2.9C14.25 4.3 11.45 1.75 8 1.75z"/><g fill="currentColor"><circle cx="4.9" cy="7.6" r=".95"/><circle cx="6.9" cy="4.75" r=".95"/><circle cx="10.2" cy="5.1" r=".95"/></g></symbol><!-- UI Design: Farbpalette -->
     <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></symbol><!-- Aufgaben: kleines Board – drei Spalten unterschiedlich voll -->
     <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.25" y="3.25" width="11.5" height="10.5" rx="2.5"/><path d="M5.5 1.75v3M10.5 1.75v3M2.25 6.75h11.5"/></g><g fill="currentColor"><circle cx="5.5" cy="9.25" r=".85"/><circle cx="8" cy="9.25" r=".85"/><circle cx="10.5" cy="9.25" r=".85"/><circle cx="5.5" cy="11.5" r=".85"/><circle cx="8" cy="11.5" r=".85"/></g></symbol>
     <symbol id="o-inbox" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 9.25 3.9 3.9a1.6 1.6 0 0 1 1.53-1.15h5.14A1.6 1.6 0 0 1 12.1 3.9l1.65 5.35v2.5a2 2 0 0 1-2 2h-7.5a2 2 0 0 1-2-2z"/><path d="M2.25 9.25h3l.75 1.5h4l.75-1.5h3"/></g></symbol>
@@ -125,6 +126,7 @@
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-home"/></svg>Home</a>
           <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-tasks"/></svg>Aufgaben</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
+          <a class="nav-item" href="#" data-nav="uidesign"><svg width="16" height="16"><use href="#o-palette"/></svg>UI Design</a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -282,6 +284,7 @@
     <script src="tasks.js"></script>
     <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
     <script src="docs.js"></script>
+    <script src="ui-design.js"></script><!-- UI Design: alle Bausteine der App an einem Ort (Sidebar → UI Design) -->
     <script src="home.js"></script><!-- Home: „Als Nächstes“-Karten über der Liste (Termin, Aufgaben, Börse-Alarm, Weitermachen) -->
   </template>
   <script src="auth.js?v=4"></script><!-- Anmeldung + Konto (Daten ins Konto), lädt danach die App -->

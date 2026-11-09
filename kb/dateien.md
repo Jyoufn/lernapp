@@ -16,7 +16,8 @@
 | `boerse-bestand.js` | „Meine Käufe“ / Depot-Karte |
 | `praesentation.js` | Präsentation (```praesentation): Vorschau, PPTX-/PDF-Schreiber, Bearbeiten-Fenster |
 | `lernset.js` | Lernsets (```lernset): `parse`, `figure` (Chat), `deck` (Karteikarten-Stapel), `quiz`, `exam`, `open` (Vollbild), `dialog` (Erstellen-Fenster), `pickMention`, `sectionsOf` |
-| `home.js` | Home-Kopf: Unterzeile + „Als Nächstes“-Karten (`Home.render/leave/refreshBoerse`) |
+| `home.js` | Home: „Als Nächstes“-Karten (`Home.render/refreshBoerse`) |
+| `ui-design.js` | Ansicht „UI Design“: Katalog aller Bausteine mit echten Klassen (`window.UIDesign`, `VIEW_TABS.uidesign`) |
 | `docs.js` | Home-Liste (`list`), Editor (`editor`: `draw`, Fokusmodus `setFocus`), Dokument-Chat rechts (`drawDocChat`), `Docs.create/open/discard/isEmpty` |
 | `docblocks.js` | Slash-Menü und Blöcke im Dokument (Tabelle, Medien, Kalender, Zeit, Dashboard, Karte, Diagramme, Board) |
 | `tasks.js` | Aufgaben: `createBoard(store, {agents, list})`; Liste (`row`, `toggleRow`, `renderList`), Fenster (`edit`: Pillen date/sched/prio/tags/agent/auto/limit), Automatisierung (`syncAuto`), Agenten-Lauf (`startRun`, `pull`) |

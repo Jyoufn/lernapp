@@ -570,6 +570,7 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
   const PAGE_SHAPE = '<path class="pg-out" d="M3.6 1.5h6.3l4.6 4.6v10.3a2.1 2.1 0 0 1-2.1 2.1H3.6a2.1 2.1 0 0 1-2.1-2.1V3.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-fold" d="M9.9 1.5v3a1.6 1.6 0 0 0 1.6 1.6h3"/><path class="pg-ln" d="M4.6 10h6.8M4.6 13h6.8M4.6 16h4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
   function renderSide() {
@@ -623,7 +624,7 @@ const Docs = (() => {
     const view = el('section', 'dc-view dc-list');
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
-      <div class="cl-head hm-top"><h2>Home</h2><p class="hm-sub"></p></div>
+      <div class="cl-head hm-top"><h2>Home</h2><button type="button" class="hm-plus" data-act="plus" aria-label="Neu" aria-haspopup="menu">${fi('plus', 14)}</button></div>
       <section class="hm-next" aria-label="Als Nächstes" hidden></section>
       <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
@@ -649,7 +650,6 @@ const Docs = (() => {
     // Dokument-Icon: Blatt mit Eselsohr und drei Textzeilen (PAGE_SHAPE oben)
     const PAGE_ICON = `<svg class="lb2-page" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
     // Chats in der Liste (07.11.): Sprechblase im selben Strich-Stil wie das Blatt statt Agenten-Gesicht
-    const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M3.6 3.5h10.8a2.1 2.1 0 0 1 2.1 2.1v7.1a2.1 2.1 0 0 1-2.1 2.1H8.4l-3.6 2.9v-2.9H3.6a2.1 2.1 0 0 1-2.1-2.1V5.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-ln" d="M5 7.9h8M5 10.9h5.2"/></svg>';
     const descOf = (d) => (d.subtitle || '').trim() || plain(d.content).replace(/\s+/g, ' ').trim().slice(0, 140);
     const entries = (q) => {
       const ds = filter === 'chat' ? [] : docs.filter((d) => inWs(d) && !isEmpty(d) && (!q || `${d.title} ${d.subtitle || ''} ${plain(d.content)}`.toLowerCase().includes(q)))
@@ -697,7 +697,7 @@ const Docs = (() => {
         if (!dock.isConnected) panel()?.append(dock);
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         api.render();
-        window.Home?.render(view.querySelector('.hm-next'), view.querySelector('.hm-sub'));
+        window.Home?.render(view.querySelector('.hm-next'));
       },
       hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); window.Home?.leave(); closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
     };
@@ -735,10 +735,20 @@ const Docs = (() => {
     dock.addEventListener('click', (e) => { const b = e.target.closest('[data-bulk]'); if (b) doBulk(b); });
     search.addEventListener('input', () => api.render());
     search.addEventListener('keydown', (e) => e.stopPropagation());
-    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-filter')) closeMenu(); });
+    document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-filter, .hm-plus')) closeMenu(); });
     view.addEventListener('scroll', closeMenu, true);
     view.addEventListener('click', (e) => {
       if (e.target.closest('[data-act="new"]')) { create(''); return; }
+      // Plus oben rechts neben „Home“ (09.11.): Menü Neuer Chat | Neues Dokument
+      const pb = e.target.closest('[data-act="plus"]');
+      if (pb) {
+        openMenu(pb, item('chat', 'Neuer Chat', false, fi('chat', 14)) + item('doc', 'Neues Dokument', false, fi('file-plus', 14)), (v) => {
+          closeMenu();
+          if (v === 'doc') create('');
+          else document.querySelector('.sidebar .sb-main [data-nav="new"]')?.click();
+        });
+        return;
+      }
       const fb = e.target.closest('[data-act="filter"]');
       if (fb) { openMenu(fb, Object.entries(FILTERS).map(([v, l]) => item(v, l, filter === v)).join(''), (v) => { filter = v; localStorage.setItem('docs.libFilter', v); closeMenu(); api.render(); }); return; }
       const bulk = e.target.closest('[data-bulk]');
@@ -3047,7 +3057,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
   function discard(id) { const d = docOf(id); if (d && isEmpty(d)) { docs = docs.filter((x) => x !== d); deletedIds.add(id); save(); renderSide(); if (list.open) list.render(); } }
 
   return {
-    list, editor, open, create, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
+    list, editor, open, create, PAGE_SHAPE, CHAT_ICON, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
     // für den Sprach-Agenten: Projekt anlegen (gibt es den Namen schon, wird es wiederverwendet) und Dokument verschieben
     addProject: (name) => { const n = String(name || '').trim().slice(0, 40); if (!n) return null; const have = projects.find((p) => p.name.toLowerCase() === n.toLowerCase()); if (have) return have; const pr = { id: newId('p'), name: n, c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); open$.add(pr.id); save(); renderSide(); if (list.open) list.render(); return pr; },
     moveToProject: (id, name) => { const d = docOf(id); if (!d) return; const q = String(name || '').toLowerCase().trim(); const pr = q ? (projects.find((p) => p.name.toLowerCase() === q) || projects.find((p) => p.name.toLowerCase().includes(q))) : null; d.projectId = pr ? pr.id : ''; touch(d); save(); renderSide(); if (list.open) list.render(); },
