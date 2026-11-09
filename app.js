@@ -242,27 +242,40 @@ MODELS.filter(() => false).forEach((m) => {
   modelList.append(item);
 });
 
-// Aufwand: Liste wie bei den Modellen – alle Stufen sichtbar, Haken an der gewählten
-EFFORTS.forEach((e, i) => {
-  const item = document.createElement('button');
-  item.type = 'button';
-  item.className = 'mp-item';
-  item.setAttribute('role', 'option');
-  item.dataset.i = String(i);
-  item.innerHTML = `<span>${e}</span><svg width="14" height="14"><use href="#f-check"/></svg>`;
-  item.addEventListener('click', () => { state.effort = i; render(); });
-  effortList.append(item);
+/* Modell + Aufwand in EINEM Menü (Wunsch 10.11., wie bei Claude): neben dem Plus steht das Modell (statt „Auto“).
+   Oben die Modelle (Automatisch = Haupt-KI aus Einstellungen → Agenten, wechselt bei Limit selbst; sonst fest ein Anbieter für alles),
+   darunter „Aufwand“ als gleitender Umschalter Auto · Niedrig · Mittel · Hoch · Max. Die Wahl geht über den Kopf X-App-Keys (AI_PICK) an den Server. */
+const AI_PICKS = [
+  { id: 'auto', label: 'Automatisch', sub: 'Haupt-KI, wechselt bei Limit selbst' },
+  { id: 'gemini', label: 'Gemini', sub: 'Google · schnell, mit Websuche' },
+  { id: 'deepseek', label: 'DeepSeek V4.1', sub: 'gründlich beim Denken und Rechnen' },
+  { id: 'kimi', label: 'Kimi K3.1 Pro', sub: 'lange Texte, sorgfältig' },
+  { id: 'minimax', label: 'MiniMax M3.1', sub: 'schnell, gut für Code' },
+];
+const EFF_DE = { Auto: 'Auto', Low: 'Niedrig', Medium: 'Mittel', High: 'Hoch', Max: 'Max' };
+const aiPick = () => { try { const v = localStorage.getItem('ai.pick'); return AI_PICKS.some((p) => p.id === v) ? v : 'auto'; } catch { return 'auto'; } };
+const pickLabel = () => { const p = aiPick(); if (p !== 'auto') return AI_PICKS.find((x) => x.id === p).label; const m = window.AiMain?.() || 'gemini'; return AI_PICKS.find((x) => x.id === m)?.label || 'Gemini'; };
+popover.classList.add('mpx');
+popover.innerHTML = `<div class="mpx-h">Modell</div><div class="mpx-models" role="listbox" aria-label="Modell">${AI_PICKS.map((p) => `<button type="button" class="mpx-m" role="option" data-pick="${p.id}"><span class="mpx-mt"><b>${p.label}</b><em>${p.sub}</em></span><svg width="14" height="14" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}</div>
+  <div class="mpx-sep"></div><div class="mpx-h">Aufwand</div><div class="cs-pill mpx-eff" role="radiogroup" aria-label="Aufwand">${EFFORTS.map((e, i) => `<button type="button" role="radio" data-eff="${i}">${EFF_DE[e]}</button>`).join('')}</div>`;
+popover.addEventListener('click', (e) => {
+  const m = e.target.closest('[data-pick]');
+  if (m) { try { localStorage.setItem('ai.pick', m.dataset.pick); } catch {} render(); setTimeout(() => setPopover(false), 180); return; }
+  const f = e.target.closest('[data-eff]');
+  if (f) { state.effort = +f.dataset.eff; render(); }
 });
 
 function render() {
-  [...modelList.children].forEach((el) => el.classList.toggle('selected', el.dataset.id === state.model));
-  [...effortList.children].forEach((el, i) => { el.classList.toggle('selected', i === state.effort); el.setAttribute('aria-selected', String(i === state.effort)); });
-  const model = MODELS.find((m) => m.id === state.model);
-  $('chipModel').textContent = ''; void model; // nur der Aufwand steht im Eingabefeld
-  $('chipEffort').textContent = EFFORTS[state.effort];
-  snapToPixels(chip.querySelectorAll('span'));
+  const pick = aiPick();
+  popover.querySelectorAll('[data-pick]').forEach((b) => { const on = b.dataset.pick === pick; b.classList.toggle('selected', on); b.setAttribute('aria-selected', String(on)); });
+  popover.querySelectorAll('[data-eff]').forEach((b, i) => { b.classList.toggle('on', i === state.effort); b.setAttribute('aria-checked', String(i === state.effort)); });
+  $('chipModel').textContent = pickLabel();
+  $('chipEffort').textContent = state.effort ? EFF_DE[EFFORTS[state.effort]] : '';
+  chip.classList.toggle('has-effort', !!state.effort);
+  chip.querySelectorAll('span').forEach((x) => { x.style.width = ''; });
   try { localStorage.setItem('modelState', JSON.stringify(state)); } catch {}
 }
+window.renderModelChip = () => render();
 
 /* Texte haben krumme Breiten (z. B. 87,4 px) – alles dahinter würde auf halbe
    Pixel rutschen und unscharf wirken. Deshalb Breiten auf ganze Pixel aufrunden. */
@@ -273,7 +286,7 @@ function snapToPixels(elements) {
   });
 }
 function snapAll() {
-  snapToPixels(document.querySelectorAll('.tab, .tool-row > span, .ws-name, .model-chip > span'));
+  snapToPixels(document.querySelectorAll('.tab, .tool-row > span, .ws-name'));
 }
 document.fonts.ready.then(snapAll);
 // Bei Größenänderung des Fensters neu ausrichten (Breiten + Höhe des Eingabefelds)
@@ -601,7 +614,7 @@ input.addEventListener('input', () => {
 /* Sprache: Deutsch als Basis. Die Browser-Erkennung kann nur eine Sprache pro
    Aufnahme – das deutsche Modell schreibt gängige englische Wörter („Thinking“,
    „Prompt“, „Feature“ …) aber direkt mit. Echtes Mischen → später Whisper in der App. */
-const SPEECH_LANG = 'de-DE';
+const SPEECH_LANG = (() => { try { return localStorage.getItem('ui.lang') === 'en' ? 'en-US' : 'de-DE'; } catch { return 'de-DE'; } })(); // Oberfläche English → Erkennung Englisch
 
 function joinText(a, b) {
   if (!a) return b.trimStart();
@@ -703,7 +716,10 @@ async function polishDictation(from) {
   if (said.trim().split(/\s+/).length < 2) return;
   showListening('Satzzeichen setzen');
   try {
-    const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim() }) });
+    // Wörterliste: Tags, Projekte, Titel von Dokumenten und Chats – so erkennt die Glättung Fachbegriffe und Namen (Wunsch 10.11.)
+    const hints = [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
+      'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
+    const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim(), hints, context: (from || '').slice(-300) || chatOf(activeTab())?.title || '' }) });
     const { text } = await r.json();
     if (input.value !== now || !text) return; // weitergeschrieben/abgeschickt → nichts überschreiben
     const lead = said.match(/^\s*/)[0];
@@ -1636,6 +1652,7 @@ function renderMarkdown(target, text, opts = {}) {
     pre.replaceWith(keep.get(raw));
   });
   wbCredits(target);
+  wbFit(target);
   // Podcast (```podcast): Player wie bei Spotify mit Transkript und Mitreden (podcast.js) – solange die KI noch schreibt: eine Warte-Karte
   const podClosed = (text.match(/```podcast[^\n]*\n[\s\S]*?\n```/g) || []).length;
   target.querySelectorAll('pre:has(code.language-podcast)').forEach((pre, i) => {
@@ -2437,7 +2454,7 @@ function sourceImageFigure(raw, sources) {
   a.href = safeUrl(s.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
   const img = document.createElement('img');
   img.alt = String(d.text || im.alt || ''); img.decoding = 'async'; img.referrerPolicy = 'no-referrer';
-  img.addEventListener('load', () => fig.classList.add('ready'));
+  img.addEventListener('load', () => { fig.classList.add('ready'); wbFit(fig.closest('.msg-ai') || fig.parentElement); });
   img.addEventListener('error', () => fig.remove());
   img.src = im.src;
   a.append(img);
@@ -2470,12 +2487,27 @@ function wbCredits(target) {
   }));
   target.append(row); // immer ans Ende (auch während die Antwort noch wächst)
 }
+/* Kleine Bilder neben dem Text (Wunsch 10.11.): nur, wenn daneben wirklich Text steht – reicht der Text bis zur nächsten Überschrift/Tabelle
+   nicht annähernd an die Bildhöhe heran (z. B. ein kurzer Satz neben einem großen Bild), steht das Bild mittig darüber statt daneben. */
+function wbFit(root) {
+  if (!root?.querySelectorAll) return;
+  requestAnimationFrame(() => root.querySelectorAll('figure.web-img.wb-klein').forEach((fig) => {
+    if (!fig.classList.contains('ready')) return;
+    fig.classList.remove('wb-noside');
+    if (innerWidth <= 640) return;
+    let h = 0;
+    for (let n = fig.nextElementSibling; n && !n.matches('h1, h2, h3, h4, table, pre, figure, hr, .chart-fig, .tl-fig, .mm-fig'); n = n.nextElementSibling) h += n.offsetHeight;
+    if (h < fig.offsetHeight * 0.75) fig.classList.add('wb-noside');
+  }));
+}
+addEventListener('resize', () => document.querySelectorAll('.msg-ai').forEach((m) => { if (m.querySelector('.wb-klein')) wbFit(m); }));
 function webImageFigure(raw) {
   let d = null;
   try { d = JSON.parse(String(raw).trim()); } catch { return null; }
   if (!/^https:\/\//.test(d?.src || '')) return null;
   // Größe nach Inhalt (Server-Prüfung): klein = neben dem Text, mittel, groß = volle Breite; Antippen öffnet groß (Lightbox), der Link steht unten
-  const fig = el('figure', `src-img web-img wb-${['klein', 'mittel', 'gross'].includes(d.size) ? d.size : 'mittel'}`);
+  // klein: links oder rechts neben dem Text (d.side); ob genug Text daneben steht, prüft wbFit nach dem Zeichnen – sonst mittig darüber
+  const fig = el('figure', `src-img web-img wb-${['klein', 'mittel', 'gross'].includes(d.size) ? d.size : 'mittel'}${d.size === 'klein' && d.side === 'links' ? ' wb-links' : ''}`);
   const a = el('a', 'src-img-pic');
   a.href = safeUrl(d.url); a.target = '_blank'; a.rel = 'noopener noreferrer';
   a.addEventListener('click', (e) => { e.preventDefault(); openLightbox([img], 0); });
@@ -4566,7 +4598,7 @@ function vaSetState(state) {
   voiceEl.dataset.state = state;
   voiceBtn.dataset.state = state;
   const title = voiceEl.querySelector('.va-title');
-  const label = 'Agent is on it'; // fester Text – Zustand zeigt das Gesicht
+  const label = 'Sprachmodus'; // fester Text – Zustand zeigt das Gesicht (Oberfläche nur Deutsch)
   if (title && title.firstChild?.nodeType === 3 && title.firstChild.textContent.trim() !== label) title.firstChild.textContent = `${label} `;
   if (!va.noteTimer) swapText(vaStatus, vaStateText()); // kurze Hinweise (vaNote) bleiben stehen
 }
@@ -4685,9 +4717,9 @@ async function vaStream(job) {
 }
 function vaSchedule(buffer) {
   const ctx = vaAudioCtx();
-  const src = ctx.createBufferSource();
+  const src = ctx.createBufferSource(); // geht über vaOut → Analyser → Lautsprecher
   src.buffer = buffer;
-  src.connect(ctx.destination);
+  src.connect(vaOut(ctx));
   const at = Math.max(va.cursor || 0, ctx.currentTime + 0.04);
   src.start(at);
   va.cursor = at + buffer.duration;
@@ -5055,6 +5087,7 @@ function vaOpen() {
   va.browserVoice = vaPickBrowserVoice();
   vaAudioCtx(); // Audio beim Klick freischalten (Browser-Regel)
   vaStartBargeIn();
+  vaWave.start();
   vaListen();
 }
 function vaClose() {
@@ -5069,6 +5102,7 @@ function vaClose() {
   voiceBtn.setAttribute('aria-pressed', 'false');
   voiceEl.classList.add('closing');
   vaStopBargeIn();
+  vaWave.stop();
   setTimeout(() => {
     if (va.on) return;
     window.dockFlip(() => {
@@ -5125,6 +5159,7 @@ async function vaStartBargeIn() {
       let sum = 0;
       for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
       const rms = Math.sqrt(sum / data.length);
+      va.micLevel = rms; // für die Tonwelle über dem Eingabefeld
       vaShowLevel(va.state === 'listening' ? rms : 0); // Pegel beim Zuhören anzeigen
       if (!va.speaking) { bargeIn.loud = 0; bargeIn.samples = 0; bargeIn.base = 0; return; }
       // Grundpegel (Rest-Echo des Agenten) in den ersten ~0,5 s lernen
@@ -5142,6 +5177,62 @@ async function vaStartBargeIn() {
   } catch {
     vaStopBargeIn(); // ohne Mikrofon-Freigabe einfach ohne Unterbrechen
   }
+}
+/* Tonwelle über dem Eingabefeld (Wunsch 10.11.): solange der Sprachmodus läuft, schwebt direkt über dem Feld eine kleine Pille mit
+   Balken, die sich wirklich bewegen – beim Zuhören mit der eigenen Stimme (Mikro-Pegel), beim Sprechen mit der Stimme des Agenten
+   (Pegel der Wiedergabe), beim Nachdenken als ruhige Welle. Nur transform (flüssig auf dem iPad). */
+const vaWave = (() => {
+  const N = 28;
+  const box = el('div', 'va-wave');
+  box.innerHTML = `<span class="va-wave-dot"></span><span class="va-wave-bars">${'<i></i>'.repeat(N)}</span><span class="va-wave-t">Hört zu</span>`;
+  box.hidden = true;
+  const bars = [...box.querySelectorAll('i')], label = box.querySelector('.va-wave-t');
+  const lv = new Float32Array(N);
+  let raf = 0, t0 = 0, outData = null;
+  const outLevel = () => {
+    const an = va.outAn; if (!an) return 0.25 + 0.2 * Math.sin(performance.now() / 140);
+    if (!outData || outData.length !== an.fftSize) outData = new Float32Array(an.fftSize);
+    an.getFloatTimeDomainData(outData); let s2 = 0; for (let i = 0; i < outData.length; i++) s2 += outData[i] * outData[i];
+    return Math.min(1, Math.sqrt(s2 / outData.length) * 7);
+  };
+  function frame(now) {
+    if (!va.on) { stop(); return; }
+    const st = va.muted ? 'muted' : va.state;
+    const t = (now - t0) / 1000;
+    let amp = 0;
+    if (st === 'listening') amp = Math.min(1, (va.micLevel || 0) * 9);
+    else if (st === 'speaking') amp = outLevel();
+    for (let i = 0; i < N; i++) {
+      const x = i / (N - 1), env = Math.sin(Math.PI * x) ** 0.8; // Mitte höher, Ränder flacher
+      let target;
+      if (st === 'thinking') target = 0.18 + 0.16 * (0.5 + 0.5 * Math.sin(t * 4 - x * 9));
+      else if (st === 'muted') target = 0.08;
+      else target = 0.1 + amp * env * (0.55 + 0.45 * Math.sin(t * 13 + i * 1.7) * Math.sin(t * 7.3 + i * 0.6));
+      lv[i] += (target - lv[i]) * 0.35;
+      bars[i].style.transform = `scaleY(${Math.max(0.08, Math.min(1, lv[i])).toFixed(3)})`;
+    }
+    const txt = { listening: 'Hört zu', thinking: 'Denkt nach', speaking: 'Spricht', muted: 'Mikro aus' }[st] || 'Hört zu';
+    if (label.textContent !== txt) label.textContent = txt;
+    box.dataset.state = st;
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    const area = document.querySelector('.composer-area'); if (!area) return;
+    if (!box.isConnected) area.append(box);
+    box.hidden = false; box.classList.remove('out'); box.classList.add('in'); document.documentElement.classList.add('va-on');
+    if (!raf) { t0 = performance.now(); raf = requestAnimationFrame(frame); }
+  }
+  function stop() {
+    cancelAnimationFrame(raf); raf = 0;
+    box.classList.remove('in'); box.classList.add('out'); document.documentElement.classList.remove('va-on');
+    setTimeout(() => { if (!va.on) box.hidden = true; }, 260);
+  }
+  return { start, stop };
+})();
+// Wiedergabe des Agenten über einen Analyser leiten (für die Tonwelle)
+function vaOut(ctx) {
+  if (!va.outAn || va.outAn.context !== ctx) { va.outAn = ctx.createAnalyser(); va.outAn.fftSize = 512; va.outAn.connect(ctx.destination); }
+  return va.outAn;
 }
 function vaStopBargeIn() {
   clearInterval(bargeIn.timer);
@@ -5404,7 +5495,7 @@ function renderChatTags() {
   const all = window.ChatTags ? window.ChatTags.all() : [];
   const gs = (c?.tags || []).map((id) => all.find((g) => g.id === id)).filter(Boolean);
   box.hidden = !gs.length;
-  box.innerHTML = gs.slice(0, 3).map((g) => `<span class="lb2-tag"><i style="background:${escapeHtml(g.c)}"></i>${escapeHtml(g.name)}</span>`).join('') + (gs.length > 3 ? `<span class="lb2-tag more">+${gs.length - 3}</span>` : '');
+  box.innerHTML = gs.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${escapeHtml(g.c)}"><span>${escapeHtml(g.name)}</span></span>`).join('') + (gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : '');
 }
 $('chatTags')?.addEventListener('click', (e) => { e.stopPropagation(); const t = activeTab(); if (t && !t.dataset.view) ChatTags.open(t, $('chatTags')); });
 window.addEventListener('chat-tab-switched', () => renderChatTags());
@@ -5472,63 +5563,95 @@ chatMenu.addEventListener('click', (e) => {
   }
 });
 
-/* ---------- Tags für Chats (Wunsch 09.11.) ----------
-   Gleicher Tag-Vorrat wie Aufgaben und Dokumente (localStorage „tasks.tags.v1“, Ereignis „tags-changed“).
-   Öffnen über das Chat-Menü (Titel oben links) oder „⋯“ am Chat in der Sidebar: oben ein Feld zum Suchen bzw. Anlegen
-   (Enter = neuer Tag mit der nächsten Farbe), darunter alle Tags zum An-/Abwählen. Gespeichert am Chat (c.tags), angezeigt in Home. */
-const ChatTags = (() => {
+/* ---------- Tags: EINE Auswahl für Chats, Home-Zeilen und alles andere (Wunsch 09.11./10.11.) ----------
+   Gleicher Tag-Vorrat wie Aufgaben und Dokumente (localStorage „tasks.tags.v1“, Ereignis „tags-changed“), gleicher Aufbau wie im Dokument:
+   oben „Suchen“, darunter die Tags (Punkt, Name, Haken, Stift zum Bearbeiten). Neuer Name → „X hinzufügen“ → danach die Farbe wählen
+   (Farbfeld + Farbkreise + Helligkeit, UIKit.colorRow) → angelegt und gesetzt.
+   TagMenu.open(anchor, { get: () => ids, set: (ids) => … }) – ChatTags.open(tab, anchor) ist die Fassung für Chats. */
+const TagMenu = (() => {
   const KEY = 'tasks.tags.v1';
   const all = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
-  const saveAll = (list) => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} window.dispatchEvent(new CustomEvent('tags-changed', { detail: 'chats' })); };
-  const box = el('div', 'lb2-menu ct-menu');
-  box.hidden = true; box.setAttribute('role', 'menu');
-  document.body.append(box);
-  let tab = null, q = '';
-  const changed = () => { saveChats(); renderChatList?.(); window.renderSideChats?.(); renderChatTags(); if (window.Docs?.list?.open) window.Docs.list.render(); };
+  const saveAll = (list, from = 'tagmenu') => { try { localStorage.setItem(KEY, JSON.stringify(list)); } catch {} window.dispatchEvent(new CustomEvent('tags-changed', { detail: from })); };
+  const pop = el('div', 'tk-pop tagm-pop');
+  pop.innerHTML = '<div class="tk-menu tags tagm" role="menu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Suchen" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></div>';
+  document.body.append(pop);
+  const input = pop.querySelector('input'), listEl = pop.querySelector('.tk-tag-list');
+  let target = null, q = '', creating = '', editing = '';
+  const fiH = (n, s) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
+  const ids = () => target?.get() || [];
   function draw() {
-    const c = chatOf(tab); if (!c) return;
-    const on = new Set(c.tags || []);
-    const list = all().filter((g) => !q || g.name.toLowerCase().includes(q.toLowerCase()));
-    const exact = all().some((g) => g.name.toLowerCase() === q.trim().toLowerCase());
-    const listEl = box.querySelector('.ct-list');
-    listEl.innerHTML = list.map((g) => `<button type="button" class="lb2-mi" role="menuitemcheckbox" aria-checked="${on.has(g.id)}" data-tag="${escapeHtml(g.id)}"><i class="ct-dot" style="background:${escapeHtml(g.c)}"></i><span>${escapeHtml(g.name)}</span>${on.has(g.id) ? `<i class="lb2-tick">${icon('f-check', 13)}</i>` : ''}</button>`).join('')
-      + (q.trim() && !exact ? `<button type="button" class="lb2-mi ct-new" data-newtag>${icon('f-plus', 13)}<span>„${escapeHtml(q.trim())}“ anlegen</span></button>` : '')
-      + (!list.length && !q.trim() ? '<div class="ct-empty">Noch keine Tags – oben einen Namen eingeben.</div>' : '');
-  }
-  function create() {
-    const name = q.trim().slice(0, 24); if (!name) return;
     const list = all();
-    const g = { id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, name, c: (window.UIKit?.COLORS || ['#d1d1d1'])[list.length % (window.UIKit?.COLORS.length || 1)] };
-    list.push(g); saveAll(list);
-    const c = chatOf(tab); (c.tags || (c.tags = [])).push(g.id); q = ''; box.querySelector('input').value = ''; changed(); draw();
+    const ed = list.find((g) => g.id === editing);
+    if (ed) {
+      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tk-tag-edit-l">Tag bearbeiten</span><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name" />${UIKit.colorRow(ed.c, 'data-tecolor')}`
+        + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-tdel>${fiH('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-tdone>Fertig</button></span></span>`;
+      return;
+    }
+    if (creating) { listEl.innerHTML = `<span class="tk-tag-new-l">Farbe für „${escapeHtml(creating)}“</span>${UIKit.colorRow('', 'data-tncolor')}`; return; }
+    const on = new Set(ids()), ql = q.trim().toLowerCase();
+    const found = list.filter((g) => g.name.toLowerCase().includes(ql));
+    const exact = list.some((g) => g.name.toLowerCase() === ql);
+    listEl.innerHTML = (ql && !exact ? `<span class="tk-mi tk-tag-add" data-tadd role="button" tabindex="0">${fiH('plus', 12)}<span><b>${escapeHtml(q.trim())}</b> hinzufügen</span></span>` : '')
+      + found.map((g) => `<span class="tk-mi tag${on.has(g.id) ? ' on' : ''}" data-ttag="${escapeHtml(g.id)}" role="button" tabindex="0"><i style="background:${escapeHtml(g.c)}"></i><span>${escapeHtml(g.name)}</span>${fiH('check', 12)}<button type="button" class="tk-tag-pen" data-tedit="${escapeHtml(g.id)}" aria-label="Tag bearbeiten">${fiH('pencil', 11)}</button></span>`).join('')
+      + (!found.length && !ql ? '<span class="tk-ml">Noch keine Tags</span>' : '');
   }
-  box.innerHTML = `<div class="ct-head"><input class="ct-in" placeholder="Tag suchen oder anlegen" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="ct-list"></div>`;
-  const input = box.querySelector('input');
-  input.addEventListener('input', () => { q = input.value; draw(); });
-  input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); const hit = all().find((g) => g.name.toLowerCase() === q.trim().toLowerCase()); if (hit) toggle(hit.id); else create(); } if (e.key === 'Escape') close(); });
-  function toggle(id) {
-    const c = chatOf(tab); if (!c) return;
-    const set = new Set(c.tags || []); set.has(id) ? set.delete(id) : set.add(id);
-    c.tags = [...set]; changed(); draw();
+  const setIds = (next) => { target?.set([...new Set(next)]); draw(); };
+  function create(c) {
+    const name = creating.slice(0, 24); if (!name) return;
+    const list = all(); const g = { id: `g${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, name, c };
+    list.push(g); saveAll(list); creating = ''; q = ''; input.value = '';
+    setIds([...ids(), g.id]);
   }
-  box.addEventListener('click', (e) => {
+  pop.addEventListener('pointerdown', (e) => e.stopPropagation());
+  pop.addEventListener('click', (e) => {
     e.stopPropagation();
-    const t = e.target.closest('[data-tag]'); if (t) { toggle(t.dataset.tag); return; }
-    if (e.target.closest('[data-newtag]')) create();
+    const pen = e.target.closest('[data-tedit]'); if (pen) { editing = pen.dataset.tedit; draw(); return; }
+    if (editing) {
+      const list = all(), g = list.find((x) => x.id === editing);
+      const ec = e.target.closest('[data-tecolor]'); if (ec && g && ec.dataset.tecolor) { g.c = ec.dataset.tecolor; saveAll(list); draw(); return; }
+      if (e.target.closest('[data-tdel]') && g) { saveAll(list.filter((x) => x.id !== g.id)); setIds(ids().filter((id) => id !== g.id)); editing = ''; draw(); return; }
+      if (e.target.closest('[data-tdone]')) { editing = ''; draw(); }
+      return;
+    }
+    const nc = e.target.closest('[data-tncolor]'); if (nc && nc.dataset.tncolor) { create(nc.dataset.tncolor); return; }
+    if (e.target.closest('[data-tadd]')) { creating = q.trim(); draw(); return; }
+    const t = e.target.closest('[data-ttag]');
+    if (t) { const cur = ids(); setIds(cur.includes(t.dataset.ttag) ? cur.filter((x) => x !== t.dataset.ttag) : [...cur, t.dataset.ttag]); }
   });
-  function close() { box.hidden = true; tab = null; }
-  function open(t, anchor) {
-    tab = t; q = ''; input.value = '';
-    draw(); box.hidden = false;
-    const r = anchor.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
-    box.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
-    box.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? r.top - h - 6 : r.bottom + 6)}px`;
-    setTimeout(() => input.focus({ preventScroll: true }), 30);
+  pop.addEventListener('input', (e) => {
+    if (e.target === input) { q = input.value; creating = ''; draw(); return; }
+    if (e.target.matches('[data-tname]')) { const list = all(), g = list.find((x) => x.id === editing); const v = e.target.value.trim(); if (g && v) { g.name = v.slice(0, 24); saveAll(list); } }
+  });
+  pop.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Escape') { if (creating || editing) { creating = ''; editing = ''; draw(); } else close(); return; }
+    if (e.key !== 'Enter' || e.target !== input) return;
+    e.preventDefault();
+    const hit = all().find((g) => g.name.toLowerCase() === q.trim().toLowerCase());
+    if (hit) { const cur = ids(); setIds(cur.includes(hit.id) ? cur.filter((x) => x !== hit.id) : [...cur, hit.id]); }
+    else if (q.trim()) { creating = q.trim(); draw(); }
+  });
+  function close() { pop.classList.remove('open'); target = null; }
+  function open(anchor, t) {
+    if (pop.classList.contains('open') && target && target.key && target.key === t.key) { close(); return; }
+    target = t; q = ''; creating = ''; editing = ''; input.value = '';
+    draw();
+    pop.classList.add('open');
+    const r = anchor.getBoundingClientRect(), menu = pop.firstElementChild, w = menu.offsetWidth || 230, h = Math.max(menu.offsetHeight, 240);
+    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
+    pop.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 12) : r.bottom)}px`;
+    setTimeout(() => input.focus({ preventScroll: true }), 40);
   }
-  document.addEventListener('click', (e) => { if (!box.hidden && !box.contains(e.target)) close(); });
+  document.addEventListener('pointerdown', () => { if (pop.classList.contains('open')) close(); });
   addEventListener('resize', close);
-  window.addEventListener('tags-changed', (e) => { if (e.detail !== 'chats' && !box.hidden) draw(); });
-  return { open, close, all };
+  window.addEventListener('tags-changed', (e) => { if (e.detail !== 'tagmenu' && pop.classList.contains('open')) draw(); });
+  return { open, close, all, get isOpen() { return pop.classList.contains('open'); } };
+})();
+window.TagMenu = TagMenu;
+const ChatTags = (() => {
+  const changed = () => { saveChats(); renderChatList?.(); window.renderSideChats?.(); renderChatTags(); if (window.Docs?.list?.open) window.Docs.list.render(); if (window.Docs?.chatList?.open) window.Docs.chatList.render(); };
+  const forTab = (tab) => ({ key: `chat:${chatId(tab)}`, get: () => chatOf(tab)?.tags || [], set: (ids) => { const c = chatOf(tab); if (!c) return; c.tags = ids; changed(); } });
+  return { open: (tab, anchor) => TagMenu.open(anchor, forTab(tab)), all: TagMenu.all, forTab };
 })();
 window.ChatTags = ChatTags;
 
@@ -5542,6 +5665,9 @@ function togglePin(tab) {
   saveChats();
 }
 
+// Textbreite in der Schrift eines Elements (für mitwachsende Felder)
+const measureCanvas = document.createElement('canvas').getContext('2d');
+function measureText(text, elx) { const cs = getComputedStyle(elx); measureCanvas.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; return Math.ceil(measureCanvas.measureText(text).width); }
 function startRename(tab) {
   const c = chatOf(tab);
   const input = document.createElement('input');
@@ -5549,7 +5675,12 @@ function startRename(tab) {
   input.value = c.title;
   input.maxLength = 60;
   input.setAttribute('aria-label', 'Chat umbenennen');
+  // Umbenennen direkt im Titel-Knopf (Wunsch 10.11.: Rand sah nicht gut aus) – kein eigener Kasten, das Feld wächst mit dem Text
+  const btn = chatTitleEl.closest('button');
+  const fit = () => { input.style.width = `${Math.min(240, Math.max(60, measureText(input.value || ' ', input) + 6))}px`; };
   chatTitleEl.replaceWith(input);
+  btn?.classList.add('renaming');
+  fit(); input.addEventListener('input', fit);
   input.focus();
   input.select();
   let done = false;
@@ -5557,6 +5688,7 @@ function startRename(tab) {
     if (done) return;
     done = true;
     const v = input.value.replace(/\s+/g, ' ').trim();
+    btn?.classList.remove('renaming');
     input.replaceWith(chatTitleEl);
     if (save && v && v !== c.title) setChatTitle(tab, v);
   };
@@ -5653,95 +5785,47 @@ window.flipList = (box, change, popKey = null) => {
   });
   box.querySelectorAll('.cl-label').forEach((n) => { n.style.animation = 'none'; });
 };
+/* Chats-Ansicht im Hauptteil (Wunsch 10.11.): genau wie Home, nur mit den Chats – die Liste baut docs.js (Docs.chatList),
+   hier nur Öffnen/Schließen und die Zustände drumherum (Panel-Klasse, Chats-Symbol, Sidebar). */
 const chatsView = (() => {
   const panel = document.querySelector('.panel');
-  const view = el('section', 'chats-view');
-  view.hidden = true;
-  view.setAttribute('aria-label', 'Alle Chats');
-  // kein „Zurück“: der Chatverlauf ist ein eigener Bereich, gewechselt wird über die Sidebar
-  view.innerHTML = `<div class="cl-wrap">
-    <div class="cl-head"><h2>Chats</h2><button type="button" class="cl-new" title="Neuer Chat"><svg width="14" height="14"><use href="#f-plus"/></svg><span>Neuer Chat</span></button></div>
-    <label class="cl-search"><svg width="14" height="14"><use href="#f-search"/></svg><input type="search" placeholder="Chats durchsuchen" aria-label="Chats durchsuchen" /></label>
-    <div class="cl-list"></div></div>`;
-  const list = view.querySelector('.cl-list'), search = view.querySelector('input');
-  view.querySelector('.cl-new').addEventListener('click', () => { hide(); createTab('Neuer Chat'); input.focus(); });
-  const render = () => {
-    const q = search.value.trim().toLowerCase();
-    const all = [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t)).map((t) => ({ tab: t, c: chatOf(t) })); // leere Chats zählen nicht
-    const items = all.filter((x) => !q || x.c.title.toLowerCase().includes(q)).sort((a, b) => b.c.updated - a.c.updated);
-    const frag = document.createDocumentFragment();
-    [['Angepinnt', items.filter((x) => x.c.pinned)], ...(window.UIKit ? UIKit.timeGroups(items.filter((x) => !x.c.pinned), (x) => x.c.updated) : [['Zuletzt', items.filter((x) => !x.c.pinned)]])].forEach(([label, rows]) => {
-      if (!rows.length) return;
-      frag.append(el('div', 'cl-label', label));
-      rows.forEach(({ tab, c }, i) => {
-        const row = el('div', 'cl-row' + (tab.classList.contains('active') ? ' active' : ''));
-        row.tabIndex = 0;
-        row.dataset.key = chatId(tab);
-        row.style.animationDelay = `${Math.min(i, 10) * 20}ms`;
-        // rechts immer: Zeit, Anheften, Löschen (wie in der Library) – Löschen: 1. Klick rot, 2. Klick löscht
-        row.innerHTML = `${chatAvatar(tab, 'cl-av')}<span class="cl-title"></span><span class="cl-time"></span><span class="cl-acts">`
-          + `<button type="button" class="lb-act cl-pin${c.pinned ? ' on' : ''}" aria-label="${c.pinned ? 'Lösen' : 'Anheften'}" title="${c.pinned ? 'Lösen' : 'Anheften'}"><svg width="14" height="14"><use href="#f-pin"/></svg></button>`
-          + '<button type="button" class="lb-act lb-del cl-del" aria-label="Chat löschen" title="Löschen"><svg width="14" height="14"><use href="#f-trash"/></svg></button></span>';
-        row.querySelector('.cl-title').textContent = c.title;
-        row.querySelector('.cl-time').textContent = relTime(c.updated);
-        row.addEventListener('click', (e) => {
-          if (e.target.closest('.cl-pin')) { window.flipList(list, () => { togglePin(tab); render(); }, chatId(tab)); return; }
-          const del = e.target.closest('.cl-del');
-          if (del) {
-            if (!del.classList.contains('confirm')) { del.classList.add('confirm'); del.title = 'Nochmal klicken zum Löschen'; setTimeout(() => { del.classList.remove('confirm'); del.title = 'Löschen'; }, 2500); return; }
-            window.flipList(list, () => { deleteChat(tab); render(); });
-            return;
-          }
-          hide(); activateTab(tab);
-        });
-        row.addEventListener('keydown', (e) => { if (e.key === 'Enter') { hide(); activateTab(tab); } });
-        frag.append(row);
-      });
-    });
-    if (!items.length) frag.append(el('div', 'cl-empty', q ? 'Kein Chat gefunden' : 'Noch keine Chats'));
-    list.replaceChildren(frag);
-  };
-  search.addEventListener('input', render);
+  const L = () => window.Docs?.chatList;
   let open = false;
-  let hideT = 0;
   function show() {
-    if (panel && !view.isConnected) panel.append(view);
     window.Calendar?.hide();
     window.Tasks?.hide();
-    clearTimeout(hideT);
+    window.Docs?.list?.hide();
     open = true;
-    search.value = '';
-    render();
-    setTimeout(() => { if (open) search.focus({ preventScroll: true }); }, 60); // gleich lostippen zum Suchen
-    view.classList.remove('closing');
-    view.hidden = false;
     panel?.classList.add('view-chats');
     chatsBtn.classList.add('on');
+    L()?.show(); L()?.focusSearch();
     window.renderSideChats?.();
   }
-  // weich ausblenden, dann erst verstecken; der Chat erscheint sofort darunter
   function hide() {
     if (!open) return;
     open = false;
     panel?.classList.remove('view-chats');
     chatsBtn.classList.remove('on');
+    L()?.hide();
     window.renderSideChats?.();
-    view.classList.add('closing');
-    hideT = setTimeout(() => { view.hidden = true; view.classList.remove('closing'); }, 200);
   }
+  const render = () => { if (open) L()?.render(); };
   // Tab-Wechsel, neuer Tab oder Seitenleiste → zurück zum Chat
   tabsEl.addEventListener('click', (e) => { if (e.target.closest('.tab') && !e.target.closest('.tab-close')) hide(); });
   newTabBtn.addEventListener('click', hide);
   document.querySelectorAll('.sidebar .sb-main a.nav-item:not([data-nav="history"])').forEach((a) => a.addEventListener('click', hide));
   return { show, hide, toggle: () => (open ? hide() : show()), render, get open() { return open; } };
 })();
+// „+“ in der Chats-Ansicht: neuer leerer Chat
+window.newChatFromList = () => { chatsView.hide(); createTab('Neuer Chat'); setTimeout(() => $('input')?.focus(), 50); };
 
 /* Bibliothek (docs.js) zeigt Chats und Dokumente zusammen (Wunsch 04.11.: kein eigener Chatverlauf mehr) – dafür die Chats als Liste */
 const libTab = (id) => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].find((t) => chatId(t) === id);
 window.LibChats = {
   items: () => [...tabsEl.querySelectorAll('.tab:not(.uil-tab):not([data-view])')].filter((t) => !isDraft(t) && inWorkspace(t))
     .map((t) => { const c = chatOf(t); return { id: chatId(t), title: c.title || 'Neuer Chat', updated: c.updated || 0, pinned: !!c.pinned, projectId: c.projectId || '', tags: c.tags || [], av: chatAvatar(t, 'cl-av') }; }),
-  open: (id) => { const t = libTab(id); if (t) { t.hidden = false; activateTab(t); } },
+  open: (id) => { const t = libTab(id); if (t) { chatsView.hide(); t.hidden = false; activateTab(t); } },
+  tagTarget: (id) => { const t = libTab(id); return t ? window.ChatTags.forTab(t) : null; },
   pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
   del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
 };

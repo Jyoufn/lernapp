@@ -342,6 +342,16 @@ const DocIcons = (() => {
   const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#d-${name}"/></svg>`;
   // Icon eines Dokuments/Projekts ({ name, c }) als <svg> in seiner Farbe – immer gefüllt (Linien-Fassung wird nicht mehr angeboten)
   const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#d-${ic.name}"/></svg>` : '');
-  return { names: NAMES, svg, of, has: (n) => NAMES.includes(n) };
+  /* Einheitliche Icon-Auswahl (Wunsch 09.11.): überall, wo man ein Icon wählt (Dokument, Projekt, Termin, Block …), dieselben 48 Icons
+     im runden Linien-Stil – nach Themen: Lernen · Fächer · Welt & Medien · Zahlen & Ziele · Symbole · Alltag. Ältere Icons bleiben gültig. */
+  const BASE = ['book', 'notebook', 'cap', 'pencil', 'bookmark', 'list', 'folder', 'calendar',
+    'sigma', 'pi', 'calc', 'atom', 'flask', 'dna', 'sprout', 'clock',
+    'globe', 'map', 'landmark', 'language', 'music', 'palette', 'code', 'laptop',
+    'chart', 'trend', 'pie', 'coins', 'scale', 'bulb', 'target', 'trophy',
+    'star', 'heart', 'sparkle', 'flag', 'bolt', 'flame', 'leaf', 'sun',
+    'home', 'chat', 'users', 'briefcase', 'rocket', 'puzzle', 'gamepad', 'dumbbell'].filter((n) => I[n]);
+  // Auswahl-Liste: die 48 Grund-Icons; ein schon gesetztes älteres Icon steht vorne, damit es sichtbar bleibt
+  const pickList = (cur) => (cur && NAMES.includes(cur) && !BASE.includes(cur) ? [cur, ...BASE] : BASE);
+  return { names: NAMES, base: BASE, pickList, svg, of, has: (n) => NAMES.includes(n) };
 })();
 window.DocIcons = DocIcons;

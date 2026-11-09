@@ -277,8 +277,8 @@ const AppSearch = (() => {
     pop.innerHTML = `${rows}
       ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 12)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
-      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new">${oi('plus', 12)}<span>Workspace hinzufügen</span></button>`}
-      <button type="button" class="ws-mi" data-ws="settings">${oi('settings', 15)}<span>Einstellungen</span></button>`;
+      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new"><span class="ws-mi-ic">${oi('plus', 15)}</span><span>Workspace hinzufügen</span></button>`}
+      <button type="button" class="ws-mi" data-ws="settings"><span class="ws-mi-ic">${oi('gear', 15)}</span><span>Einstellungen</span></button>`;
     const inp = pop.querySelector('.ws-in');
     if (inp) { setTimeout(() => { inp.focus(); inp.select(); }, 20); }
   };

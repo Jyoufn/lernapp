@@ -220,7 +220,7 @@ test('Börsen-Agent: fester Ablauf (kein Planungs-Aufruf), liest nur Nachrichten
   const plan = c.of('status').find((s) => s.stage === 'thinking' && s.status === 'done');
   assert.deepEqual(plan.meta.points, ['Kurs und Charts: Tag, Woche, Monat', 'Nachrichten zum Wert', 'Chancen und Risiken', 'Einstieg, Stopp und Ziel'], 'Plan passt zur Frage (bestimmte Aktie)');
   const gen = fx.calls.filter(M.is.geminiStream).pop();
-  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192, 'High');
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 16384, 'High');
   assert.equal(gen.body.tools, undefined, 'keine Google-Suche im Modell');
   const sys = M.systemOf(gen);
   assert.match(sys, /DENKWEG/);

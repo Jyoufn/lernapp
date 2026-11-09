@@ -81,7 +81,7 @@ test('1b Gewählter Effort ist verbindlich: High gewählt – auch bei einfacher
   assert.equal(done.meta.effort.applied, 'high');
   assert.match(done.meta.effort.reason, /gewählt/);
   assert.ok(!r.stages().some((s) => /searching_sources|verifying/.test(s))); // keine Recherche, weil die Analyse keine braucht
-  assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 8192);
+  assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 16384);
   // dieselbe Stufe, einfache Frage → trotzdem High (der Nutzer hat High gewählt)
   fx.restore();
   fx = M.installFetch([
@@ -146,7 +146,7 @@ test('2b Auto, anspruchsvolle Frage: Analyse legt High fest → Recherche-Ablauf
   ]);
   const r = await run({ ...msg('Erkläre die Photosynthese.'), effort: 'auto' });
   assert.ok(r.stages().includes('searching_sources:active'));
-  assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 8192);
+  assert.equal(fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig.thinkingBudget, 16384);
 });
 
 /* ---------- 3. High + komplexe Frage ---------- */
@@ -160,7 +160,7 @@ test('3 High, komplexe Frage: echte Analyse (Vorgehen sichtbar), höheres Thinki
   const thinkingDone = r.of('status').find((s) => s.stage === 'thinking' && s.status === 'done');
   assert.match(thinkingDone.meta.approach, /Lichtreaktion/);
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192);
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 16384);
   assert.match(M.systemOf(gen), /AUFWAND HIGH/);
   assert.match(M.systemOf(gen), /GEPLANTES VORGEHEN/);
 });
@@ -478,7 +478,7 @@ test('High ist verbindlich: Antwortstil High statt „nach Bedarf“, Denken an'
   const r = await run({ ...msg('Was ist Mitose?'), effort: 'high' });
   assert.equal(r.of('status').at(-1).meta.effort.applied, 'high');
   const gen = fx.calls.find(M.is.geminiStream);
-  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 8192);
+  assert.equal(gen.body.generationConfig.thinkingConfig.thinkingBudget, 16384);
   assert.match(M.systemOf(gen), /AUFWAND HIGH/);
 });
 
@@ -1159,7 +1159,10 @@ test('Aufwand wirkt (04.11.): gewählte Stufe = eigene Denktiefe und eigener Sti
   }
   const lvl = (e) => seen[e].tc.thinkingLevel ?? seen[e].tc.thinkingBudget;
   const rank = (v) => (typeof v === 'number' ? v : { low: 1, medium: 2, high: 3 }[v]);
-  assert.ok(rank(lvl('low')) < rank(lvl('medium')) && rank(lvl('medium')) < rank(lvl('high')) && rank(lvl('high')) <= rank(lvl('max')), `Denktiefe steigt: ${['low', 'medium', 'high', 'max'].map(lvl)}`);
+  // Stand 10.11. (Wunsch): Medium = ganz normale Antwort des Modells (dynamisches Denken, keine Vorgabe); ab High bewusst viel Denken, Max = Maximum
+  assert.ok(rank(lvl('low')) < rank(lvl('high')) && rank(lvl('high')) <= rank(lvl('max')), `Denktiefe steigt: ${['low', 'high', 'max'].map(lvl)}`);
+  assert.ok(seen.medium.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.medium.tc.thinkingBudget), 'Medium: denkt wie das Modell von sich aus');
+  assert.doesNotMatch(seen.medium.sys, /AUFWAND: Medium/, 'Medium: keine Stil-Vorgabe');
   assert.ok(seen.auto.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.auto.tc.thinkingBudget), 'Auto: Gemini entscheidet selbst');
   assert.match(seen.low.sys, /Aufwand: Low|AUFWAND: Low/); assert.match(seen.high.sys, /AUFWAND: High/); assert.match(seen.max.sys, /AUFWAND: Max/);
   assert.ok(!seen.low.tools.includes('google_search'), 'Low: keine Suche');
@@ -1179,4 +1182,22 @@ test('deckThin: Präsentation nur mit Bildern/Titeln gilt als zu dünn, eine ech
   assert.match(W.deckThin(deck(leer.slice(0, 3).map((x) => ({ ...x, points: ['Die Geburtenrate liegt bei 1,4 Kindern je Frau'] }))), 'max'), /nur 3/);
   const gut = Array.from({ length: 9 }, (_, i) => ({ type: 'punkte', title: `F${i}`, points: ['Die Bevölkerung altert deutlich schneller', 'Mehr Rentner stehen weniger Erwerbstätigen gegenüber'] }));
   assert.equal(W.deckThin(deck(gut), 'max'), '');
+});
+
+test('DeepSeek & Co. (10.11.): Nachdenken ohne öffnendes <think> landet nicht in der Antwort, sondern in den Gedanken', async () => {
+  const P = require('../lib/providers');
+  const chunks = ['Okay, the user wants ', 'a short answer about motors.</think>', 'Ein Elektromotor ', 'wandelt Strom in Bewegung um.'].map((c) => ({ choices: [{ delta: { content: c } }] }));
+  const prev = global.fetch;
+  global.fetch = async () => M.sseResponse(chunks);
+  try {
+    let text = '', thought = '';
+    await P.openaiChat({ provider: 'deepseek', key: 'k', model: 'deepseek-ai/deepseek-v4.1-flash', system: 's', messages: [{ role: 'user', text: 'x' }], stream: true, think: true, onText: (t) => { text += t; }, onThought: (t) => { thought += t; } });
+    assert.equal(text, 'Ein Elektromotor wandelt Strom in Bewegung um.');
+    assert.match(thought, /the user wants/);
+    // ohne </think>: kurze Antwort kommt ganz normal als Text
+    global.fetch = async () => M.sseResponse([{ choices: [{ delta: { content: 'Hallo!' } }] }]);
+    text = '';
+    await P.openaiChat({ provider: 'kimi', key: 'k', model: 'm', system: 's', messages: [{ role: 'user', text: 'x' }], stream: true, think: 'auto', onText: (t) => { text += t; } });
+    assert.equal(text, 'Hallo!');
+  } finally { global.fetch = prev; }
 });

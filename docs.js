@@ -621,13 +621,16 @@ const Docs = (() => {
      Darüberfahren: links Auswahl-Kästchen, rechts statt der Zeit Anheften und Löschen. Ab einer Auswahl
      stehen alle Kästchen da, oben nur „N ausgewählt“, unten mittig eine Pille (Anheften | Löschen mit 2. Tipp | Abbrechen); gewählte Zeilen blass. Filter: Alle · Chats · Dokumente. */
   const panel = () => document.querySelector('.panel');
-  const list = (() => {
-    const view = el('section', 'dc-view dc-list');
+  /* makeList('all') = Home (Chats + Dokumente), makeList('chats') = Chats (Wunsch 10.11.: genau wie Home, nur mit den Chats –
+     gleiche Zeilen, Icons, Tags, Auswahl, Filter). Die Chats-Ansicht öffnet app.js (chatsView) über Docs.chatList. */
+  const makeList = (mode = 'all') => {
+    const CH = mode === 'chats';
+    const view = el('section', `dc-view dc-list${CH ? ' dc-chatlist' : ''}`);
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
-      <div class="cl-head hm-top"><h2>Home</h2><button type="button" class="hm-plus" data-act="plus" aria-label="Neu" aria-haspopup="menu">${fi('plus', 14)}</button></div>
-      <section class="hm-next" aria-label="Als Nächstes" hidden></section>
-      <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" /></label>
+      <div class="cl-head hm-top"><h2>${CH ? 'Chats' : 'Home'}</h2><button type="button" class="hm-plus" data-act="plus" aria-label="${CH ? 'Neuer Chat' : 'Neu'}" aria-haspopup="${CH ? 'false' : 'menu'}">${fi('plus', 14)}</button></div>
+      ${CH ? '' : '<section class="hm-next" aria-label="Als Nächstes" hidden></section>'}
+      <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="${CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen'}" aria-label="${CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen'}" /></label>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
       <div class="cl-list"></div></div>`;
@@ -643,12 +646,13 @@ const Docs = (() => {
       <button type="button" class="lb2-dk-none" data-bulk="none"><span class="lb2-dk-l">Abbrechen</span></button></div>`;
     const sel = new Set(); // Schlüssel „doc:ID“ / „chat:ID“
     /* Filter (Wunsch 09.11.): Art (Alle · Chats · Dokumente), Zeitraum, Tags (mehrere), nur Angeheftete – das Menü bleibt beim Wählen offen */
-    let filter = localStorage.getItem('docs.libFilter') || 'all';
+    const FKEY = CH ? 'chats.libFilter' : 'docs.libFilter';
+    let filter = CH ? 'chat' : localStorage.getItem(FKEY) || 'all';
     const FILTERS = { all: 'Alle', chat: 'Chats', doc: 'Dokumente' };
     const TIMES = { any: 'Jederzeit', today: 'Heute', week: 'Letzte 7 Tage', month: 'Letzte 30 Tage' };
-    const fx = (() => { try { const v = JSON.parse(localStorage.getItem('docs.libFilter2')) || {}; return { time: TIMES[v.time] ? v.time : 'any', tags: new Set(v.tags || []), pinned: !!v.pinned }; } catch { return { time: 'any', tags: new Set(), pinned: false }; } })();
-    const saveFx = () => { try { localStorage.setItem('docs.libFilter2', JSON.stringify({ time: fx.time, tags: [...fx.tags], pinned: fx.pinned })); } catch {} };
-    const filtered = () => filter !== 'all' || fx.time !== 'any' || fx.tags.size > 0 || fx.pinned;
+    const fx = (() => { try { const v = JSON.parse(localStorage.getItem(`${FKEY}2`)) || {}; return { time: TIMES[v.time] ? v.time : 'any', tags: new Set(v.tags || []), pinned: !!v.pinned }; } catch { return { time: 'any', tags: new Set(), pinned: false }; } })();
+    const saveFx = () => { try { localStorage.setItem(`${FKEY}2`, JSON.stringify({ time: fx.time, tags: [...fx.tags], pinned: fx.pinned })); } catch {} };
+    const filtered = () => (!CH && filter !== 'all') || fx.time !== 'any' || fx.tags.size > 0 || fx.pinned;
     const passFx = (x) => {
       if (fx.pinned && !x.pinned) return false;
       if (fx.tags.size && !(x.tags || []).some((id) => fx.tags.has(id))) return false;
@@ -676,7 +680,8 @@ const Docs = (() => {
     };
     const tagChips = (ids) => {
       const gs = (ids || []).map(tagOf).filter(Boolean); if (!gs.length) return '';
-      return `<span class="lb2-tags">${gs.slice(0, 2).map((g) => `<span class="lb2-tag"><i style="background:${esc(g.c)}"></i>${esc(g.name)}</span>`).join('')}${gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : ''}</span>`;
+      // getönt wie die Etiketten im Dokument, ohne Punkt (Wunsch 10.11.); lange Namen werden gekürzt, höchstens 2 + „+N“
+      return `<span class="lb2-tags">${gs.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : ''}</span>`;
     };
     const row = (x, i) => {
       const k = `${x.kind}:${x.id}`;
@@ -684,8 +689,8 @@ const Docs = (() => {
       return `<div class="lb2-row${sel.has(k) ? ' picked' : ''}" data-k="${k}" data-key="${k}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
         ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>${tagChips(x.tags)}
-        <span class="lb2-time">${when(x.updated)}</span>
-        <span class="lb2-acts"><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
+        <span class="lb2-time">${x.pinned ? `<i class="lb2-pinmark">${fi('pin', 12)}</i>` : ''}${when(x.updated)}</span>
+        <span class="lb2-acts"><button type="button" class="lb-act lb2-tagbtn" data-row="tags" aria-label="Tags">${fi('tag', 14)}</button><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
     };
     const syncBar = () => {
       selBox.hidden = !sel.size; bar.querySelector('.lb2-all').hidden = !!sel.size;
@@ -697,7 +702,7 @@ const Docs = (() => {
       const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.querySelector('.lb2-dk-l').textContent = allPinned ? 'Lösen' : 'Anheften';
       dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
       bar.querySelector('.lb2-filter').classList.toggle('set', filtered()); // gefiltert → Icon hell
-      bar.querySelector('.lb2-all').textContent = filtered() ? 'Gefiltert' : 'Alle Einträge';
+      bar.querySelector('.lb2-all').textContent = filtered() ? 'Gefiltert' : CH ? 'Alle Chats' : 'Alle Einträge';
     };
     const api = {
       open: false,
@@ -710,17 +715,19 @@ const Docs = (() => {
         let i = 0;
         rows.innerHTML = [['Angepinnt', items.filter((x) => x.pinned)], ...UIKit.timeGroups(items.filter((x) => !x.pinned), (x) => x.updated)]
           .filter(([, r]) => r.length).map(([label, r]) => `<div class="cl-label">${label === 'Zuletzt' ? 'Heute' : label}</div>${r.map((x) => row(x, i++)).join('')}`).join('')
-          || `<div class="cl-empty">${q ? 'Nichts gefunden' : 'Noch keine Chats oder Dokumente'}</div>`;
+          || `<div class="cl-empty">${q ? 'Nichts gefunden' : CH ? 'Noch keine Chats' : 'Noch keine Chats oder Dokumente'}</div>`;
         syncBar();
       },
       show() {
         if (!view.isConnected) panel()?.append(view);
         if (!dock.isConnected) panel()?.append(dock);
-        api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
+        api.open = true; view.hidden = false; if (!CH) panel()?.classList.add('view-docs');
+        if (CH) { search.value = ''; view.scrollTop = 0; }
         api.render();
-        window.Home?.render(view.querySelector('.hm-next'));
+        if (!CH) window.Home?.render(view.querySelector('.hm-next'));
       },
-      hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); window.Home?.leave(); closeMenu(); if (!editor.open) panel()?.classList.remove('view-docs'); },
+      hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); if (!CH) window.Home?.leave(); closeMenu(); window.TagMenu?.close(); if (!CH && !editor.open) panel()?.classList.remove('view-docs'); },
+      focusSearch() { setTimeout(() => { if (api.open) search.focus({ preventScroll: true }); }, 60); },
     };
     // Menüs (Ordner, Tag, ⋯, Filter): Kasten wie .tk-box unter dem Knopf, Auswahl = blauer Haken
     let menuFor = null;
@@ -763,6 +770,7 @@ const Docs = (() => {
       // Plus oben rechts neben „Home“ (09.11.): Menü Neuer Chat | Neues Dokument
       const pb = e.target.closest('[data-act="plus"]');
       if (pb) {
+        if (CH) { window.newChatFromList?.(); return; }
         openMenu(pb, item('chat', 'Neuer Chat', false, fi('chat', 14)) + item('doc', 'Neues Dokument', false, fi('file-plus', 14)), (v) => {
           closeMenu();
           if (v === 'doc') create('');
@@ -772,16 +780,17 @@ const Docs = (() => {
       }
       const fb = e.target.closest('[data-act="filter"]');
       if (fb) {
-        const html = () => `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v, fi(v === 'chat' ? 'chat' : v === 'doc' ? 'file' : 'stack', 14))).join('')}`
-          + `<div class="lb2-msep"></div><div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v, fi(v === 'any' ? 'clock' : 'calendar', 14))).join('')}`
+        // Aufbau wie der Filter in Aufgaben (Wunsch 10.11.): Abschnitte mit leiser Überschrift, Zeilen nur Text (Tags mit Farbpunkt), Haken rechts
+        const html = () => (CH ? '' : `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v)).join('')}<div class="lb2-msep"></div>`)
+          + `<div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v)).join('')}`
           + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<i class="lb2-mdot" style="background:${esc(g.c)}"></i>`)).join('')}` : '')
-          + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned, fi('pin', 14))}${filtered() ? item('reset', 'Filter zurücksetzen', false, fi('x', 14), ' muted') : ''}`;
+          + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned)}${filtered() ? `<div class="lb2-msep"></div>${item('reset', 'Filter zurücksetzen', false, '', ' muted')}` : ''}`;
         openMenu(fb, html(), (v) => {
-          if (v.startsWith('k:')) { filter = v.slice(2); localStorage.setItem('docs.libFilter', filter); }
+          if (v.startsWith('k:')) { filter = v.slice(2); localStorage.setItem(FKEY, filter); }
           else if (v.startsWith('t:')) fx.time = v.slice(2);
           else if (v.startsWith('g:')) { const id = v.slice(2); fx.tags.has(id) ? fx.tags.delete(id) : fx.tags.add(id); }
           else if (v === 'p') fx.pinned = !fx.pinned;
-          else if (v === 'reset') { filter = 'all'; localStorage.setItem('docs.libFilter', 'all'); fx.time = 'any'; fx.tags.clear(); fx.pinned = false; }
+          else if (v === 'reset') { filter = CH ? 'chat' : 'all'; if (!CH) localStorage.setItem(FKEY, 'all'); fx.time = 'any'; fx.tags.clear(); fx.pinned = false; }
           saveFx(); api.render(); menu.innerHTML = html(); // Menü bleibt offen
         });
         return;
@@ -794,6 +803,13 @@ const Docs = (() => {
       if (act === 'pick' || (!act && sel.size)) { sel.has(k) ? sel.delete(k) : sel.add(k); r.classList.toggle('picked', sel.has(k)); r.querySelector('.lb2-check').setAttribute('aria-checked', String(sel.has(k))); syncBar(); return; }
       const btn = e.target.closest('[data-row]');
       if (act === 'pin') { const x = entries('').find((y) => y.kind === kind && y.id === id); if (x) pinKeys([k], !x.pinned); return; }
+      if (act === 'tags') { // Tags direkt in der Liste setzen (gleiche Auswahl wie überall)
+        const t = kind === 'doc'
+          ? { key: k, get: () => docOf(id)?.tags || [], set: (ids) => { const d = docOf(id); if (!d) return; d.tags = ids; touch(d); save(); api.render(); window.Docs?.editor?.redraw?.(); } }
+          : window.LibChats?.tagTarget(id);
+        if (t) window.TagMenu?.open(btn, t);
+        return;
+      }
       if (act === 'del') {
         // Löschen: erster Klick färbt rot, zweiter löscht (wie vorher)
         if (!btn.classList.contains('confirm')) { btn.classList.add('confirm'); setTimeout(() => btn.classList.remove('confirm'), 2500); return; }
@@ -803,7 +819,9 @@ const Docs = (() => {
     });
     view.addEventListener('keydown', (e) => { const r = e.target.closest?.('.lb2-row'); if (e.key === 'Enter' && r && e.target === r) { const [kind, id] = r.dataset.k.split(':'); kind === 'doc' ? open(id) : window.LibChats?.open(id); } });
     return api;
-  })();
+  };
+  const list = makeList('all');
+  const chatList = makeList('chats');
 
   /* ---------- KI im Dokument (Server: /api/doc-ai) ---------- */
   async function docAi(body) {
@@ -1876,12 +1894,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const tagsHtml = `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
             <span class="tk-pop dc-mpop"><button type="button" class="dc-madd dc-tagadd" data-mopen="tags" aria-label="Tag hinzufügen">${fi('tag', 12)}${ts.length ? '' : '<span>Tags</span>'}</button>
             <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Suchen" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></span></span>`;
-      box.innerHTML = `<div class="dc-tagline">${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('calendar', 'Erstellt', esc(fmtDate(doc.created)))
-        + row('clock', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
-        + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic" style="color:${esc(pr.c)}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
+      box.innerHTML = `<div class="dc-tagline">${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('clock', 'Erstellt', esc(fmtDate(doc.created)))
+        + row('pencil', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
+        + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic" style="color:${esc(pr.c)}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'folder', 14)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
-        + row('file', 'Umfang', `${words.toLocaleString('de-DE')} Wörter`)
+        + row('align-left', 'Umfang', `${words.toLocaleString('de-DE')} ${words === 1 ? 'Wort' : 'Wörter'}${words >= 200 ? `<span class="dc-mval-sub"> · ${Math.max(1, Math.round(words / 200))} Min. Lesezeit</span>` : ''}`)
         + row('list', 'Abschnitte', String(heads)) + '</div>';
     }
     function drawMetaTags() {
@@ -1908,15 +1926,21 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen mit nächster Farbe
     // Projekt: suchen, wählen (nochmal = entfernen), neu anlegen – wie bei den Tags: erst der Name, dann Icon und Farbe
     // Neues Projekt: erst der Name, dann die Farbe antippen, danach das Icon (in dieser Farbe) – das Icon legt das Projekt an
-    let projNew = '', projIcon = 'folder', projColor = '', projEdit = ''; // projEdit: ID des Projekts, das gerade bearbeitet wird
+    let projNew = '', projIcon = 'folder', projColor = '', projEdit = '', projStep = ''; // projEdit: ID des Projekts, das gerade bearbeitet wird
     function drawMetaProj() {
       const list = view.querySelector('.dc-proj-list'), inp = view.querySelector('.dc-proj-in'); if (!list) return;
       const ed = projEdit && projOf(projEdit);
-      if (ed) { // Projekt bearbeiten: Name, Farbe, Icon (in der Farbe), aus dem Dokument nehmen, löschen
-        list.innerHTML = `<span class="tk-tag-new-l">Name</span><span class="tk-tag-row"><input class="tk-tag-in dc-pj-name" value="${esc(ed.name)}" maxlength="40" aria-label="Projektname" /></span>
-          <span class="tk-tag-new-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-pjecolor')}
-          <span class="tk-tag-new-l">Icon</span><span class="dc-pj-icons" style="color:${esc(ed.c)}">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic${n === ed.icon ? ' on' : ''}" data-pjeicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>
-          <span class="dc-pj-acts">${doc.projectId === ed.id ? '<button type="button" data-pjout>Aus Dokument entfernen</button>' : ''}<span class="grow"></span><button type="button" class="danger" data-pjdel>Projekt löschen</button></span>`;
+      if (ed) { // Projekt bearbeiten (Wunsch 10.11.: nacheinander statt alles auf einmal): Name oben, darunter „Farbe“ und „Icon“ als Zeilen – antippen öffnet nur diesen Schritt
+        const back = (label) => `<button type="button" class="dc-pj-back" data-pjstep="">${fi('back', 12)}<span>${label}</span></button>`;
+        if (projStep === 'color') { list.innerHTML = back('Farbe') + UIKit.colorRow(ed.c, 'data-pjecolor'); }
+        else if (projStep === 'icon') { list.innerHTML = back('Icon') + `<span class="dc-pj-icons" style="color:${esc(ed.c)}">${DocIcons.pickList(ed.icon).map((n) => `<button type="button" class="dc-pj-ic${n === ed.icon ? ' on' : ''}" data-pjeicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`; }
+        else {
+          list.innerHTML = `<span class="tk-tag-row"><input class="tk-tag-in dc-pj-name" value="${esc(ed.name)}" maxlength="40" aria-label="Projektname" /></span>
+            <span class="tk-mi dc-pj-step" data-pjstep="color" role="button" tabindex="0"><span>Farbe</span><i class="dc-pj-sw" style="background:${esc(ed.c)}"></i>${fi('chevron-right', 11)}</span>
+            <span class="tk-mi dc-pj-step" data-pjstep="icon" role="button" tabindex="0"><span>Icon</span><span class="dc-pj-cur" style="color:${esc(ed.c)}">${DocIcons.svg(ed.icon && DocIcons.has(ed.icon) ? ed.icon : 'folder', 15)}</span>${fi('chevron-right', 11)}</span>
+            <span class="dc-pj-acts">${doc.projectId === ed.id ? '<button type="button" data-pjout>Aus Dokument entfernen</button>' : ''}<span class="grow"></span><button type="button" class="danger" data-pjdel>Löschen</button></span>`;
+        }
+        list.firstElementChild?.parentElement.animate([{ opacity: 0, transform: `translateX(${projStep ? 10 : -10}px)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
         return;
       }
       if (projNew && !projColor) {
@@ -1925,7 +1949,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       }
       if (projNew) {
         list.innerHTML = `<span class="tk-tag-new-l">Icon für „${esc(projNew)}“</span>
-          <span class="dc-pj-icons dc-pj-pick">${DocIcons.names.map((n) => `<button type="button" class="dc-pj-ic" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`;
+          <span class="dc-pj-icons dc-pj-pick">${DocIcons.base.map((n) => `<button type="button" class="dc-pj-ic" data-pjicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`;
         list.querySelector('.dc-pj-icons')?.animate([{ opacity: 0, transform: 'translateX(10px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
         return;
       }
@@ -1933,7 +1957,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
       list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span><b>${esc(q)}</b> hinzufügen</span></span>` : '')
-        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'cube', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-pjedit="${p.id}" aria-label="Projekt bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'folder', 15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-pjedit="${p.id}" aria-label="Projekt bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
@@ -1942,7 +1966,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       b.classList.toggle('set', !!pr);
       b.classList.toggle('tinted', !!pr); // Projektfarbe für Icon, transparente Fläche und Text
       if (pr) b.style.setProperty('--pc', pr.c); else b.style.removeProperty('--pc');
-      const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'cube', 14)}</span>` : '<svg width="13" height="13" aria-hidden="true"><use href="#d-cube"/></svg>';
+      const ic = pr ? `<span class="dc-pj-pic" style="color:${pr.c}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'folder', 14)}</span>` : fi('folder', 13); // ohne Projekt: schlichter Ordner wie in der Sidebar
       b.innerHTML = `${ic}<span>${pr ? esc(pr.name) : 'Projekt'}</span>${fi('chevron-down', 9)}`;
       view.querySelector('.dc-page')?.classList.toggle('with-proj', !!pr);
       drawMeta(); // Projekt steht auch in der Infos-Tabelle
@@ -1953,13 +1977,14 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       drawProj();
       const pop = box.querySelector('.dc-ppop'), inp = box.querySelector('.dc-proj-in');
       box.addEventListener('click', (e) => {
-        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; projEdit = doc.projectId && projOf(doc.projectId) ? doc.projectId : ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
-        const pe = e.target.closest('[data-pjedit]'); if (pe) { e.stopPropagation(); projEdit = pe.dataset.pjedit; drawMetaProj(); return; }
+        if (e.target.closest('[data-popen]')) { const open = !pop.classList.contains('open'); pop.classList.toggle('open', open); if (open) { inp.value = ''; projNew = ''; projStep = ''; projEdit = doc.projectId && projOf(doc.projectId) ? doc.projectId : ''; drawMetaProj(); setTimeout(() => inp.focus(), 30); } return; }
+        const pe = e.target.closest('[data-pjedit]'); if (pe) { e.stopPropagation(); projEdit = pe.dataset.pjedit; projStep = ''; drawMetaProj(); return; }
         if (projEdit) {
           const ed = projOf(projEdit);
+          const st = e.target.closest('[data-pjstep]'); if (st) { projStep = st.dataset.pjstep; drawMetaProj(); return; }
           const after = () => { save(); drawProj(); renderSide(); if (list.open) list.render(); };
-          const ec = e.target.closest('[data-pjecolor]'); if (ec && ed) { ed.c = ec.dataset.pjecolor; after(); drawMetaProj(); return; }
-          const ei = e.target.closest('[data-pjeicon]'); if (ei && ed) { ed.icon = ei.dataset.pjeicon; delete ed.line; after(); box.querySelectorAll('.dc-pj-ic').forEach((x) => x.classList.toggle('on', x === ei)); return; }
+          const ec = e.target.closest('[data-pjecolor]'); if (ec && ed && ec.dataset.pjecolor) { ed.c = ec.dataset.pjecolor; after(); projStep = ''; drawMetaProj(); return; }
+          const ei = e.target.closest('[data-pjeicon]'); if (ei && ed) { ed.icon = ei.dataset.pjeicon; delete ed.line; after(); projStep = ''; drawMetaProj(); return; }
           if (e.target.closest('[data-pjout]')) { doc.projectId = ''; touch(doc); changed(); projEdit = ''; drawProj(); pop.classList.remove('open'); return; }
           if (e.target.closest('[data-pjdel]') && ed) {
             projects = projects.filter((x) => x.id !== ed.id);
@@ -1973,12 +1998,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (e.target.closest('[data-mproj-new]')) { newProj(inp.value.trim()); return; }
         const pi = e.target.closest('[data-pjicon]');
         if (pi && projColor) { projIcon = pi.dataset.pjicon; makeProj(projColor); return; }
-        const pc = e.target.closest('[data-pjcolor]'); if (pc) { projColor = pc.dataset.pjcolor; drawMetaProj(); return; }
+        const pc = e.target.closest('[data-pjcolor]'); if (pc && pc.dataset.pjcolor) { projColor = pc.dataset.pjcolor; drawMetaProj(); return; }
         if (e.target.closest('.tk-picker')) return;
         const cu = e.target.closest('[data-custom]');
         if (cu && projNew) { const host = cu.closest('.tk-colors').nextElementSibling; if (host.firstChild) { host.replaceChildren(); return; } host.append(UIKit.colorPicker('#5b8cff', (hex, done) => { cu.style.setProperty('--c', hex); cu.classList.add('on'); if (done) { projColor = hex; drawMetaProj(); } }, 'Weiter')); }
       });
-      inp.addEventListener('input', () => { projNew = ''; projColor = ''; projEdit = ''; drawMetaProj(); });
+      inp.addEventListener('input', () => { projNew = ''; projColor = ''; projEdit = ''; projStep = ''; drawMetaProj(); });
       box.addEventListener('input', (e) => { if (!e.target.classList.contains('dc-pj-name')) return; const ed = projOf(projEdit); if (!ed) return; const v = e.target.value.trim(); if (v) { ed.name = v.slice(0, 40); save(); drawProj(); renderSide(); } });
       box.addEventListener('keydown', (e) => { if (e.target.classList.contains('dc-pj-name')) { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); e.target.blur(); } } });
       inp.addEventListener('keydown', (e) => {
@@ -2169,30 +2194,38 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const pt = view.querySelector('.dc-ptable'); if (pt) pt.hidden = s.infos === false;
       view.querySelector('.dc-content')?.setAttribute('spellcheck', String(!!s.spell));
     }
+    /* Einstellungen des Dokuments (Wunsch 10.11.): gleiten als Seitenfenster von rechts herein (nicht mehr mittig) und sehen aus wie die
+       normalen Einstellungen – Abschnitts-Titel, darunter Karten mit Zeilen (st-card/st-row/st-seg), nur ohne eigene Sidebar. */
     function openSettings() {
-      document.querySelector('.dc-set-ov')?.remove();
-      const ov = document.createElement('div'); ov.className = 'dc-set-ov';
-      const seg = (k, opts, cur) => `<div class="dc-seg" data-k="${k}">${opts.map(([v, l]) => `<button type="button" data-v="${v}"${cur === v ? ' class="on"' : ''}>${l}</button>`).join('')}</div>`;
+      const old = document.querySelector('.dc-set-ov');
+      if (old) { old._close?.(); return; }
+      const ov = document.createElement('div'); ov.className = 'dc-set-ov side';
+      const seg = (k, opts, cur) => `<span class="st-seg" data-k="${k}" role="radiogroup">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${cur === v}" data-v="${v}"${cur === v ? ' class="on"' : ''}>${l}</button>`).join('')}</span>`;
       const sw = (k, on) => `<button type="button" class="ce-switch${on ? ' on' : ''}" data-sw="${k}" role="switch" aria-checked="${on}" aria-label="umschalten"><i></i></button>`;
-      const row = (label, hint, ctrl) => `<div class="dc-set-row"><div class="dc-set-l"><span>${label}</span>${hint ? `<em>${hint}</em>` : ''}</div><div class="dc-set-c">${ctrl}</div></div>`;
+      const row = (label, hint, ctrl, cls = '') => `<div class="st-row dcs-row${cls}"><div class="dcs-l"><span class="st-name">${label}</span>${hint ? `<em>${hint}</em>` : ''}</div><span class="grow"></span>${ctrl}</div>`;
       const draw = () => {
         const s = docSet();
-        ov.innerHTML = `<div class="dc-set big" role="dialog" aria-label="Einstellungen des Dokuments">
-          <div class="dc-set-head"><span class="dc-set-title">Einstellungen</span><span class="grow"></span><button type="button" class="icon-btn" data-close aria-label="Schließen">${fi('x', 13)}</button></div>
-          <div class="dc-set-body">
-            <div class="dc-set-sec">Darstellung</div>
-            ${row('Akzentfarbe', s.accent === 'auto' ? 'passt sich dem Cover an' : 'für Haken, Markierungen und Links', `<div class="dc-acc"><button type="button" data-acc="auto" class="dc-acc-auto${s.accent === 'auto' ? ' on' : ''}">Auto</button>${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="dc-dot${s.accent === c ? ' on' : ''}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div>`)}
+        const body = `<h2>Darstellung</h2><div class="st-card">
+            <div class="st-row dcs-row dcs-acc-row"><div class="dcs-l"><span class="st-name">Akzentfarbe</span><em>${s.accent === 'auto' ? 'passt sich dem Cover an' : 'für Haken, Markierungen und Links'}</em></div>
+              <div class="dc-acc"><button type="button" data-acc="auto" class="dc-acc-auto${s.accent === 'auto' ? ' on' : ''}">Auto</button>${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="dc-dot${s.accent === c ? ' on' : ''}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div></div>
             ${row('Schrift', '', seg('font', [['sans', 'Standard'], ['serif', 'Serif'], ['mono', 'Mono']], s.font))}
             ${row('Breite', '', seg('width', [['normal', 'Normal'], ['wide', 'Breit']], s.width))}
             ${row('Kleine Schrift', '', sw('small', !!s.small))}
-            <div class="dc-set-sec">Dokument</div>
-            ${row('Infos', 'Tabelle unter dem Titel (Erstellt, Bearbeitet, Priorität …)', sw('infos', s.infos !== false))}
+          </div>
+          <h2>Dokument</h2><div class="st-card">
+            ${row('Infos', 'Tabelle unter dem Titel', sw('infos', s.infos !== false))}
             ${row('Gliederung links', 'Striche zu den Überschriften', sw('nav', s.nav))}
             ${row('Rechtschreibprüfung', '', sw('spell', s.spell))}
-          </div></div>`;
+          </div>`;
+        const scroll = ov.querySelector('.dcs-body');
+        if (scroll) { const top = scroll.scrollTop; scroll.innerHTML = body; scroll.scrollTop = top; return; }
+        ov.innerHTML = `<aside class="dcs-sheet" role="dialog" aria-label="Einstellungen des Dokuments">
+          <div class="dcs-head"><span class="dcs-title">Einstellungen</span><span class="grow"></span><button type="button" class="dcs-x" data-close aria-label="Schließen">${fi('x', 13)}</button></div>
+          <div class="dcs-body">${body}</div></aside>`;
       };
       const set = (patch) => { doc.settings = { ...docSet(), ...patch }; touch(doc); save(); applySettings(); draw(); };
-      const close = () => { ov.classList.add('closing'); document.removeEventListener('keydown', key, true); setTimeout(() => ov.remove(), 200); };
+      const close = () => { if (ov.classList.contains('closing')) return; ov.classList.add('closing'); document.removeEventListener('keydown', key, true); setTimeout(() => ov.remove(), 320); };
+      ov._close = close;
       const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
       ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
       ov.addEventListener('click', (e) => {
@@ -2235,86 +2268,49 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       changed(); save(); drawIcon();
     }
     let iconPop = null;
-    // gleicher Ablauf wie beim Cover: erst die Icons, Klick → oben Vorschau (so wie im Dokument), darunter die Farben;
-    // Klick auf eine Farbe übernimmt und schließt
-    function openIconPop() {
+    /* Icon wählen (Wunsch 10.11.: im Stil der App statt eigenem Fenster): kleines Menü direkt unter dem Icon bzw. „Icon hinzufügen“ –
+       oben die 48 Grund-Icons (antippen setzt sofort), darunter die Farbauswahl (gleiche wie überall). Bleibt offen, bis man daneben tippt. */
+    function openIconPop(anchor) {
       if (iconPop) { iconPop.close(); return; }
-      const modal = el('div', 'tk-modal dc-cmodal dc-imodal');
-      const pop = el('div', 'tk-form dc-cpop dc-ipop');
+      const pop = el('div', 'dc-ipop2');
       pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Icon');
-      pop.innerHTML = `<div class="dc-cpop-head"><span class="dc-cpop-title">Icon</span><span class="grow"></span>${iconOf(doc) ? '<button type="button" class="dc-ipop-del" data-del>Entfernen</button>' : ''}<button type="button" class="tk-x dc-cpop-x" aria-label="Schließen" title="Schließen">${fi('x', 12)}</button></div>
-        <div class="dc-cpop-body"></div>`;
-      modal.append(pop);
-      document.body.append(modal);
-      const body = pop.querySelector('.dc-cpop-body'), title = pop.querySelector('.dc-cpop-title');
-      let step = null; // null = Übersicht, sonst der Name des gewählten Icons
-      const pick = { c: iconOf(doc)?.c || '#a3a3a3', line: false }; // nur gefüllte Icons (keine Linien-Fassung mehr)
-      const onCover = !!coverCss(doc.cover);
-      const ttl = esc(doc.title.trim() || 'Unbenannt');
-      const preview = (name, c) => (onCover
-        ? `<div class="dc-ipreview cover"><div class="dc-ipv-cover" style="background:${esc(coverCss(doc.cover))}"></div><div class="dc-ipv-row"><span class="dc-icon dc-ipv on-cover" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 42, '', pick.line)}</span></span></div><div class="dc-ipv-title">${ttl}</div></div>`
-        : `<div class="dc-ipreview"><div class="dc-ipv-line"><span class="dc-icon dc-ipv small" style="--c:${esc(c)}"><span class="dc-icon-g">${DocIcons.svg(name, 26, '', pick.line)}</span></span><span class="dc-ipv-title">${ttl}</span></div></div>`);
-      function render(dir = 0) {
-        if (!step) {
-          title.textContent = 'Icon';
-          // Übersicht immer grau (nicht in der Farbe des aktuellen Icons); nur gefüllte Icons
-          body.innerHTML = `<div class="dc-igrid">${DocIcons.names.map((n) => `<button type="button" class="dc-itile${iconOf(doc)?.name === n ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 22, '', pick.line)}</button>`).join('')}</div>`;
-        } else {
-          title.innerHTML = `<button type="button" class="dc-cback" data-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>Farbe`;
-          body.innerHTML = `${preview(step, pick.c)}<div class="dc-clabel">Farbe</div>${UIKit.colorRow(pick.c, 'data-c')}`;
-        }
-        // beide Ansichten gleich hoch: Übersicht scrollt darin, die Farbauswahl darf (Farbwähler) länger werden
-        body.style.height = step ? '' : `${viewH()}px`;
-        body.style.minHeight = step ? `${viewH()}px` : '';
-        if (dir) body.animate([{ opacity: 0, transform: `translateX(${dir * 10}px)` }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
-      }
-      // Höhe der Farbauswahl einmal messen (ohne Farbwähler) – das ist die Höhe des Fensters
-      let colorH = 0;
-      function viewH() {
-        if (colorH) return colorH;
-        const probe = body.cloneNode(false); probe.style.cssText = 'position:absolute;visibility:hidden;left:0;right:0;height:auto';
-        probe.innerHTML = `${preview(DocIcons.names[0], pick.c)}<div class="dc-clabel">Farbe</div>${UIKit.colorRow(pick.c, 'data-c')}`;
-        body.parentElement.append(probe); colorH = Math.round(probe.offsetHeight); probe.remove();
-        return colorH;
-      }
-      const showPreview = (hex) => body.querySelector('.dc-ipv')?.style.setProperty('--c', hex);
-      const apply = (hex) => { pick.c = hex; setIcon({ name: step, c: hex, ...(pick.line ? { line: true } : {}) }); };
-      modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
-      // Darüberfahren zeigt die Farbe schon in der Vorschau, Verlassen zeigt wieder die gewählte
-      body.addEventListener('pointerover', (e) => { const sw = e.target.closest('[data-c]'); if (sw && step) showPreview(sw.dataset.c); });
-      body.addEventListener('pointerout', (e) => { if (e.target.closest('[data-c]') && step && !e.relatedTarget?.closest?.('[data-c]')) showPreview(pick.c); });
+      const pick = { c: iconOf(doc)?.c || '#bbbbbb' };
+      const draw = () => {
+        const cur = iconOf(doc)?.name;
+        pop.innerHTML = `<div class="dc-ip2-head"><span>Icon</span><span class="grow"></span>${cur ? '<button type="button" class="dc-ip2-del" data-del>Entfernen</button>' : ''}</div>
+          <div class="dc-ip2-grid" style="color:${esc(pick.c)}">${DocIcons.pickList(cur).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 18)}</button>`).join('')}</div>
+          <div class="dc-ip2-sep"></div><div class="dc-ip2-head"><span>Farbe</span></div>${UIKit.colorRow(iconOf(doc)?.c || '', 'data-c')}`;
+      };
+      draw();
+      document.body.append(pop);
+      const place = () => {
+        const a = (anchor && anchor.isConnected ? anchor : null) || view.querySelector('.dc-icon:not([hidden])') || view.querySelector('[data-add="icon"]');
+        const r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+        pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
+        pop.style.top = `${Math.round(r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8)}px`;
+      };
+      place();
+      pop.addEventListener('pointerdown', (e) => e.stopPropagation());
       pop.addEventListener('click', (e) => {
-        if (e.target.closest('.dc-cpop-x')) { close(); return; }
+        e.stopPropagation();
         if (e.target.closest('[data-del]')) { setIcon(null); close(); return; }
-        if (e.target.closest('[data-back]')) { step = null; render(-1); return; }
-        const is = e.target.closest('[data-istyle]');
-        if (is) { const line = is.dataset.istyle === 'line'; if (line !== pick.line) { const top = body.querySelector('.dc-igrid')?.scrollTop || body.scrollTop; pick.line = line; render(); body.scrollTop = top; } return; }
         const it = e.target.closest('[data-icon]');
-        if (it) { step = it.dataset.icon; render(1); return; }
-        if (e.target.closest('.tk-picker')) return;
-        const cu = e.target.closest('[data-custom]');
-        if (cu) { // eigene Farbe: Farbwähler zum Ziehen (wie beim Cover)
-          const host = cu.closest('.tk-colors').nextElementSibling;
-          if (host.firstChild) { host.replaceChildren(); return; }
-          host.append(UIKit.colorPicker(pick.c, (hex, done) => {
-            cu.style.setProperty('--c', hex); cu.classList.add('on');
-            showPreview(hex);
-            if (done) { apply(hex); close(); } // „Übernehmen“ → Icon setzen, Fenster zu
-          }));
-          return;
-        }
-        const sw = e.target.closest('[data-c]'); if (sw) { apply(sw.dataset.c); showPreview(sw.dataset.c); setTimeout(close, 160); } // Farbe gewählt → übernehmen und schließen
+        if (it) { setIcon({ name: it.dataset.icon, c: pick.c }); pop.querySelectorAll('.dc-ip2-ic').forEach((b) => b.classList.toggle('on', b === it)); if (!pop.querySelector('[data-del]')) { draw(); place(); } return; }
+        const sw = e.target.closest('[data-c]');
+        if (sw && sw.dataset.c) { pick.c = sw.dataset.c; pop.querySelector('.dc-ip2-grid').style.color = pick.c; const cur = iconOf(doc)?.name; if (cur) setIcon({ name: cur, c: pick.c }); pop.querySelectorAll('.cp-panel .tk-colors button').forEach((b) => b.classList.toggle('on', b === sw)); }
       });
       const esc_ = (e) => { if (e.key === 'Escape') close(); };
+      const outside = () => close();
       function close() {
         document.removeEventListener('keydown', esc_);
-        modal.classList.add('closing');
-        setTimeout(() => modal.remove(), 220);
+        document.removeEventListener('pointerdown', outside);
+        pop.classList.add('closing');
+        setTimeout(() => pop.remove(), 180);
         iconPop = null;
       }
       document.addEventListener('keydown', esc_);
+      setTimeout(() => document.addEventListener('pointerdown', outside), 0);
       iconPop = { close };
-      render();
     }
     function setCover(cv) {
       const box = view.querySelector('.dc-cover');
@@ -2932,7 +2928,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (act === 'cover') { openCoverPop(); return; }
       if (act === 'cover-ai') { openCoverPop(true); return; }
       if (act === 'settings') { openSettings(); return; }
-      if (act === 'icon') { openIconPop(); return; }
+      if (act === 'icon') { openIconPop(e.target.closest('[data-act]')); return; }
       if (act === 'cover-del') { setCover(null); return; }
     });
 
@@ -3092,7 +3088,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
   function discard(id) { const d = docOf(id); if (d && isEmpty(d)) { docs = docs.filter((x) => x !== d); deletedIds.add(id); save(); renderSide(); if (list.open) list.render(); } }
 
   return {
-    list, editor, open, create, PAGE_SHAPE, CHAT_ICON, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
+    list, chatList, editor, open, create, PAGE_SHAPE, CHAT_ICON, add, update, discard, sync, forget, forgetWs, remove, makeForm, offer, make, clean, appendTo,
     // für den Sprach-Agenten: Projekt anlegen (gibt es den Namen schon, wird es wiederverwendet) und Dokument verschieben
     addProject: (name) => { const n = String(name || '').trim().slice(0, 40); if (!n) return null; const have = projects.find((p) => p.name.toLowerCase() === n.toLowerCase()); if (have) return have; const pr = { id: newId('p'), name: n, c: UIKit.COLORS[projects.length % UIKit.COLORS.length] }; projects.push(pr); open$.add(pr.id); save(); renderSide(); if (list.open) list.render(); return pr; },
     moveToProject: (id, name) => { const d = docOf(id); if (!d) return; const q = String(name || '').toLowerCase().trim(); const pr = q ? (projects.find((p) => p.name.toLowerCase() === q) || projects.find((p) => p.name.toLowerCase().includes(q))) : null; d.projectId = pr ? pr.id : ''; touch(d); save(); renderSide(); if (list.open) list.render(); },

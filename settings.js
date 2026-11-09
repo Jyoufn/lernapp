@@ -40,6 +40,8 @@
   }
   const keyHeader = () => {
     const list = Object.entries(deviceKeys).filter(([, v]) => v);
+    // Modell-Auswahl im Eingabefeld (app.js): fester Anbieter für diese Anfragen statt der Haupt-KI
+    try { const pk = localStorage.getItem('ai.pick'); if (pk && pk !== 'auto') list.push(['AI_PICK', pk]); } catch {}
     return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
   };
   const nativeFetch = window.fetch.bind(window);
@@ -107,10 +109,13 @@
     const isMain = p.fam && mainFam() === p.fam;
     const head = `<div class="st-row st-prov${open ? ' open' : ''}" data-edit="${p.id}" role="button" tabindex="0" aria-expanded="${open}">${logo(p)}<span class="st-name">${esc(p.name)}</span>${isMain ? '<span class="st-main-tag">Haupt-KI</span>' : p.image && (keys.length || fileKeys[p.id]) ? '<span class="st-main-tag soft">Bild-KI</span>' : ''}<span class="grow"></span>${status}<span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`;
     if (!open) return head;
+    // aufgeklappt (Wunsch 10.11. schöner): Abschnitt „Schlüssel“ (je Schlüssel eine Zeile mit Schlüssel-Icon, darunter ein Feld mit Knopf darin),
+    // darunter durch eine Linie getrennt „Rolle“ mit erklärendem Satz und dem Umschalter rechts
     return head + `<div class="st-keys"><div class="st-keys-in">
-        ${keys.map((k, i) => `<div class="st-key"><span class="st-key-dots">••••${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
+        <div class="stk-sec"><div class="stk-lab"><span>${esc(what === 'API-Key' ? 'Schlüssel' : what)}</span>${p.multi ? '<em>mehrere Schlüssel = mehr Gratis-Kontingent</em>' : ''}</div>
+        ${keys.map((k, i) => `<div class="st-key stk-key"><span class="stk-ki">${fi('lock', 12)}</span><span class="st-key-dots">••••  ${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
         ${fileKeys[p.id] && !keys.length ? '<p class="st-ws-note">Ein Schlüssel ist auf dem Server hinterlegt.</p>' : ''}
-        ${p.multi || !keys.length ? `<form class="st-key-add" data-key="${p.id}" autocomplete="off"><input class="st-field st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="st-btn light">Hinzufügen</button></form>` : ''}
+        ${p.multi || !keys.length ? `<form class="st-key-add stk-add" data-key="${p.id}" autocomplete="off"><input class="st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="stk-btn">Hinzufügen</button></form>` : ''}</div>
         ${rolesHtml(p, keys.length || fileKeys[p.id])}
       </div></div>`;
   }
@@ -118,6 +123,7 @@
      Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
   const FAMS = ['gemini', 'minimax', 'deepseek', 'kimi'];
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
+  window.AiMain = () => mainFam(); // Name im Modell-Knopf, wenn „Automatisch“ gewählt ist
   const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
   function rolesHtml(p, has) {
     if (!p.fam) return '';
@@ -125,8 +131,7 @@
     const why = { main: 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.', backup: 'Springt nur ein, wenn die Haupt-KI gerade nicht kann.', off: 'Wird nie genutzt.' }[role]
       + (main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : '');
     const opt = (v, label) => `<button type="button" role="radio" aria-checked="${role === v}" class="${role === v ? 'on' : ''}" data-ai-role="${p.fam}:${v}"${main && v !== 'main' ? ' disabled' : ''}>${label}</button>`;
-    return `<div class="st-role"><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>
-`;
+    return `<div class="st-role stk-role"><div class="stk-l"><span>Rolle</span><em>${esc(why)}</em></div><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>`;
   }
 
 
@@ -150,13 +155,16 @@
     const accent = String(cfg.accent || '').toLowerCase();
     const custom = !ap.ACCENTS.includes(accent);
     const near = TILES.reduce((a, b) => (Math.abs(b[1] - cfg.tiles) < Math.abs(a[1] - cfg.tiles) ? b : a))[1];
+    // Wunsch 10.11.: Vorschau als kleine App (Sidebar mit Zeilen, Nachricht, Antwort, Eingabefeld), gewählt = heller Ring statt blauem Rahmen;
+    // „Kacheln“ steht im selben Kasten unter der Akzentfarbe (mit Trennlinie), darunter die Sprache. Kein eigener Abschnitt „Chat-Hintergrund“ mehr.
+    const lang = window.I18n?.lang() || 'de';
     return `<h2>Aussehen</h2><div class="st-card">
         <div class="st-row st-modes-row"><span class="st-name">Modus</span><div class="ap-modes st-ap-modes">${Object.entries(ap.MODES).map(([id, label]) => { const pv = ap.PREVIEW?.[id] || {};
-          return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev"><span class="pv-side"></span><span class="pv-body"><i></i><i></i><i class="acc"></i><i class="acc short"></i><b><em></em></b></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
+          return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev apv"><span class="apv-side"><i></i><i></i><i></i></span><span class="apv-main"><span class="apv-msg"></span><span class="apv-ans"><i></i><i></i><i class="s"></i></span><span class="apv-in"><em></em></span></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
         <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
-        + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div></div>
-      <h2>Neuer Chat</h2><div class="st-card">
-        <div class="st-row"><span class="st-name">Kacheln</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div></div>`
+        + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div>
+        <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
+        <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
   }
 
@@ -338,6 +346,8 @@
     if (md) { window.Appearance?.set({ mode: md.dataset.apMode }); drawView(); return; }
     const ac = e.target.closest('[data-ap-accent]');
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
+    const lg = e.target.closest('[data-lang]');
+    if (lg) { window.I18n?.set(lg.dataset.lang); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }

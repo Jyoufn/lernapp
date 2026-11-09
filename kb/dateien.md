@@ -18,11 +18,12 @@
 | `lernset.js` | Lernsets (```lernset): `parse`, `figure` (Chat), `deck` (Karteikarten-Stapel), `quiz`, `exam`, `open` (Vollbild), `dialog` (Erstellen-Fenster), `pickMention`, `sectionsOf` |
 | `home.js` | Home: „Als Nächstes“-Karten (`Home.render/refreshBoerse`) |
 | `line-icons.js` | Runde Linien-Icons: ersetzt beim Laden `#f-`/`#i-`/`#d-`-Symbole (`window.LineIcons`) |
+| `i18n.js` | Sprache der Oberfläche (Einstellungen → Aussehen): bei English übersetzt ein Wörterbuch feste Beschriftungen, Inhalte bleiben |
 | `docs.js` | Home-Liste (`list`), Editor (`editor`: `draw`, Fokusmodus `setFocus`), Dokument-Chat rechts (`drawDocChat`), `Docs.create/open/discard/isEmpty` |
 | `docblocks.js` | Slash-Menü und Blöcke im Dokument (Tabelle, Medien, Kalender, Zeit, Dashboard, Karte, Diagramme, Board) |
 | `tasks.js` | Aufgaben: `createBoard(store, {agents, list})`; Liste (`row`, `toggleRow`, `renderList`), Fenster (`edit`: Pillen date/sched/prio/tags/agent/auto/limit), Automatisierung (`syncAuto`), Agenten-Lauf (`startRun`, `pull`) |
 | `calendar.js` | Wochenansicht (`render`, `layoutDay`, `band` für ganztägig), Tagesfenster (`drawDay`), Termin-Fenster (`edit`) |
-| `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow`, `colorPicker`, `timeGroups` (Zuletzt/Gestern/…) |
+| `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow` (Farbfeld + Kreise + Helligkeit, überall gleich), `colorPicker`, `timeGroups` (Zuletzt/Gestern/…), `placeThumb` |
 | `search.js` | ⌘K-Palette, Workspace-Menü (`window.Workspaces`) |
 | `workspace-invite.js`, `music.js`, `timer.js`, `code-agent.js` | Einladung, Musik, Timer, Coding-Anzeige (alter Datei-Modus) |
 | `code-box.js` | Mini-Apps (```widget): `parse`, `figure` (Kasten, Dashboard-Kacheln, Code-Ansicht), `srcdoc` (Sandbox + Grundstile + Laufzeit), `start/stop` (iframes, Wächter, Pause), Gespeichert (`codebox.saved.v1`), Design (`codebox.design.v1`), ```einstellung (`applySetting`), `render` (Haken aus `renderMarkdown`) |

@@ -7,7 +7,19 @@
 - **Formen**: Knöpfe/Pillen/Etiketten „abgerundet“ (Radius 8) statt „ganz rund“ – auch Kalender, Aufgaben, Home. Kein Fokus-Rahmen beim Anklicken, keine Schatten. Filter-Knöpfe nur als Icon ohne Kasten.
 - **Umschalter `.cs-pill`** (Agenten | Dokumente): Spur #181818, Rand #242424, Radius 12; gewählter Teil = gleitende Fläche `.cs-thumb` (#262628, Rand #303033, Radius 9), gesetzt von `ui-kit.js` → `placeThumb` (beobachtet Klassen-/Größenänderungen, gilt für jedes `.cs-pill`).
 - **Farbauswahl** (`UIKit.COLORS`, Tags/Projekte/Termine): #d1d1d1, #cb88ab, #d38b7d, #ce965b, #a1af60, #7db993, #6bb0d7, #9799ec (Farbpunkte aus dem Nutzer-Bild „Appearance“); Punkte 20 px, gewählt = heller Ring. Dokument-Eigenschaften (Erstellt, Bearbeitet, Projekt, Priorität …) als Karte (Rand #242424, Radius 12, Zeilen mit Trennlinie).
-- **Home-Liste**: Chat-Icon = runde Sprechblase, neutral wie das Dokument-Icon (kein Blau); Tags der Einträge rechts als kleine Etiketten (Punkt + Name, max. 2, dann +N).
+- **Home-Liste**: Chat-Icon = runde Sprechblase, neutral wie das Dokument-Icon (kein Blau); Tags der Einträge rechts getönt ohne Punkt (max. 2, dann +N).
+
+## STAND 10.11. (zwei Nutzer-Listen umgesetzt)
+- **Eine Icon-Auswahl überall**: `DocIcons.base` (48 Grund-Icons im runden Linien-Stil: Lernen · Fächer · Welt & Medien · Zahlen & Ziele · Symbole · Alltag) – Dokument-Icon, Projekt-Icon, Termin-Icon (`d-…`), Block-Icon. `DocIcons.pickList(cur)` stellt ein älteres gesetztes Icon vorne dazu. Neue Icons nur dort ergänzen.
+- **Eine Farbauswahl überall** (`UIKit.colorRow`, nach Nutzer-Bild „Themes“): Farbfeld zum Ziehen (Farbton × Sättigung 10–75 %, runder Griff), darunter die 8 Farbkreise, unten „Helligkeit“ mit Prozent und Regler. Ziehen gibt die Farbe beim Loslassen über einen versteckten Knopf `[attr]=hex` ab – die Aufrufer brauchen nichts Neues. Kein „eigene Farbe“-Knopf mehr.
+- **Eine Tag-Auswahl** (`TagMenu` in `app.js`, gleicher Aufbau wie im Dokument): Suchen → „X hinzufügen“ → Farbe wählen → angelegt. Für Chats (`ChatTags`), Home-/Chats-Zeilen (Tag-Knopf beim Darüberfahren).
+- **Home und Chats**: dieselbe Liste (`Docs.list` / `Docs.chatList` aus `makeList`). Tags getönt ohne Punkt (Fläche 13 %), höchstens 2 + „+N“, lange Namen gekürzt. Angeheftet: Nadel vor der Zeit, beim Darüberfahren Nadel in Akzentfarbe. Filter wie in Aufgaben (nur Text, Abschnitte, Haken). Scrollleisten app-weit schmal ohne Pfeile.
+- **Dokument**: Einstellungen als Seitenfenster rechts (`.dcs-sheet`, gleitet herein, Karten wie Einstellungen). Icon-Auswahl als kleines Menü unter dem Icon (`.dc-ipop2`). Projekt bearbeiten Schritt für Schritt (Name · Farbe › · Icon ›). Infos: Erstellt = Uhr, Bearbeitet = Stift, Umfang „1 Wort“/„N Wörter · Lesezeit“; Menüs dürfen aus der Karte ragen.
+- **Kalender**: Woche ohne Scrollen (7–22 Uhr bzw. so weit die Termine der Woche reichen, Stundenhöhe aus der Höhe). Termin-Fenster immer mittig wie „Neue Aufgabe“, „Ganztägig“ als Schalter in der Zeit-Zeile.
+- **Sidebar**: Home = sehr rundes Haus mit Strich, Kalender = runder Kasten mit Kopflinie und Punkten (keine Ringe). Einstellungen: Aussehen = Palette, Agenten = runder Roboter.
+- **Eingabefeld**: neben dem Plus steht das Modell (Automatisch → Name der Haupt-KI); Menü wie bei Claude: Modelle mit Untertitel, darunter „Aufwand“ als gleitender Umschalter (`.mpx-eff`, `.cs-pill`). Sprachmodus: Tonwelle über dem Feld (`.va-wave`).
+- **Antworten**: Links ohne Unterstrich (beim Darüberfahren), Zitate als leiser Kasten ohne Strich links, `---` nur Abstand. Kleine Bilder links/rechts neben dem Text nur, wenn genug Text daneben steht (`wbFit`), sonst mittig.
+- **Aussehen**: Vorschau als kleine App, gewählt = heller Ring (kein Blau); Kacheln und Sprache (Deutsch/English, `i18n.js`) im selben Kasten. Kein Abschnitt „Chat-Hintergrund“ mehr.
 
 ## DESIGNSCHEMA (verbindlich seit 04.11. – überall anwenden, vor jeder UI-Änderung prüfen)
 Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flach, wenig Kontrast über Flächen, Kontrast über Text.

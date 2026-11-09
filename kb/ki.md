@@ -80,6 +80,14 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
+- **Stand 10.11. (Nutzer)**: Medium = die ganz normale Antwort des Modells (Denken dynamisch wie das Modell es selbst macht, KEIN Stil-Satz);
+  High = Nachdenken bewusst hoch (Gemini level high / Budget 16 384, DeepSeek/Kimi reasoning high); Max = Maximum (Budget 24 576, höchste Stufe).
+  Gilt für jeden Anbieter gleich: `think` in `generate` (low · auto · true · 'max') → `P.thinkExtra(provider, think)` – neue Anbieter dort eintragen.
+- **Modell-Auswahl im Eingabefeld**: `localStorage ai.pick` → Kopf X-App-Keys `AI_PICK` → Server setzt `AI_ORDER` für diese Anfrage (die anderen bleiben Ersatz bei Limit).
+- **Titel** beim Anbieter der Anfrage (`P.familyFor`), Gemini nur als Ersatz; Gedanken (`</think>` ohne `<think>`) werden entfernt. Im Stream puffert `openaiChat` den Anfang, bis klar ist, ob ein `</think>` kommt (DeepSeek/Kimi/MiniMax denken sonst sichtbar in der Antwort).
+- **Gedanken-Oberpunkte** (`lib/thoughts.js`): jeder Abschnitt bekommt einen konkreten Oberpunkt mit Inhalt (3–8 Wörter), nie „Analysieren“/„Nachdenken“.
+- **Rückfragen** (`ASK_PROMPT`): jede KI darf nachfragen, wenn etwas WICHTIG ist – sonst naheliegende Annahme und direkt antworten.
+- **Spracheingabe**: `/api/polish` korrigiert lautmalerisch erkannte englische Wörter und Fachbegriffe (Wörterliste aus Tags, Projekten, Titeln + KI-Namen).
 - **Stand 04.11. (Nutzer: „Aufwand wird nicht beachtet“)**: Im Gemini-nativen Ablauf denkt die KI NUR bei Auto dynamisch. Gewählte Stufe = deren Denktiefe
   (`EFFORTS[level].thinking`: Low low/1024 · Medium medium/4096 · High high/8192 · Max high/24576), deutliche Längen-/Tiefen-Sätze (`NATIVE_EFFORT`),
   Low ohne Suche (außer Aktuelles/Wunsch), Max: einfache Websuche wird zur Tiefen-Recherche.

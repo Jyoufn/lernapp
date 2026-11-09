@@ -1517,7 +1517,7 @@ const DocBlocks = (() => {
     function iconPanel(node, p, has) {
       const isT = node.classList.contains('dc-tw'), t = isT ? node.querySelector('table') : null;
       p.classList.add('dcb-sub-icons');
-      p.innerHTML = `${has ? `<button type="button" class="dcb-cx" data-std>${fi('x', 16)}<span>Icon entfernen</span></button><div class="dcb-cx-sep"></div>` : ''}<div class="dcb-icgrid">${(window.DocIcons?.names || []).map((n) => `<button type="button" data-n="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 18)}</button>`).join('')}</div>`;
+      p.innerHTML = `${has ? `<button type="button" class="dcb-cx" data-std>${fi('x', 16)}<span>Icon entfernen</span></button><div class="dcb-cx-sep"></div>` : ''}<div class="dcb-icgrid">${(window.DocIcons?.base || []).map((n) => `<button type="button" data-n="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 18)}</button>`).join('')}</div>`;
       p.addEventListener('click', (e) => {
         const b = e.target.closest('[data-n], [data-std]'); if (!b) return;
         const ic = b.dataset.n ? `d:${b.dataset.n}` : '';

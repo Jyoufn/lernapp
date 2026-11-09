@@ -11638,3 +11638,229 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 /* Schalter „Ganztägig“ in der Karte: aus = heller Hauch statt dunkler Spur */
 .ce-card .ce-switch:not(.on) { background: var(--ce-hi); }
 .ce-card .tk-wh-band { background: var(--ce-hi); }
+   10.11. (nachts) – Überarbeitung nach zwei Nutzer-Listen
+   ===================================================================== */
+/* Farbauswahl überall gleich (Feld zum Ziehen · Farbkreise · Helligkeit), nach Nutzer-Bild „Themes“ */
+.cp-panel { display: flex; flex-direction: column; gap: 10px; padding: 8px; }
+.cp-field { position: relative; height: 112px; border-radius: 12px; cursor: crosshair; touch-action: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.cp-knob { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; box-shadow: 0 0 0 3px #fff; pointer-events: none; transition: transform 160ms var(--spring); }
+.cp-knob.idle { opacity: 0; transform: scale(0.6); }
+.cp-field:active .cp-knob { transform: scale(1.12); }
+.cp-panel .tk-colors { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 6px; padding: 0 2px; }
+.cp-panel .tk-colors button { flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: var(--c); cursor: pointer; transition: transform 160ms var(--spring); }
+.cp-panel .tk-colors button:hover { transform: scale(1.1); }
+.cp-panel .tk-colors button.on { box-shadow: 0 0 0 2px var(--menu-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.9); }
+.cp-light { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px; color: var(--text-2); font-size: 12.5px; font-weight: 500; }
+.cp-light em { color: var(--text-4); font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; }
+.cp-slider { position: relative; height: 18px; margin: -4px 9px 2px; cursor: pointer; touch-action: none; }
+.cp-slider::before { content: ""; position: absolute; left: -9px; right: -9px; top: 7px; height: 4px; border-radius: 99px; background: #262626; }
+.cp-slider i { position: absolute; left: -9px; top: 7px; height: 4px; border-radius: 99px; background: var(--text-3); }
+.cp-slider b { position: absolute; top: 0; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #141414; box-shadow: inset 0 0 0 2.5px var(--text-2); transition: transform 160ms var(--spring); }
+.cp-slider:active b { transform: scale(1.12); }
+.cp-commit { display: none; }
+.tk-menu .cp-panel, .tk-box .cp-panel { width: 220px; box-sizing: border-box; }
+.tk-sheet-rows .cp-panel { width: auto; max-width: 300px; padding: 4px 0 6px; }
+/* Scrollleisten überall schmal und ohne Pfeile (Wunsch 10.11.: kein dicker Balken mit Hoch/Runter rechts) */
+*::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { min-height: 32px; border: 3px solid transparent; border-radius: 999px; background: rgba(255, 255, 255, 0.12) padding-box; }
+*::-webkit-scrollbar-thumb:hover { background-color: rgba(255, 255, 255, 0.22); }
+*::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+*::-webkit-scrollbar-corner { background: transparent; }
+.st-scroll { scrollbar-width: auto; scrollbar-color: auto; }
+/* Home/Chats: Tags getönt ohne Punkt, gekürzt; nichts überlappt */
+.lb2-row { min-width: 0; }
+.lb2-tags { flex: 0 1 auto; min-width: 0; max-width: 46%; overflow: hidden; gap: 4px; }
+.lb2-tag { flex: 0 1 auto; min-width: 0; max-width: 132px; height: 20px; padding: 0 7px; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--c, #8a8a8a) 13%, transparent); color: color-mix(in srgb, var(--c, #bbbbbb) 72%, #fff); font-size: 11.5px; font-weight: 500; }
+.lb2-tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb2-tag i { display: none; }
+.lb2-tag.more { flex: none; background: #212121; color: var(--text-4); }
+.chat-tags .lb2-tag { height: 22px; }
+/* angeheftet: kleine Nadel vor der Zeit, beim Darüberfahren deutlich in Akzentfarbe */
+.lb2-time { display: inline-flex; align-items: center; gap: 6px; }
+.lb2-pinmark { display: inline-grid; place-items: center; color: var(--text-4); font-style: normal; }
+.lb2-pinmark svg { transform: rotate(35deg); }
+.lb2-pin.on { color: var(--accent) !important; background: color-mix(in srgb, var(--accent) 14%, transparent) !important; }
+.lb2-pin.on svg { transform: rotate(35deg); transition: transform 260ms var(--spring); }
+.lb2-acts { gap: 4px; }
+/* Filter-Menü wie in Aufgaben: nur Text, leise Abschnitte, Haken rechts, schmale Scrollleiste */
+.lb2-menu { width: 236px; max-width: 236px; max-height: min(70vh, 520px); overscroll-behavior: contain; }
+.lb2-menu .lb2-mi { height: 30px; gap: 9px; }
+.lb2-menu .lb2-mi .lb2-tick { margin-left: auto; display: inline-grid; place-items: center; color: var(--text); font-style: normal; }
+.lb2-menu .lb2-mi.muted { color: var(--text-4); }
+/* gemeinsame Tag-Auswahl (Chats, Home, …) als schwebendes Menü */
+.tagm-pop { position: fixed; z-index: 420; width: 0; height: 0; }
+.tagm-pop .tk-menu { top: 0; left: 0; width: 236px; }
+.tagm-pop:not(.open) .tk-menu { pointer-events: none; }
+.tagm .tk-tag-list { display: block; max-height: min(60vh, 420px); overflow-y: auto; }
+.tagm .tk-mi.tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cp-panel .tk-colors button { width: 20px; height: 20px; }
+.lb2-pin.on { background: #212121 !important; }
+/* Dokument-Infos: Menüs (Priorität …) dürfen über die Karte hinausragen; Karte im Fenster-Ton */
+.dc-ptable { overflow: visible; background: var(--win-bg); }
+.dc-ptable .dc-mrow:first-child { border-radius: 12px 12px 0 0; }
+.dc-ptable .tk-pop.open { z-index: 30; }
+.dc-ptable .tk-pop.open .tk-menu { z-index: 31; }
+.dc-mval-sub { color: var(--text-4); }
+/* Projekt bearbeiten: Schritt für Schritt */
+.dc-pj-step { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; border-radius: 7px; color: var(--text-2); font-size: 12.5px; cursor: pointer; }
+.dc-pj-step > span:first-child { flex: 1; }
+.dc-pj-step:hover { background: var(--menu-hover); }
+.dc-pj-step > svg:last-child { color: var(--text-4); }
+.dc-pj-sw { width: 14px; height: 14px; border-radius: 50%; }
+.dc-pj-cur { display: inline-grid; place-items: center; }
+.dc-pj-back { display: flex; align-items: center; gap: 6px; width: 100%; height: 30px; margin-bottom: 2px; padding: 0 6px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.dc-pj-back:hover { background: var(--menu-hover); }
+.dc-pj-back svg { color: var(--text-4); }
+.dc-ppop .dc-pj-icons { display: grid !important; grid-template-columns: repeat(8, 1fr); gap: 2px; max-height: 236px; overflow-y: auto; padding: 2px; }
+.dc-ppop .dc-pj-ic { width: auto !important; aspect-ratio: 1; }
+/* gewähltes Icon: leise Fläche statt blauem Rahmen */
+.dc-pj-ic.on, .dc-itile.on, .ce-icon-grid button.on, .dcb-icgrid button.on { border-color: transparent !important; box-shadow: none !important; outline: 0 !important; background: #262626 !important; }
+/* Icon-Auswahl im Dokument: kleines Menü im App-Stil (statt Fenster mit leerer Fläche) */
+.dc-ipop2 { position: fixed; z-index: 430; width: 300px; padding: 6px; border: 1px solid var(--menu-border); border-radius: 12px; background: var(--menu-bg); animation: tk-card-in 240ms var(--spring) both; }
+.dc-ipop2.closing { opacity: 0; transform: translateY(-4px); transition: opacity 160ms ease, transform 180ms ease; }
+.dc-ip2-head { display: flex; align-items: center; height: 26px; padding: 0 6px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.dc-ip2-head .grow { flex: 1; }
+.dc-ip2-del { height: 22px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--text-3); font: inherit; font-size: 12px; cursor: pointer; }
+.dc-ip2-del:hover { background: var(--menu-hover); color: #f07a6e; }
+.dc-ip2-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 2px; }
+.dc-ip2-ic { display: grid; place-items: center; aspect-ratio: 1; border: 0; border-radius: 8px; background: none; color: inherit; opacity: 0.8; cursor: pointer; transition: background-color 90ms ease, opacity 90ms ease, transform 160ms var(--spring); }
+.dc-ip2-ic:hover { opacity: 1; background: #212121; }
+.dc-ip2-ic.on { opacity: 1; background: #262626; }
+.dc-ip2-sep { height: 1px; margin: 6px 4px; background: #242424; }
+.dc-ipop2 .cp-panel { padding: 2px 6px 6px; }
+/* Dokument-Einstellungen: Seitenfenster rechts im Stil der Einstellungen */
+.dc-set-ov.side { display: block; padding: 0; background: color-mix(in srgb, var(--main-bg) 40%, transparent); animation: dcs-fade 260ms ease both; }
+.dc-set-ov.side.closing { animation: dcs-fade-out 300ms ease forwards; }
+.dcs-sheet { position: absolute; top: 8px; right: 8px; bottom: 8px; display: flex; flex-direction: column; width: min(400px, calc(100vw - 16px)); border: 1px solid var(--line); border-radius: 14px; background: var(--main-bg); animation: dcs-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.dc-set-ov.side.closing .dcs-sheet { animation: dcs-out 300ms cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.dcs-head { display: flex; align-items: center; height: 52px; padding: 0 12px 0 20px; }
+.dcs-title { color: var(--text); font-size: 15px; font-weight: 600; }
+.dcs-head .grow { flex: 1; }
+.dcs-x { display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--text-3); cursor: pointer; }
+.dcs-x:hover { background: #212121; color: var(--text); }
+.dcs-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 16px 24px; }
+.dcs-body h2 { margin: 18px 4px 10px; color: var(--text); font-size: 13.5px; font-weight: 600; }
+.dcs-body h2:first-child { margin-top: 6px; }
+.dcs-body .st-row { height: auto; min-height: 50px; padding: 8px 12px 8px 14px; }
+.dcs-body .st-row .grow { flex: 1; }
+.dcs-l { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dcs-l .st-name { color: var(--text-2); font-size: 13.5px; font-weight: 500; }
+.dcs-l em { color: var(--text-4); font-size: 12px; font-style: normal; }
+.dcs-acc-row { flex-direction: column; align-items: stretch !important; gap: 10px !important; padding-top: 12px !important; padding-bottom: 12px !important; }
+.dcs-acc-row .dc-acc { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@keyframes dcs-in { from { transform: translateX(calc(100% + 16px)); } }
+@keyframes dcs-out { to { transform: translateX(calc(100% + 16px)); } }
+@keyframes dcs-fade { from { opacity: 0; } }
+@keyframes dcs-fade-out { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .dcs-sheet, .dc-set-ov.side { animation: none !important; } }
+/* KI-Chat im Dokument (rechtes Seitenfenster): exakt Ton und leiser Rand des Hauptteils – wirkte heller (10.11.) */
+.rpane { background: var(--main-bg) !important; border-color: #1d1d1d !important; }
+.rpane :is(.dcc, .dcc-list, .dcc-listview, .dcc-body) { background: transparent !important; }
+/* Einstellungen → Agenten: aufgeklappter Anbieter (Schlüssel + Rolle) aufgeräumt */
+.st-keys-in { gap: 0; padding: 0 14px 14px 48px; }
+.stk-sec { display: flex; flex-direction: column; gap: 6px; }
+.stk-lab { display: flex; align-items: baseline; gap: 8px; padding: 2px 2px 2px; color: var(--text-3); font-size: 12px; font-weight: 500; }
+.stk-lab em { color: var(--text-4); font-style: normal; font-weight: 400; }
+.stk-key { height: 34px; padding: 0 4px 0 10px; border: 1px solid #242424; border-radius: 10px; background: var(--main-bg); gap: 8px; }
+.stk-ki { display: inline-grid; place-items: center; color: var(--text-4); }
+.stk-key .st-key-x { width: 26px; height: 26px; border-radius: 7px; }
+.stk-add { display: flex; align-items: center; gap: 6px; height: 38px; padding: 0 4px 0 12px; border: 1px solid #242424; border-radius: 10px; background: var(--main-bg); transition: border-color 160ms ease; }
+.stk-add:focus-within { border-color: #2e2e2e; }
+.stk-add .st-key-in { flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: 0; background: none; color: var(--text); font: inherit; font-size: 13px; }
+.stk-add .st-key-in::placeholder { color: var(--text-4); }
+.stk-btn { flex: none; height: 28px; padding: 0 12px; border: 1px solid #2a2a2a; border-radius: 8px; background: #212121; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.stk-btn:hover { background: #262626; color: var(--text); }
+.st-keys-in .stk-role { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; padding: 12px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.stk-l { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.stk-l span { color: var(--text-2); font-size: 13px; font-weight: 500; }
+.stk-l em { color: var(--text-4); font-size: 12px; font-style: normal; line-height: 1.4; }
+.stk-role .st-seg { flex: none; }
+@media (max-width: 560px) { .st-keys-in .stk-role { flex-direction: column; align-items: flex-start; } .st-keys-in { padding-left: 14px; } }
+/* Aussehen: Vorschau als kleine App, gewählt = heller Ring (kein Blau) */
+.ap-prev.apv { display: flex; padding: 0; gap: 0; }
+.apv-side { display: flex; flex-direction: column; gap: 4px; width: 24%; padding: 9px 6px; background: var(--pv-side); box-sizing: border-box; }
+.apv-side i { display: block; height: 3px; border-radius: 2px; background: var(--pv-line); opacity: 0.9; }
+.apv-side i:first-child { width: 80%; } .apv-side i:nth-child(2) { width: 60%; } .apv-side i:nth-child(3) { width: 70%; }
+.apv-main { position: relative; flex: 1; padding: 9px 10px; }
+.apv-msg { position: absolute; top: 9px; right: 10px; width: 38%; height: 9px; border-radius: 5px; background: var(--pv-field); }
+.apv-ans { position: absolute; top: 25px; left: 10px; right: 18px; display: flex; flex-direction: column; gap: 4px; }
+.apv-ans i { display: block; height: 3px; border-radius: 2px; background: var(--pv-line); }
+.apv-ans i.s { width: 55%; }
+.apv-in { position: absolute; left: 10px; right: 10px; bottom: 8px; height: 12px; border-radius: 6px; border: 1px solid var(--pv-field); box-sizing: border-box; }
+.apv-in em { position: absolute; right: 2px; top: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.st-ap-modes .ap-mode.on .ap-prev, .ap-mode.on .ap-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 2px var(--main-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.85) !important; }
+.ap-mode:not(.on):hover .ap-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
+/* Workspace-Menü: Icons gleich groß wie in der Sidebar, weicheres Auf-/Zuklappen */
+.ws-menu .ws-mi { gap: 8px; }
+.ws-menu .ws-mi-ic { display: grid; place-items: center; width: 24px; height: 24px; color: var(--text-3); }
+.ws-menu .ws-mi-ic svg { width: 15px !important; height: 15px !important; margin: 0 !important; }
+.ws-menu .ws-mi:hover .ws-mi-ic { color: var(--text); }
+.ws-menu { transform-origin: 16px 0; transform: translateY(-4px) scale(0.97); transition: opacity 140ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 260ms; }
+.ws-menu.open { transform: none; transition: opacity 180ms ease, transform 380ms var(--spring), visibility 0s; }
+.ws-menu.open .ws-row, .ws-menu.open .ws-mi, .ws-menu.open .ws-sep { animation: ws-row-in 360ms var(--spring) both; animation-delay: calc(var(--i, 0) * 28ms + 20ms); }
+@keyframes ws-row-in { from { opacity: 0; transform: translateY(-4px); } }
+.sb-ws-btn svg:last-child, .sb-ws svg.sb-ws-chev { transition: transform 300ms var(--spring); }
+/* Einstellungen: ruhigere Abstände zwischen den Abschnitten */
+.st-page h2 { margin: 30px 2px 10px; }
+.st-page > h2:first-child, .st-page > :first-child h2:first-child { margin-top: 0; }
+.st-page .st-card + .st-ws-note, .st-page .st-card + p { margin: 8px 4px 0; color: var(--text-4); font-size: 12px; line-height: 1.5; }
+.st-row .st-name { color: var(--text-2); font-weight: 500; }
+/* Modell + Aufwand im Eingabefeld (wie bei Claude): Modelle mit Untertitel, darunter Aufwand als gleitender Umschalter */
+.model-popover.mpx { width: 292px !important; min-width: 0; padding: 6px !important; border-radius: 14px; transform-origin: bottom left; transform: translateY(6px) scale(0.97); transition: opacity 160ms ease, transform 340ms var(--spring); }
+.model-popover.mpx.below { transform-origin: top left; transform: translateY(-6px) scale(0.97); }
+.model-popover.mpx.open { transform: none; }
+.mpx-h { padding: 6px 8px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.mpx-models { display: flex; flex-direction: column; gap: 1px; }
+.mpx-m { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 9px; background: none; color: var(--text-2); font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease; }
+.mpx-m:hover { background: var(--menu-hover); }
+.mpx-mt { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
+.mpx-mt b { color: var(--text-2); font-size: 13px; font-weight: 500; }
+.mpx-mt em { overflow: hidden; color: var(--text-4); font-size: 11.5px; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
+.mpx-m.selected .mpx-mt b { color: var(--text); }
+.mpx-m > svg { flex: none; color: var(--text); opacity: 0; transform: scale(0.6); transition: opacity 140ms ease, transform 260ms var(--spring); }
+.mpx-m.selected > svg { opacity: 1; transform: none; }
+.mpx-sep { height: 1px; margin: 6px 6px 2px; background: #242424; }
+.mpx-eff { position: relative; display: flex; gap: 0; margin: 2px 4px 6px; padding: 3px; height: 36px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 12px; background: var(--main-bg); }
+.mpx-eff > button { position: relative; z-index: 1; flex: 1; height: 28px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-4); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: color 160ms ease; }
+.mpx-eff > button.on { color: var(--text); }
+.mpx-eff > .cs-thumb { transition: transform 360ms var(--spring), width 360ms var(--spring), opacity 160ms ease; }
+/* Knopf neben dem Plus: Modellname, Aufwand leise dahinter */
+.model-chip #chipModel { display: inline !important; }
+.model-chip #chipEffort:empty { display: none; }
+.model-chip.has-effort #chipEffort { margin-left: 5px; color: var(--text-4); }
+/* Sprachmodus: Tonwelle schwebt direkt über dem Eingabefeld */
+.va-wave { position: absolute; left: 50%; bottom: calc(100% + 10px); z-index: 20; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px 0 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--win-bg); transform: translateX(-50%); pointer-events: none; }
+.va-wave[hidden] { display: none; }
+.va-wave.in { animation: va-wave-in 380ms var(--spring) both; }
+.va-wave.out { animation: va-wave-out 240ms ease forwards; }
+@keyframes va-wave-in { from { opacity: 0; transform: translate(-50%, 8px) scale(0.96); } }
+@keyframes va-wave-out { to { opacity: 0; transform: translate(-50%, 6px) scale(0.97); } }
+.va-wave-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: va-dot 1.6s ease-in-out infinite; }
+.va-wave[data-state="speaking"] .va-wave-dot { background: #7db993; }
+.va-wave[data-state="thinking"] .va-wave-dot { background: var(--text-3); }
+.va-wave[data-state="muted"] .va-wave-dot { background: #f07a6e; animation: none; }
+@keyframes va-dot { 50% { opacity: 0.45; transform: scale(0.8); } }
+.va-wave-bars { display: flex; align-items: center; gap: 2.5px; height: 24px; }
+.va-wave-bars i { display: block; width: 3px; height: 24px; border-radius: 3px; background: var(--text-2); transform: scaleY(0.1); transform-origin: center; will-change: transform; }
+.va-wave[data-state="thinking"] .va-wave-bars i, .va-wave[data-state="muted"] .va-wave-bars i { background: var(--text-4); }
+.va-wave-t { min-width: 64px; color: var(--text-3); font-size: 12px; font-weight: 500; }
+@media (prefers-reduced-motion: reduce) { .va-wave, .va-wave-dot { animation: none !important; } }
+html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opacity 200ms ease, transform 300ms var(--spring); }
+.dh-title { transition: opacity 200ms ease, transform 300ms var(--spring); }
+/* Antworten: Links ohne Unterstrich, Zitate ohne Strich links, Trennlinien nur als Abstand (Wunsch 10.11.) */
+.md a:not(.cite-ico) { text-decoration: none; color: #8ab4ff; }
+.md a:not(.cite-ico):hover { text-decoration: underline; text-decoration-color: rgba(138, 180, 255, 0.45); text-underline-offset: 3px; }
+.md blockquote { margin: 0 0 12px; padding: 10px 14px; border: 0; border-radius: 10px; background: var(--win-bg); color: var(--text-3); }
+.md blockquote > :last-child { margin-bottom: 0; }
+.md hr { height: 0; margin: 14px 0; background: none; }
+/* kleine Bilder links/rechts neben dem Text – sauber, nichts überlappt */
+.web-img.wb-klein.wb-links { float: left; margin: 4px 18px 12px 0; }
+.web-img.wb-klein.wb-noside { float: none; width: min(100%, 420px); margin: 6px auto 14px; }
+.msg-ai :is(ul, ol) { overflow: hidden; } /* Listen-Punkte rutschen nicht unter ein schwebendes Bild */
+.msg-ai .web-img.wb-klein img { border-radius: 14px; }
+/* Chat umbenennen: im Titel-Knopf selbst, ohne eigenen Rahmen */
+.chat-title-btn.renaming { background: var(--pop-bg) !important; box-shadow: inset 0 0 0 1px var(--line); cursor: text; }
+.chat-title-btn.renaming > svg { display: none; }
+.chat-title-input { height: 100%; margin: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none !important; color: var(--text); }
+.chat-title-input::selection { background: rgba(255, 255, 255, 0.2); color: var(--text); }

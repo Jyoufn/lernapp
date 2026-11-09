@@ -118,7 +118,10 @@ const ChatBg = (() => {
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
   // alter Stand (v1): eigener KI-Hintergrund übernehmen
   try { const old = JSON.parse(localStorage.getItem('chatbg.v1') || 'null'); if (old?.custom && !cfg.saved.length) { cfg.saved = [{ id: 'b1', type: 'code', name: 'Eigener Hintergrund', code: old.custom, at: Date.now() }]; if (old.kind === 'eigener') cfg.active = 'b1'; } } catch {}
+  try { localStorage.removeItem('chatbg.v1'); } catch {} // einmal übernommen – sonst kam ein gelöschter Hintergrund immer wieder (Fehler bis 10.11.)
   if (!Array.isArray(cfg.saved)) cfg.saved = [];
+  // Wunsch 10.11.: kein eigener Chat-Hintergrund mehr in den Einstellungen – der leere Chat zeigt wieder die Kacheln
+  cfg.active = '';
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch { window.CodeBox?.toast?.('Speicher voll – lösch einen Hintergrund.'); } };
   const byId = (id) => cfg.saved.find((x) => x.id === id);
 
@@ -266,7 +269,7 @@ const ChatBg = (() => {
     return false;
   }
   function change(e) { if (e.target.matches('[data-cbg-file]')) { upload(e.target.files?.[0]); return true; } return false; }
-  (window.SettingsHooks ||= []).push({ page: 'look', order: 1, html, click, change });
+  (window.SettingsHooks ||= []).push({ page: 'look', order: 1, html: () => '', click, change }); // Abschnitt ausgeblendet (10.11.)
 
   /* ---------- ```hintergrund im Chat: Vorschau + „Als Hintergrund verwenden“ (wird gespeichert) ---------- */
   function figure(raw) {

@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'home.js', 'line-icons.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -60,6 +60,8 @@ function deviceKeysOf(req) {
     // Einstellungen → Verbindung: Haupt-KI je Anbieter (früher „Mistral“ = MiniMax) und abgeschaltete Ersatz-Anbieter
     const main = obj.AI_ORDER === 'mistral' ? 'minimax' : obj.AI_ORDER;
     if (P.FAMILIES.includes(main)) out.AI_ORDER = main;
+    // Modell-Auswahl im Eingabefeld: fester Anbieter für diese Anfrage (geht der Haupt-KI vor; die anderen bleiben Ersatz bei Limit)
+    if (P.FAMILIES.includes(obj.AI_PICK)) out.AI_ORDER = obj.AI_PICK;
     const off = String(obj.AI_OFF || '').split(',').filter((f) => P.FAMILIES.includes(f) && f !== out.AI_ORDER);
     if (off.length) out.AI_OFF = off.join(',');
     return out;
@@ -1278,19 +1280,29 @@ async function handleWidgetFix(req, res) {
 
 /* ---------- /api/polish: diktierten Text glätten (nur nach der Spracheingabe) ----------
    Satzzeichen, Groß-/Kleinschreibung und offensichtliche Erkennungsfehler – keine Umformulierung. Ein kleiner Aufruf beim Anbieter der Anfrage. */
-const POLISH_SYSTEM = `Du bekommst Text aus einer Spracherkennung (meist Deutsch, gesprochen, ohne Satzzeichen).
-Setze Punkte, Kommas, Fragezeichen und Ausrufezeichen, korrigiere Groß- und Kleinschreibung und offensichtliche Rechtschreib- oder Erkennungsfehler.
-Ändere KEINE Wörter, keine Reihenfolge, keinen Stil, nichts ergänzen, nichts weglassen, nicht zusammenfassen. Englische Wörter bleiben, wie sie sind.
+const POLISH_SYSTEM = `Du bekommst Text aus einer deutschen Spracherkennung (gesprochen, ohne Satzzeichen). Der Sprecher mischt oft Deutsch und Englisch
+und nutzt Fachbegriffe (Schule, Technik, Apps). Die Erkennung schreibt englische Wörter und Fachbegriffe dann oft lautmalerisch falsch.
+Deine Aufgabe:
+1. Satzzeichen (Punkt, Komma, Fragezeichen, Ausrufezeichen) und Groß-/Kleinschreibung setzen.
+2. Falsch erkannte Wörter durch das gemeinte Wort ersetzen – vor allem englische Wörter und Fachbegriffe, die lautmalerisch eingedeutscht wurden
+   (z. B. „Dieb Siek“ → „DeepSeek“, „Mieting“ → „Meeting“, „Prompt“ statt „Brombt“, „Mito Chondrien“ → „Mitochondrien“, „Ei Pätt“ → „iPad“,
+   „Dasch Bord“ → „Dashboard“, „Klaut“ → „Claude“, wenn es um KI geht). Nutze dafür den Zusammenhang und die WÖRTERLISTE (falls mitgeschickt).
+   Englische Sätze und Ausdrücke bleiben Englisch und werden richtig geschrieben.
+Sonst ändere NICHTS: keine Umformulierung, keine andere Reihenfolge, nichts ergänzen, nichts weglassen, nicht zusammenfassen.
 Antworte NUR mit dem korrigierten Text – ohne Anführungszeichen, ohne Kommentar.`;
 async function handlePolish(req, res) {
   const env = readEnv();
-  const text = String((await readBody(req, 40000)).text || '').trim().slice(0, 6000);
+  const body = await readBody(req, 40000);
+  const text = String(body.text || '').trim().slice(0, 6000);
   if (text.length < 3) return sendJson(res, 200, { text });
+  // Wörterliste aus der App (Tags, Projekte, Dokument-/Chat-Titel) hilft bei Fachbegriffen und Namen
+  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 60);
+  const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n\n` : ''}TEXT:\n${text}`;
   try {
-    const out = String(await P.textTask(env, { system: POLISH_SYSTEM, user: text, maxTokens: 3000, timeoutMs: 15000 }) || '').trim().replace(/^["„“]|["“”]$/g, '');
+    const out = String(await P.textTask(env, { system: POLISH_SYSTEM, user, maxTokens: 3000, timeoutMs: 15000 }) || '').replace(/^[\s\S]*<\/think>/, '').replace(/^TEXT:\s*/i, '').trim().replace(/^["„“]|["“”]$/g, '');
     // Sicherheitsnetz: deutlich andere Länge = umformuliert → Original behalten
     const words = (t) => t.split(/\s+/).filter(Boolean).length;
-    if (!out || Math.abs(words(out) - words(text)) > Math.max(3, words(text) * 0.15)) return sendJson(res, 200, { text });
+    if (!out || Math.abs(words(out) - words(text)) > Math.max(4, words(text) * 0.2)) return sendJson(res, 200, { text }); // Begriffe zusammengezogen („Dieb Siek“ → „DeepSeek“) ist erlaubt
     return sendJson(res, 200, { text: out });
   } catch { return sendJson(res, 200, { text }); }
 }
@@ -1319,18 +1331,25 @@ async function handleTitle(req, res) {
   const env = readEnv();
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 1500);
   if (!text) return sendJson(res, 400, { error: 'Kein Text' });
-  const clean = (t) => String(t || '').split('\n')[0].replace(/^["„“'»«\s]+|["„“'»«.\s]+$/g, '').replace(/^titel:\s*/i, '').slice(0, 60).trim();
-  // Gemini 2.5 Flash (nach HTTP 429 eine Weile übersprungen) → Flash-Lite → Nemotron (kein Tageslimit) – damit nicht einfach der Prompt zum Titel wird
-  if (env.GEMINI_API_KEY) {
+  // Gedanken (<think>…</think> oder nur das schließende Tag) und Markdown weg, dann die erste echte Zeile
+  const clean = (t) => String(t || '').replace(/^[\s\S]*<\/think>/i, '').replace(/<think>[\s\S]*$/i, '').replace(/[*_#`]/g, '').split('\n').map((l) => l.trim()).filter(Boolean)[0]?.replace(/^["„“'»«\s]+|["„“'»«.\s]+$/g, '').replace(/^titel:\s*/i, '').slice(0, 60).trim() || '';
+  // Titel beim Anbieter der Anfrage (Haupt-KI bzw. Auswahl im Eingabefeld, Wunsch 10.11.: mit DeepSeek & Co. kam oft kein Titel):
+  // erst dieser Anbieter (ohne Nachdenken, genug Tokens, längere Zeit für NVIDIA), dann Gemini als Ersatz – und umgekehrt
+  const viaGemini = async () => {
+    if (!env.GEMINI_API_KEY) return '';
     for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) {
       if (model === P.GEMINI_MODEL && Date.now() < visionMainSkipUntil) continue;
       try {
         const t = clean(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TITLE_SYSTEM, user: text, maxTokens: 200, thinking, signal: AbortSignal.timeout(10000) }));
-        if (t) return sendJson(res, 200, { title: t });
+        if (t) return t;
       } catch (e) { if (e.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000; }
     }
-  }
-  try { const t = clean(await P.textTask(env, { system: TITLE_SYSTEM, user: text, maxTokens: 200, timeoutMs: 12000 })); if (t) return sendJson(res, 200, { title: t }); } catch {} // MiniMax/DeepSeek/Kimi, wenn Gemini aufgebraucht
+    return '';
+  };
+  const viaFamily = async () => { try { return clean(await P.textTask(env, { system: TITLE_SYSTEM, user: text, maxTokens: 900, timeoutMs: 25000 })); } catch { return ''; } };
+  const fam = await P.familyFor(env).catch(() => 'gemini');
+  const title = fam === 'gemini' ? (await viaGemini()) || (await viaFamily()) : (await viaFamily()) || (await viaGemini());
+  if (title) return sendJson(res, 200, { title });
   sendJson(res, 200, { title: '' });
 }
 
