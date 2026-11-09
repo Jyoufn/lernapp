@@ -43,7 +43,7 @@ const UIDesign = (() => {
     const sideIcons = [...document.querySelectorAll('symbol[id^="o-"]')].map((s) => s.id.slice(2)).filter((n) => n !== 'chev');
     return `<div class="ud-top"><div class="cs-pill" role="tablist" aria-label="Stil">
         <button type="button" role="tab" data-udstyle="cur">Aktuell</button><button type="button" role="tab" data-udstyle="glass">Glas</button></div>
-        <div class="ud-top-in"><nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav></div></div>
+        <div class="ud-top-in"><nav class="ud-jump">${[['farben', 'Farben'], ['schrift', 'Schrift'], ['knoepfe', 'Knöpfe'], ['eingaben', 'Eingaben'], ['auswahl', 'Auswahl'], ['menues', 'Menüs'], ['listen', 'Listen'], ['karten', 'Karten'], ['chat', 'Chat'], ['etiketten', 'Etiketten'], ['werkzeuge', 'Werkzeuge'], ['icons', 'Icons']].map(([k, l]) => `<button type="button" data-jump="${k}">${l}</button>`).join('')}</nav></div></div>
       <div class="ud-wrap">
       <div class="cl-head ud-head"><h2>UI Design</h2></div>
       <p class="ud-lead">${two('Alle Bausteine der App an einem Ort – mit den echten Stilen. Was hier geändert wird, ändert sich überall.', 'Vorschau auf den neuen Stil: dieselben Bausteine wie am Mac. Gilt nur hier – in die App kommt er erst nach deiner Freigabe.')}</p>
@@ -124,6 +124,16 @@ const UIDesign = (() => {
         item('Hinweis im Chat', '.ud-note-card', `<div class="ud-note-card"><span class="ud-dog">${dog('learn', 24)}</span><span class="ud-nc-txt"><b>API-Schlüssel fehlt</b><span>Trag ihn in den Einstellungen ein.</span></span><button type="button" class="hm-go">Öffnen</button></div>`, 'Hund links, ein Knopf rechts', true),
       ])}
 
+      ${section('chat', 'Chat', ['Nachrichten und Eingabefeld, wie im Chat.', 'Nachrichten und Eingabefeld, wie im Chat.'], [
+        item('Eigene Nachricht', '.msg-out · .out-bubble', '<div class="ud-chat"><div class="msg-out"><div class="out-bubble">Kannst du mir die Photosynthese einfach erklären?</div></div></div>', '', true),
+        item('Antwort des Agenten', '.msg-ai', '<div class="ud-chat"><div class="msg-ai"><p>Pflanzen bauen mit Licht aus Wasser und Kohlendioxid Zucker auf – dabei entsteht Sauerstoff.</p></div></div>', '', true),
+        item('Eingabefeld', '.composer · .composer-bar', `<div class="ud-composer"><div class="composer"><textarea rows="1" placeholder="Schreib dem Agenten …" aria-label="Beispiel"></textarea>
+            <div class="composer-bar"><button type="button" class="plus-btn" aria-label="Hinzufügen"><svg width="16" height="16"><use href="#i-plus"/></svg></button>
+            <button type="button" class="model-chip"><span>Auto</span><svg class="chip-chev" width="16" height="16"><use href="#i-chevron-down"/></svg></button><div class="flex-spacer"></div>
+            <button type="button" class="mic-btn" aria-label="Sprache"><svg class="icon-mic" width="16" height="16"><use href="#i-mic"/></svg></button>
+            <button type="button" class="send-btn" aria-label="Senden"><svg class="icon-send" width="16" height="16"><use href="#i-arrow-up"/></svg></button></div></div></div>`, '', true),
+      ])}
+
       ${section('etiketten', 'Etiketten', 'Getönte Fläche 12 %, farbiger Text.', [
         item('Tags', '.tk-tag', `<div class="tk-tags ud-row">${colors.slice(0, 4).map((c, i) => `<span class="tk-tag" style="--c:${c}"><i class="tag-dot"></i>${['Mathe', 'Deutsch', 'Bio', 'Englisch'][i]}</span>`).join('')}</div>`),
         item('Etikett', '.ud-badge', '<span class="ud-row"><span class="ud-badge accent">Haupt-KI</span><span class="ud-badge">Bild-KI</span><span class="ud-badge danger">Überfällig</span></span>'),
@@ -154,9 +164,67 @@ const UIDesign = (() => {
   const syncShell = () => {
     let st = 'cur'; try { st = localStorage.getItem(STYLE_KEY) || 'cur'; } catch {}
     const on = view ? view.classList.contains('ud-glass') : st === 'glass';
-    if (on) glassify();
+    if (on) { glassify(); applyLook(); }
+    swapIcons(on);
     document.body.classList.toggle('gl-shell', on);
   };
+
+  /* Icons: im Glas-Stil den Inhalt der Symbole #f-…/#o-… gegen dünne Linien-Icons tauschen (glass-icons.js), bei „Aktuell“ zurück */
+  const iconBackup = new Map();
+  function swapIcons(on) {
+    const G = window.GlassIcons; if (!G) return;
+    for (const [pre, set] of [['f', G.f], ['o', G.o], ['i', G.i || {}]]) {
+      for (const [name, body] of Object.entries(set)) {
+        const sym = document.getElementById(`${pre}-${name}`); if (!sym) continue;
+        if (on) {
+          if (!iconBackup.has(sym)) iconBackup.set(sym, [sym.getAttribute('viewBox'), sym.innerHTML]);
+          sym.setAttribute('viewBox', '0 0 24 24');
+          sym.innerHTML = `<g fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">${body}</g>`;
+        } else if (iconBackup.has(sym)) {
+          const [vb, html] = iconBackup.get(sym);
+          if (vb) sym.setAttribute('viewBox', vb); sym.innerHTML = html;
+        }
+      }
+    }
+  }
+
+  /* Farben der Glas-Vorschau (Einstellungen → Aussehen): Hintergrundfarbe + Stärke, Akzentfarbe.
+     Palette = die Farbpunkte aus dem Nutzer-Bild „Appearance“. Standard: Neutral (Grau) – kein Blau. */
+  const LOOK_KEY = 'gl.look.v1';
+  const PALETTE = [['Neutral', '#d1d1d1'], ['Rosa', '#cb88ab'], ['Lachs', '#d38b7d'], ['Orange', '#ce965b'], ['Oliv', '#a1af60'], ['Grün', '#7db993'], ['Blau', '#6bb0d7'], ['Lavendel', '#9799ec']];
+  const readLook = () => { let v = {}; try { v = JSON.parse(localStorage.getItem(LOOK_KEY) || '{}') || {}; } catch {} return { bg: v.bg || '#d1d1d1', amt: Number.isFinite(v.amt) ? v.amt : 50, accent: v.accent || '' }; };
+  const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const rgbHsl = ([r, g, b]) => { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2; let h = 0, s = 0;
+    if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; } return [h, s * 100, l * 100]; };
+  function applyLook() {
+    const L = readLook(), b = document.body.style;
+    const [h, sat] = rgbHsl(hexRgb(L.bg)), k = Math.max(0, Math.min(100, L.amt)) / 100;
+    // drei Farbpunkte wie im Bild (Ton −28°, Ton, Ton +28°); Stärke = wie kräftig die Farbe ist
+    const pt = (dh, l, a) => `hsla(${(h + dh + 360) % 360}, ${Math.round(sat * (0.35 + k * 0.75))}%, ${l}%, ${(0.30 + k * 0.45).toFixed(2)})`;
+    b.setProperty('--gl-c1', pt(-28, 62, 1)); b.setProperty('--gl-c2', pt(0, 58, 1)); b.setProperty('--gl-c3', pt(28, 60, 1));
+    if (L.accent) b.setProperty('--gl-accent', L.accent); else b.removeProperty('--gl-accent');
+  }
+  const lookRow = (label, attr, cur, withDefault) => `<div class="st-row"><span class="st-name">${label}</span><span class="grow"></span><span class="st-swatches gl-sws">${
+    (withDefault ? `<button type="button" class="st-sw gl-sw-def${!cur ? ' on' : ''}" ${attr}="" aria-label="Standard"></button>` : '')
+    + PALETTE.map(([n, c]) => `<button type="button" class="st-sw${cur === c ? ' on' : ''}" style="--sw:${c}" ${attr}="${c}" aria-label="${n}"></button>`).join('')}</span></div>`;
+  function lookHtml() {
+    const L = readLook();
+    return `<div class="gl-look"><h2>Glas (Vorschau)</h2><div class="st-card">
+      ${lookRow('Hintergrundfarbe', 'data-gl-bg', L.bg, false)}
+      <div class="st-row"><span class="st-name">Stärke</span><span class="grow"></span><input class="gl-range" type="range" min="0" max="100" step="5" value="${L.amt}" data-gl-amt aria-label="Stärke der Hintergrundfarbe" /><span class="st-muted gl-amt">${L.amt} %</span></div>
+      ${lookRow('Akzentfarbe', 'data-gl-accent', L.accent, true)}</div></div>`;
+  }
+  const saveLook = (patch) => { const L = { ...readLook(), ...patch }; try { localStorage.setItem(LOOK_KEY, JSON.stringify(L)); } catch {} applyLook(); return L; };
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-gl-bg], [data-gl-accent]'); if (!t) return;
+    const k = t.hasAttribute('data-gl-bg') ? 'bg' : 'accent';
+    saveLook({ [k]: t.getAttribute(k === 'bg' ? 'data-gl-bg' : 'data-gl-accent') });
+    t.parentElement.querySelectorAll('.st-sw').forEach((x) => x.classList.toggle('on', x === t));
+  });
+  document.addEventListener('input', (e) => {
+    const r = e.target.closest?.('[data-gl-amt]'); if (!r) return;
+    saveLook({ amt: +r.value }); const o = r.parentElement.querySelector('.gl-amt'); if (o) o.textContent = `${r.value} %`;
+  });
 
   /* Glas-Umrechnung: style.css enthält viele fest eingetragene Grautöne (#141414, #181818, #212121 …).
      Für die Vorschau wird direkt HINTER jede solche Regel eine gleich spezifische Regel eingefügt
@@ -180,6 +248,12 @@ const UIDesign = (() => {
       }
       return Math.max(r, g, b) - Math.min(r, g, b) <= 6 && r <= 60 ? r : -1;
     };
+    const blue = (v) => {
+      const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec((v || '').trim());
+      if (!m) { const h = /^#([0-9a-f]{6})$/i.exec((v || '').trim()); if (!h) return null; return blue(`rgb(${hexRgb('#' + h[1]).join(', ')})`); }
+      const [r, g, b] = [+m[1], +m[2], +m[3]];
+      return b > 200 && b - r > 90 && g > 100 && g < 200 ? (m[4] === undefined ? 1 : +m[4]) : null;
+    };
     const fill = (l, float) => (float ? 'var(--gl-float)' : l <= 22 ? 'transparent' : l <= 31 ? 'var(--gl-card)' : l <= 40 ? 'var(--gl-card-2)' : 'var(--gl-card-3)');
     const prefix = (sel) => {
       const parts = []; let depth = 0, cur = '';
@@ -200,6 +274,12 @@ const UIDesign = (() => {
         const st = r.style; const out = [];
         const pos = st.getPropertyValue('position');
         const float = pos === 'absolute' || pos === 'fixed';
+        // fest eingetragenes App-Blau (#2f86ff und Verwandte) → Akzent der Glas-Vorschau (Standard neutral)
+        for (const p of ['color', 'background-color', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color']) {
+          const a = blue(st.getPropertyValue(p)); if (a !== null) out.push(`${p}: ${a === 1 ? 'var(--accent)' : `color-mix(in srgb, var(--accent) ${Math.round(a * 100)}%, transparent)`}${st.getPropertyPriority(p) ? ' !important' : ''}`);
+        }
+        // weiße Schrift auf Akzent-Fläche → Schrift passend zum (hellen) Akzent
+        if (/var\(--accent\)/.test(st.getPropertyValue('background-color') + st.getPropertyValue('background')) && /^(#fff(fff)?|white|rgb\(255, 255, 255\))$/i.test(st.getPropertyValue('color').trim())) out.push('color: var(--gl-on-accent)');
         let bg = st.getPropertyValue('background-color');
         if (!bg) { const m = /background(?:-color)?:\s*([^;]+)/.exec(st.cssText); const c = m && /(#[0-9a-f]{3,6}|rgba?\([^)]*\))\s*(?:!important)?\s*$/i.exec(m[1].trim()); if (c) bg = c[1]; }
         const imp = (p) => (st.getPropertyPriority(p) ? ' !important' : '');
@@ -292,6 +372,7 @@ const UIDesign = (() => {
   const api = {
     open: false,
     applyStored: () => syncShell(),
+    lookHtml,
     show() {
       const p = panel(); if (!p) return;
       if (!view) {

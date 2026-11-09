@@ -150,7 +150,7 @@
     const accent = String(cfg.accent || '').toLowerCase();
     const custom = !ap.ACCENTS.includes(accent);
     const near = TILES.reduce((a, b) => (Math.abs(b[1] - cfg.tiles) < Math.abs(a[1] - cfg.tiles) ? b : a))[1];
-    return `<h2>Aussehen</h2><div class="st-card">
+    return (window.UIDesign?.lookHtml?.() || '') + `<h2>Aussehen</h2><div class="st-card">
         <div class="st-row st-modes-row"><span class="st-name">Modus</span><div class="ap-modes st-ap-modes">${Object.entries(ap.MODES).map(([id, label]) => { const pv = ap.PREVIEW?.[id] || {};
           return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev"><span class="pv-side"></span><span class="pv-body"><i></i><i></i><i class="acc"></i><i class="acc short"></i><b><em></em></b></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
         <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`

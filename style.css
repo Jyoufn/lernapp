@@ -11486,21 +11486,24 @@ body.gl-shell {
   --gl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
   --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   /* Töne wie im dritten Bild: kühles Schiefergrau, Kacheln heller, Text leicht kühl */
-  --gl-side: rgba(78, 86, 98, 0.22);         /* Sidebar: Milchglas direkt auf dem Fenster */
-  --gl-main: rgba(17, 20, 25, 0.72);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
+  --gl-side: rgba(255, 255, 255, 0.025);     /* Sidebar: klares Glas direkt auf dem Fenster – Hintergrund scheint durch */
+  --gl-main: rgba(19, 19, 22, 0.86);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
   --gl-card: rgba(255, 255, 255, 0.065);     /* Karte / Kachel */
   --gl-card-2: rgba(255, 255, 255, 0.10);    /* angehoben: Knöpfe, Felder, aktive Zeile */
   --gl-card-3: rgba(255, 255, 255, 0.16);    /* gewählt */
   --gl-hover: rgba(255, 255, 255, 0.07);
   --gl-edge: rgba(255, 255, 255, 0.09);      /* haarfeiner Rand */
   --gl-sep: rgba(255, 255, 255, 0.07);
-  --gl-float: rgba(40, 45, 53, 0.92);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
+  --gl-float: rgba(40, 40, 44, 0.90);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
   --gl-menu: var(--gl-float);
   --gl-menu-edge: rgba(255, 255, 255, 0.14);
   --gl-blur: blur(40px) saturate(170%);
   --gl-lift: 0 18px 50px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(0, 0, 0, 0.4);
-  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(232, 238, 246, 0.80); --gl-t3: rgba(196, 207, 220, 0.60); --gl-t4: rgba(196, 207, 220, 0.38);
-  --gl-accent: #4c9bf5; --gl-green: #5fd38d; --gl-red: #ff6b61; --gl-orange: #f5b657;
+  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(235, 235, 245, 0.80); --gl-t3: rgba(235, 235, 245, 0.56); --gl-t4: rgba(235, 235, 245, 0.34);
+  --gl-accent: #d1d1d6;    /* Standard: neutral (hell) – Akzentfarbe nur über Einstellungen → Aussehen → Glas */
+  --gl-on-accent: rgba(0, 0, 0, 0.86); /* Schrift/Haken auf Akzent-Flächen (alle Akzente sind hell) */
+  --gl-green: #7db993; --gl-red: #e8837a; --gl-orange: #ce965b;
+  --gl-c1: rgba(150, 150, 158, 0.52); --gl-c2: rgba(120, 120, 128, 0.46); --gl-c3: rgba(140, 140, 148, 0.44); /* Farbpunkte des Hintergrunds (ui-design.js → applyLook) */
   /* die Variablen der ganzen App zeigen auf Glas – alles, was sie nutzt, zieht mit (fest eingetragene Grautöne rechnet ui-design.js → glassify um) */
   --main-bg: transparent; --sidebar-bg: transparent; --win-bg: var(--gl-card); --pop-bg: var(--gl-card-2);
   --field-bg: var(--gl-card); --field-border: var(--gl-edge); --card: var(--gl-card); --card-2: var(--gl-card-2); --card-border: var(--gl-edge);
@@ -11514,20 +11517,21 @@ body.gl-shell { -webkit-font-smoothing: antialiased; }
 /* Fenster-Hintergrund hinter dem Glas: kühles Grau mit weichen hellen und dunklen Flächen */
 body.gl-shell::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    linear-gradient(118deg, transparent 36%, rgba(255, 255, 255, 0.045) 46%, transparent 56%),
-    radial-gradient(40% 50% at 8% 12%, rgba(150, 160, 174, 0.50), transparent 70%),
-    radial-gradient(36% 46% at 18% 84%, rgba(120, 116, 104, 0.40), transparent 72%),
-    radial-gradient(46% 56% at 60% 6%, rgba(112, 124, 140, 0.42), transparent 70%),
-    radial-gradient(40% 50% at 94% 46%, rgba(132, 144, 160, 0.40), transparent 70%),
-    radial-gradient(44% 50% at 58% 98%, rgba(104, 116, 132, 0.38), transparent 72%),
-    radial-gradient(30% 36% at 44% 50%, rgba(0, 0, 0, 0.32), transparent 70%),
-    #20252c; }
+    linear-gradient(118deg, transparent 30%, rgba(255, 255, 255, 0.06) 38%, transparent 44%),
+    linear-gradient(118deg, transparent 58%, rgba(255, 255, 255, 0.04) 64%, transparent 70%),
+    radial-gradient(38% 48% at 6% 10%, var(--gl-c1), transparent 70%),
+    radial-gradient(34% 44% at 16% 86%, var(--gl-c3), transparent 72%),
+    radial-gradient(44% 54% at 58% 4%, var(--gl-c2), transparent 70%),
+    radial-gradient(40% 50% at 96% 44%, var(--gl-c3), transparent 70%),
+    radial-gradient(44% 50% at 60% 100%, var(--gl-c1), transparent 72%),
+    radial-gradient(32% 38% at 44% 52%, rgba(0, 0, 0, 0.38), transparent 70%),
+    #1c1c20; }
 body.gl-shell .app { z-index: 1; }
 
 /* ---------- Fenster: Sidebar Milchglas, Hauptteil abgerundete Glasfläche mit etwas Abstand ---------- */
-body.gl-shell .sidebar { background: var(--gl-noise), linear-gradient(var(--gl-side), var(--gl-side)) !important; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+body.gl-shell .sidebar { background: linear-gradient(var(--gl-side), var(--gl-side)) !important; -webkit-backdrop-filter: blur(18px) saturate(150%); backdrop-filter: blur(18px) saturate(150%); }
 body.gl-shell .panel { margin: 8px 8px 8px 0 !important; border: 1px solid rgba(255, 255, 255, 0.10) !important; border-radius: 16px !important;
-  background: var(--gl-noise), linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%), linear-gradient(var(--gl-main), var(--gl-main)) !important;
+  background: var(--gl-noise), linear-gradient(var(--gl-main), var(--gl-main)) !important;
   box-shadow: var(--gl-rim), 0 20px 60px rgba(0, 0, 0, 0.30) !important;
   -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
 body.gl-shell .app.collapsed .panel { margin-left: 8px !important; }
@@ -11566,149 +11570,173 @@ body.gl-shell :is(.chat-pop, .model-popover, .ws-menu, .tk-menu, .lb2-menu) { bo
 .ud-view.ud-glass code { color: var(--gl-t4); font-family: var(--gl-mono) !important; font-size: 10.5px; }
 
 /* Oben frei: nur der Umschalter (wie „Now | Stats“), keine Leiste, keine Sprungknöpfe */
-.ud-view.ud-glass .ud-top { position: static; padding: 16px 0 0; background: none; box-shadow: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.ud-view.ud-glass .ud-top-in { display: none; }
-.ud-view.ud-glass .ud-wrap { max-width: 900px; padding: 44px 32px 96px; }
-.ud-view.ud-glass .ud-head { margin-bottom: 4px; }
-.ud-view.ud-glass .ud-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.6px; }
-.ud-view.ud-glass .ud-lead { margin: 0; color: var(--gl-t3); font-size: 13px; }
-.ud-view.ud-glass .ud-sec { padding-top: 36px; }
-.ud-view.ud-glass .ud-sec h3 { margin: 0 0 12px 2px; color: var(--gl-t1); font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
-.ud-view.ud-glass .ud-note { display: none; }
-.ud-view.ud-glass .ud-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+body.gl-shell .ud-top { position: static; padding: 16px 0 0; background: none; box-shadow: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.gl-shell .ud-top-in { display: none; }
+body.gl-shell .ud-wrap { max-width: 900px; padding: 44px 32px 96px; }
+body.gl-shell .ud-head { margin-bottom: 4px; }
+body.gl-shell .ud-head h2 { font-size: 28px; font-weight: 700; letter-spacing: -0.6px; }
+body.gl-shell .ud-lead { margin: 0; color: var(--gl-t3); font-size: 13px; }
+body.gl-shell .ud-sec { padding-top: 36px; }
+body.gl-shell .ud-sec h3 { margin: 0 0 12px 2px; color: var(--gl-t1); font-size: 15px; font-weight: 600; letter-spacing: -0.2px; }
+body.gl-shell .ud-note { display: none; }
+body.gl-shell .ud-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
 
 /* Karten wie die Kacheln im Bild: Kopf IN der Karte (Name links, Klasse rechts), Inhalt darunter */
-.ud-view.ud-glass :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker) { border: 1px solid var(--gl-edge); border-radius: 16px;
+body.gl-shell :is(.ud-item, .ud-box, .ud-note-card, .hm-card, .ud-cal2, .tk-sheet, .tk-picker) { border: 1px solid var(--gl-edge); border-radius: 16px;
   background: var(--gl-card); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035); }
-.ud-view.ud-glass .ud-item { padding: 14px 16px 16px; }
-.ud-view.ud-glass .ud-item figcaption { order: -1; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 0 12px; border: 0; }
-.ud-view.ud-glass .ud-item figcaption b { color: var(--gl-t1); font-size: 13.5px; font-weight: 600; letter-spacing: -0.1px; }
-.ud-view.ud-glass .ud-item figcaption code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ud-view.ud-glass .ud-item figcaption span { display: none; }
-.ud-view.ud-glass .ud-stage { justify-content: flex-start; min-height: 56px; padding: 0; border-radius: 0; }
-.ud-view.ud-glass .ud-stage:has(.ud-pop) { min-height: 150px; }
-.ud-view.ud-glass .ud-stage .tk-sheet, .ud-view.ud-glass .ud-stage :is(.ud-box, .ud-note-card, .ud-hm) { max-width: none; }
+body.gl-shell .ud-item { padding: 14px 16px 16px; }
+body.gl-shell .ud-item figcaption { order: -1; flex-wrap: nowrap; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 0 12px; border: 0; }
+body.gl-shell .ud-item figcaption b { color: var(--gl-t1); font-size: 13.5px; font-weight: 600; letter-spacing: -0.1px; }
+body.gl-shell .ud-item figcaption code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.gl-shell .ud-item figcaption span { display: none; }
+body.gl-shell .ud-stage { justify-content: flex-start; min-height: 56px; padding: 0; border-radius: 0; }
+body.gl-shell .ud-stage:has(.ud-pop) { min-height: 150px; }
+body.gl-shell .ud-stage .tk-sheet, body.gl-shell .ud-stage :is(.ud-box, .ud-note-card, .ud-hm) { max-width: none; }
 
 /* Farben */
-.ud-view.ud-glass .ud-sws { gap: 12px 18px; }
-.ud-view.ud-glass .ud-sw { min-width: 180px; }
-.ud-view.ud-glass .ud-sw i { width: 32px; height: 32px; border-color: rgba(255, 255, 255, 0.12); border-radius: 9px; }
-.ud-view.ud-glass .ud-sw b { color: var(--gl-t1); font-size: 13px; }
+body.gl-shell .ud-sws { gap: 12px 18px; }
+body.gl-shell .ud-sw { min-width: 180px; }
+body.gl-shell .ud-sw i { width: 32px; height: 32px; border-color: rgba(255, 255, 255, 0.12); border-radius: 9px; }
+body.gl-shell .ud-sw b { color: var(--gl-t1); font-size: 13px; }
 /* Schrift */
-.ud-view.ud-glass .ud-type { gap: 10px; }
-.ud-view.ud-glass .ud-type div { padding-bottom: 10px; border-bottom-color: var(--gl-sep); }
+body.gl-shell .ud-type { gap: 10px; }
+body.gl-shell .ud-type div { padding-bottom: 10px; border-bottom-color: var(--gl-sep); }
 
 /* Umschalter: Spur mit feinem Rand, gewählter Teil hell (wie „Now | Stats“) */
-.ud-view.ud-glass :is(.cs-pill, .st-seg) { box-sizing: border-box; display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px;
+body.gl-shell :is(.cs-pill, .st-seg) { box-sizing: border-box; display: inline-flex; align-items: center; gap: 2px; height: 34px; padding: 0 3px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 999px;
   background: rgba(0, 0, 0, 0.18); box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2); }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button { height: 26px; padding: 0 16px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--gl-t2); font-size: 13.5px; font-weight: 500; }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button:hover { color: #fff; }
-.ud-view.ud-glass :is(.cs-pill, .st-seg) button.on { background: rgba(255, 255, 255, 0.17) !important; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.25) !important; }
+body.gl-shell :is(.cs-pill, .st-seg) button { height: 26px; padding: 0 16px; border: 0 !important; border-radius: 999px; background: none !important; box-shadow: none !important; color: var(--gl-t2); font-size: 13.5px; font-weight: 500; }
+body.gl-shell :is(.cs-pill, .st-seg) button:hover { color: #fff; }
+body.gl-shell :is(.cs-pill, .st-seg) button.on { background: rgba(255, 255, 255, 0.17) !important; color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 1px 3px rgba(0, 0, 0, 0.25) !important; }
 
 /* Knöpfe */
-.ud-view.ud-glass .ud-btn, .ud-view.ud-glass .tk-view.tk-listmode .tk-new { height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 13px; font-weight: 500;
+body.gl-shell .ud-btn, body.gl-shell .tk-view.tk-listmode .tk-new { height: 30px; padding: 0 14px; border: 0; border-radius: 9px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 13px; font-weight: 500;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-.ud-view.ud-glass .ud-btn:hover, .ud-view.ud-glass .tk-view.tk-listmode .tk-new:hover { background: var(--gl-card-3); }
-.ud-view.ud-glass .tk-view.tk-listmode .tk-new svg { color: var(--gl-t2); }
-.ud-view.ud-glass .ud-btn.primary { background: var(--gl-accent); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
-.ud-view.ud-glass .ud-btn.primary:hover { background: color-mix(in srgb, var(--gl-accent) 88%, #fff); }
-.ud-view.ud-glass .ud-btn.danger { background: rgba(255, 105, 97, 0.15); color: var(--gl-red); box-shadow: none; }
-.ud-view.ud-glass .ud-btn.danger:hover { background: rgba(255, 105, 97, 0.23); }
+body.gl-shell .ud-btn:hover, body.gl-shell .tk-view.tk-listmode .tk-new:hover { background: var(--gl-card-3); }
+body.gl-shell .tk-view.tk-listmode .tk-new svg { color: var(--gl-t2); }
+body.gl-shell .ud-btn.primary { background: var(--gl-accent); color: var(--gl-on-accent); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+body.gl-shell .ud-btn.primary:hover { background: color-mix(in srgb, var(--gl-accent) 88%, #fff); }
+body.gl-shell .ud-btn.danger { background: rgba(255, 105, 97, 0.15); color: var(--gl-red); box-shadow: none; }
+body.gl-shell .ud-btn.danger:hover { background: rgba(255, 105, 97, 0.23); }
 /* runde Knöpfe wie im Bild (Stopp/Öffnen) */
-.ud-view.ud-glass :is(.icon-btn, .hm-plus) { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--gl-card-2); color: var(--gl-t1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-.ud-view.ud-glass :is(.icon-btn, .hm-plus):hover { background: var(--gl-card-3); }
-.ud-view.ud-glass .ud-box-head .icon-btn { width: 28px; height: 28px; background: none; box-shadow: none; color: var(--gl-t3); }
-.ud-view.ud-glass .tk-pill { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); font-size: 12.5px; font-weight: 500; box-shadow: none; }
-.ud-view.ud-glass .tk-pill:hover { background: var(--gl-card-3); color: #fff; }
-.ud-view.ud-glass .hm-go { height: 28px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 12.5px; font-weight: 500; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
-.ud-view.ud-glass .hm-go:hover { background: var(--gl-card-3); }
+body.gl-shell :is(.icon-btn, .hm-plus) { width: 30px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--gl-t2); box-shadow: none; }
+body.gl-shell :is(.icon-btn, .hm-plus):hover { background: var(--gl-hover); color: var(--gl-t1); }
+body.gl-shell .ud-box-head .icon-btn { width: 28px; height: 28px; background: none; box-shadow: none; color: var(--gl-t3); }
+body.gl-shell .tk-pill { height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); font-size: 12.5px; font-weight: 500; box-shadow: none; }
+body.gl-shell .tk-pill:hover { background: var(--gl-card-3); color: #fff; }
+body.gl-shell .hm-go { height: 28px; padding: 0 13px; border: 0; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t1); font-size: 12.5px; font-weight: 500; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+body.gl-shell .hm-go:hover { background: var(--gl-card-3); }
 
 /* Eingaben (wie das Suchfeld unten im Bild) */
-.ud-view.ud-glass .cl-search { height: 38px; padding: 0 14px; border: 1px solid var(--gl-edge); border-radius: 13px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
-.ud-view.ud-glass .cl-search input { font-size: 14px; }
-.ud-view.ud-glass :is(.ud-input, .ud-select) { border: 1px solid var(--gl-edge); border-radius: 10px; background: rgba(255, 255, 255, 0.07); color: var(--gl-t1); font-size: 13px; box-shadow: none; }
-.ud-view.ud-glass .ud-input { padding: 7px 11px; }
-.ud-view.ud-glass .ud-select { height: 30px; }
-.ud-view.ud-glass :is(.cl-search, .ud-select):focus-within, .ud-view.ud-glass .ud-input:focus { border-color: color-mix(in srgb, var(--gl-accent) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gl-accent) 25%, transparent); }
-.ud-view.ud-glass .ud-select option { background: #2c2c2e; }
+body.gl-shell .cl-search { height: 38px; padding: 0 14px; border: 1px solid var(--gl-edge); border-radius: 13px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+body.gl-shell .cl-search input { font-size: 14px; }
+body.gl-shell :is(.ud-input, .ud-select) { border: 1px solid var(--gl-edge); border-radius: 10px; background: rgba(255, 255, 255, 0.07); color: var(--gl-t1); font-size: 13px; box-shadow: none; }
+body.gl-shell .ud-input { padding: 7px 11px; }
+body.gl-shell .ud-select { height: 30px; }
+body.gl-shell :is(.cl-search, .ud-select):focus-within, body.gl-shell .ud-input:focus { border-color: color-mix(in srgb, var(--gl-accent) 70%, transparent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gl-accent) 25%, transparent); }
+body.gl-shell .ud-select option { background: #2c2c2e; }
 
 /* Auswahl */
-.ud-view.ud-glass .ce-switch { width: 38px; height: 22px; background: rgba(255, 255, 255, 0.16); }
-.ud-view.ud-glass .ce-switch i { top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
-.ud-view.ud-glass .ce-switch.on { background: var(--gl-accent); }
-.ud-view.ud-glass .ce-switch.on i { transform: translateX(16px); }
-.ud-view.ud-glass .lb2-check { border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 5px; background: transparent; }
-.ud-view.ud-glass .lb2-row.picked .lb2-check { border-color: var(--gl-accent); background: var(--gl-accent); color: #fff; }
-.ud-view.ud-glass .lb2-row.picked .lb2-check svg { stroke: #fff; }
-.ud-view.ud-glass .lb2-row.picked, .ud-view.ud-glass .lb2-row.picked:hover { background: transparent; }
-.ud-view.ud-glass .tk-colors button.on { box-shadow: 0 0 0 2px #26262a, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+body.gl-shell .ce-switch { width: 38px; height: 22px; background: rgba(255, 255, 255, 0.16); }
+body.gl-shell .ce-switch i { top: 2px; left: 2px; width: 18px; height: 18px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
+body.gl-shell .ce-switch.on { background: var(--gl-accent); }
+body.gl-shell .ce-switch.on i { transform: translateX(16px); }
+body.gl-shell .lb2-check { border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 5px; background: transparent; }
+body.gl-shell .lb2-row.picked .lb2-check { border-color: var(--gl-accent); background: var(--gl-accent); color: var(--gl-on-accent); }
+body.gl-shell .lb2-row.picked .lb2-check svg { stroke: var(--gl-on-accent); }
+body.gl-shell .lb2-row.picked, body.gl-shell .lb2-row.picked:hover { background: transparent; }
+body.gl-shell .tk-colors button.on { box-shadow: 0 0 0 2px #26262a, 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
 
 /* Menüs: Milchglas über Inhalt */
-.ud-view.ud-glass :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--gl-menu-edge); border-radius: 13px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
+body.gl-shell :is(.tk-menu, .lb2-menu, .chat-pop) { padding: 5px; border: 1px solid var(--gl-menu-edge); border-radius: 13px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-.ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 7px; color: var(--gl-t1); font-size: 13px; }
-.ud-view.ud-glass :is(.tk-mi, .lb2-mi, .chat-pop button):hover { background: rgba(255, 255, 255, 0.1); }
-.ud-view.ud-glass :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t3); }
-.ud-view.ud-glass :is(.lb2-mi.lb2-danger, .chat-pop button.danger), .ud-view.ud-glass :is(.lb2-mi.lb2-danger, .chat-pop button.danger) > svg { color: var(--gl-red); }
-.ud-view.ud-glass .cm-sep { background: var(--gl-sep); }
-.ud-view.ud-glass :is(.lb2-tick, .ud-pop .tk-mi svg) { color: var(--gl-t1); }
+body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button) { height: 28px; border-radius: 7px; color: var(--gl-t1); font-size: 13px; }
+body.gl-shell :is(.tk-mi, .lb2-mi, .chat-pop button):hover { background: rgba(255, 255, 255, 0.1); }
+body.gl-shell :is(.lb2-mi, .chat-pop button) > svg { color: var(--gl-t3); }
+body.gl-shell :is(.lb2-mi.lb2-danger, .chat-pop button.danger), body.gl-shell :is(.lb2-mi.lb2-danger, .chat-pop button.danger) > svg { color: var(--gl-red); }
+body.gl-shell .cm-sep { background: var(--gl-sep); }
+body.gl-shell :is(.lb2-tick, .ud-pop .tk-mi svg) { color: var(--gl-t1); }
 /* Fenster mit Aufklapp-Zeilen */
-.ud-view.ud-glass .tk-sheet { width: 100%; max-width: 460px; }
-.ud-view.ud-glass .tk-sheet-rows .tk-pill { height: 42px; padding: 0 16px; border-radius: 0; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 400; }
-.ud-view.ud-glass .tk-sheet-rows .tk-pill.empty { color: var(--gl-t3); }
-.ud-view.ud-glass .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 16px 16px 0 0; }
-.ud-view.ud-glass .tk-sheet-rows .tk-pill:hover { background: var(--gl-hover); }
-.ud-view.ud-glass .tk-sheet .tk-menu { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
-.ud-view.ud-glass .tk-sheet .tk-box { margin: 0 8px 8px; border: 1px solid var(--gl-sep) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.04) !important; }
+body.gl-shell .tk-sheet { width: 100%; max-width: 460px; }
+body.gl-shell .tk-sheet-rows .tk-pill { height: 42px; padding: 0 16px; border-radius: 0; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 400; }
+body.gl-shell .tk-sheet-rows .tk-pill.empty { color: var(--gl-t3); }
+body.gl-shell .tk-sheet-rows .tk-pop:first-child > .tk-pill { border-radius: 16px 16px 0 0; }
+body.gl-shell .tk-sheet-rows .tk-pill:hover { background: var(--gl-hover); }
+body.gl-shell .tk-sheet .tk-menu { padding: 0; border: 0; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; }
+body.gl-shell .tk-sheet .tk-box { margin: 0 8px 8px; border: 1px solid var(--gl-sep) !important; border-radius: 12px; background: rgba(255, 255, 255, 0.04) !important; }
 /* Uhrzeit-Rad, Mini-Kalender, Farbwähler */
-.ud-view.ud-glass .tk-wh-band { border-radius: 8px; background: var(--gl-card-2); }
-.ud-view.ud-glass .tk-wh-item.on { color: #fff; }
-.ud-view.ud-glass .ud-cal2 { padding: 10px; }
-.ud-view.ud-glass .tk-cal-head span { color: var(--gl-t1); font-weight: 600; }
-.ud-view.ud-glass .tk-cal-grid button { border-radius: 999px; }
-.ud-view.ud-glass .tk-cal-grid button:hover { background: var(--gl-card-2); }
-.ud-view.ud-glass .tk-cal-grid button.on { background: var(--gl-accent); color: #fff; }
-.ud-view.ud-glass .tk-cal-grid button.today:not(.on) { color: var(--gl-accent); }
-.ud-view.ud-glass .tk-picker { padding: 10px; }
-.ud-view.ud-glass .tk-sv, .ud-view.ud-glass .tk-hue { border-radius: 9px; }
+body.gl-shell .tk-wh-band { border-radius: 8px; background: var(--gl-card-2); }
+body.gl-shell .tk-wh-item.on { color: #fff; }
+body.gl-shell .ud-cal2 { padding: 10px; }
+body.gl-shell .tk-cal-head span { color: var(--gl-t1); font-weight: 600; }
+body.gl-shell .tk-cal-grid button { border-radius: 999px; }
+body.gl-shell .tk-cal-grid button:hover { background: var(--gl-card-2); }
+body.gl-shell .tk-cal-grid button.on { background: var(--gl-accent); color: var(--gl-on-accent); }
+body.gl-shell .tk-cal-grid button.today:not(.on) { color: var(--gl-accent); }
+body.gl-shell .tk-picker { padding: 10px; }
+body.gl-shell .tk-sv, body.gl-shell .tk-hue { border-radius: 9px; }
 
 /* Listen (wie „Live“ im Bild) */
-.ud-view.ud-glass .cl-label { padding-left: 8px; color: var(--gl-t3); font-size: 12px; font-weight: 500; }
-.ud-view.ud-glass .lb2-row { border-radius: 10px; }
-.ud-view.ud-glass .lb2-row + .lb2-row::before { background: var(--gl-sep); }
-.ud-view.ud-glass .lb2-row:hover { background: var(--gl-hover); }
-.ud-view.ud-glass .lb2-title { color: var(--gl-t1); font-size: 14px; font-weight: 500; }
-.ud-view.ud-glass .lb2-time { color: var(--gl-t3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
-.ud-view.ud-glass .lb2-dock-pill { height: 40px; padding: 0 4px; border: 1px solid var(--gl-menu-edge); border-radius: 999px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
+body.gl-shell .cl-label { padding-left: 8px; color: var(--gl-t3); font-size: 12px; font-weight: 500; }
+body.gl-shell .lb2-row { border-radius: 10px; }
+body.gl-shell .lb2-row + .lb2-row::before { background: var(--gl-sep); }
+body.gl-shell .lb2-row:hover { background: var(--gl-hover); }
+body.gl-shell .lb2-title { color: var(--gl-t1); font-size: 14px; font-weight: 500; }
+body.gl-shell .lb2-time { color: var(--gl-t3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+body.gl-shell .lb2-dock-pill { height: 40px; padding: 0 4px; border: 1px solid var(--gl-menu-edge); border-radius: 999px; background: var(--gl-noise), linear-gradient(var(--gl-menu), var(--gl-menu));
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift); -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-.ud-view.ud-glass .lb2-dock-pill button { height: 30px; border-radius: 999px; color: var(--gl-t2); font-size: 13px; }
-.ud-view.ud-glass .lb2-dock-pill button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
-.ud-view.ud-glass .lb2-dk-sep { background: var(--gl-sep); }
+body.gl-shell .lb2-dock-pill button { height: 30px; border-radius: 999px; color: var(--gl-t2); font-size: 13px; }
+body.gl-shell .lb2-dock-pill button:hover { background: rgba(255, 255, 255, 0.1); color: #fff; }
+body.gl-shell .lb2-dk-sep { background: var(--gl-sep); }
 
 /* Karten im Inhalt: Kachel-Look, Zustand über Farbe von Icon/Text */
-.ud-view.ud-glass .hm-card { min-height: 62px; padding: 12px 12px 12px 14px; background: rgba(255, 255, 255, 0.05); }
-.ud-view.ud-glass .hm-card:is(.hm-soon, .hm-warn) { border-color: var(--gl-edge); }
-.ud-view.ud-glass .hm-ic { border: 0; border-radius: 10px; background: var(--gl-card-2); color: var(--gl-t2); }
-.ud-view.ud-glass .hm-title { color: var(--gl-t1); font-size: 14px; font-weight: 600; }
-.ud-view.ud-glass .hm-desc { color: var(--gl-t3); font-size: 12.5px; }
-.ud-view.ud-glass .hm-soon :is(.hm-desc b, .hm-ic) { color: var(--gl-green); }
-.ud-view.ud-glass .hm-warn :is(.hm-desc b, .hm-ic) { color: var(--gl-red); }
-.ud-view.ud-glass .hm-x { color: var(--gl-t4); }
-.ud-view.ud-glass :is(.ud-box, .ud-note-card) { background: rgba(255, 255, 255, 0.05); }
-.ud-view.ud-glass .ud-box-head b { font-size: 14px; font-weight: 600; }
-.ud-view.ud-glass .ud-box p { color: var(--gl-t2); font-size: 13.5px; }
-.ud-view.ud-glass .ud-nc-txt b { font-size: 13.5px; font-weight: 600; }
-.ud-view.ud-glass .ud-nc-txt span { color: var(--gl-t3); font-size: 12.5px; }
+body.gl-shell .hm-card { min-height: 62px; padding: 12px 12px 12px 14px; background: rgba(255, 255, 255, 0.05); }
+body.gl-shell .hm-card:is(.hm-soon, .hm-warn) { border-color: var(--gl-edge); }
+body.gl-shell .hm-ic { border: 0; border-radius: 10px; background: var(--gl-card-2); color: var(--gl-t2); }
+body.gl-shell .hm-title { color: var(--gl-t1); font-size: 14px; font-weight: 600; }
+body.gl-shell .hm-desc { color: var(--gl-t3); font-size: 12.5px; }
+body.gl-shell .hm-soon :is(.hm-desc b, .hm-ic) { color: var(--gl-green); }
+body.gl-shell .hm-warn :is(.hm-desc b, .hm-ic) { color: var(--gl-red); }
+body.gl-shell .hm-x { color: var(--gl-t4); }
+body.gl-shell :is(.ud-box, .ud-note-card) { background: rgba(255, 255, 255, 0.05); }
+body.gl-shell .ud-box-head b { font-size: 14px; font-weight: 600; }
+body.gl-shell .ud-box p { color: var(--gl-t2); font-size: 13.5px; }
+body.gl-shell .ud-nc-txt b { font-size: 13.5px; font-weight: 600; }
+body.gl-shell .ud-nc-txt span { color: var(--gl-t3); font-size: 12.5px; }
 
 /* Etiketten */
-.ud-view.ud-glass .tk-tag { border-radius: 999px; }
-.ud-view.ud-glass .ud-badge { height: 22px; padding: 0 9px; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); }
-.ud-view.ud-glass .ud-badge.accent { background: color-mix(in srgb, var(--gl-accent) 22%, transparent); color: #9ccbff; }
-.ud-view.ud-glass .ud-badge.danger { background: rgba(255, 105, 97, 0.18); color: #ffa19b; }
+body.gl-shell .tk-tag { border-radius: 999px; }
+body.gl-shell .ud-badge { height: 22px; padding: 0 9px; border-radius: 999px; background: var(--gl-card-2); color: var(--gl-t2); }
+body.gl-shell .ud-badge.accent { background: color-mix(in srgb, var(--gl-accent) 22%, transparent); color: #9ccbff; }
+body.gl-shell .ud-badge.danger { background: rgba(255, 105, 97, 0.18); color: #ffa19b; }
 
 /* Icons */
-.ud-view.ud-glass .ud-icons span { border-radius: 10px; color: var(--gl-t2); }
-.ud-view.ud-glass .ud-icons span:hover { background: var(--gl-card-2); color: #fff; }
+body.gl-shell .ud-icons span { border-radius: 10px; color: var(--gl-t2); }
+body.gl-shell .ud-icons span:hover { background: var(--gl-card-2); color: #fff; }
 /* Glas: Kalender-Stundenlinien und Startseiten-Karten (Farben stehen dort als Verlauf) */
 body.gl-shell .cal-week .cw-body { background-image: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 56px); }
 body.gl-shell .hm-card { border-color: var(--gl-edge) !important; border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+
+/* Glas (3. Runde): Filter-/Leisten-Knöpfe nur als Icon, Einstellungen „Glas“ nur in der Vorschau, Farbpunkte + Regler */
+body.gl-shell :is(.lb2-filter, .lb2-btn) { border: 0 !important; background: none !important; color: var(--gl-t3); }
+body.gl-shell :is(.lb2-filter, .lb2-btn):hover, body.gl-shell .lb2-filter:is(.on, .set) { background: var(--gl-hover) !important; color: var(--gl-t1); }
+.gl-look { display: none; }
+body.gl-shell .gl-look { display: block; }
+body.gl-shell .gl-sws .st-sw { width: 20px; height: 20px; }
+body.gl-shell .gl-sw-def { background: conic-gradient(from 45deg, #d1d1d1 0 50%, #6a6a70 50% 100%) !important; }
+body.gl-shell .gl-range { width: 160px; height: 4px; accent-color: var(--accent); }
+body.gl-shell .gl-amt { min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+/* Linien-Icons: nicht fett nachzeichnen */
+body.gl-shell svg use { stroke-width: inherit; }
+/* Glas: Einstellungen liegen über den anderen Ansichten – darunterliegende Ansichten ausblenden (Hintergrund ist durchsichtig) */
+body.gl-shell .app.settings-open .panel > :not(.st-view, .panel-toggle) { visibility: hidden !important; }
+/* UI Design – Chat-Bausteine als ruhende Kopie (keine Animation, nicht schwebend) */
+.ud-chat { width: 100%; }
+.ud-chat :is(.msg-out, .msg-ai) { margin: 0 !important; animation: none !important; opacity: 1 !important; transform: none !important; }
+.ud-composer { position: static !important; width: 100% !important; max-width: 640px; margin: 0 !important; padding: 0 !important; transform: none !important; opacity: 1 !important; }
+.ud-composer .composer { position: relative; }
+/* Einstellungen im Glas-Stil: alte Karte „Modus/Akzentfarbe“ gilt hier nicht → ausblenden, Glas-Karte mit Abstand */
+body.gl-shell .gl-look { margin-bottom: 26px; }
+body.gl-shell .gl-look + h2, body.gl-shell .gl-look + h2 + .st-card { display: none; }
+body.gl-shell .ce-switch.on i { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45); }
+body.gl-shell :is(.send-btn) { color: var(--gl-on-accent); }
