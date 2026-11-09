@@ -11593,3 +11593,48 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .ce-cover-x { position: absolute; top: 6px; right: 6px; display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--main-bg) 70%, transparent); color: #fff; cursor: pointer; }
 .ce-cover-x svg { width: 12px; height: 12px; }
 .ce-card .ce-cover-row .tk-pill .ce-chev svg { transform: none !important; }
+
+/* =====================================================================
+   KALENDER · TERMIN-KARTEN v2 (10.11. nachts): Klick auf einen Termin = Ansicht (nur Angaben, Stift oben rechts →
+   bearbeiten), „+N weitere“ = Tagesliste, leerer Tag = nichts. Kästen nur einen Hauch heller als die Karte (wie die
+   hellgrauen Kästen der Vorlage auf Weiß) – kein harter Grau-Kontrast, keine dunklen Kästchen rechts, keine Icons am Termin.
+   ===================================================================== */
+.cal-emodal .tk-form.ce-card { --ce-box: color-mix(in srgb, var(--win-bg) 97.5%, #fff); --ce-hi: color-mix(in srgb, var(--win-bg) 94%, #fff); border-color: rgba(255, 255, 255, 0.07); }
+.ce-card .tk-sheet-main.ce-headbox, .ce-card .ce-headbox, .ce-card .ce-rows .tk-pop, .ce-card .ce-vrow, .ce-card .ce-cover { background: var(--ce-box); }
+.ce-card .ce-rows .tk-box { border-top-color: rgba(255, 255, 255, 0.06); }
+/* rechts: nur ein leiser Pfeil bzw. Plus – kein dunkler Kasten */
+.ce-card .ce-chev { width: 20px; height: 20px; border: 0; background: none; color: var(--text-4); }
+.ce-card .ce-rows .tk-pill:hover .ce-chev { color: var(--text-2); }
+.ce-card .ce-dur { background: var(--ce-hi); color: var(--text-3); }
+/* Knöpfe unten: Löschen leise (rot erst beim Darüberfahren), Speichern/Erstellen als ruhiger blauer Knopf */
+.ce-card .ce-foot { padding: 8px 2px 2px; }
+.ce-card .ce-foot .tk-sheet-ib { display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-4); cursor: pointer; transition: color 120ms ease, background-color 120ms ease; }
+.ce-card .ce-foot .tk-sheet-ib svg { width: 15px; height: 15px; }
+@media (hover: hover) { .ce-card .ce-foot .tk-sheet-ib:hover { background: rgba(239, 107, 95, 0.12); color: #f07a6e; } }
+.ce-card .ce-foot .tk-create { height: 30px; padding: 0 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: 500 12.5px Inter, sans-serif; }
+/* Ansicht */
+.ce-card.ce-view { display: flex; flex-direction: column; gap: 6px; padding: 6px; animation: cm-view-in 240ms var(--spring) both; }
+@keyframes cm-view-in { from { opacity: 0; transform: translateY(4px) scale(0.985); } }
+.ce-card .ce-vhead { position: relative; display: block; padding: 10px 44px 10px 12px; border-radius: 11px; }
+.ce-vtitle { color: var(--text); font-size: 14.5px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.ce-vsub { display: flex; align-items: center; gap: 6px; margin-top: 2px; color: var(--text-4); font-size: 12.5px; }
+.ce-vdot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.ce-daylist .ce-vdot { display: none; }
+.ce-vbtn { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: color 120ms ease, background-color 120ms ease; }
+.ce-vbtn svg { width: 13px; height: 13px; }
+@media (hover: hover) { .ce-vbtn:hover { background: var(--ce-hi); color: var(--text); } }
+.ce-card.ce-view .ce-cover { margin: 0; animation: none; }
+.ce-vrow { display: flex; align-items: center; gap: 9px; min-height: 36px; padding: 0 8px 0 12px; border-radius: 11px; color: var(--text); font-size: 12.5px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.ce-vrow .tk-si { display: grid; place-items: center; flex: none; width: 14px; color: var(--text-3); }
+.ce-vrow .tk-si svg { width: 14px; height: 14px; }
+.ce-vval { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.ce-vrow.ce-vdesc { align-items: flex-start; padding-top: 10px; padding-bottom: 10px; }
+.ce-vrow.ce-vdesc .tk-si { margin-top: 1px; }
+.ce-vrow.ce-vdesc .ce-vval { display: block; color: var(--text-3); font-weight: 400; line-height: 1.45; overflow-wrap: anywhere; }
+/* Tagesliste („+N weitere“) */
+.ce-dl { display: flex; flex-direction: column; gap: 3px; max-height: 300px; padding: 2px; overflow-y: auto; }
+.ce-dl .cm-ev.cal-pill { height: 26px; padding: 0 9px; border-radius: 7px; font-size: 12.5px; }
+.ce-dl .cm-ev-time { font-size: 12px; }
+/* Schalter „Ganztägig“ in der Karte: aus = heller Hauch statt dunkler Spur */
+.ce-card .ce-switch:not(.on) { background: var(--ce-hi); }
+.ce-card .tk-wh-band { background: var(--ce-hi); }

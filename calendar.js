@@ -3,7 +3,7 @@
    - Monatsansicht (Seitenleiste → „Kalender“): Raster Mo–So, Termine als Chips im Tag, „+N weitere“ wenn es nicht passt;
      blättern monatsweise (Pfeile, „Heute“, Wischen auf dem iPad); schmal nur Farbpunkte
    - „Neu“ → Termin-Fenster: Titel, Beschreibung, Datum, Uhrzeit, Icon, Farbe
-   - Klick auf einen Tag → großes Tagesfenster (wächst aus der Zelle)
+   - Klick auf einen Termin → Ansicht-Karte (Stift = bearbeiten), „+N weitere“ → alle Termine des Tages; leerer Tag: nichts
    - Klick auf einen Termin → bearbeiten oder löschen
    - Gespeichert im Browser (localStorage); der Agent kann Termine anlegen (AppActions.add_event)
    =================================================================== */
@@ -132,9 +132,11 @@ const Calendar = (() => {
     if (a === 'new') { edit(null, todayIso(), '', '', null, ev.target.closest('[data-cal]')); return; }
     const cell = ev.target.closest('.cm-cell');
     const p = ev.target.closest('.cm-ev');
-    // schmal sind die Chips nur Punkte → Antippen öffnet den Tag statt eines Termins
-    if (p && !box.classList.contains('compact')) { edit(events.find((e) => e.id === p.dataset.id), null, '', '', null, p); return; }
-    if (cell) { openDay(cell.dataset.date, cell); }
+    const compact = box.classList.contains('compact');
+    // Termin antippen → Ansicht (bearbeiten über den Stift oben rechts); schmal sind die Chips nur Punkte → Tagesliste
+    if (p && !compact) { showEvent(events.find((e) => e.id === p.dataset.id), p); return; }
+    // „+N weitere“ (bzw. schmal: Tag mit Terminen) → alle Termine des Tages; ein leerer Tag macht nichts
+    if (cell && (ev.target.closest('.cm-more') || (compact && cell.querySelector('.cm-ev')))) showDayList(cell.dataset.date, cell);
   });
   // Wischen auf dem iPad: links/rechts = Monat vor/zurück
   let swipe = null;
@@ -317,6 +319,66 @@ const Calendar = (() => {
   const WD_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   // store: eigener Speicherort (z. B. Kalender in einem Dokument) – { onSave(item), onDelete(id) }; ohne: der Kalender der App
   // anchor = Termin/Zelle im Wochenraster: das Fenster erscheint wie in der Vorlage als Popover mit Spitze direkt daneben
+  // Karte neben den Termin (bzw. unter „Neuer Termin“) setzen – ohne Spitze, ohne Schleier
+  function place(form, anchor) {
+    emodal.classList.toggle('anchored', !!anchor);
+    if (!anchor || !anchor.isConnected) { emodal.classList.remove('anchored'); form.removeAttribute('style'); return; }
+    const r = anchor.getBoundingClientRect(), fw = Math.min(340, innerWidth - 24), gap = 8;
+    const fh = form.offsetHeight || 260;
+    const room = form.classList.contains('ce-view') ? 0 : 220; // Bearbeiten: Platz nach unten zum Aufklappen
+    let left, top;
+    if (anchor.closest('.cm-head')) { // „Neuer Termin“ oben rechts: klappt darunter auf, rechtsbündig
+      left = Math.max(8, Math.min(innerWidth - fw - 8, r.right - fw));
+      top = r.bottom + gap;
+    } else {
+      const cell = anchor.closest('.cm-cell') || anchor, cr = cell.getBoundingClientRect();
+      left = cr.right + gap + fw <= innerWidth - 8 ? cr.right + gap : cr.left - gap - fw >= 8 ? cr.left - gap - fw : Math.max(8, (innerWidth - fw) / 2);
+      top = Math.max(12, Math.min(innerHeight - fh - room - 12, cr.top));
+    }
+    Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px` });
+  }
+  const DUR = (a, b) => { const s0 = minsOf(a), e0 = minsOf(b); if (s0 == null || e0 == null || e0 <= s0) return ''; const d = e0 - s0; return d < 60 ? `${d} Min.` : `${Math.floor(d / 60)} Std.${d % 60 ? ` ${d % 60} Min.` : ''}`; };
+  const dateText = (k) => { const d = new Date(`${k}T12:00:00`); return `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`; };
+
+  /* Termin ansehen (Klick auf einen Termin): nur die Angaben, oben rechts Stift → bearbeiten */
+  function showEvent(ev, anchor, store = null) {
+    if (!ev) return;
+    close();
+    const timeHtml = ev.time ? `${esc(ev.time)}${ev.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${esc(ev.end)}` : ''}` : 'Ganztägig';
+    const dur = DUR(ev.time, ev.end);
+    emodal.innerHTML = `<div class="tk-form ce-card ce-view" style="--c:${esc(ev.color || COLORS[0])}">
+      <div class="ce-headbox ce-vhead">
+        <div class="ce-vtitle">${esc(ev.title)}</div>
+        <div class="ce-vsub"><i class="ce-vdot"></i>${dateText(ev.date)}${ev.date === todayIso() ? ' · Heute' : ''}</div>
+        <button type="button" class="ce-vbtn ce-vedit" data-act="edit" aria-label="Bearbeiten">${icon('f-pencil')}</button>
+      </div>
+      ${ev.cover ? `<div class="ce-cover"><img alt="" src="${esc(ev.cover)}" /></div>` : ''}
+      <div class="ce-vrow"><span class="tk-si">${icon('f-clock')}</span><span class="ce-vval">${timeHtml}</span>${dur ? `<span class="ce-dur">${dur}</span>` : ''}</div>
+      ${ev.description ? `<div class="ce-vrow ce-vdesc"><span class="tk-si">${icon('f-align-left')}</span><span class="ce-vval">${esc(ev.description).replace(/\n/g, '<br>')}</span></div>` : ''}
+    </div>`;
+    const card = emodal.firstElementChild;
+    card.addEventListener('click', (x) => {
+      if (x.target.closest('[data-act="edit"]')) edit(ev, null, ev.time || '', ev.end || '', store, anchor);
+    });
+    emodal.hidden = false;
+    place(card, anchor);
+  }
+  /* „+N weitere“: alle Termine des Tages in einer kleinen Karte */
+  function showDayList(date, anchor) {
+    close();
+    const list = dayEvents(date);
+    emodal.innerHTML = `<div class="tk-form ce-card ce-view ce-daylist">
+      <div class="ce-headbox ce-vhead"><div class="ce-vtitle">${dateText(date)}</div><div class="ce-vsub">${list.length} Termine</div></div>
+      <div class="ce-dl"></div></div>`;
+    const card = emodal.firstElementChild, box = card.querySelector('.ce-dl');
+    list.forEach((e) => box.append(chip(e)));
+    card.addEventListener('click', (x) => {
+      const p = x.target.closest('.cm-ev');
+      if (p) showEvent(events.find((e) => e.id === p.dataset.id), anchor);
+    });
+    emodal.hidden = false;
+    place(card, anchor);
+  }
   // Cover-Bild: auf höchstens 720 × 400 px verkleinern (JPEG), damit es klein im Speicher bleibt
   function shrinkImage(file) {
     return new Promise((res, rej) => {
@@ -353,7 +415,6 @@ const Calendar = (() => {
           <div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${pill('color', UIKit.colorRow(e.color, 'data-color'), 'color')}
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
-        ${pill('icon', `<div class="ce-icon-grid">${EV_ICONS.map((id) => `<button type="button" data-icon="${id}" aria-label="Icon">${icon(id)}</button>`).join('')}</div>`, 'icon')}
       </div>
       <div class="tk-sheet-foot ce-foot">${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen">${icon('f-trash')}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
     </form>`;
@@ -366,7 +427,7 @@ const Calendar = (() => {
     const fromMin = (n) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
     const draw = () => {
       const d = new Date(`${e.date}T12:00:00`);
-      const chev = `<span class="ce-chev">${icon('f-chevron-down')}</span>`;
+      const chev = `<span class="ce-chev">${icon('f-chevron-down')}</span>`; // nur ein leiser Pfeil, kein Kasten
       const set = (k, ic, text, extra = '') => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>${extra}${chev}`; };
       set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`);
       // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
@@ -374,12 +435,10 @@ const Calendar = (() => {
       const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
       set('time', icon('f-clock'), e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Ganztägig', durTxt ? `<span class="ce-dur">${durTxt}</span>` : '');
       set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
-      set('icon', `<span style="color:${e.color}">${icon(e.icon)}</span>`, 'Icon');
       form.querySelector('[data-act="cover"]').innerHTML = `<span class="tk-si">${icon('f-image')}</span><span class="tk-rv">${e.cover ? 'Cover ändern' : 'Cover hinzufügen'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
       const cv = form.querySelector('.ce-cover'); cv.hidden = !e.cover; if (e.cover && cv.firstElementChild.getAttribute('src') !== e.cover) cv.firstElementChild.src = e.cover;
       form.querySelector('[data-allday]').classList.toggle('on', !e.time);
       form.querySelector('.ce-wheels').hidden = !e.time; // ganztägig: keine Uhrzeiten
-      form.querySelectorAll('[data-icon]').forEach((b) => b.classList.toggle('on', b.dataset.icon === e.icon));
       form.querySelectorAll('[data-color]').forEach((b) => b.classList.toggle('on', b.dataset.color === e.color));
     };
     // Datum: kleiner Kalender
@@ -420,8 +479,6 @@ const Calendar = (() => {
       if (x.target.closest('.tk-picker')) return;
       const co = x.target.closest('[data-color]');
       if (co) { e.color = co.dataset.color; form.querySelector('.tk-custom').classList.remove('on'); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
-      const ic = x.target.closest('[data-icon]');
-      if (ic) { e.icon = ic.dataset.icon; iconPicked = true; draw(); ic.closest('.tk-pop').classList.remove('open'); return; }
       if (!x.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = x.target.closest('[data-act]')?.dataset.act;
       if (act === 'cover') { form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open')); form.querySelector('.ce-cover-in').click(); return; }
@@ -462,23 +519,7 @@ const Calendar = (() => {
     });
     draw();
     emodal.hidden = false;
-    emodal.classList.toggle('anchored', !!anchor);
-    if (anchor) {
-      const r = anchor.getBoundingClientRect(), fw = Math.min(340, innerWidth - 24), gap = 8;
-      const fh = form.offsetHeight || 260;
-      const room = 260; // Platz nach unten, damit Datum/Zeit/Icon aufklappen können, ohne dass das Fenster wandert
-      let left, top;
-      if (anchor.closest('.cm-head')) { // „Neu“ oben rechts: Fenster klappt darunter auf, rechtsbündig
-        left = Math.max(8, Math.min(innerWidth - fw - 8, r.right - fw));
-        top = r.bottom + gap;
-      } else {
-        const cell = anchor.closest('.cm-cell') || anchor, cr = cell.getBoundingClientRect();
-        left = cr.right + gap + fw <= innerWidth - 8 ? cr.right + gap : cr.left - gap - fw >= 8 ? cr.left - gap - fw : Math.max(8, (innerWidth - fw) / 2);
-        top = Math.max(12, Math.min(innerHeight - fh - room - 12, cr.top));
-      }
-      Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px` });
-      delete form.dataset.arrow;
-    } else { form.removeAttribute('style'); delete form.dataset.arrow; }
+    place(form, anchor);
     requestAnimationFrame(grow);
     setTimeout(() => form.querySelector('.tk-f-title').focus(), 60);
   }
