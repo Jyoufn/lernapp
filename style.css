@@ -11638,6 +11638,7 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 /* Schalter „Ganztägig“ in der Karte: aus = heller Hauch statt dunkler Spur */
 .ce-card .ce-switch:not(.on) { background: var(--ce-hi); }
 .ce-card .tk-wh-band { background: var(--ce-hi); }
+/* =====================================================================
    10.11. (nachts) – Überarbeitung nach zwei Nutzer-Listen
    ===================================================================== */
 /* Farbauswahl überall gleich (Feld zum Ziehen · Farbkreise · Helligkeit), nach Nutzer-Bild „Themes“ */
@@ -11870,3 +11871,11 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .stk-key .st-key-x:hover { color: var(--text); background: #212121; }
 .stk-edit .st-key-in { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
 .stk-edit .st-key-x { width: 26px; height: 26px; border-radius: 7px; }
+/* Termin-Fenster (10.11. nachts, 2): Kästen noch dunkler – kaum heller als die Karte, feiner Rand hält sie zusammen;
+   Farbreihe über die ganze Breite mit 11 Vorschlagsfarben + eigener Farbe */
+.cal-emodal .tk-form.ce-card { --ce-box: color-mix(in srgb, var(--win-bg) 99%, #fff); --ce-hi: color-mix(in srgb, var(--win-bg) 95.5%, #fff); }
+.ce-card .tk-sheet-main.ce-headbox, .ce-card .ce-headbox, .ce-card .ce-rows .tk-pop, .ce-card .ce-vrow, .ce-card .ce-cover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045); }
+.ce-card .tk-colors.ce-colors { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 0; padding: 8px 6px 6px; }
+.ce-card .ce-colors button { flex: none; width: 22px; height: 22px; }
+.ce-card .ce-colors button.on, .ce-card .ce-colors .tk-custom.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px rgba(255, 255, 255, 0.85); }
+.ce-card .ce-colors .tk-custom.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px var(--c); }

@@ -10,6 +10,13 @@
 const Calendar = (() => {
   const KEY = 'calendarEvents';
   const COLORS = ['#6d9fff', '#a78bfa', '#f472b6', '#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf'];
+  // Vorschlagsfarben im Termin-Fenster: die App-Farben (UIKit.COLORS) + drei weitere, damit die Reihe bis ganz rechts reicht
+  const EV_COLORS = [...((window.UIKit && UIKit.COLORS) || []), '#e0737a', '#d6bf5e', '#5db8b3'];
+  const evColorRow = (cur) => {
+    const custom = cur && !EV_COLORS.includes(cur);
+    return `<div class="tk-colors ce-colors">${EV_COLORS.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}`
+      + `<button type="button" class="tk-custom${custom ? ' on' : ''}" data-custom="data-color" ${custom ? `style="--c:${cur}"` : ''} aria-label="Eigene Farbe"></button></div><div class="tk-picker-host"></div>`;
+  };
   const ICONS = ['i-calendar', 'i-book', 'i-pencil', 'i-star', 'i-people', 'i-timer', 'i-music', 'i-heart', 'i-globe', 'i-bolt', 'i-file', 'i-check'];
   const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -395,7 +402,7 @@ const Calendar = (() => {
   }
   function edit(ev, date, time = '', end = '', store = null, anchor = null) {
     close(); // ggf. Tagesliste schließen
-    const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: COLORS[0], icon: 'f-calendar' };
+    const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: EV_COLORS[6] || COLORS[0], icon: 'f-calendar' };
     let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
     // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
@@ -413,7 +420,7 @@ const Calendar = (() => {
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<label class="ce-allday"><span>Ganztägig</span><button type="button" class="ce-switch" data-allday role="switch" aria-label="Ganztägig"><i></i></button></label>
           <div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
-        ${pill('color', UIKit.colorRow(e.color, 'data-color'), 'color')}
+        ${pill('color', evColorRow(e.color), 'color')}
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
       </div>
       <div class="tk-sheet-foot ce-foot">${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen">${icon('f-trash')}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
@@ -470,7 +477,7 @@ const Calendar = (() => {
       if (cu) {
         const host = cu.closest('.tk-colors').nextElementSibling;
         if (host.firstChild) { host.replaceChildren(); return; }
-        host.append(UIKit.colorPicker(COLORS.includes(e.color) ? '#5b8cff' : e.color, (hex, done) => {
+        host.append(UIKit.colorPicker(EV_COLORS.includes(e.color) || COLORS.includes(e.color) ? '#5b8cff' : e.color, (hex, done) => {
           e.color = hex; cu.style.setProperty('--c', hex); cu.classList.add('on'); draw();
           if (done) { host.replaceChildren(); cu.closest('.tk-pop').classList.remove('open'); }
         }));
