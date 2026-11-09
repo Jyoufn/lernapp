@@ -11864,3 +11864,9 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .chat-title-btn.renaming > svg { display: none; }
 .chat-title-input { height: 100%; margin: 0; padding: 0; border: 0 !important; border-radius: 0; background: transparent !important; box-shadow: none !important; color: var(--text); }
 .chat-title-input::selection { background: rgba(255, 255, 255, 0.2); color: var(--text); }
+/* Schlüssel anzeigen / bearbeiten */
+.stk-key .st-key-dots.full { overflow: hidden; max-width: 100%; min-width: 0; flex: 1; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; letter-spacing: 0; white-space: nowrap; text-overflow: ellipsis; user-select: all; }
+.stk-key .st-key-x { color: var(--text-4); }
+.stk-key .st-key-x:hover { color: var(--text); background: #212121; }
+.stk-edit .st-key-in { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.stk-edit .st-key-x { width: 26px; height: 26px; border-radius: 7px; }

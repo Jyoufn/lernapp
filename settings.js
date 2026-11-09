@@ -101,6 +101,7 @@
   // Eingabe direkt in der Zeile: Feld (grau) + Abbrechen + Speichern; ein auf dem Gerät gespeicherter Schlüssel lässt sich trennen.
   // Anbieter: Logo, Name, rechts „N Schlüssel“ bzw. „Verbinden“ + Pfeil. Antippen klappt darunter die Schlüssel auf (schiebt die anderen nach unten):
   // jeder Schlüssel als Zeile (••••1234, × entfernt), darunter ein Feld zum Hinzufügen. Mehrere Schlüssel = mehr Gratis-Kontingent, die App wechselt selbst.
+  const keyView = { shown: new Set(), edit: null }; // angezeigte Schlüssel („Anbieter:Index“) und der gerade bearbeitete
   const keyList = (id) => String(deviceKeys[id] || '').split(/[\s,;]+/).map((k) => k.trim()).filter(Boolean);
   function providerRow(p) {
     const keys = keyList(p.id), open = editing === p.id, what = p.label || 'API-Key';
@@ -113,7 +114,13 @@
     // darunter durch eine Linie getrennt „Rolle“ mit erklärendem Satz und dem Umschalter rechts
     return head + `<div class="st-keys"><div class="st-keys-in">
         <div class="stk-sec"><div class="stk-lab"><span>${esc(what === 'API-Key' ? 'Schlüssel' : what)}</span>${p.multi ? '<em>mehrere Schlüssel = mehr Gratis-Kontingent</em>' : ''}</div>
-        ${keys.map((k, i) => `<div class="st-key stk-key"><span class="stk-ki">${fi('lock', 12)}</span><span class="st-key-dots">••••  ${esc(k.slice(-4))}</span><span class="grow"></span><button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
+        ${keys.map((k, i) => keyView.edit === `${p.id}:${i}`
+          // Schlüssel bearbeiten (Wunsch 10.11.): Feld mit dem ganzen Schlüssel, Speichern ersetzt genau diesen
+          ? `<form class="stk-add stk-edit" data-key-edit="${i}" autocomplete="off"><input class="st-key-in" type="text" value="${esc(k)}" aria-label="Schlüssel bearbeiten" spellcheck="false" /><button type="button" class="st-key-x" data-key-cancel aria-label="Abbrechen">${fi('x', 11)}</button><button type="submit" class="stk-btn">Speichern</button></form>`
+          : `<div class="st-key stk-key"><span class="stk-ki">${fi('lock', 12)}</span><span class="st-key-dots${keyView.shown.has(`${p.id}:${i}`) ? ' full' : ''}">${keyView.shown.has(`${p.id}:${i}`) ? esc(k) : `••••  ${esc(k.slice(-4))}`}</span><span class="grow"></span>`
+            + `<button type="button" class="st-key-x" data-key-show="${i}" aria-label="${keyView.shown.has(`${p.id}:${i}`) ? 'Schlüssel verbergen' : 'Schlüssel anzeigen'}">${fi('eye', 12)}</button>`
+            + `<button type="button" class="st-key-x" data-key-ed="${i}" aria-label="Schlüssel bearbeiten">${fi('pencil', 11)}</button>`
+            + `<button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
         ${fileKeys[p.id] && !keys.length ? '<p class="st-ws-note">Ein Schlüssel ist auf dem Server hinterlegt.</p>' : ''}
         ${p.multi || !keys.length ? `<form class="st-key-add stk-add" data-key="${p.id}" autocomplete="off"><input class="st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="stk-btn">Hinzufügen</button></form>` : ''}</div>
         ${rolesHtml(p, keys.length || fileKeys[p.id])}
@@ -324,8 +331,13 @@
   });
 
   view.addEventListener('click', (e) => {
+    const sh = e.target.closest('[data-key-show]');
+    if (sh && editing) { const k = `${editing}:${sh.dataset.keyShow}`; keyView.shown.has(k) ? keyView.shown.delete(k) : keyView.shown.add(k); drawView(); return; }
+    const ked = e.target.closest('[data-key-ed]');
+    if (ked && editing) { keyView.edit = `${editing}:${ked.dataset.keyEd}`; drawView(); const inp = view.querySelector('.stk-edit input'); inp?.focus(); inp?.select(); return; }
+    if (e.target.closest('[data-key-cancel]')) { keyView.edit = null; drawView(); return; }
     const rm = e.target.closest('[data-key-rm]');
-    if (rm && editing) { const ks = keyList(editing); ks.splice(+rm.dataset.keyRm, 1); if (ks.length) deviceKeys[editing] = ks.join('\n'); else delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); drawView(); return; }
+    if (rm && editing) { keyView.shown.clear(); keyView.edit = null; const ks = keyList(editing); ks.splice(+rm.dataset.keyRm, 1); if (ks.length) deviceKeys[editing] = ks.join('\n'); else delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); drawView(); return; }
     const ro = e.target.closest('[data-ai-role]');
     if (ro && !ro.disabled) {
       const [f, v] = ro.dataset.aiRole.split(':');
@@ -337,7 +349,7 @@
     }
     if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');
-    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; drawView(); return; }
+    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; keyView.shown.clear(); keyView.edit = null; drawView(); return; }
     if (e.target.closest('[data-cancel]')) { editing = null; drawView(); return; }
     if (e.target.closest('[data-remove]')) {
       delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;
@@ -359,6 +371,12 @@
   });
   view.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const ef = e.target.closest('form[data-key-edit]');
+    if (ef && editing) { // bearbeiteten Schlüssel übernehmen (leer = unverändert lassen)
+      const v = ef.querySelector('input').value.trim(), ks = keyList(editing), i = +ef.dataset.keyEdit;
+      if (v.length >= 8) { ks[i] = v.slice(0, 400); deviceKeys[editing] = [...new Set(ks)].join('\n'); write(KEYS_KEY, deviceKeys); }
+      keyView.edit = null; drawView(); return;
+    }
     const sf = e.target.closest('[data-ws-share]');
     if (sf) {
       const inp = sf.querySelector('input'), btn = sf.querySelector('button'), mail = inp.value.trim();
