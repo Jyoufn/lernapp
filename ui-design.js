@@ -150,8 +150,78 @@ const UIDesign = (() => {
     return c || '';
   };
   const STYLE_KEY = 'ud.style.v1';
-  // Glas-Vorschau: Fenster + Sidebar der App nur umstellen, solange diese Ansicht mit „Glas“ offen ist
-  const syncShell = () => document.body.classList.toggle('gl-shell', !!(view && api.open && view.classList.contains('ud-glass')));
+  // Glas-Vorschau gilt app-weit (Home, Erstellen, Aufgaben, Kalender …), solange oben „Glas“ gewählt ist
+  const syncShell = () => {
+    let st = 'cur'; try { st = localStorage.getItem(STYLE_KEY) || 'cur'; } catch {}
+    const on = view ? view.classList.contains('ud-glass') : st === 'glass';
+    if (on) glassify();
+    document.body.classList.toggle('gl-shell', on);
+  };
+
+  /* Glas-Umrechnung: style.css enthält viele fest eingetragene Grautöne (#141414, #181818, #212121 …).
+     Für die Vorschau wird direkt HINTER jede solche Regel eine gleich spezifische Regel eingefügt
+     (:where(body.gl-shell) zählt nicht zur Spezifität), die das Grau durch die passende Glasfläche ersetzt.
+     So bleibt die Reihenfolge der Regeln erhalten und neue Regeln werden automatisch mit umgestellt.
+     Grau, das frei schwebt (position absolute/fixed), wird zu Milchglas mit Weichzeichner. */
+  let glassDone = false;
+  function glassify() {
+    if (glassDone) return; glassDone = true;
+    const sheet = [...document.styleSheets].find((sh) => /style\.css/.test(sh.href || ''));
+    if (!sheet) return;
+    const grey = (v) => {
+      v = (v || '').trim();
+      let r, g, b;
+      const h = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
+      if (h) { const x = h[1].length === 3 ? h[1].replace(/./g, '$&$&') : h[1]; [r, g, b] = [0, 2, 4].map((k) => parseInt(x.slice(k, k + 2), 16)); }
+      else {
+        const m = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(v);
+        if (!m || (m[4] !== undefined && +m[4] < 1)) return -1;
+        [r, g, b] = [+m[1], +m[2], +m[3]];
+      }
+      return Math.max(r, g, b) - Math.min(r, g, b) <= 6 && r <= 60 ? r : -1;
+    };
+    const fill = (l, float) => (float ? 'var(--gl-float)' : l <= 22 ? 'transparent' : l <= 31 ? 'var(--gl-card)' : l <= 40 ? 'var(--gl-card-2)' : 'var(--gl-card-3)');
+    const prefix = (sel) => {
+      const parts = []; let depth = 0, cur = '';
+      for (const ch of sel) { if (ch === '(') depth++; if (ch === ')') depth--; if (ch === ',' && !depth) { parts.push(cur); cur = ''; } else cur += ch; }
+      parts.push(cur);
+      return parts.map((x) => {
+        x = x.trim();
+        if (/^(html|:root)/.test(x)) { const i = x.search(/\s/); return i < 0 ? '' : `${x.slice(0, i)} :where(body.gl-shell) ${x.slice(i + 1)}`; }
+        if (/^body\b/.test(x)) return x.replace(/^body/, 'body:where(.gl-shell)');
+        return `:where(body.gl-shell) ${x}`;
+      }).filter(Boolean).join(', ');
+    };
+    const walk = (list, insert) => {
+      for (let i = list.length - 1; i >= 0; i--) {
+        const r = list[i];
+        if (r.cssRules && !r.selectorText) { try { walk(r.cssRules, (t, at) => r.insertRule(t, at)); } catch {} continue; }
+        if (!r.selectorText || !r.style || /gl-shell|ud-glass/.test(r.selectorText)) continue;
+        const st = r.style; const out = [];
+        const pos = st.getPropertyValue('position');
+        const float = pos === 'absolute' || pos === 'fixed';
+        let bg = st.getPropertyValue('background-color');
+        if (!bg) { const m = /background(?:-color)?:\s*([^;]+)/.exec(st.cssText); const c = m && /(#[0-9a-f]{3,6}|rgba?\([^)]*\))\s*(?:!important)?\s*$/i.exec(m[1].trim()); if (c) bg = c[1]; }
+        const imp = (p) => (st.getPropertyPriority(p) ? ' !important' : '');
+        const l = grey(bg);
+        if (l >= 0) {
+          out.push(`background-color: ${fill(l, float)}${imp('background-color')}`);
+          if (float) out.push('-webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur)');
+        } else if (/var\(--menu-bg\)/.test(bg + st.getPropertyValue('background'))) {
+          out.push('-webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur)');
+        }
+        for (const side of ['top', 'right', 'bottom', 'left']) {
+          const p = `border-${side}-color`;
+          const bl = grey(st.getPropertyValue(p));
+          if (bl >= 18) out.push(`${p}: var(--gl-edge)${imp(p)}`);
+        }
+        if (!out.length) continue;
+        const sel = prefix(r.selectorText);
+        if (sel) { try { insert(`${sel} { ${out.join('; ')} }`, i + 1); } catch {} }
+      }
+    };
+    try { walk(sheet.cssRules, (t, at) => sheet.insertRule(t, at)); } catch {}
+  }
   const paintHex = () => view.querySelectorAll('[data-hex]').forEach((c) => { if (c.dataset.hex) c.textContent = hexOf(c.dataset.hex) || c.dataset.fix; });
   function setStyle(st) {
     const glass = st === 'glass';
@@ -221,6 +291,7 @@ const UIDesign = (() => {
 
   const api = {
     open: false,
+    applyStored: () => syncShell(),
     show() {
       const p = panel(); if (!p) return;
       if (!view) {
@@ -233,12 +304,12 @@ const UIDesign = (() => {
         setStyle(st);
       }
       if (!view.isConnected) p.append(view);
-      api.open = true; view.hidden = false; syncShell(); paintHex();
+      api.open = true; view.hidden = false; paintHex();
       p.classList.add('view-docs', 'view-ud');
     },
     hide() {
       if (!api.open) return;
-      api.open = false; syncShell();
+      api.open = false;
       if (view) view.hidden = true;
       const p = panel(); if (!p) return;
       p.classList.remove('view-ud');
@@ -248,3 +319,4 @@ const UIDesign = (() => {
   return api;
 })();
 window.UIDesign = UIDesign;
+UIDesign.applyStored();

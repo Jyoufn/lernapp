@@ -11484,50 +11484,74 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 body.gl-shell {
   --gl-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Inter, system-ui, sans-serif;
   --gl-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
-  --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --gl-side: rgba(72, 72, 76, 0.38);         /* Sidebar: helles Milchglas */
-  --gl-main: rgba(30, 30, 33, 0.66);         /* Hauptteil: dunkles Glas */
-  --gl-card: rgba(255, 255, 255, 0.07);      /* Karte / Kachel */
-  --gl-card-2: rgba(255, 255, 255, 0.09);    /* angehoben: Knöpfe, Felder, aktive Zeile */
-  --gl-card-3: rgba(255, 255, 255, 0.15);    /* gewählt */
-  --gl-hover: rgba(255, 255, 255, 0.06);
-  --gl-edge: rgba(255, 255, 255, 0.085);     /* haarfeiner Rand */
-  --gl-sep: rgba(255, 255, 255, 0.06);
-  --gl-menu: rgba(46, 46, 50, 0.66);
+  --gl-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* Töne wie im dritten Bild: kühles Schiefergrau, Kacheln heller, Text leicht kühl */
+  --gl-side: rgba(78, 86, 98, 0.22);         /* Sidebar: Milchglas direkt auf dem Fenster */
+  --gl-main: rgba(17, 20, 25, 0.72);         /* Hauptteil: dunklere, abgerundete Glasfläche (wie im zweiten Bild) */
+  --gl-card: rgba(255, 255, 255, 0.065);     /* Karte / Kachel */
+  --gl-card-2: rgba(255, 255, 255, 0.10);    /* angehoben: Knöpfe, Felder, aktive Zeile */
+  --gl-card-3: rgba(255, 255, 255, 0.16);    /* gewählt */
+  --gl-hover: rgba(255, 255, 255, 0.07);
+  --gl-edge: rgba(255, 255, 255, 0.09);      /* haarfeiner Rand */
+  --gl-sep: rgba(255, 255, 255, 0.07);
+  --gl-float: rgba(40, 45, 53, 0.92);        /* schwebend: Menüs, Fenster, Leisten (mit Weichzeichner) */
+  --gl-menu: var(--gl-float);
   --gl-menu-edge: rgba(255, 255, 255, 0.14);
-  --gl-blur: blur(40px) saturate(160%);
+  --gl-blur: blur(40px) saturate(170%);
   --gl-lift: 0 18px 50px rgba(0, 0, 0, 0.38), 0 0 0 0.5px rgba(0, 0, 0, 0.4);
-  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(255, 255, 255, 0.80); --gl-t3: rgba(235, 235, 245, 0.55); --gl-t4: rgba(235, 235, 245, 0.33);
-  --gl-accent: #0a84ff; --gl-green: #30d158; --gl-red: #ff6961;
-  background: #1c1c1e;
+  --gl-t1: rgba(255, 255, 255, 0.95); --gl-t2: rgba(232, 238, 246, 0.80); --gl-t3: rgba(196, 207, 220, 0.60); --gl-t4: rgba(196, 207, 220, 0.38);
+  --gl-accent: #4c9bf5; --gl-green: #5fd38d; --gl-red: #ff6b61; --gl-orange: #f5b657;
+  /* die Variablen der ganzen App zeigen auf Glas – alles, was sie nutzt, zieht mit (fest eingetragene Grautöne rechnet ui-design.js → glassify um) */
+  --main-bg: transparent; --sidebar-bg: transparent; --win-bg: var(--gl-card); --pop-bg: var(--gl-card-2);
+  --field-bg: var(--gl-card); --field-border: var(--gl-edge); --card: var(--gl-card); --card-2: var(--gl-card-2); --card-border: var(--gl-edge);
+  --menu-bg: var(--gl-float); --menu-border: var(--gl-menu-edge); --menu-hover: rgba(255, 255, 255, 0.10);
+  --hover: var(--gl-hover); --active: var(--gl-card-2); --tab: var(--gl-card-2); --tab-active: var(--gl-card); --line: var(--gl-edge); --divider: var(--gl-sep);
+  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4); --icon: var(--gl-t2); --accent: var(--gl-accent);
+  background: #1b1f25; color: var(--gl-t1);
 }
-/* Hintergrund hinter dem Glas: neutrales Grau mit weichen hellen und dunklen Flächen (bereits weich, keine Farbe) */
+body.gl-shell :not(code, pre, kbd, samp, .katex, .katex *) { font-family: var(--gl-font) !important; }
+body.gl-shell { -webkit-font-smoothing: antialiased; }
+/* Fenster-Hintergrund hinter dem Glas: kühles Grau mit weichen hellen und dunklen Flächen */
 body.gl-shell::before { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    linear-gradient(118deg, transparent 38%, rgba(255, 255, 255, 0.05) 47%, transparent 56%),
-    radial-gradient(42% 52% at 10% 14%, rgba(150, 150, 156, 0.55), transparent 70%),
-    radial-gradient(38% 46% at 22% 78%, rgba(110, 110, 116, 0.45), transparent 72%),
-    radial-gradient(46% 56% at 62% 8%, rgba(120, 120, 126, 0.45), transparent 70%),
-    radial-gradient(40% 50% at 92% 48%, rgba(140, 140, 146, 0.40), transparent 70%),
-    radial-gradient(44% 50% at 56% 96%, rgba(126, 126, 132, 0.38), transparent 72%),
-    radial-gradient(30% 36% at 44% 52%, rgba(0, 0, 0, 0.30), transparent 70%),
-    #232326; }
+    linear-gradient(118deg, transparent 36%, rgba(255, 255, 255, 0.045) 46%, transparent 56%),
+    radial-gradient(40% 50% at 8% 12%, rgba(150, 160, 174, 0.50), transparent 70%),
+    radial-gradient(36% 46% at 18% 84%, rgba(120, 116, 104, 0.40), transparent 72%),
+    radial-gradient(46% 56% at 60% 6%, rgba(112, 124, 140, 0.42), transparent 70%),
+    radial-gradient(40% 50% at 94% 46%, rgba(132, 144, 160, 0.40), transparent 70%),
+    radial-gradient(44% 50% at 58% 98%, rgba(104, 116, 132, 0.38), transparent 72%),
+    radial-gradient(30% 36% at 44% 50%, rgba(0, 0, 0, 0.32), transparent 70%),
+    #20252c; }
 body.gl-shell .app { z-index: 1; }
 
-/* ---------- Fenster: Sidebar Milchglas, Hauptteil dunkles Glas bündig (kein Kasten, kein Abstand) ---------- */
-body.gl-shell .sidebar { background: var(--gl-noise), linear-gradient(var(--gl-side), var(--gl-side));
-  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur);
-  --text: var(--gl-t1); --text-2: var(--gl-t2); --text-3: var(--gl-t3); --text-4: var(--gl-t4); --pop-bg: var(--gl-card-2); --line: var(--gl-edge); }
-body.gl-shell .panel { margin: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.07) !important;
-  background: var(--gl-noise), linear-gradient(var(--gl-main), var(--gl-main)) !important; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
-body.gl-shell .sidebar, body.gl-shell .sidebar *, body.gl-shell .panel-toggle { font-family: var(--gl-font) !important; -webkit-font-smoothing: antialiased; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 28px; padding: 0 9px; gap: 9px; border-radius: 7px; background: none; color: var(--gl-t2); font-size: 13px; font-weight: 400; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item svg { width: 15px; height: 15px; color: var(--gl-t3); }
+/* ---------- Fenster: Sidebar Milchglas, Hauptteil abgerundete Glasfläche mit etwas Abstand ---------- */
+body.gl-shell .sidebar { background: var(--gl-noise), linear-gradient(var(--gl-side), var(--gl-side)) !important; -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+body.gl-shell .panel { margin: 8px 8px 8px 0 !important; border: 1px solid rgba(255, 255, 255, 0.10) !important; border-radius: 16px !important;
+  background: var(--gl-noise), linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%), linear-gradient(var(--gl-main), var(--gl-main)) !important;
+  box-shadow: var(--gl-rim), 0 20px 60px rgba(0, 0, 0, 0.30) !important;
+  -webkit-backdrop-filter: var(--gl-blur); backdrop-filter: var(--gl-blur); }
+body.gl-shell .app.collapsed .panel { margin-left: 8px !important; }
+
+/* Sidebar wie im Einstellungs-Fenster (zweites Bild): Kopf schlicht (Avatar + Name, Lupe rechts), Zeilen mit
+   schlichten Linien-Icons ohne Kachel, aktive Zeile hell gefüllt */
+body.gl-shell .sb-ws { gap: 8px; border-radius: 8px; background: none; color: var(--gl-t1); font-size: 13.5px; font-weight: 600; }
+body.gl-shell :is(.sb-ws, .sb-head-btn):hover { background: var(--gl-hover); }
+body.gl-shell .sb-ws-chev { color: var(--gl-t3); }
+body.gl-shell .sb-head-btn { border-radius: 8px; color: var(--gl-t3); }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item { height: 30px; padding: 0 9px; gap: 10px; border-radius: 8px; background: none; color: var(--gl-t2); font-size: 13.5px; font-weight: 400; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item > svg { width: 16px; height: 16px; color: var(--gl-t3); }
 body.gl-shell :is(.sidebar, .ud-nav) .nav-item:hover { background: var(--gl-hover); }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.12); color: #fff; font-weight: 500; }
-body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active svg { color: #fff; }
-body.gl-shell .sidebar .sb-ws-name { font-size: 13px; font-weight: 600; }
-body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; font-weight: 500; }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active { background: rgba(255, 255, 255, 0.10); color: #fff; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+body.gl-shell :is(.sidebar, .ud-nav) .nav-item.active > svg { color: #fff; }
+body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 12px; font-weight: 500; }
+body.gl-shell .ws-menu { background: rgba(40, 45, 53, 0.97) !important; }
+
+/* Lichtkante wie bei Apple „Liquid Glass“: oben/links heller, unten/rechts schwächer */
+body.gl-shell { --gl-rim: inset 1px 1px 0 rgba(255, 255, 255, 0.10), inset -1px -1px 0 rgba(255, 255, 255, 0.03); }
+
+/* schwebende Leisten/Menüs der App: Milchglas mit Schatten */
+body.gl-shell :is(.chat-pop, .model-popover, .ws-menu, .tk-menu, .lb2-menu) { border-color: var(--gl-menu-edge) !important; border-radius: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--gl-lift) !important; }
 
 /* ---------- Ansicht ---------- */
 .ud-view.ud-glass {
@@ -11685,3 +11709,6 @@ body.gl-shell .sidebar .sb-sec-head { color: var(--gl-t3); font-size: 11.5px; fo
 /* Icons */
 .ud-view.ud-glass .ud-icons span { border-radius: 10px; color: var(--gl-t2); }
 .ud-view.ud-glass .ud-icons span:hover { background: var(--gl-card-2); color: #fff; }
+/* Glas: Kalender-Stundenlinien und Startseiten-Karten (Farben stehen dort als Verlauf) */
+body.gl-shell .cal-week .cw-body { background-image: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 56px); }
+body.gl-shell .hm-card { border-color: var(--gl-edge) !important; border-radius: 14px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
