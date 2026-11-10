@@ -732,13 +732,13 @@ async function locateParts(env, img, labels, parts, required = []) {
    FLUX bei NVIDIA kann keine eigenen Bilder bearbeiten – deshalb dieses Modell. Nicht verfügbar (z. B. Kontingent 429) → null,
    dann malt FLUX wie bisher anhand einer Beschreibung neu (Ersatz). */
 const IMAGE_EDIT_MODEL = 'gemini-2.5-flash-image';
-async function geminiImageEdit(env, img, instruction) {
+async function geminiImageEdit(env, img, instruction, { allowText = false } = {}) {
   if (!env.GEMINI_API_KEY || !img) return null;
   try {
     const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${IMAGE_EDIT_MODEL}:generateContent`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': P.geminiKey(env, IMAGE_EDIT_MODEL) }, signal: AbortSignal.timeout(90000),
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: img.mime, data: img.data } }, { text: `Bearbeite dieses Bild: ${instruction}\nÄndere NUR das Gewünschte. Stil, Motiv, Aufbau, Farben und Bildformat bleiben sonst genau gleich. Keine Schrift hinzufügen.` }] }],
+        contents: [{ role: 'user', parts: [{ inline_data: { mime_type: img.mime, data: img.data } }, { text: `Bearbeite dieses Bild: ${instruction}\nÄndere NUR das Gewünschte. Stil, Motiv, Aufbau, Farben und Bildformat bleiben sonst genau gleich.${allowText ? '' : ' Keine Schrift hinzufügen.'}` }] }],
         generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
       }),
     });
@@ -748,6 +748,30 @@ async function geminiImageEdit(env, img, instruction) {
     const d = part && (part.inlineData || part.inline_data);
     return d ? { mime: d.mimeType || d.mime_type || 'image/png', data: d.data } : null;
   } catch (e) { console.warn(`[Bild-Bearbeitung] ${e.message}`); return null; }
+}
+
+/* ---------- /api/image-translate: englisch beschriftetes Erklärbild aus einer Quelle → deutsche Beschriftung (Wunsch 10.11. abends) ----------
+   Gemini (Bild-Bearbeitung) ersetzt nur die Texte, das Bild bleibt gleich. Ergebnis bleibt gespeichert (gleiche Adresse → gleiches Bild).
+   Klappt es nicht (Kontingent), zeigt die App einfach das Original. */
+async function handleImageTranslate(req, res) {
+  const env = readEnv();
+  const { src } = await readBody(req, 4000);
+  const url = String(src || '');
+  if (!/^https:\/\//.test(url)) return sendJson(res, 400, { error: 'Bildadresse fehlt' });
+  const key = imgKey(`übersetzt:${url}`, 'de');
+  const cached = readImgCache(key);
+  if (cached) return sendJson(res, 200, cached);
+  try {
+    const r = await WEB.fetchPublic(url, { timeoutMs: 8000, binary: true, maxBytes: 3000000, accept: 'image/png,image/jpeg,image/webp,image/*;q=0.8' });
+    const mime = /png/.test(r.type) ? 'image/png' : /webp/.test(r.type) ? 'image/webp' : /jpe?g/.test(r.type) ? 'image/jpeg' : '';
+    if (!mime) return sendJson(res, 200, { url: '' });
+    const out = await geminiImageEdit(env, { mime, data: r.body.toString('base64') },
+      'Übersetze ALLE Beschriftungen, Überschriften und Legenden-Texte ins Deutsche (korrekte deutsche Fachbegriffe, z. B. „Phospholipid-Doppelschicht“, „hydrophiler Kopf“). Gleiche Schriftart, Größe und Position; Linien, Formen und Farben unverändert.', { allowText: true });
+    if (!out) return sendJson(res, 200, { url: '' });
+    const data = { url: `data:${out.mime};base64,${out.data}` };
+    writeImgCache(key, data);
+    return sendJson(res, 200, data);
+  } catch { return sendJson(res, 200, { url: '' }); }
 }
 
 /* ---------- /api/image-edit: Bild im Dokument „mit KI bearbeiten“ ----------
@@ -1775,6 +1799,7 @@ async function handle(req, res) {
       return sendJson(res, 200, { items: (Array.isArray(items) ? items : [items]).filter(Boolean).slice(0, 12) });
     }
     if (req.method === 'POST' && urlPath === '/api/image-edit') return await handleImageEdit(req, res);
+    if (req.method === 'POST' && urlPath === '/api/image-translate') return await handleImageTranslate(req, res);
     if (req.method === 'POST' && urlPath === '/api/cover-image') return await handleCoverImage(req, res);
     if (req.method === 'GET' && urlPath === '/api/spotify/config') {
       // Die Client-ID ist kein Geheimnis (PKCE-Anmeldung ohne Secret) – darf an den Browser

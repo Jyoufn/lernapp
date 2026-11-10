@@ -1217,3 +1217,20 @@ test('Prompt nennt die Fähigkeiten der App und Quellen nur unten', () => {
   assert.match(s, /Strukturformel/);
   assert.match(s, /zeigt die App automatisch UNTER der Antwort/);
 });
+
+test('Gefundenes Erklärbild: zusätzliches KI-Bild fällt weg, ohne Fund kommt es doch', async () => {
+  const W = require('../lib/workflow');
+  const run = async (img) => {
+    let out = '';
+    const inj = { text: (t) => { out += t; }, finish: async () => {} };
+    const g = W.illuGate(inj, { promise: Promise.resolve(img) });
+    for (const ch of ['Text davor.\n\n``', '`illus', 'tration\n{"prompt":"Zellmembran beschriftet"}\n', '```\n\nText danach.']) g.text(ch);
+    await g.finish();
+    return out;
+  };
+  const withImg = await run({ src: 'https://x/y.png' });
+  assert.doesNotMatch(withImg, /illustration/);
+  assert.match(withImg, /Text davor\.[\s\S]*Text danach\./);
+  const without = await run(null);
+  assert.match(without, /```illustration/);
+});

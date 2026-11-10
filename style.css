@@ -12227,3 +12227,33 @@ html.boot-noside .boot-main { margin-left: 8px; }
 .next-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @keyframes next-in { from { opacity: 0; transform: translateY(4px); } }
 @media (prefers-reduced-motion: reduce) { .next-sug { animation: none; } .next-sugs { transition: none; } }
+
+/* ===== 10.11. abends: Quellen unten neben den Icons – leicht überlappende Kacheln (Bildquelle mit Vorschau), einzeln antippbar, +N öffnet alle ===== */
+.msg-actions .src-covers { display: inline-flex; align-items: center; margin-left: 8px; padding-left: 2px; }
+.src-cover { position: relative; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 7px; overflow: hidden; background: var(--pop-bg);
+  box-shadow: 0 0 0 2px var(--main-bg); transition: transform 160ms var(--spring, ease); -webkit-tap-highlight-color: transparent; }
+.src-cover + .src-cover { margin-left: -6px; }
+.src-cover:hover { transform: translateY(-2px); z-index: 10 !important; }
+.src-cover.is-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.src-cover .cover-ico { display: grid; place-items: center; width: 100%; height: 100%; font-size: 10px; font-weight: 600; color: var(--text-3); }
+.src-cover .cover-ico img { width: 14px; height: 14px; border-radius: 3px; }
+.src-cover-more { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; padding: 0 6px; border: 0; border-radius: 7px; background: none;
+  color: var(--text-3); font: inherit; font-size: 12px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.src-cover-more:hover { background: var(--menu-hover); color: var(--text); }
+.src-cover-more.only-icon { padding: 0; }
+.wb-credits { display: none !important; }
+/* Erklärbild wird gerade ins Deutsche übersetzt: leiser Schimmer über dem Bild */
+figure.web-img.wb-tr .src-img-pic { position: relative; }
+figure.web-img.wb-tr .src-img-pic::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.18) 50%, transparent 70%); background-size: 220% 100%; animation: wb-tr 1.6s linear infinite; pointer-events: none; }
+@keyframes wb-tr { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+
+/* ===== 10.11. abends: To-dos weiter links (bündig mit den Punkten), Farben aus dem jeweiligen Modus; „Bild gefunden“ nur als Link ===== */
+.step.has-box > .fold:has(> .fold-in > .plan-list.todo) { margin-left: -22px; }
+.plan-list.todo { border-color: var(--line); background: var(--win-bg); }
+.plan-list.todo .plan-item + .plan-item { border-top-color: var(--line); }
+.plan-list.todo .plan-item .pi-mark { border-color: color-mix(in srgb, var(--text) 28%, transparent); color: var(--main-bg); }
+.plan-list.todo .plan-item[data-state="active"] .pi-mark { background: var(--text-2); }
+.plan-list.todo .plan-item[data-state="done"] .pi-mark { background: color-mix(in srgb, var(--text) 20%, transparent); color: var(--text-2); }
+.img-found-link { color: inherit; text-decoration: none; }
+.img-found-link:hover { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
+.step.img-step .img-chips { display: none; }

@@ -370,7 +370,7 @@ input.addEventListener('keydown', (e) => {
   }
 });
 
-composer.addEventListener('submit', () => fadeNextSuggestions(), true);
+composer.addEventListener('submit', () => { fadeNextSuggestions(); setTimeout(() => renderChatTags(), 80); }, true);
 composer.addEventListener('submit', (e) => {
   e.preventDefault();
   const run = runOf(); if (run) { run.abort(); return; } // während der Antwort dieses Chats: Stopp-Button
@@ -1827,7 +1827,7 @@ function renderMarkdown(target, text, opts = {}) {
     if (!keep.has(raw)) { const f = webImageFigure(raw); if (!f) { pre.remove(); return; } keep.set(raw, f); }
     pre.replaceWith(keep.get(raw));
   });
-  wbCredits(target);
+  target.querySelector(':scope > .wb-credits')?.remove(); // Bildquellen stehen jetzt unten bei den Quellen (placeSourceStack)
   wbFit(target);
   // Podcast (```podcast): Player wie bei Spotify mit Transkript und Mitreden (podcast.js) – solange die KI noch schreibt: eine Warte-Karte
   const podClosed = (text.match(/```podcast[^\n]*\n[\s\S]*?\n```/g) || []).length;
@@ -2738,6 +2738,13 @@ function webImageFigure(raw) {
   img.addEventListener('error', () => fig.remove());
   img.src = d.src;
   a.append(img);
+  // englisch beschriftet → deutsche Fassung holen (Gemini ersetzt nur die Texte); bis dahin bzw. wenn es nicht klappt: das Original
+  if (d.uebersetzen) {
+    fig.classList.add('wb-tr');
+    fetch('/api/image-translate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ src: d.src }) })
+      .then((r) => r.json()).then((j) => { if (/^data:image\//.test(j?.url || '')) { img.src = j.url; fig.classList.add('wb-de'); } })
+      .catch(() => {}).finally(() => fig.classList.remove('wb-tr'));
+  }
   // keine Unterschrift unter dem Bild (Wunsch 04.11.) – die Quelle steht am Ende der Nachricht (Bild-Icon + Vorschau + Website, siehe wbCredits)
   fig._wb = d;
   fig.append(a);
@@ -3064,27 +3071,38 @@ function messageFooter(msgEl, text) {
 
 /* Hauptquellen direkt hinter dem letzten Text der Antwort; endet die Antwort mit einer Tabelle (o. Ä.), darunter */
 function placeSourceStack(answerEl, sources) {
-  if (!sources.length) return null;
-  const stack = el('button', 'src-stack');
-  stack.type = 'button';
-  stack.title = 'Quellen anzeigen';
-  const nameOf = (s) => { const d = String(s.domain || '').replace(/^www\./i, ''); return /^[a-z0-9.-]+\.[a-z]{2,}$/i.test(d) && !/vertexaisearch/i.test(d) ? d : String(s.title || d).slice(0, 28); };
-  // je Quelle nur das Logo als abgerundetes Quadrat (ohne Namen), nebeneinander aufgereiht, deutsche Quellen zuerst, höchstens fünf – dahinter „+N“
-  void nameOf;
+  /* Quellen unten neben den Icons (Wunsch 10.11. abends): leicht überlappende runde Kacheln – Bilder aus Quellen mit kleiner Vorschau zuerst,
+     dann die Website-Logos (deutsche zuerst). Jede Kachel öffnet ihre Seite, „+N“ öffnet das Fenster mit allen Quellen. */
+  const imgs = [...answerEl.querySelectorAll('figure.web-img')].map((f) => f._wb).filter((d) => d && /^https:\/\//.test(d.src || ''));
   const de = (s) => /\.(de|at|ch)$/i.test(String(s.domain || '').replace(/^www\./, '')) || s.german;
-  const sorted = [...sources].sort((a, b) => (de(b) ? 1 : 0) - (de(a) ? 1 : 0));
-  stack.classList.add('row');
-  sorted.slice(0, 5).forEach((src) => { const c = el('span', 'stack-src sq'); c.append(siteIcon(src.domain, src.title, 'stack-ico')); stack.append(c); });
-  if (sorted.length > 5) stack.append(el('span', 'stack-more', `+${sorted.length - 5}`));
-  stack.addEventListener('click', () => openSourcesModal(sources, null));
-  let last = answerEl.lastElementChild;
-  while (last && (last.matches('ul, ol') ? last.lastElementChild : null)) last = last.lastElementChild; // in Listen: letzter Punkt
-  if (last && last.matches('p, li, h1, h2, h3, h4, blockquote') && last.textContent.trim()) {
-    stack.classList.add('inline');
-    last.append(stack);
-    return null;
+  const sorted = [...sources].filter((x) => x && (x.url || x.domain)).sort((a, b) => (de(b) ? 1 : 0) - (de(a) ? 1 : 0));
+  if (!sorted.length && !imgs.length) return null;
+  const stack = el('div', 'src-covers');
+  const items = [...imgs.map((d) => ({ img: d })), ...sorted.map((src) => ({ src }))];
+  const MAX = 5;
+  items.slice(0, MAX).forEach((it, i) => {
+    const a = el('a', `src-cover${it.img ? ' is-img' : ''}`);
+    a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.zIndex = String(MAX - i);
+    if (it.img) {
+      a.href = safeUrl(it.img.url || it.img.src);
+      a.setAttribute('aria-label', `Bildquelle: ${String(it.img.site || '').slice(0, 40)}`);
+      const im = document.createElement('img'); im.alt = ''; im.decoding = 'async'; im.referrerPolicy = 'no-referrer'; im.src = it.img.src; im.onerror = () => a.remove();
+      a.append(im);
+    } else {
+      a.href = safeUrl(it.src.url || `https://${it.src.domain}`);
+      a.setAttribute('aria-label', String(it.src.title || it.src.domain || 'Quelle').slice(0, 80));
+      a.append(siteIcon(it.src.domain, it.src.title, 'cover-ico'));
+    }
+    stack.append(a);
+  });
+  if (items.length > MAX) {
+    const more = el('button', 'src-cover-more', `+${items.length - MAX}`);
+    more.type = 'button';
+    more.setAttribute('aria-label', 'Alle Quellen anzeigen');
+    more.addEventListener('click', () => openSourcesModal(sorted, null));
+    stack.append(more);
   }
-  return stack; // kein Text am Ende (z. B. Tabelle) → kommt in die Leiste neben „Neu erzeugen“
+  return stack;
 }
 
 /* Antwort neu erzeugen: nur bei der letzten Antwort, gleicher Verlauf bis zur Frage */
@@ -3807,13 +3825,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (!webImg || webImg.done) return;
     webImg.done = true;
     if (d.status !== 'found') { webImg.step.remove(); return; }
-    finishStep(webImg.step, `Bild gefunden <span class="ph-x">· ${escapeHtml(String(d.site || '').replace(/^www\./, ''))}</span> <span class="t">${secs(webImg.from)}</span>`);
+    // nur „Bild gefunden“ mit Link zur Seite (keine Vorschau in der Zeitleiste) – und erst dort, wo es gefunden wurde, nicht ganz oben
+    const site = escapeHtml(String(d.site || '').replace(/^www\./, ''));
+    const href = /^https:\/\//.test(d.url || d.src || '') ? escapeHtml(safeUrl(d.url || d.src)) : '';
+    finishStep(webImg.step, `Bild gefunden${site ? ` <span class="ph-x">· ${href ? `<a class="img-found-link" href="${href}" target="_blank" rel="noopener noreferrer">${site}</a>` : site}</span>` : ''} <span class="t">${secs(webImg.from)}</span>`);
     markerIcon(webImg.step, 'image');
-    if (/^https:\/\//.test(d.src || '')) {
-      const row = el('div', 'chips img-chips');
-      const i = document.createElement('img'); i.alt = ''; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer'; i.src = d.src; i.onerror = () => row.remove();
-      row.append(i); webImg.step.append(row);
-    }
+    work?.steps.insertBefore(webImg.step, stages.answering?.step || null);
   };
   /* Große PDFs: die Seitenbilder (Handschrift, Scans, Folien) entstehen nach dem Anhängen im Hintergrund. Sind sie beim Senden noch nicht
      fertig, wartet die Antwort darauf – sichtbar als Schritt „Dokumente analysieren · 5/18“; die Server-Stufe „Dokumente analysieren“
@@ -5763,8 +5780,9 @@ function renderChatTags() {
   const tab = activeTab(), c = tab && !tab.dataset.view ? chatOf(tab) : null;
   const all = window.ChatTags ? window.ChatTags.all() : [];
   const gs = (c?.tags || []).map((id) => all.find((g) => g.id === id)).filter(Boolean);
-  // Tag-Icon oben rechts ist in jedem Chat da (Wunsch 10.11.); gesetzte Tags stehen daneben
-  box.hidden = !c;
+  // Tag-Icon oben rechts erst, wenn im Chat geschrieben wurde (nicht im leeren Chat, nicht in der Chats-Übersicht – Wunsch 10.11. abends)
+  const inList = document.querySelector('.panel')?.classList.contains('view-chats');
+  box.hidden = !c || inList || isDraft(tab);
   box.classList.toggle('empty', !gs.length);
   box.innerHTML = '<svg class="ct-ic" width="15" height="15" aria-hidden="true"><use href="#f-tag"/></svg>' + gs.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${escapeHtml(g.c)}"><span>${escapeHtml(g.name)}</span></span>`).join('') + (gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : '');
 }
@@ -6072,6 +6090,7 @@ const chatsView = (() => {
     open = true;
     panel?.classList.add('view-chats');
     chatsBtn.classList.add('on');
+    renderChatTags();
     L()?.show(); L()?.focusSearch();
     window.renderSideChats?.();
   }
@@ -6080,6 +6099,7 @@ const chatsView = (() => {
     open = false;
     panel?.classList.remove('view-chats');
     chatsBtn.classList.remove('on');
+    renderChatTags();
     L()?.hide();
     window.renderSideChats?.();
   }
@@ -6407,6 +6427,7 @@ function savedThoughts(h) {
     step.classList.add('foldable', 'has-box');
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', '<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>');
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
+    if (todo) step.classList.add('open'); // To-dos stehen offen da, sobald man die Gedanken aufklappt
     w.steps.append(step);
   }
   (h.thoughts || []).forEach(({ title, body }) => {
@@ -6457,7 +6478,12 @@ function renderSavedItem(h, i) {
       r.append(text);
       r.flush();
       void hydrateIllustrations(answer); // Bilder der gespeicherten Antwort nachladen (kommen aus dem Speicher des Servers)
-      msgEl.append(messageFooter(msgEl, text));
+      const footer = messageFooter(msgEl, text);
+      const used = new Set([...text.matchAll(/\[(\d{1,2})\]/g)].map((m) => +m[1]));
+      const saved = (h.sources || []).filter(Boolean);
+      const cov = placeSourceStack(answer, saved.filter((x) => used.has(x.n))); // nur belegte Quellen (+ Bildquellen)
+      if (cov) footer.append(cov);
+      msgEl.append(footer);
     } else { chat.append(msgEl); msgEl.append(restartBar(msgEl)); }
   }
 }
