@@ -7224,10 +7224,10 @@ document.addEventListener('click', (e) => {
     // Schwarz (10.11. abends, umgedreht): Hauptteil reines Schwarz, Sidebar einen Hauch heller (grau statt dunkler als der Hauptteil)
     black: { label: 'Schwarz', main: '#000000', side: '#080808', field: '#0a0a0a', fieldBorder: '#1c1c1c',
       pv: { main: '#000000', side: '#0a0a0a', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
-    // Glas (10.11. abends, überarbeitet): helles, milchiges Glas NUR in der Sidebar über einem ruhigen Verlauf in der Glasfarbe (ohne Formen/Linien);
-    // Hauptteil, Karten und Eingabefeld bekommen einen Hauch derselben Farbe. Glasfarbe wählbar (cfg.glass, Standard Weiß).
-    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 9%, #141416)', side: 'transparent', field: 'color-mix(in srgb, var(--glass) 12%, #18181a)', fieldBorder: 'color-mix(in srgb, var(--glass) 20%, #222224)', glass: true,
-      pv: { main: '#151516', side: 'linear-gradient(160deg,#6b6b70 0%,#3a3a3e 55%,#222224 100%)', line: 'rgba(255,255,255,.35)', field: 'rgba(255,255,255,.18)' } },
+    // Glas (Stand 10.11. abends, Vorbild glassapp.dev): Sidebar flach grau (Hauch Glasfarbe), Hauptteil als randlose, abgerundete dunkelgraue Fläche
+    // (etwas heller als im Vorbild), Eingabefeld eine Stufe heller ohne Rand. Glasfarbe wählbar (cfg.glass) – tönt nur ganz leicht.
+    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 3%, #161618)', side: 'color-mix(in srgb, var(--glass) 6%, #1d1d1f)', field: 'color-mix(in srgb, var(--glass) 6%, #202022)', fieldBorder: 'transparent', glass: true,
+      pv: { main: '#161618', side: '#232325', line: 'rgba(255,255,255,.18)', field: 'rgba(255,255,255,.12)' } },
     // Hell: Werte VOR der Umkehrung (style.css → [data-theme="light"]) – neutral (kein Blaustich): Hauptteil weiß, Sidebar #f4f4f4, Felder weiß mit feinem Rand
     light: { label: 'Hell', main: '#000000', side: '#0b0b0b', field: '#000000', fieldBorder: '#1c1c1c', light: true,
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },

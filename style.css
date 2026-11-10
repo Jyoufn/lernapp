@@ -12129,21 +12129,14 @@ html.auth-opening .auth { opacity: 0; transform: none; }
 /* ===== 10.11. abends: Modi Schwarz (umgedreht), Glas (neu) und Hell (aufgeräumt) =====
    Schwarz: Hauptteil reines Schwarz, Sidebar einen Hauch heller. Glas: NUR die Sidebar ist gläsern (Hintergrundbild + Weichzeichner dahinter),
    der Hauptteil bleibt fest – Wunsch des Nutzers, Ausnahme vom früheren „kein Glas“. Hell: neutrale Töne (vorher Blaustich), weiße Karten, dunklere Schrift. */
-html[data-glass="on"], html[data-glass="on"] body {
-  /* eine durchgehende, ruhige Fläche in der Glasfarbe – links (Sidebar) und rund um den Hauptteil derselbe Ton, kein dunkler Rand unten */
-  background: linear-gradient(160deg, color-mix(in srgb, var(--glass) 30%, #19191b) 0%, color-mix(in srgb, var(--glass) 22%, #161618) 55%, color-mix(in srgb, var(--glass) 18%, #141416) 100%) fixed;
-}
-html[data-glass="on"] .sidebar {
-  /* Milchglas ohne Weichzeichner (backdrop-filter machte beim Ansichtswechsel schwarze Flächen und kostet auf dem iPad) */
-  background: linear-gradient(180deg, color-mix(in srgb, var(--glass) 7%, transparent), transparent 70%);
-  -webkit-backdrop-filter: none; backdrop-filter: none; border-right: 0;
-}
+html[data-glass="on"], html[data-glass="on"] body { background: var(--sidebar-bg); }
+html[data-glass="on"] .sidebar { background: none; -webkit-backdrop-filter: none; backdrop-filter: none; border-right: 0; }
 html[data-glass="on"] .sidebar .nav-item:hover, html[data-glass="on"] .sidebar .st-item:hover, html[data-glass="on"] .sidebar :is(.sb-chat:hover) { background: color-mix(in srgb, var(--glass) 10%, transparent); }
 html[data-glass="on"] .sidebar .nav-item.active, html[data-glass="on"] .sidebar .st-item.active, html[data-glass="on"] .sidebar .sb-chat.active { background: color-mix(in srgb, var(--glass) 16%, transparent); }
 /* Hauptteil passend: fest, aber mit einem Hauch Glasfarbe; Karten, Menüs und Ränder im selben Ton */
-html[data-glass="on"] { --win-bg: color-mix(in srgb, var(--glass) 12%, #18181a); --card: color-mix(in srgb, var(--glass) 12%, #18181a); --pop-bg: color-mix(in srgb, var(--glass) 15%, #1c1c1e);
-  --menu-bg: color-mix(in srgb, var(--glass) 10%, #161618); --menu-hover: color-mix(in srgb, var(--glass) 15%, #1c1c1e); --hover: color-mix(in srgb, var(--glass) 14%, #1b1b1d);
-  --active: color-mix(in srgb, var(--glass) 17%, #1d1d1f); --line: color-mix(in srgb, var(--glass) 17%, #202022); --menu-border: var(--line); --divider: var(--line); --card-border: var(--line); }
+html[data-glass="on"] { --win-bg: color-mix(in srgb, var(--glass) 6%, #1d1d1f); --card: color-mix(in srgb, var(--glass) 6%, #1d1d1f); --pop-bg: color-mix(in srgb, var(--glass) 9%, #232325);
+  --menu-bg: color-mix(in srgb, var(--glass) 6%, #1d1d1f); --menu-hover: color-mix(in srgb, var(--glass) 10%, #242426); --hover: color-mix(in srgb, var(--glass) 9%, #232325);
+  --active: color-mix(in srgb, var(--glass) 12%, #262628); --line: color-mix(in srgb, var(--glass) 9%, #232325); --menu-border: var(--line); --divider: var(--line); --card-border: var(--line); }
 html[data-glass="on"] .panel { border-color: color-mix(in srgb, var(--glass) 16%, transparent); }
 html[data-glass="on"] .out-bubble { background: color-mix(in srgb, var(--glass) 11%, #19191b); }
 html[data-glass="on"] .cs-pill { background: color-mix(in srgb, var(--glass) 6%, #121213); border-color: var(--line); }
@@ -12257,3 +12250,11 @@ figure.web-img.wb-tr .src-img-pic::after { content: ''; position: absolute; inse
 .img-found-link { color: inherit; text-decoration: none; }
 .img-found-link:hover { color: var(--text-2); text-decoration: underline; text-underline-offset: 2px; }
 .step.img-step .img-chips { display: none; }
+
+/* ===== 10.11. abends: Glas nach Vorbild glassapp.dev – Hauptteil randlos und abgerundet, Eingabefeld rund ohne Rand ===== */
+html[data-glass="on"] .panel { border-color: transparent; border-radius: 14px; }
+html[data-glass="on"] .sidebar .nav-item:hover, html[data-glass="on"] .sidebar .st-item:hover, html[data-glass="on"] .sidebar .sb-chat:hover { background: color-mix(in srgb, #fff 4%, transparent); }
+html[data-glass="on"] .sidebar .nav-item.active, html[data-glass="on"] .sidebar .st-item.active, html[data-glass="on"] .sidebar .sb-chat.active { background: color-mix(in srgb, #fff 7%, transparent); }
+html[data-glass="on"] .composer { border-radius: 22px; }
+html[data-glass="on"] .boot-main { border-color: transparent; border-radius: 14px; }
+html[data-glass="on"] .boot-in { border-color: transparent; border-radius: 22px; }
