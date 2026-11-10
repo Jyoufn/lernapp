@@ -370,6 +370,7 @@ input.addEventListener('keydown', (e) => {
   }
 });
 
+composer.addEventListener('submit', () => fadeNextSuggestions(), true);
 composer.addEventListener('submit', (e) => {
   e.preventDefault();
   const run = runOf(); if (run) { run.abort(); return; } // während der Antwort dieses Chats: Stopp-Button
@@ -1057,6 +1058,39 @@ agentHint.addEventListener('click', (e) => {
   document.addEventListener('dogmodechange', updateAgentHint); // nach einem Wechsel neu prüfen
 }
 function stripAskBlock(text) { return text.replace(ASK_BLOCK, '').trimEnd(); }
+/* Vorschläge für den nächsten Schritt (```weiter, nur nach der ersten Frage im Chat): nie als Text zeigen – auch nicht halb geschrieben */
+const NEXT_BLOCK = /\n?```weiter[\s\S]*?(?:```|$)/g;
+function stripNext(text) { return String(text || '').replace(NEXT_BLOCK, '').replace(/\n?`{1,3}(w(e(i(t(e(r)?)?)?)?)?)?$/, ''); }
+function parseNext(text) {
+  const m = /```weiter\s*([\s\S]*?)```/.exec(String(text || ''));
+  if (!m) return [];
+  try { const a = JSON.parse(m[1]); return (Array.isArray(a) ? a : a?.vorschlaege || []).map((x) => String(x || '').trim()).filter((x) => x && x.length <= 120).slice(0, 3); } catch { return []; }
+}
+/* unter der Antwort: drei Vorschläge mit Pfeil ↳ – Antippen setzt den Text ins Eingabefeld (abschicken tut man selbst) */
+function nextSuggestions(text) {
+  const items = parseNext(text);
+  if (!items.length) return null;
+  const box = el('div', 'next-sugs');
+  items.forEach((t, i) => {
+    const b = el('button', 'next-sug');
+    b.type = 'button';
+    b.style.setProperty('--i', i);
+    b.innerHTML = '<svg class="next-arr" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 3v4.5A2.5 2.5 0 0 0 6.5 10H12M9.5 7.5 12 10l-2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    b.append(el('span', 'next-t', t));
+    b.addEventListener('click', () => {
+      input.value = t;
+      input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint (wie beim Diktat)
+      autoGrow(); input.focus();
+      try { input.setSelectionRange(t.length, t.length); } catch {}
+    });
+    box.append(b);
+  });
+  return box;
+}
+// neue Nachricht abgeschickt → Vorschläge werden langsam durchsichtig und verschwinden
+function fadeNextSuggestions() {
+  document.querySelectorAll('.next-sugs:not(.out)').forEach((b) => { b.classList.add('out'); setTimeout(() => b.remove(), 900); });
+}
 function parseAskBlock(text) {
   const m = text.match(/```ask\s*([\s\S]*?)```/);
   if (!m) return null;
@@ -1638,7 +1672,7 @@ async function hydrateIllustration(figure, signal) {
 }
 
 function renderMarkdown(target, text, opts = {}) {
-  text = stripAskBlock(ChatVisuals.fenceBareIllustrations(text)).replace(AGENT_BLOCK, '') // Bild-Auftrag ohne Rahmen → trotzdem als Bild
+  text = stripNext(stripAskBlock(ChatVisuals.fenceBareIllustrations(text))).replace(AGENT_BLOCK, '') // Bild-Auftrag ohne Rahmen → trotzdem als Bild
     .replace(/^[ \t]*\[\[\s*grafik\s*:[^\]\n]*\]\][ \t]*$/gim, '') // alte Grafik-Marker ausblenden
     .replace(/\[\[[^\]\n]*$/, ''); // halb getippter Marker
   // Coding-Agent: Datei- und Terminal-Blöcke werden zu Arbeitsschritten (code-agent.js)
@@ -3007,7 +3041,7 @@ function messageFooter(msgEl, text) {
   copy.title = 'Kopieren';
   copy.setAttribute('aria-label', 'Antwort kopieren');
   copy.addEventListener('click', async () => {
-    const plain = stripAskBlock(text).replace(/\s*(?:\[\d{1,2}(?:\s*[,;]\s*\d{1,2})*\](?!\())+/g, '');
+    const plain = stripNext(stripAskBlock(text)).replace(/\s*(?:\[\d{1,2}(?:\s*[,;]\s*\d{1,2})*\](?!\())+/g, '');
     try { await navigator.clipboard.writeText(plain); } catch { return; }
     copy.innerHTML = icon('i-check');
     copy.classList.add('done');
@@ -3992,6 +4026,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const footer = messageFooter(msgEl, answerR.text);
     if (loose) footer.append(loose);
     msgEl.append(footer);
+    const sugs = nextSuggestions(answerR.text);
+    if (sugs) msgEl.append(sugs);
     // „Generating picture“ läuft noch → Kopieren/Neu erzeugen/Ins Dokument erst danach einblenden
     if (pictures && answer.querySelector('.chat-illustration[data-prompt], .illustration-pending')) {
       footer.hidden = true;
@@ -4406,12 +4442,12 @@ async function docIntentAsk(text) {
   } catch { return false; }
 }
 function chatContext(list) {
-  return list.filter((h) => h.text && !h.doc).slice(-14).map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${stripAskBlock(h.text)}`).join('\n\n');
+  return list.filter((h) => h.text && !h.doc).slice(-14).map((h) => `${h.role === 'user' ? 'Nutzer' : 'KI'}: ${stripNext(stripAskBlock(h.text))}`).join('\n\n');
 }
 // die letzte richtige KI-Antwort (vollständig) – das, was mit „schreib das ins Dokument“ meistens gemeint ist
 function lastAnswerText(list) {
   const a = [...list].reverse().find((h) => h.role === 'assistant' && !h.doc && h.text && h.text !== '(keine Antwort)');
-  return a ? stripAskBlock(a.text).replace(AGENT_BLOCK, '').trim() : '';
+  return a ? stripNext(stripAskBlock(a.text)).replace(AGENT_BLOCK, '').trim() : '';
 }
 // Bearbeiten-Wunsch, der nur etwas HINZUFÜGT („füg das hinzu“, „ergänze …“, „schreib das ins Dokument“) → nur das Neue schreiben lassen,
 // das vorhandene Dokument bleibt unangetastet (früher schrieb die KI das ganze Dokument neu und ließ dabei Teile weg)
@@ -6396,6 +6432,9 @@ function savedThoughts(h) {
 }
 function renderSavedHistory(list) {
   list.forEach((h, i) => { try { renderSavedItem(h, i); } catch (err) { console.error('Nachricht konnte nicht gezeigt werden', err); } }); // eine kaputte Nachricht blockiert nie den Rest
+  // Vorschläge nur, solange die erste Antwort die letzte Nachricht ist
+  const last = list[list.length - 1];
+  if (last?.role !== 'user' && last?.text && list.filter((h) => h.role === 'user').length === 1) { const sugs = nextSuggestions(last.text); if (sugs) chat.querySelector('.msg-ai:last-of-type')?.append(sugs); }
 }
 function renderSavedItem(h, i) {
   {

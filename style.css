@@ -12214,3 +12214,16 @@ html.boot-noside .boot-main { margin-left: 8px; }
 .boot-in i { width: 32%; } .boot-in .s { width: 18%; align-self: flex-end; }
 @keyframes boot-pulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .boot i { animation: none; } html.booted #app, .boot { transition: none; } }
+
+/* ===== 10.11. abends: Vorschläge für den nächsten Schritt unter der ersten Antwort (↳ Pfeil, Antippen → Eingabefeld) ===== */
+.next-sugs { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 12px 0 0 -6px; transition: opacity 800ms ease; }
+.next-sugs.out { opacity: 0; pointer-events: none; }
+.next-sug { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; min-height: 30px; padding: 4px 10px 4px 6px; border: 0; border-radius: 8px; background: none;
+  color: var(--text-3); font: inherit; font-size: 13.5px; text-align: left; cursor: pointer; transition: background-color 140ms ease, color 140ms ease;
+  animation: next-in 420ms var(--spring, ease) both; animation-delay: calc(var(--i, 0) * 70ms + 120ms); -webkit-tap-highlight-color: transparent; }
+.next-sug:hover { background: var(--menu-hover, #181818); color: var(--text); }
+.next-arr { flex: none; color: var(--text-4); }
+.next-sug:hover .next-arr { color: var(--text-2); }
+.next-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@keyframes next-in { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .next-sug { animation: none; } .next-sugs { transition: none; } }
