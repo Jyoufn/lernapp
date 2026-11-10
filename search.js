@@ -140,7 +140,7 @@ const AppSearch = (() => {
   const wsName = (w) => w.name || (w.id === 'main' ? (window.userName?.() || 'Julian') : 'Workspace');
   // Personen im Workspace: Besitzer + angenommene Mitglieder (Einladungen zählen noch nicht)
   const people = (w) => (w.guest ? 0 : 1) + (w.members || []).filter((m) => m.state !== 'pending').length;
-  const wsSub = (w) => (w.shared ? `Geteilt · ${people(w)} ${people(w) === 1 ? 'Person' : 'Personen'}` : 'Privat');
+  const wsSub = (w) => (w.shared ? `Geteilt · ${people(w)} ${people(w) === 1 ? 'Person' : 'Personen'}` : ''); // „Privat“ steht nicht mehr darunter (Wunsch 10.11.) – nur geteilte Workspaces haben eine zweite Zeile
   const post = async (path, body) => {
     const r = await fetch(`/api/workspaces/${path}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({}));
@@ -269,9 +269,9 @@ const AppSearch = (() => {
   let adding = false, renaming = null;
   const draw = () => {
     const rows = wsData.list.map((w) => renaming === w.id
-      ? `<div class="ws-row edit"><span class="ws-av">${wsAvatar(w, 24)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
+      ? `<div class="ws-row edit"><span class="ws-av">${wsAvatar(w, 20)}</span><input class="ws-in" data-rename="${w.id}" value="${esc(wsName(w))}" maxlength="32" aria-label="Name des Workspace" /></div>`
       : `<div class="ws-row${w.id === wsData.active ? ' on' : ''}" data-ws-pick="${w.id}" role="menuitemradio" aria-checked="${w.id === wsData.active}" tabindex="0">
-          <span class="ws-av">${wsAvatar(w, 24)}</span><span class="ws-t"><b>${esc(wsName(w))}</b><small>${wsSub(w)}</small></span>
+          <span class="ws-av">${wsAvatar(w, 20)}</span><span class="ws-t"><b>${esc(wsName(w))}</b>${wsSub(w) ? `<small>${wsSub(w)}</small>` : ''}</span>
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
     const full = !window.Workspaces.canAdd();
     pop.innerHTML = `${rows}
