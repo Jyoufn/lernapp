@@ -1,5 +1,7 @@
 // Qualitäts-Vergleich mit ECHTER KI (nicht Teil von `npm test`, braucht Netz + Schlüssel):
-//   GEMINI_API_KEY=… node tests/eval/run.js [id …]
+//   GEMINI_API_KEY=… node tests/eval/run.js [--roh] [id …]
+// --roh: dieselbe Frage zusätzlich an das beste Gemini-Modell OHNE den Prompt der App (steht im Bericht direkt darunter – so sieht man, was unser Ablauf
+//        besser oder schlechter macht). Fragen mit "messages" (statt "text") prüfen einen ganzen Chatverlauf, z. B. Folgefragen.
 // Lässt den echten Ablauf (runChat) die Fragen aus fragen.json beantworten und speichert je Frage Antwort, Quellen,
 // Gedanken, Zeitleiste und Dauer nach tests/eval/out/<datum>/ (JSON + bericht.md zum Lesen und Vergleichen).
 const fs = require('fs');
@@ -7,7 +9,9 @@ const path = require('path');
 const W = require('../../lib/workflow');
 
 const QUESTIONS = JSON.parse(fs.readFileSync(path.join(__dirname, 'fragen.json'), 'utf8'));
-const only = process.argv.slice(2);
+const RAW = process.argv.includes('--roh');
+const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const P = require('../../lib/providers');
 const env = { ...process.env };
 if (!env.GEMINI_API_KEY) { console.error('GEMINI_API_KEY fehlt'); process.exit(1); }
 
@@ -31,9 +35,20 @@ async function ask(q) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(new Error('Zeitlimit 280 s')), 280000);
   try {
-    await W.runChat({ env, body: { messages: [{ role: 'user', text: q.text }], agent: q.agent || 'general', effort: q.effort || 'auto' }, send, signal: ctl.signal });
+    await W.runChat({ env, body: { messages: q.messages || [{ role: 'user', text: q.text }], agent: q.agent || 'general', effort: q.effort || 'auto' }, send, signal: ctl.signal });
   } catch (err) { ev.errors.push(err.message); } finally { clearTimeout(timer); }
   return { ...q, ms: Date.now() - t0, firstTextMs: firstText, ...ev };
+}
+// Vergleich: Gemini ohne den Prompt der App (nur die letzte Frage, bei einem Verlauf mit dem Verlauf als Text davor)
+async function askRaw(q) {
+  const t0 = Date.now();
+  try {
+    const model = (await P.ladder(env, 'text'))[0];
+    const msgs = q.messages || [{ role: 'user', text: q.text }];
+    const user = msgs.length > 1 ? `${msgs.slice(0, -1).map((m) => `${m.role === 'user' ? 'Nutzer' : 'Assistent'}: ${m.text}`).join('\n\n')}\n\nNutzer: ${msgs.at(-1).text}` : msgs[0].text;
+    const text = await P.geminiOnce({ key: P.geminiKey(env, model), model, system: 'Du bist ein hilfreicher Assistent. Antworte auf Deutsch.', user, maxTokens: 8192, signal: AbortSignal.timeout(120000) });
+    return { model, ms: Date.now() - t0, text };
+  } catch (err) { return { model: '?', ms: Date.now() - t0, text: '', error: err.message }; }
 }
 
 (async () => {
@@ -46,9 +61,12 @@ async function ask(q) {
     fs.writeFileSync(path.join(dir, `${q.id}.json`), JSON.stringify(r, null, 2));
     const src = r.sources;
     console.log(`${(r.ms / 1000).toFixed(1)} s, ${r.text.length} Zeichen, ${src.length} Quellen${r.errors.length ? `, FEHLER: ${r.errors[0]}` : ''}`);
-    md += `\n---\n## ${q.id} · ${q.agent || 'general'} · ${q.effort || 'auto'}\n**Frage:** ${q.text}\n\n**Prüfpunkte:** ${(q.expect || []).join(' · ')}\n\n`
+    const raw = RAW ? await askRaw(q) : null;
+    const frage = q.text || (q.messages || []).map((m) => `${m.role === 'user' ? 'Nutzer' : 'KI'}: ${m.text}`).join(' → ');
+    md += `\n---\n## ${q.id} · ${q.agent || 'general'} · ${q.effort || 'auto'}\n**Frage:** ${frage}\n\n**Prüfpunkte:** ${(q.expect || []).join(' · ')}\n\n`
       + `Dauer ${(r.ms / 1000).toFixed(1)} s (erster Text ${(r.firstTextMs / 1000).toFixed(1)} s) · Modell ${JSON.stringify(r.model || '?')} · Aufwand ${r.effort?.applied || '?'} · Gedanken ${r.thoughts.length}\n\n`
-      + `**Zeitleiste:** ${r.timeline.join(' → ') || '–'}\n\n**Quellen:** ${src.map((s) => s.url).join(' , ') || '–'}\n\n${r.errors.length ? `**Fehler:** ${r.errors.join('; ')}\n\n` : ''}### Antwort\n${r.text}\n`;
+      + `**Zeitleiste:** ${r.timeline.join(' → ') || '–'}\n\n**Quellen:** ${src.map((s) => s.url).join(' , ') || '–'}\n\n${r.errors.length ? `**Fehler:** ${r.errors.join('; ')}\n\n` : ''}### Antwort der App\n${r.text}\n`
+      + (raw ? `\n### Zum Vergleich: Gemini ohne App-Prompt (${raw.model}, ${(raw.ms / 1000).toFixed(1)} s)\n${raw.error ? `FEHLER: ${raw.error}` : raw.text}\n` : '');
   }
   fs.writeFileSync(path.join(dir, 'bericht.md'), md);
   console.log(`\nBericht: ${path.join(dir, 'bericht.md')}`);

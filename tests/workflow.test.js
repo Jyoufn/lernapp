@@ -665,7 +665,7 @@ test('Verlauf: ältere Antworten gekürzt, Bild-Aufträge bleiben vollständig',
 // Material-Hinweis: „nur mit dem Material“, wenn es die Infos enthält; älteres Material nur bei passender Frage – nie eine Rückfrage
 test('Material: Hinweis im System-Prompt ohne Rückfrage', () => {
   assert.match(W.systemFor('medium', { material: { only: true } }), /NUR mit dem Material/);
-  assert.match(W.systemFor('medium', { material: { only: false } }), /früheren Nachrichten/);
+  assert.match(W.systemFor('medium', { material: { only: false } }), /QUELLEN DIESES CHATS \(GEDÄCHTNIS\)/); // Dateien von früher gehören zum ganzen Chat
   assert.doesNotMatch(W.systemFor('medium', { material: { only: true } }), /Darf ich andere Quellen/);
   assert.ok(!W.systemFor('medium', {}).includes('MATERIAL:'));
 });
@@ -864,7 +864,8 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
   assert.match(sys, /Du entscheidest selbst, wie du eine Anfrage angehst/, 'schlanker Prompt');
   assert.doesNotMatch(sys, /GEWÄHLTER AUFWAND|SCHULAUFGABEN – WIE|FACHREGELN/, 'Auto: keine Vorgaben zu Aufwand, Gliederung oder Fachregeln');
-  assert.match(sys, /Nutze pro Zahlenreihe genau einen Block/, 'Bausteine der App (Diagramme …) kennt die KI weiter');
+  assert.match(sys, /```chart mit \{"title"/, 'Bausteine der App (Diagramme …) kennt die KI weiter – als Kurzformat');
+  assert.doesNotMatch(sys, /Nutze pro Zahlenreihe genau einen Block|BILD ANPASSEN|"slides"/, 'ausführliche Abschnitte nur bei Bedarf');
   assert.match(sys, /```ask|\\`\\`\\`ask|RÜCKFRAGEN/, 'Rückfragen-Format');
   assert.ok(!gen.body.tools, 'keine Suche, wenn die Einschätzung keine Quellen braucht');
   fx.calls.length = 0;

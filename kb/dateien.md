@@ -42,6 +42,7 @@
 | `lib/research.js`, `lib/web.js`, `lib/deepresearch.js` | Quellen-Suche (Wikipedia, OpenAlex), Websuche/Seiten lesen (`searchWeb`, `findVisuals`, `linkPreview` für `/api/link`), Tiefen-Recherche |
 | `lib/boerse.js`, `lib/radar.js`, `lib/holdings.js`, `lib/universe.js` | Börse: Kurse/Charts/Nachrichten (`contextFor` → `steps`), Chancen-Radar, Orderbuch/Depot, Aktienliste |
 | `lib/lernset.js` | Lernset-Prompt `PROMPT(spec)`, Wunsch-Erkennung `ASK`, Klausur-Korrektur `grade` (`/api/lernset/grade`) |
+| `lib/antwort.js` | **Antwortverhalten** (nativer Ablauf): Antwortformen `FORMS`, Gedächtnis `CHAT_MEMORY`/`MATERIAL_MEMORY`, Rückfragen `ASK_CORE`/`ASK_QUIZ` + `quizMode`, Wächter `createAskGate`/`createFinishGate`, Bausteine nach Bedarf `toolNeeds` |
 | `lib/thoughts.js` | Gedanken-Filter (nur Inhalt, Deutsch) und Antwort-Wächter (kein Vorgehen im Text) |
 | `lib/agenttasks.js` | Aufgaben im Hintergrund (`run` mit `noClarify`), Automatisierungen (`saveAuto`, `runDue`, `nextRun`, Limit) |
 | `lib/accounts.js`, `lib/store.js`, `lib/workspaces.js` | Konten/Sitzungen, Speicher (Redis/Dateien/Speicher), geteilte Workspaces |

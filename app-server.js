@@ -1733,7 +1733,18 @@ async function handle(req, res) {
         try {
           await requestKeys.run(keys, () => W.runChat({ env: readEnv(), body: withAgentData({ messages: [{ role: 'user', text: String(qs.get('q') || '').slice(0, 2000) }], agent: qs.get('agent') || 'general', effort: qs.get('effort') || 'auto' }, { id: uid }), send, signal: ctl.signal }));
         } catch (err) { ev.errors.push(err.message); } finally { clearTimeout(tm); }
-        return sendJson(res, 200, { ms: Date.now() - t0, firstTextMs: ev.first, model: ev.model, effort: ev.effort, thoughts: ev.thoughts, timeline: ev.timeline, sources: ev.sources.slice(0, 20), errors: ev.errors, chars: ev.text.length, text: ev.text.slice(0, 6000), schluessel: Object.keys(keys) });
+        // Vergleich (&roh=1): dieselbe Frage zusätzlich an das beste Gemini-Modell OHNE den Prompt der App – zeigt, was unser Ablauf besser oder schlechter macht
+        let roh = null;
+        if (qs.get('roh') && Date.now() - t0 < 200000) {
+          try {
+            roh = await requestKeys.run(keys, async () => {
+              const e = readEnv(), model = (await P.ladder(e, 'text'))[0], r0 = Date.now();
+              const text = await P.geminiOnce({ key: P.geminiKey(e, model), model, system: 'Du bist ein hilfreicher Assistent. Antworte auf Deutsch.', user: String(qs.get('q') || '').slice(0, 2000), maxTokens: 8192, signal: AbortSignal.timeout(80000) });
+              return { model, ms: Date.now() - r0, chars: text.length, text: text.slice(0, 6000) };
+            });
+          } catch (err) { roh = { fehler: String(err.message).slice(0, 200) }; }
+        }
+        return sendJson(res, 200, { ms: Date.now() - t0, firstTextMs: ev.first, model: ev.model, effort: ev.effort, thoughts: ev.thoughts, timeline: ev.timeline, sources: ev.sources.slice(0, 20), errors: ev.errors, chars: ev.text.length, text: ev.text.slice(0, 6000), ...(roh ? { roh } : {}), schluessel: Object.keys(keys) });
       }
       user = await ACC.sessionUser(store, cookiesOf(req).sid);
       if (!user) return sendJson(res, 401, { error: 'Nicht angemeldet', auth: true });
