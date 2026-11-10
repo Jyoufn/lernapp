@@ -87,7 +87,7 @@ const Tasks = (() => {
      store = { load() → Liste, save(liste) } ---------- */
   // cols = nur diese Spalten (z. B. im Dokument ohne „Prüfen“); Aufgaben aus fehlenden Spalten landen in „In Arbeit“
   // agents = Aufgaben können an einen Agenten gehen (nur das Haupt-Board „Aufgaben“)
-  const AGENT_NAMES = { general: 'Allgemein', learn: 'Lernen', research: 'Research', boerse: 'Börse' };
+  const AGENT_NAMES = window.PixelDogs?.ONE_AGENT ? { general: 'Allgemein' } : { general: 'Allgemein', learn: 'Lernen', research: 'Research', boerse: 'Börse' }; // nur ein Agent (10.11.)
   const dog = (id, s = 20) => (window.PixelDogs?.svg ? window.PixelDogs.svg(id, s) : '');
   // list = Liste statt Spalten (Haupt-Ansicht „Aufgaben“): nur offen / erledigt, Blöcke nach Fälligkeit, Kreis zum Abhaken
   function createBoard(store, { title = 'Aufgaben', cls = '', cols = null, agents = false, list: listMode = false } = {}) {

@@ -122,3 +122,5 @@
 
 - Aufgabenfenster (10.11.): Tags mit Tag-Icon (`tag`, nicht Lesezeichen); Agenten-Menü mit Kacheln (26 px); Zeilen, die dazukommen oder gehen (Aufwand/Quellen bei Agent-Wahl, Datum ↔ Zeitplan, Wiederholungen), gleiten über `slideRow` (Höhe + Deckkraft + Zeilenabstand, gleichzeitig); Schalter aus = grauer Knopf auf #2a2a2a.
 - Chat trägt Termine und Aufgaben ein (```termin / ```aufgabe, siehe `ki.md`).
+
+- **Nur ein Agent** (Wunsch 10.11.): `ONE_AGENT = true` in `pixel-dogs.js` → nur „Allgemein“, kein Agenten-Feld (Hund nicht klickbar), kein „Neuer Agent“, `switch_agent` → Allgemein, Aufgaben nur „Ohne Agent“/„Allgemein“. Code der anderen Agenten und von `agent-builder.js` bleibt – zum Zurückholen `ONE_AGENT = false` (und im Prompt den Satz „Eigene Agenten gibt es … gerade nicht“ wieder entfernen).

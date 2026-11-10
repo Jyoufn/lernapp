@@ -377,7 +377,7 @@ composer.addEventListener('submit', (e) => {
   if (!text && attachments.length === 0) return;
   if (filesLoading()) { showHint('Einen Moment – die Datei wird noch gelesen'); return; } // erst abschicken, wenn alles gelesen ist
   if (listening || recognition) stopListening(true); // Diktat endet sofort mit dem Abschicken
-  if (!attachments.length && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
+  if (!attachments.length && !window.PixelDogs?.ONE_AGENT && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
   const images = attachments.filter((a) => a.file && a.status !== 'error').map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf, prep: a.prep })); // URLs bleiben für den Chat erhalten; prep = schon gelesen bzw. wird gerade gelesen
   const mentioned = attachments.filter((a) => a.mention).map((a) => a.mention);
   input.value = '';
@@ -5458,6 +5458,7 @@ window.AppActions = {
   delete_chat({ title } = {}) { const t = title ? findChatTab(title) : null; if (t) deleteChat(t); },
   // Agent wechseln: general | learn | research | code | boerse (oder ein eigener Agent per Name)
   switch_agent({ agent } = {}) {
+    if (window.PixelDogs?.ONE_AGENT) agent = 'general'; // nur ein Agent (Wunsch 10.11.)
     const q = String(agent || '').toLowerCase().trim(), modes = window.PixelDogs?.MODES || [];
     const alias = { allgemein: 'general', lernen: 'learn', lern: 'learn', recherche: 'research', coden: 'code', programmieren: 'code', börse: 'boerse', aktien: 'boerse' };
     const m = modes.find((x) => x.id === q || x.id === alias[q]) || modes.find((x) => (x.name || '').toLowerCase() === q);

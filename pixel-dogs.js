@@ -834,6 +834,11 @@ const PixelDogs = (() => {
   ];
   // nicht verfügbare Agenten (ausgegraut) – Coden ist wieder frei (Mini-Apps, MiniMax zuerst)
   const UNAVAILABLE = new Set();
+  /* NUR EIN AGENT (Wunsch 10.11.): es gibt vorerst nur „Allgemein“ – keine Agenten-Auswahl, kein „Neuer Agent“.
+     Alles andere (Lernen, Research, Coden, Börse, eigene Agenten, Agenten-Feld, agent-builder.js) bleibt im Code:
+     zum Zurückholen einfach auf false setzen. */
+  const ONE_AGENT = true;
+  if (ONE_AGENT && typeof document !== 'undefined') document.documentElement.classList.add('one-agent'), document.body?.classList.add('one-agent');
 
   /* ---------- Eigene Agenten (agent-builder.js): Figur der festen Agenten, nur umgefärbt – exakt derselbe Pixel-Stil ----------
      Gespeichert in localStorage 'agents.custom.v1' (geht mit ins Konto). id 'u-…', figur → Raster eines festen Agenten, farbe → Fellfarbe.
@@ -1322,6 +1327,7 @@ const PixelDogs = (() => {
 
   // host: das Eingabefeld (position: relative); triggers: was das Feld öffnet; onPick(id): Hund wechseln
   function makePicker(host, triggers, onPick) {
+    if (ONE_AGENT) return null; // nur ein Agent: kein Agenten-Feld, der Hund ist nicht klickbar
     const picker = document.createElement('div');
     picker.className = 'agent-picker';
     picker.setAttribute('role', 'dialog');
@@ -1397,9 +1403,7 @@ const PixelDogs = (() => {
     form.classList.add('dog-host');
     const peek = document.createElement('div');
     peek.className = 'dog-peek doc-peek';
-    peek.setAttribute('role', 'button');
-    peek.setAttribute('aria-label', 'Agenten anzeigen');
-    peek.title = 'Agenten';
+    if (!ONE_AGENT) { peek.setAttribute('role', 'button'); peek.setAttribute('aria-label', 'Agenten anzeigen'); peek.title = 'Agenten'; }
     const hero = document.createElement('div');
     hero.className = 'dog-hero doc-hero';
     hero.innerHTML = '<button type="button" class="dh-dog" aria-label="Agenten anzeigen" title="Agenten"></button><div class="dh-title">Woran arbeiten wir heute?</div>';
@@ -1419,7 +1423,7 @@ const PixelDogs = (() => {
   const KEY = 'dogMode';
   let mode = 'general';
   try { if (DOGS[localStorage.getItem(KEY)] && !ANIMALS[localStorage.getItem(KEY)]) mode = localStorage.getItem(KEY); } catch {}
-  if (UNAVAILABLE.has(mode)) mode = 'general'; // gespeicherter, inzwischen gesperrter Agent → Allgemein
+  if (UNAVAILABLE.has(mode) || ONE_AGENT) mode = 'general'; // gespeicherter, inzwischen gesperrter Agent → Allgemein
 
   function mount() {
     const panel = document.querySelector('.panel');
@@ -1471,6 +1475,7 @@ const PixelDogs = (() => {
     let swapToken = 0;
     selectFn = (id) => { if (id !== mode) select(id); };
     function select(id, animate = true) {
+      if (ONE_AGENT) id = 'general'; // nur ein Agent
       mode = id;
       try { localStorage.setItem(KEY, id); } catch {}
       chat.dataset.dog = id;
@@ -1515,10 +1520,12 @@ const PixelDogs = (() => {
     }))).observe(chat, { childList: true });
 
     // Klick auf den Begleiter (bzw. den großen Hund) → Agenten-Feld über dem Eingabefeld
-    peek.removeAttribute('aria-hidden');
-    peek.setAttribute('role', 'button');
-    peek.setAttribute('aria-label', 'Agenten anzeigen');
-    peek.title = 'Agenten';
+    if (!ONE_AGENT) {
+      peek.removeAttribute('aria-hidden');
+      peek.setAttribute('role', 'button');
+      peek.setAttribute('aria-label', 'Agenten anzeigen');
+      peek.title = 'Agenten';
+    } else hero.querySelector('.dh-dog')?.removeAttribute('title');
     makePicker(composer, [peek, hero.querySelector('.dh-dog')], (id) => select(id));
 
     // Dokument-Chat: Begleiter, mittiger Hund und Agenten-Feld an jedes Eingabefeld hängen – auch wenn das Seitenfenster neu gebaut wird
@@ -1916,7 +1923,7 @@ const PixelDogs = (() => {
     if (figur === 'eigenes') return raster && okRaster(raster[32], 32) ? rasterSvg(raster[32], size) : '';
     const base = FIGURES[figur] || 'general', m = furMap(base, fur); return art(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`);
   };
-  return { actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, preview, rasterSvg, ACTIONS, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
+  return { ONE_AGENT, actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, preview, rasterSvg, ACTIONS, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
 })();
 if (typeof window !== 'undefined') window.PixelDogs = PixelDogs;
 if (typeof module !== 'undefined') module.exports = PixelDogs;
