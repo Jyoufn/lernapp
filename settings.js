@@ -15,6 +15,7 @@
     // eigene Schlüssel je Modell verteilen nur das Limit (ca. 40 Anfragen/Minute je Schlüssel).
     { id: 'DEEPSEEK_API_KEY', name: 'DeepSeek V4.1 (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'deepseek' },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
+    { id: 'GROQ_API_KEY', name: 'Groq (Diktat)', logo: 'groq', where: 'console.groq.com', multi: true }, // Whisper fürs Diktat – kostenlos, schnell, Deutsch + Englisch gemischt
     { id: 'TAVILY_API_KEY', name: 'Tavily (Websuche)', logo: 'tavily', where: 'app.tavily.com', multi: true }, // Recherche: echte Treffer samt Text
     { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true, image: true },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
@@ -179,6 +180,7 @@
           return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev apv"><span class="apv-side"><i></i><i></i><i></i></span><span class="apv-main"><span class="apv-msg"></span><span class="apv-ans"><i></i><i></i><i class="s"></i></span><span class="apv-in"><em></em></span></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
         <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
         + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div>
+        ${cfg.mode === 'glass' && ap.GLASS ? `<div class="st-row"><span class="st-name">Glasfarbe</span><span class="grow"></span><span class="st-swatches">${ap.GLASS.map((c) => `<button type="button" class="st-sw st-sw-glass${c === String(cfg.glass || '#ffffff').toLowerCase() ? ' on' : ''}" style="--sw:${c}" data-ap-glass="${c}" aria-label="Glasfarbe ${c}"></button>`).join('')}</span></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
         <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
@@ -366,6 +368,8 @@
     if (md) { window.Appearance?.set({ mode: md.dataset.apMode }); drawView(); return; }
     const ac = e.target.closest('[data-ap-accent]');
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
+    const gl = e.target.closest('[data-ap-glass]');
+    if (gl) { window.Appearance?.set({ glass: gl.dataset.apGlass }); drawView(); return; }
     const lg = e.target.closest('[data-lang]');
     if (lg) { window.I18n?.set(lg.dataset.lang); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');

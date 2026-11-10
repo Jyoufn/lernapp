@@ -46,7 +46,7 @@ const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
    Schlüssel aus den Einstellungen der App (Kopf „X-App-Keys“, bleiben auf dem Gerät) gehen vor – gilt für die ganze Anfrage. */
-const DEVICE_KEYS = ['TAVILY_API_KEY', 'GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'DEEPSEEK_API_KEY', 'KIMI_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
+const DEVICE_KEYS = ['GROQ_API_KEY', 'TAVILY_API_KEY', 'GEMINI_API_KEY', 'MINIMAX_API_KEY', 'MISTRAL_API_KEY', 'DEEPSEEK_API_KEY', 'KIMI_API_KEY', 'NVIDIA_API_KEY', 'FLUX3_API_KEY', 'SPOTIFY_CLIENT_ID'];
 // mehrere Schlüssel je Anbieter erlaubt (je Zeile einer) → bereinigt, höchstens 10
 const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => k.trim()).filter((k) => /^[!-~]{8,400}$/.test(k)).slice(0, 10).join('\n') : '');
 const requestKeys = new AsyncLocalStorage();
@@ -1294,21 +1294,52 @@ Antworte NUR mit dem korrigierten Text – ohne Anführungszeichen, ohne Komment
    der Browser nimmt den Ton auf und schickt ihn hierher; Gemini hört ihn an und schreibt wörtlich mit – mit Satzzeichen, Groß-/Kleinschreibung,
    englischen Wörtern und Fachbegriffen richtig. Der Text im Feld wird damit ersetzt. Ohne Gemini-Schlüssel bleibt es bei der Browser-Erkennung. */
 const TRANSCRIBE_SYSTEM = `Du bekommst eine Sprachaufnahme. Schreibe WÖRTLICH mit, was gesagt wird – nichts ergänzen, nichts weglassen, nicht antworten, nicht zusammenfassen.
-Der Sprecher redet Deutsch und mischt oft englische Wörter und Fachbegriffe ein: schreibe jedes Wort in seiner richtigen Sprache und Schreibweise
-(„DeepSeek“, „Dashboard“, „Prompt“, „Mitochondrien“ …). Setze Satzzeichen und Groß-/Kleinschreibung. Füllwörter wie „äh“ weglassen.
+Die Sprache ist egal: der Sprecher redet meist Deutsch, oft mit englischen Wörtern und Fachbegriffen dazwischen, manchmal ganz Englisch.
+Schreibe jedes Wort in SEINER Sprache und richtigen Schreibweise („DeepSeek“, „Dashboard“, „Prompt“, „Mitochondrien“ …) – nie übersetzen.
+Hör auf den Zusammenhang: ein Wort, das erst falsch klingt, aber im Satz eindeutig etwas anderes meint, schreibst du richtig.
+Setze Satzzeichen (Punkt, Komma, Fragezeichen) und Groß-/Kleinschreibung. Füllwörter wie „äh“ weglassen.
 Ist nichts Verständliches zu hören, antworte mit einer leeren Antwort. Antworte NUR mit dem mitgeschriebenen Text.`;
+/* Diktat genau mitschreiben (Wunsch 10.11. abends: „gratis und besser“):
+   1. Groq Whisper large-v3-turbo (GROQ_API_KEY, kostenlos mit Konto auf console.groq.com: ~2000 Aufnahmen/Tag, sehr schnell ~0,3–1 s) –
+      erkennt die Sprache selbst, Deutsch mit englischen Wörtern klappt gut, setzt Satzzeichen.
+   2. sonst Gemini (wie bisher) aus dem freien Kontingent.
+   partial = es wird noch gesprochen: ein Punkt am Ende fällt weg (der Satz ist ja noch nicht fertig). */
+async function groqTranscribe(env, { data, mime, hints, context }) {
+  const key = P.keysOf(env, 'GROQ_API_KEY')[0];
+  if (!key) return null;
+  const ext = /mp4|m4a|aac/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : /wav/.test(mime) ? 'wav' : /mpeg|mp3/.test(mime) ? 'mp3' : 'webm';
+  const form = new FormData();
+  form.append('file', new Blob([Buffer.from(data, 'base64')], { type: mime }), `diktat.${ext}`);
+  form.append('model', 'whisper-large-v3-turbo');
+  form.append('response_format', 'json');
+  form.append('temperature', '0');
+  // Whisper-„prompt“ (höchstens ~224 Tokens): Schreibweisen und Zusammenhang – hilft bei Namen und englischen Begriffen im deutschen Satz
+  const prompt = [context ? String(context).slice(-200) : '', hints.length ? `Begriffe: ${hints.slice(0, 30).join(', ')}.` : ''].filter(Boolean).join(' ');
+  if (prompt) form.append('prompt', prompt.slice(0, 700));
+  const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(15000) });
+  if (!r.ok) throw new Error(`Groq ${r.status}`);
+  return String((await r.json()).text || '').trim();
+}
 async function handleTranscribe(req, res) {
   const env = envOf(req);
   const body = await readBody(req, 12 * 1024 * 1024);
   const data = String(body.audio || ''), mime = String(body.mime || 'audio/webm').split(';')[0].slice(0, 40);
-  if (!env.GEMINI_API_KEY || data.length < 2000 || !/^audio\//.test(mime)) return sendJson(res, 200, { text: '' });
+  if (data.length < 2000 || !/^audio\//.test(mime)) return sendJson(res, 200, { text: '' });
   const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 60);
-  const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}Schreibe die Aufnahme wörtlich mit.`;
+  const partial = body.partial === true;
+  const done = (text, via) => {
+    let t = String(text || '').trim().replace(/^["„“]|["“”]$/g, '');
+    if (partial) t = t.replace(/[.…]+$/, ''); // noch mitten im Satz: kein Schlusspunkt
+    return sendJson(res, 200, { text: t.slice(0, 8000), via });
+  };
+  try { const g = await groqTranscribe(env, { data, mime, hints, context: body.context }); if (g != null) return done(g, 'groq'); } catch { /* weiter mit Gemini */ }
+  if (!env.GEMINI_API_KEY) return sendJson(res, 200, { text: '' });
+  const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}${partial ? 'Der Sprecher redet noch weiter – der letzte Satz kann unfertig sein: dort keinen Schlusspunkt setzen.\n' : ''}Schreibe die Aufnahme wörtlich mit.`;
   for (const model of (await P.ladder(env, 'text')).slice(0, 2)) {
     try {
       const thinking = model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' };
-      const out = String(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TRANSCRIBE_SYSTEM, user, maxTokens: 3000, thinking, files: [{ mime, data }], signal: AbortSignal.timeout(20000) }) || '').trim().replace(/^["„“]|["“”]$/g, '');
-      return sendJson(res, 200, { text: out.slice(0, 8000) });
+      const out = await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TRANSCRIBE_SYSTEM, user, maxTokens: 3000, thinking, files: [{ mime, data }], signal: AbortSignal.timeout(20000) });
+      return done(out, 'gemini');
     } catch { /* nächstes Modell */ }
   }
   sendJson(res, 200, { text: '' });

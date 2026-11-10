@@ -151,7 +151,6 @@ const Thinking = (() => {
   const ASK = [
     ['widget', /mini-?app|simulation|\bspiel\b|\bgame\b|dashboard|interaktiv|programmier|veranschaulich\w* .*code/i],
     ['praesentation', /pr(ä|ae)sentation|powerpoint|keynote|\bfolien\b|vortragsfolien/i],
-    ['mindmap', /mind\s?-?map|gedankenkarte/i],
     ['timeline', /zeitstrahl|zeitleiste|timeline|chronolog/i],
     ['quiz', /\bquiz|teste? mich|frag mich ab|abfrag|karteikarten|(ü|ue)bungsfragen|testfragen/i],
     ['chart', /diagramm|statistik|infografik|schaubild|\bgrafik\b|visualisier/i],

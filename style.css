@@ -12130,22 +12130,44 @@ html.auth-opening .auth { opacity: 0; transform: none; }
    Schwarz: Hauptteil reines Schwarz, Sidebar einen Hauch heller. Glas: NUR die Sidebar ist gläsern (Hintergrundbild + Weichzeichner dahinter),
    der Hauptteil bleibt fest – Wunsch des Nutzers, Ausnahme vom früheren „kein Glas“. Hell: neutrale Töne (vorher Blaustich), weiße Karten, dunklere Schrift. */
 html[data-glass="on"], html[data-glass="on"] body {
-  background: #0a0a16 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3CradialGradient id='a' cx='.35' cy='.25' r='.9'%3E%3Cstop offset='0' stop-color='%232b2a57'/%3E%3Cstop offset='1' stop-color='%23111124'/%3E%3C/radialGradient%3E%3CradialGradient id='b' cx='.6' cy='.8' r='.9'%3E%3Cstop offset='0' stop-color='%2322214a'/%3E%3Cstop offset='1' stop-color='%230f0f20'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1600' height='1000' fill='%230a0a16'/%3E%3Ccircle cx='-60' cy='1000' r='640' fill='url(%23a)' stroke='%236a68c4' stroke-opacity='.42' stroke-width='3'/%3E%3Ccircle cx='560' cy='-300' r='600' fill='url(%23b)' stroke='%237472d0' stroke-opacity='.45' stroke-width='3'/%3E%3Ccircle cx='1240' cy='-360' r='560' fill='%23151530' stroke='%23615fb8' stroke-opacity='.38' stroke-width='3'/%3E%3Ccircle cx='1720' cy='1180' r='680' fill='%2314142c' stroke='%235c5aae' stroke-opacity='.36' stroke-width='3'/%3E%3C/svg%3E") center / cover no-repeat fixed;
+  /* ruhiger Verlauf in der Glasfarbe – keine Formen, keine Linien */
+  background:
+    radial-gradient(120% 85% at 0% 0%, color-mix(in srgb, var(--glass) 27%, #18181a) 0%, transparent 62%),
+    radial-gradient(90% 80% at 10% 100%, color-mix(in srgb, var(--glass) 20%, #141416) 0%, transparent 70%),
+    radial-gradient(80% 70% at 100% 0%, color-mix(in srgb, var(--glass) 14%, #121214) 0%, transparent 70%),
+    #0e0e10 fixed;
 }
 html[data-glass="on"] .sidebar {
-  background: rgba(22, 22, 40, 0.38);
-  -webkit-backdrop-filter: blur(26px) saturate(135%); backdrop-filter: blur(26px) saturate(135%);
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: color-mix(in srgb, var(--glass) 11%, transparent);
+  -webkit-backdrop-filter: blur(30px) saturate(120%); backdrop-filter: blur(30px) saturate(120%);
+  border-right: 0;
 }
-html[data-glass="on"] .sidebar .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
-html[data-glass="on"] .sidebar .nav-item.active { background: rgba(255, 255, 255, 0.1); }
-html[data-glass="on"] .panel { border-color: rgba(255, 255, 255, 0.07); }
-/* Schwarz: Ränder und Fenster passend dunkler (sonst stehen #181818-Karten grau im Schwarz) */
-html[data-mode="black"] { --win-bg: #0d0d0d; --card: #0d0d0d; --pop-bg: #161616; --menu-bg: #0d0d0d; --menu-hover: #161616; --hover: #141414; --active: #161616; --line: #1c1c1c; --menu-border: #1c1c1c; --divider: #1c1c1c; }
-html[data-mode="black"] .panel { border-color: #161616; }
-html[data-mode="black"] .sidebar .nav-item:hover { background: #161616; }
-html[data-mode="black"] .sidebar .nav-item.active { background: #1c1c1c; }
-html[data-mode="black"] .out-bubble { background: #161616; }
+html[data-glass="on"] .sidebar .nav-item:hover, html[data-glass="on"] .sidebar .st-item:hover, html[data-glass="on"] .sidebar :is(.sb-chat:hover) { background: color-mix(in srgb, var(--glass) 10%, transparent); }
+html[data-glass="on"] .sidebar .nav-item.active, html[data-glass="on"] .sidebar .st-item.active, html[data-glass="on"] .sidebar .sb-chat.active { background: color-mix(in srgb, var(--glass) 16%, transparent); }
+/* Hauptteil passend: fest, aber mit einem Hauch Glasfarbe; Karten, Menüs und Ränder im selben Ton */
+html[data-glass="on"] { --win-bg: color-mix(in srgb, var(--glass) 7%, #141415); --card: color-mix(in srgb, var(--glass) 7%, #141415); --pop-bg: color-mix(in srgb, var(--glass) 10%, #1a1a1b);
+  --menu-bg: color-mix(in srgb, var(--glass) 6%, #121213); --menu-hover: color-mix(in srgb, var(--glass) 10%, #18181a); --hover: color-mix(in srgb, var(--glass) 9%, #17171a);
+  --active: color-mix(in srgb, var(--glass) 12%, #1a1a1c); --line: color-mix(in srgb, var(--glass) 13%, #1d1d1f); --menu-border: var(--line); --divider: var(--line); --card-border: var(--line); }
+html[data-glass="on"] .panel { border-color: color-mix(in srgb, var(--glass) 16%, transparent); }
+html[data-glass="on"] .out-bubble { background: color-mix(in srgb, var(--glass) 11%, #19191b); }
+html[data-glass="on"] .cs-pill { background: color-mix(in srgb, var(--glass) 6%, #121213); border-color: var(--line); }
+html[data-glass="on"] .cs-pill .cs-thumb { background: color-mix(in srgb, var(--glass) 14%, #1c1c1e); border-color: transparent; }
+html[data-glass="on"] .st-seg button.on, html[data-glass="on"] .st-seg button[aria-checked="true"] { background: color-mix(in srgb, var(--glass) 16%, #1f1f21) !important; }
+.st-sw-glass { box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.25); }
+/* Schwarz (überarbeitet 10.11. abends): kaum Grau – Hauptteil #000, Sidebar #080808, Karten/Eingabefeld #0a0a0a mit Rand #191919,
+   Aufklapp-/Hover-Flächen #111–#161616. Kontrast entsteht über Ränder und Text, nicht über graue Flächen. */
+html[data-mode="black"] { --win-bg: #0a0a0a; --card: #0a0a0a; --card-2: #111111; --pop-bg: #111111; --menu-bg: #0a0a0a; --menu-hover: #141414; --hover: #111111; --active: #141414;
+  --line: #191919; --menu-border: #191919; --divider: #191919; --card-border: #191919; --field-bg: #0a0a0a; --field-border: #1c1c1c; }
+html[data-mode="black"] .panel { border-color: #141414; }
+html[data-mode="black"] .sidebar .nav-item:hover, html[data-mode="black"] .sidebar .st-item:hover { background: #111111; }
+html[data-mode="black"] .sidebar .nav-item.active, html[data-mode="black"] .sidebar .st-item.active { background: #151515; }
+html[data-mode="black"] .out-bubble { background: #141414; }
+html[data-mode="black"] .cs-pill { background: #0a0a0a; border-color: #1a1a1a; }
+html[data-mode="black"] .cs-pill .cs-thumb { background: #1a1a1a; border-color: transparent; }
+html[data-mode="black"] .st-card { background: #0a0a0a; border-color: #191919; }
+html[data-mode="black"] .st-card .st-row + .st-row, html[data-mode="black"] .st-row { border-color: #161616; }
+html[data-mode="black"] .st-seg { background: #0a0a0a; border-color: #1c1c1c; }
+html[data-mode="black"] .st-seg button.on, html[data-mode="black"] .st-seg button[aria-checked="true"] { background: #1c1c1c !important; }
 /* Hell: Werte VOR der Umkehrung (invert + hue-rotate) – Ergebnis: Schrift #121212/#232323/#545454/#7a7a7a, Karten weiß bzw. #fafafa, Ränder #e5e5e5 */
 html[data-theme="light"] {
   --text: #ededed; --text-2: #dcdcdc; --text-3: #ababab; --text-4: #858585;
@@ -12161,6 +12183,13 @@ html[data-theme="light"] .md strong, html[data-theme="light"] .md h2, html[data-
 .st-ap-modes { grid-template-columns: repeat(4, minmax(0, 138px)); gap: 12px; }
 @media (max-width: 720px) { .st-ap-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 html[data-theme="light"] .st-sw { filter: invert(1) hue-rotate(180deg); }
-html[data-glass="on"] .sidebar .st-item:hover { background: rgba(255, 255, 255, 0.06); }
-html[data-glass="on"] .sidebar .st-item.active { background: rgba(255, 255, 255, 0.1); }
-html[data-glass="on"] .sidebar :is(.sb-chat:hover, .sb-chat.active) { background: rgba(255, 255, 255, 0.08); }
+
+/* ===== 10.11. abends: Anmeldung – Google/GitHub nur als Logo ===== */
+.auth-soc svg { display: block; width: 18px; height: 18px; }
+
+/* ===== 10.11. abends: Ansichtswechsel nur im Hauptteil – die Sidebar bleibt beim Klicken ruhig (vorher bewegte sich die ganze Seite 4 px) ===== */
+.panel { view-transition-name: main-panel; }
+::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+::view-transition-old(main-panel) { animation: 140ms ease both vt-out; }
+::view-transition-new(main-panel) { animation: 240ms var(--spring, ease) both vt-in; }
+::view-transition-group(main-panel) { animation-duration: 0s; }

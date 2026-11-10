@@ -623,13 +623,15 @@ let hintTimer = null;
 // und bisher Erkanntes nicht wieder einsetzen – nur was danach gesprochen wird, kommt hinten dazu
 input.addEventListener('input', () => {
   if (!listening || input.value === written) return;
-  baseText = written = input.value; finalText = ''; consumed = seen;
+  // selbst getippt/gelöscht: ab hier neu mitschreiben (auch die Ton-Aufnahme beginnt neu, damit die Mitschrift nur Neues enthält)
+  baseText = written = dictFrom = input.value; rawBase = ''; finalText = ''; lastInterim = ''; consumed = seen; liveFix = null; liveN = 0;
+  dictRecStop(); dictRec.chunks = []; setTimeout(dictRecStart, 50);
 });
 
-/* Sprache: Deutsch als Basis. Die Browser-Erkennung kann nur eine Sprache pro
-   Aufnahme – das deutsche Modell schreibt gängige englische Wörter („Thinking“,
-   „Prompt“, „Feature“ …) aber direkt mit. Echtes Mischen → später Whisper in der App. */
-const SPEECH_LANG = (() => { try { return localStorage.getItem('ui.lang') === 'en' ? 'en-US' : 'de-DE'; } catch { return 'de-DE'; } })(); // Oberfläche English → Erkennung Englisch
+/* Sprache der Sofort-Erkennung: unabhängig von der Oberflächen-Sprache (Wunsch 10.11. abends: „im englischen Modus Deutsch sprechen“).
+   Die Browser-Erkennung kann nur eine Sprache je Aufnahme – sie liefert nur den schnellen ersten Text; die genaue Mitschrift (Groq Whisper bzw.
+   Gemini) erkennt die Sprache selbst und schreibt Deutsch mit englischen Wörtern richtig. Basis: Gerätesprache, sonst Deutsch. */
+const SPEECH_LANG = (() => { const l = String(navigator.languages?.[0] || navigator.language || 'de').toLowerCase(); return l.startsWith('en') ? 'en-US' : 'de-DE'; })();
 
 function joinText(a, b) {
   if (!a) return b.trimStart();
@@ -663,6 +665,21 @@ let dictFrom = null; // Feldinhalt vor dem Diktat → danach wird nur das Diktie
    Erkannte im Hintergrund geglättet (Satzzeichen, Groß-/Kleinschreibung, falsch erkannte Begriffe) und still ersetzt, während man weiterredet.
    Nur wenn sich inzwischen nichts geändert hat (kein neues fertiges Stück, nichts getippt) – sonst beim nächsten Mal. */
 let finalsEnd = 0, lastInterim = '', liveT = 0, livePolishing = false, liveDone = '';
+/* Mitschreiben WÄHREND des Sprechens (10.11. abends): die Sofort-Erkennung liefert den Rohtext (rawBase + finalText + lastInterim);
+   alle paar Sekunden schreibt Groq Whisper (sonst Gemini) die bisherige Aufnahme genau mit – mit Satzzeichen, auch mitten im Satz, im Zusammenhang
+   neu gehört. liveFix = { text, n }: die Mitschrift deckt die ersten n Wörter des Rohtexts ab; was danach gesprochen wurde, hängt roh dahinter. */
+let rawBase = '', liveFix = null, liveN = 0, liveVia = '', liveLast = 0, liveTick = 0;
+const rawSaid = () => joinText(joinText(rawBase, finalText), lastInterim);
+const wordsOf = (t) => String(t || '').split(/\s+/).filter(Boolean);
+function renderDictation() {
+  const raw = rawSaid();
+  const said = liveFix ? joinText(liveFix.text, wordsOf(raw).slice(liveFix.n).join(' ')) : raw;
+  baseText = dictFrom ?? baseText;
+  written = input.value = joinText(baseText, said);
+  input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint, sobald Text da ist (eigenes Ereignis – „input“ würde den Diktier-Stand zurücksetzen)
+  autoGrow();
+  input.scrollTop = input.scrollHeight;
+}
 const polishHints = () => [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
   'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
 /* Ton-Mitschnitt fürs genaue Verstehen (Wunsch 10.11.: Browser-Erkennung versteht zu wenig): neben der Sofort-Erkennung läuft eine Aufnahme;
@@ -686,43 +703,37 @@ function dictRecStop() {
   dictRec.stream?.getTracks().forEach((t) => t.stop());
   dictRec.rec = null; dictRec.stream = null;
 }
-async function dictTranscribe(context) {
+async function dictTranscribe(context, partial = false) {
   if (!dictRec.chunks.length) return '';
   const blob = new Blob(dictRec.chunks, { type: dictRec.mime });
   if (blob.size < 3000 || blob.size > 7 * 1024 * 1024) return '';
   const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ok(''); fr.readAsDataURL(blob); });
   if (!data) return '';
   try {
-    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context }) });
-    return String((await r.json()).text || '').trim();
+    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context, partial }) });
+    const j = await r.json(); if (j.via) liveVia = j.via;
+    return String(j.text || '').trim();
   } catch { return ''; }
 }
 async function livePolish() {
   if (!listening || livePolishing || dictFrom == null) return;
-  const raw = joinText(baseText, finalText);
-  if (!raw.startsWith(dictFrom)) return;
-  const seg = raw.slice(dictFrom.length);
-  if (seg.trim().split(/\s+/).length < 3 || seg === liveDone) return;
-  const snapBase = baseText, snapFinal = finalText, snapEnd = finalsEnd;
-  livePolishing = true;
+  const n = wordsOf(rawSaid()).length;
+  if (n < 2 || n === liveN) return;
+  const snapFrom = dictFrom;
+  livePolishing = true; liveLast = Date.now();
   let out = '';
   const ctx = dictFrom.slice(-300) || chatOf(activeTab())?.title || '';
   try {
-    out = await dictTranscribe(ctx); // genaue Mitschrift aus dem Ton; sonst nur glätten
-    if (!out) {
-      const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg.trim(), hints: polishHints(), context: ctx }) });
+    out = await dictTranscribe(ctx, true); // genaue Mitschrift aus dem Ton (läuft weiter, während man spricht)
+    if (!out && dictRec.off) { // keine Aufnahme möglich: wenigstens den Rohtext glätten
+      const seg = wordsOf(rawSaid()).slice(0, n).join(' ');
+      const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg, hints: polishHints(), context: ctx }) });
       out = String((await r.json()).text || '').trim();
     }
   } catch {} finally { livePolishing = false; }
-  if (!listening || !out) return;
-  if (baseText !== snapBase || finalText !== snapFinal || input.value !== written) { clearTimeout(liveT); liveT = setTimeout(livePolish, 700); return; } // inzwischen weitergeredet → gleich nochmal
-  const lead = seg.match(/^\s*/)[0];
-  baseText = dictFrom + lead + out;
-  liveDone = baseText.slice(dictFrom.length);
-  finalText = ''; consumed = snapEnd;
-  written = input.value = joinText(baseText, lastInterim);
-  input.dispatchEvent(new Event('dictation'));
-  autoGrow();
+  if (!listening || !out || dictFrom !== snapFrom) return; // inzwischen selbst etwas geändert → diese Mitschrift gilt nicht mehr
+  liveN = n; liveFix = { text: out, n };
+  renderDictation();
 }
 function startListening() {
   if (!SpeechRecognition) {
@@ -732,7 +743,10 @@ function startListening() {
   listening = true;
   baseText = written = input.value;
   dictFrom = input.value;
-  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = '';
+  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now();
+  // alle ~2,5 s (Groq) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
+  clearInterval(liveTick);
+  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 2500)) livePolish(); }, 500);
 
   recognition = new SpeechRecognition();
   recognition.lang = SPEECH_LANG;
@@ -748,13 +762,8 @@ function startListening() {
       if (r.isFinal) { fin = joinText(fin, r[0].transcript); end = i + 1; }
       else interim = joinText(interim, r[0].transcript);
     }
-    const grew = fin !== finalText;
     finalText = fin; seen = e.results.length; finalsEnd = end; lastInterim = interim;
-    if (grew) { clearTimeout(liveT); liveT = setTimeout(livePolish, 900); } // kurz Pause nach einem fertigen Stück → im Hintergrund glätten
-    written = input.value = joinText(joinText(baseText, finalText), interim);
-    input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint, sobald Text da ist (eigenes Ereignis – „input“ würde den Diktier-Stand zurücksetzen)
-    autoGrow();
-    input.scrollTop = input.scrollHeight;
+    renderDictation();
   };
 
   recognition.onerror = (e) => {
@@ -767,7 +776,7 @@ function startListening() {
   recognition.onend = () => {
     if (!listening) return;
     // Nicht von selbst aufhören: neuen Abschnitt starten
-    baseText = joinText(baseText, finalText);
+    rawBase = joinText(rawBase, finalText);
     finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; // neuer Abschnitt zählt von vorn
     recognition.lang = SPEECH_LANG;
     try { recognition.start(); } catch {}
@@ -788,7 +797,7 @@ function stopListening(hard = false) {
   }
   setMicUI(false);
   hideListening();
-  const from = dictFrom; dictFrom = null; clearTimeout(liveT); dictRecStop(); if (hard) dictRec.chunks = [];
+  const from = dictFrom; dictFrom = null; clearTimeout(liveT); clearInterval(liveTick); dictRecStop(); if (hard) dictRec.chunks = [];
   if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten (nur der noch nicht geglättete Rest ändert sich spürbar)
 }
 /* Nach dem Diktat: Satzzeichen und Rechtschreibung NUR im diktierten Teil (beim normalen Tippen gibt es keine Korrektur).
@@ -7123,17 +7132,20 @@ document.addEventListener('click', (e) => {
     dark: { label: 'Dunkel', main: '#141414', side: '#141414', field: '#181818', fieldBorder: '#242424', // drei Flächen (04.11.)
       pv: { main: '#141414', side: '#141414', line: 'rgba(255,255,255,.16)', field: 'rgba(255,255,255,.16)' } },
     // Schwarz (10.11. abends, umgedreht): Hauptteil reines Schwarz, Sidebar einen Hauch heller (grau statt dunkler als der Hauptteil)
-    black: { label: 'Schwarz', main: '#000000', side: '#0d0d0d', field: '#0d0d0d', fieldBorder: '#1c1c1c',
-      pv: { main: '#000000', side: '#121212', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
-    // Glas (10.11. abends, Nutzer-Bild): nur die Sidebar ist gläsern – dahinter ein ruhiges, dunkles Hintergrundbild; der Hauptteil bleibt fest
-    glass: { label: 'Glas', main: '#121214', side: 'transparent', field: '#18181b', fieldBorder: '#26262a', glass: true,
-      pv: { main: '#121214', side: 'linear-gradient(160deg,#2a2950 0%,#191936 45%,#0e0e1c 100%)', line: 'rgba(255,255,255,.2)', field: 'rgba(255,255,255,.15)' } },
+    black: { label: 'Schwarz', main: '#000000', side: '#080808', field: '#0a0a0a', fieldBorder: '#1c1c1c',
+      pv: { main: '#000000', side: '#0a0a0a', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
+    // Glas (10.11. abends, überarbeitet): helles, milchiges Glas NUR in der Sidebar über einem ruhigen Verlauf in der Glasfarbe (ohne Formen/Linien);
+    // Hauptteil, Karten und Eingabefeld bekommen einen Hauch derselben Farbe. Glasfarbe wählbar (cfg.glass, Standard Weiß).
+    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 5%, #111112)', side: 'transparent', field: 'color-mix(in srgb, var(--glass) 7%, #141415)', fieldBorder: 'color-mix(in srgb, var(--glass) 14%, #1e1e1f)', glass: true,
+      pv: { main: '#151516', side: 'linear-gradient(160deg,#6b6b70 0%,#3a3a3e 55%,#222224 100%)', line: 'rgba(255,255,255,.35)', field: 'rgba(255,255,255,.18)' } },
     // Hell: Werte VOR der Umkehrung (style.css → [data-theme="light"]) – neutral (kein Blaustich): Hauptteil weiß, Sidebar #f4f4f4, Felder weiß mit feinem Rand
     light: { label: 'Hell', main: '#000000', side: '#0b0b0b', field: '#000000', fieldBorder: '#1c1c1c', light: true,
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33 };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff' };
+  // Glasfarben (Einstellungen → Aussehen, nur im Modus Glas): Weiß zuerst, dann sanfte Töne
+  const GLASS = ['#ffffff', '#c9d6ff', '#d8c6ff', '#ffc9de', '#ffd8b8', '#c8f0d4', '#bfe8f0'];
   const cfg = { ...DEFAULTS };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
   if (!MODES[cfg.mode]) cfg.mode = 'dark'; // frühere Einstellung „Graphit“ gibt es nicht mehr
@@ -7143,6 +7155,7 @@ document.addEventListener('click', (e) => {
     root.dataset.theme = m.light ? 'light' : 'dark';
     if (m.glass) root.dataset.glass = 'on'; else delete root.dataset.glass;
     root.dataset.mode = cfg.mode; // für modusgenaue Feinheiten in style.css (Schwarz)
+    root.style.setProperty('--glass', /^#[0-9a-f]{6}$/i.test(cfg.glass || '') ? cfg.glass : '#ffffff');
     root.style.setProperty('--main-bg', m.main);
     root.style.setProperty('--sidebar-bg', m.side);
     root.style.setProperty('--field-bg', m.field);
@@ -7173,7 +7186,7 @@ document.addEventListener('click', (e) => {
   apply();
   fetch('/api/appearance').then((r) => r.json()).then((srv) => {
     if (!srv || !MODES[srv.mode]) { save(); return; } // noch nichts auf dem Server → aktuellen Stand dort ablegen
-    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles });
+    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles, ...(srv.glass ? { glass: srv.glass } : {}) });
     try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {}
     apply();
   }).catch(() => {});
@@ -7183,6 +7196,7 @@ document.addEventListener('click', (e) => {
     MODES: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.label])),
     PREVIEW: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.pv])),
     ACCENTS,
+    GLASS,
     get: () => ({ ...cfg }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };

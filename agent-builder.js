@@ -16,7 +16,7 @@ const AgentBuilder = (() => {
   const FIG_NAMES = { havaneser: 'Havaneser', collie: 'Border Collie', golden: 'Golden Retriever', oktopus: 'Oktopus', baer: 'Bär', eigenes: 'Eigenes Bild' };
   const FUR_NAMES = { original: 'Original', creme: 'Creme', weiss: 'Weiß', grau: 'Grau', schwarz: 'Schwarz', braun: 'Braun', gold: 'Gold', rot: 'Rot', orange: 'Orange', rosa: 'Rosa', blau: 'Blau', tuerkis: 'Türkis', gruen: 'Grün' };
   const ACT_NAMES = { kochen: 'Kocht', lupe: 'Sucht mit Lupe', buch: 'Liest', tablet: 'Schaut aufs Tablet', laptop: 'Tippt am Laptop', keine: 'Keine Animation' };
-  const TOOL_NAMES = { miniapps: 'Mini-Apps', lernsets: 'Lernsets', diagramme: 'Diagramme', mindmaps: 'Mindmaps', bilder: 'Bilder', quellen: 'Quellen' };
+  const TOOL_NAMES = { miniapps: 'Mini-Apps', lernsets: 'Lernsets', diagramme: 'Diagramme', bilder: 'Bilder', quellen: 'Quellen' };
   const CREATE_ASK = /\b(erstell|bau|mach|leg|richt|kreier|design|programmier)\w*\b[^.?!\n]{0,40}\b(eigenen|neuen|einen|meinen)\s+(ki-?)?agent(en)?\b|\b(eigenen|neuen)\s+(ki-?)?agent(en)?\s+(erstellen|bauen|anlegen|einrichten|machen|designen)\b/i;
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fi = (n, s = 14) => (window.FadeIcons ? FadeIcons.svg(n, s) : '');
