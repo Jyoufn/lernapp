@@ -4,10 +4,10 @@ const assert = require('node:assert');
 const M = require('./mock');
 const W = require('../lib/workflow');
 
-test('Mini-Apps im Chat sind aus: keine Mini-App-Anleitung mehr (programmiert wird nur im Coding-Agenten), Einstellungen per Chat bleiben', () => {
+test('Mini-Apps und Chat-Hintergründe per Code sind aus: keine Anleitung mehr im Prompt', () => {
   assert.doesNotMatch(W.extrasPrompt({ agent: 'code', text: 'Bau mir ein Spiel', recent: '' }), /MINI-APPS/);
   assert.doesNotMatch(W.extrasPrompt({ agent: 'general', text: 'Veranschauliche mir das mit einer Simulation', recent: '' }), /MINI-APPS/);
-  assert.match(W.extrasPrompt({ agent: 'general', text: 'Mach meinen Chat-Hintergrund zu Sternen', recent: '' }), /```einstellung/);
+  assert.doesNotMatch(W.extrasPrompt({ agent: 'general', text: 'Mach meinen Chat-Hintergrund zu Sternen', recent: '' }), /```hintergrund/);
 });
 
 test('Eigener Agent: Anweisung wird geprüft und an den System-Prompt gehängt', async () => {
