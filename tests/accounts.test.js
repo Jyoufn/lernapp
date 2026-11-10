@@ -200,3 +200,21 @@ test('Redis: große Hashes werden in Paketen gelesen (Upstash-Grenze 10 MB je An
     assert.equal(calls.filter((c) => c === 'HMGET').length, 2);
   } finally { globalThis.fetch = orig; }
 });
+
+test('Passwort vergessen: Code per E-Mail setzt das neue Passwort; unbekannte E-Mail verrät nichts', async () => {
+  const store = memoryStore();
+  const s = await startAndCatch(store, { email: 'a@b.de', password: 'geheim123' });
+  await A.verifyLogin(store, {}, { email: 'a@b.de', code: s.code });
+  await assert.rejects(A.startLogin(store, {}, { email: 'a@b.de', password: 'kurz', reset: true }, {}), /mindestens 8/);
+  const r = await startAndCatch(store, { email: 'a@b.de', password: 'ganzneu456', reset: true });
+  assert.ok(r.code);
+  // vor dem Code gilt noch das alte Passwort
+  await assert.rejects(A.startLogin(store, {}, { email: 'a@b.de', password: 'ganzneu456' }, {}), /stimmt nicht/);
+  const r2 = await startAndCatch(store, { email: 'a@b.de', password: 'ganzneu456', reset: true });
+  const v = await A.verifyLogin(store, {}, { email: 'a@b.de', code: r2.code });
+  assert.ok(v.token);
+  await assert.rejects(A.startLogin(store, {}, { email: 'a@b.de', password: 'geheim123' }, {}), /stimmt nicht/);
+  assert.ok((await startAndCatch(store, { email: 'a@b.de', password: 'ganzneu456' })).code);
+  const u = await startAndCatch(store, { email: 'fremd@b.de', password: 'irgendwas1', reset: true });
+  assert.equal(u.ok, true); assert.equal(u.code, null);
+});

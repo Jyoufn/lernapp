@@ -189,6 +189,17 @@
           <button type="button" class="auth-link" data-act="change" hidden>E-Mail ändern</button>
           <button type="button" class="auth-link" data-act="resend" hidden>Code erneut senden</button>
         </div>
+        <div class="auth-alt">
+          <p class="auth-or">Oder</p>
+          <div class="auth-social">
+            <button type="button" class="auth-soc" data-soc="Google">Google</button>
+            <button type="button" class="auth-soc" data-soc="GitHub">GitHub</button>
+          </div>
+          <div class="auth-links">
+            <button type="button" class="auth-link" data-mode="create">Konto erstellen</button>
+            <button type="button" class="auth-link" data-mode="reset">Passwort vergessen?</button>
+          </div>
+        </div>
       </form>`;
     document.body.append(wrap);
 
@@ -205,7 +216,23 @@
     const change = wrap.querySelector('[data-act="change"]');
     let step = 'login', busy = false, resendAt = 0, resendT = 0;
     try { const last = lsGet('auth.lastEmail'); if (last) email.value = last; } catch {}
-    setTimeout(() => (email.value ? pw : email).focus({ preventScroll: true }), 350);
+    // kein automatischer Fokus: erst das eigene Antippen eines Felds lässt Apple/den Browser die gespeicherten Passwörter anbieten
+    /* Modus: anmelden | Konto erstellen | Passwort zurücksetzen – gleiche Felder, anderer Titel/Knopf (Server: /api/auth/start, bei „reset“ mit reset: true) */
+    let mode = 'login';
+    const MODES = { login: ['Willkommen bei Agenten', 'Passwort', 'Anmelden', 'current-password'], create: ['Konto erstellen', 'Passwort', 'Konto erstellen', 'new-password'], reset: ['Passwort zurücksetzen', 'Neues Passwort', 'Code senden', 'new-password'] };
+    const titleEl = wrap.querySelector('.auth-title'), pwLabel = wrap.querySelector('label[for="authPw"]');
+    const linkA = wrap.querySelector('.auth-links [data-mode="create"]'), linkB = wrap.querySelector('.auth-links [data-mode="reset"]');
+    function setMode(m) {
+      mode = m;
+      const [t, l, b, ac] = MODES[m];
+      titleEl.textContent = t; pwLabel.textContent = l; btnText.textContent = b; pw.autocomplete = ac;
+      linkA.textContent = m === 'login' ? 'Konto erstellen' : 'Zur Anmeldung'; linkA.dataset.mode = m === 'login' ? 'create' : 'login';
+      linkB.hidden = m !== 'login';
+      if (m !== 'login') pw.value = '';
+      setErr('');
+    }
+    wrap.querySelector('.auth-links').addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b && !busy && step === 'login') setMode(b.dataset.mode); });
+    wrap.querySelector('.auth-social').addEventListener('click', (e) => { const b = e.target.closest('[data-soc]'); if (b) setErr(`Die Anmeldung mit ${b.dataset.soc} gibt es noch nicht.`); });
 
     const setErr = (msg) => { err.textContent = msg || ''; wrap.classList.toggle('has-err', !!msg); };
     const setBusy = (on) => { busy = on; btn.classList.toggle('busy', on); btn.disabled = on; };
@@ -227,7 +254,7 @@
       email.readOnly = pw.readOnly = true;
       digits.forEach((d) => { d.value = ''; d.tabIndex = 0; d.classList.remove('filled'); });
       sentEl.textContent = mode === 'fixed' ? 'dein fester Code' : `an ${addr} gesendet`;
-      btnText.textContent = 'Anmelden';
+      btnText.textContent = mode === 'reset' ? 'Passwort ändern' : 'Anmelden';
       btn.classList.remove('ready');
       change.hidden = false;
       resend.hidden = mode === 'fixed';
@@ -240,7 +267,7 @@
       codeWrap.setAttribute('aria-hidden', 'true');
       email.readOnly = pw.readOnly = false;
       digits.forEach((d) => { d.tabIndex = -1; });
-      btnText.textContent = 'Anmelden';
+      btnText.textContent = MODES[mode][2];
       btn.classList.remove('ready');
       resend.hidden = change.hidden = true;
       clearInterval(resendT);
@@ -264,10 +291,10 @@
       setErr('');
       const addr = email.value.trim();
       if (!addr) { setErr('Bitte gib deine E-Mail-Adresse ein.'); email.focus(); return; }
-      if (!pw.value) { setErr('Bitte gib dein Passwort ein.'); pw.focus(); return; }
+      if (!pw.value) { setErr(mode === 'reset' ? 'Bitte gib ein neues Passwort ein.' : 'Bitte gib dein Passwort ein.'); pw.focus(); return; }
       setBusy(true);
       try {
-        const j = await post('/api/auth/start', { email: addr, password: pw.value });
+        const j = await post('/api/auth/start', { email: addr, password: pw.value, ...(mode === 'reset' ? { reset: true } : {}) });
         lsSet('auth.lastEmail', j.email || addr);
         if (j.mode === 'direct') { await enter(j); return; } // feste Zugangsdaten ohne Code
         toCode(j.email || addr, j.mode);
@@ -370,7 +397,7 @@
       if (busy || Date.now() < resendAt) return;
       setErr('');
       setBusy(true);
-      try { await post('/api/auth/start', { email: email.value.trim(), password: pw.value }); startResendTimer(); digits[0].focus(); }
+      try { await post('/api/auth/start', { email: email.value.trim(), password: pw.value, ...(mode === 'reset' ? { reset: true } : {}) }); startResendTimer(); digits[0].focus(); }
       catch (e) { setErr(e.message); }
       setBusy(false);
     });
