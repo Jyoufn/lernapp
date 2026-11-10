@@ -87,6 +87,8 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - **Titel** beim Anbieter der Anfrage (`P.familyFor`), Gemini nur als Ersatz; Gedanken (`</think>` ohne `<think>`) werden entfernt. Im Stream puffert `openaiChat` den Anfang, bis klar ist, ob ein `</think>` kommt (DeepSeek/Kimi/MiniMax denken sonst sichtbar in der Antwort).
 - **Gedanken-Oberpunkte** (`lib/thoughts.js`): jeder Abschnitt bekommt einen konkreten Oberpunkt mit Inhalt (3–8 Wörter), nie „Analysieren“/„Nachdenken“.
 - **Rückfragen** (`ASK_PROMPT`): jede KI darf nachfragen, wenn etwas WICHTIG ist – sonst naheliegende Annahme und direkt antworten.
+- **Diktat genau**: neben der Browser-Erkennung läuft eine Tonaufnahme (`dictRec`); nach jeder Pause und beim Stoppen schreibt Gemini sie wörtlich mit (`/api/transcribe`, Deutsch+Englisch, Fachbegriffe, Satzzeichen) und ersetzt den Text im Feld. Ohne Gemini-Schlüssel/Aufnahme: nur Glättung.
+- **Mindmap** nie von selbst – nur auf ausdrücklichen Wunsch.
 - **Spracheingabe**: Text erscheint sofort; nach jeder kurzen Pause wird das fest Erkannte im Hintergrund geglättet und still ersetzt (`livePolish` in `app.js`), beim Stoppen der Rest. `/api/polish` korrigiert lautmalerisch erkannte englische Wörter und Fachbegriffe (Wörterliste aus Tags, Projekten, Titeln + KI-Namen).
 - **Stand 04.11. (Nutzer: „Aufwand wird nicht beachtet“)**: Im Gemini-nativen Ablauf denkt die KI NUR bei Auto dynamisch. Gewählte Stufe = deren Denktiefe
   (`EFFORTS[level].thinking`: Low low/1024 · Medium medium/4096 · High high/8192 · Max high/24576), deutliche Längen-/Tiefen-Sätze (`NATIVE_EFFORT`),

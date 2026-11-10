@@ -338,10 +338,13 @@ const DocIcons = (() => {
     const x = I[n];
     return `<symbol id="dl-${n}" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${x.u || ''}${x.b || ''}${x.c || ''}${x.cl || ''}${x.s || ''}</g>${x.k || ''}</symbol>`;
   }).join('')}</svg>`;
-  document.body.insertAdjacentHTML('afterbegin', sprite + spriteLine);
-  const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#d-${name}"/></svg>`;
+  // gefüllte Fassung bleibt als #df-<name> erhalten (line-icons.js ersetzt nur #d-… durch Linien) – wählbar „Gefüllt“ (Wunsch 10.11.)
+  const spriteFill = sprite.replace(/id="d-/g, 'id="df-').replace(/dm-/g, 'dfm-');
+  document.body.insertAdjacentHTML('afterbegin', sprite + spriteLine + spriteFill);
+  // fill = true → gefüllte Fassung (#df-…), sonst die runden Linien-Icons (#d-…)
+  const svg = (name, size = 24, cls = '', fill = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#${fill ? 'df' : 'd'}-${name}"/></svg>`;
   // Icon eines Dokuments/Projekts ({ name, c }) als <svg> in seiner Farbe – immer gefüllt (Linien-Fassung wird nicht mehr angeboten)
-  const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#d-${ic.name}"/></svg>` : '');
+  const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#${ic.fill ? 'df' : 'd'}-${ic.name}"/></svg>` : '');
   /* Einheitliche Icon-Auswahl (Wunsch 09./10.11.): überall, wo man ein Icon wählt (Dokument, Projekt, Block …), dieselben 72 Icons (ohne Sterne)
      im runden Linien-Stil – nach Themen: Lernen · Fächer · Welt & Medien · Zahlen & Ziele · Symbole · Alltag. Ältere Icons bleiben gültig. */
   const BASE = ['book', 'notebook', 'cap', 'pencil', 'eraser', 'ruler', 'paperclip', 'bookmark', 'list', 'folder', 'calendar', 'clock',

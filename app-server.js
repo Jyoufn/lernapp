@@ -1290,6 +1290,30 @@ Deine Aufgabe:
    Englische Sätze und Ausdrücke bleiben Englisch und werden richtig geschrieben.
 Sonst ändere NICHTS: keine Umformulierung, keine andere Reihenfolge, nichts ergänzen, nichts weglassen, nicht zusammenfassen.
 Antworte NUR mit dem korrigierten Text – ohne Anführungszeichen, ohne Kommentar.`;
+/* Diktat genau verstehen (Wunsch 10.11.: die Erkennung im Browser versteht die Hälfte nicht, v. a. Deutsch+Englisch gemischt und Fachbegriffe):
+   der Browser nimmt den Ton auf und schickt ihn hierher; Gemini hört ihn an und schreibt wörtlich mit – mit Satzzeichen, Groß-/Kleinschreibung,
+   englischen Wörtern und Fachbegriffen richtig. Der Text im Feld wird damit ersetzt. Ohne Gemini-Schlüssel bleibt es bei der Browser-Erkennung. */
+const TRANSCRIBE_SYSTEM = `Du bekommst eine Sprachaufnahme. Schreibe WÖRTLICH mit, was gesagt wird – nichts ergänzen, nichts weglassen, nicht antworten, nicht zusammenfassen.
+Der Sprecher redet Deutsch und mischt oft englische Wörter und Fachbegriffe ein: schreibe jedes Wort in seiner richtigen Sprache und Schreibweise
+(„DeepSeek“, „Dashboard“, „Prompt“, „Mitochondrien“ …). Setze Satzzeichen und Groß-/Kleinschreibung. Füllwörter wie „äh“ weglassen.
+Ist nichts Verständliches zu hören, antworte mit einer leeren Antwort. Antworte NUR mit dem mitgeschriebenen Text.`;
+async function handleTranscribe(req, res) {
+  const env = envOf(req);
+  const body = await readBody(req, 12 * 1024 * 1024);
+  const data = String(body.audio || ''), mime = String(body.mime || 'audio/webm').split(';')[0].slice(0, 40);
+  if (!env.GEMINI_API_KEY || data.length < 2000 || !/^audio\//.test(mime)) return sendJson(res, 200, { text: '' });
+  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 60);
+  const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}Schreibe die Aufnahme wörtlich mit.`;
+  for (const model of (await P.ladder(env, 'text')).slice(0, 2)) {
+    try {
+      const thinking = model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' };
+      const out = String(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TRANSCRIBE_SYSTEM, user, maxTokens: 3000, thinking, files: [{ mime, data }], signal: AbortSignal.timeout(20000) }) || '').trim().replace(/^["„“]|["“”]$/g, '');
+      return sendJson(res, 200, { text: out.slice(0, 8000) });
+    } catch { /* nächstes Modell */ }
+  }
+  sendJson(res, 200, { text: '' });
+}
+
 async function handlePolish(req, res) {
   const env = readEnv();
   const body = await readBody(req, 40000);
@@ -1731,6 +1755,7 @@ async function handle(req, res) {
     if (req.method === 'POST' && urlPath === '/api/title') return await handleTitle(req, res);
     if (req.method === 'POST' && urlPath === '/api/upload') return await handleUpload(req, res, new URL(req.url, 'http://x'));
     if (req.method === 'POST' && urlPath === '/api/polish') return await handlePolish(req, res);
+    if (req.method === 'POST' && urlPath === '/api/transcribe') return await handleTranscribe(req, res);
     if (req.method === 'POST' && urlPath === '/api/agent-avatar') return await handleAgentAvatar(req, res);
     if (req.method === 'POST' && urlPath === '/api/widget-fix') return await handleWidgetFix(req, res);
     if (req.method === 'POST' && urlPath === '/api/doc-intent') return await handleDocIntent(req, res);

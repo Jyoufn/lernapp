@@ -11909,3 +11909,38 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .dc-setbtn.on { background: var(--pop-bg); color: var(--text); }
 @media (prefers-reduced-motion: reduce) { .dcs-pane { animation: none; } }
 .dcs-acc-row .dc-acc { gap: 6px; } .dcs-acc-row .dc-dot { width: 20px; height: 20px; }
+/* Farbauswahl: der Regler wählt den Farbton (dünne, ruhige Farbleiste wie früher), keine Helligkeit */
+.cp-slider.cp-hue::before { top: 6px; height: 6px; background: linear-gradient(to right, #d68f8f, #d6b48f, #cbd18f, #9fd18f, #8fd1b4, #8fc4d6, #8fa0d6, #ad8fd6, #d18fc4, #d68f8f); opacity: 0.85; }
+.cp-slider.cp-hue b { box-shadow: 0 0 0 2.5px #f2f2f2; }
+.cp-light { padding-top: 2px; color: var(--text-3); font-size: 12px; }
+/* Dokument: Projekt nur in der Tabelle (kein Chip mehr über dem Titel); Cover bleibt im Fokusmodus sichtbar */
+.dc-adds .dc-ppop > .dc-pchip { display: none !important; }
+.dc-adds .dc-ppop { position: static; }
+.dc-editor.focus .dc-cover.has { display: block !important; }
+.dc-page.with-proj { padding-top: 0; }
+/* Aufwand unter dem Eingabefeld rechts (Liste wie früher), Modell-Menü nur mit Modellen */
+.composer-sub { display: flex; align-items: center; max-width: 600px; margin: 6px auto 0; padding: 0 6px; pointer-events: auto; }
+.composer-sub .grow { flex: 1; }
+.eff-chip { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 6px 0 8px; border: 0; border-radius: 7px; background: none; color: var(--text-4); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: background-color 120ms ease, color 120ms ease; -webkit-tap-highlight-color: transparent; }
+.eff-chip:hover, .eff-chip[aria-expanded="true"] { background: #1c1c1c; color: var(--text-2); }
+.eff-chip svg { color: var(--text-4); transition: transform 240ms var(--spring); }
+.eff-chip[aria-expanded="true"] svg { transform: rotate(180deg); }
+.eff-menu { width: 176px; max-width: 176px; }
+.eff-menu .lb2-mi .lb2-tick { margin-left: auto; display: inline-grid; color: var(--text); font-style: normal; }
+.mpx-h { font-size: 11px; padding: 6px 9px 3px; }
+/* Dokument: Tags oben rechts (getönt, max. 2 + N; ohne Tags nur das Icon) */
+.dc-toptags { display: inline-flex; align-items: center; gap: 4px; height: 30px; min-width: 30px; max-width: 300px; padding: 0 5px; border: 0; border-radius: 8px; background: none; color: var(--text-3); cursor: pointer; justify-content: center; }
+.dc-toptags:hover { background: var(--pop-bg); color: var(--text); }
+.dc-toptags .lb2-tag { height: 22px; }
+.dc-editor.focus .dc-toptags { display: none; }
+/* Icon-Auswahl: Umschalter Linie · Gefüllt, Farbe erst im zweiten Schritt */
+.dc-ip2-head { height: 32px; }
+.dc-ip2-kind { height: 26px; padding: 0 2px; }
+.dc-ip2-kind > button { height: 22px; padding: 0 10px; border: 0; background: none; color: var(--text-4); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; position: relative; z-index: 1; }
+.dc-ip2-kind > button.on { color: var(--text); }
+.dc-ip2-back { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px 0 4px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+.dc-ip2-back:hover { background: var(--menu-hover); }
+.dc-ip2-cur { display: inline-grid; place-items: center; width: 28px; height: 28px; }
+.dc-ipop2 .tk-colors { padding: 8px 6px 6px; }
+.dc-ipop2 .tk-picker-host { padding: 0 6px; }
+.dc-ip2-grid { color: var(--text-2); max-height: 300px; overflow-y: auto; }

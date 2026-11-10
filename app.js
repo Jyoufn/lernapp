@@ -98,7 +98,7 @@ function openDocTab(id, title) {
 }
 window.openViewTab = openViewTab;
 window.openDocTab = openDocTab;
-const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#d-${ic.name}"/></svg>`;
+const docTabIcon = (ic) => `<svg width="16" height="16" style="color:${ic.c};margin:-1px"><use href="#${ic.fill ? 'df' : 'd'}-${ic.name}"/></svg>`;
 // Icon eines Dokument-Tabs tauschen (ohne gewähltes Icon: gar kein Symbol)
 window.setTabIcon = (tab, ic) => {
   const old = tab?.querySelector(':scope > svg'); if (!old) return;
@@ -252,46 +252,43 @@ function drawModelMenu() {
   const fams = window.AiConnected?.() || [];
   const list = fams.length ? fams : [aiMain()];
   const main = aiMain();
-  popover.innerHTML = `<div class="mpx-h">Modell</div>${list.map((f) => `<button type="button" class="mpx-m${f === main ? ' selected' : ''}" data-pick="${f}"><span>${AI_NAMES[f] || f}</span><svg width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}
-    <div class="mpx-sep"></div><div class="mpx-eh"><span>Aufwand</span><b>${EFF_DE[EFFORTS[state.effort]]}</b></div>
-    <div class="mpx-range" role="slider" aria-label="Aufwand" aria-valuemin="0" aria-valuemax="${EFFORTS.length - 1}" aria-valuenow="${state.effort}" tabindex="0"><i class="mpx-fill"></i>${EFFORTS.map((_, i) => `<span class="mpx-stop" style="left:${(i / (EFFORTS.length - 1)) * 100}%"></span>`).join('')}<b class="mpx-knob"></b></div>
-    <div class="mpx-ticks">${EFFORTS.map((e, i) => `<span style="left:${(i / (EFFORTS.length - 1)) * 100}%">${EFF_DE[e]}</span>`).join('')}</div>`;
-  placeKnob();
+  // nur die Modelle (Wunsch 10.11., 4. Runde) – der Aufwand hat einen eigenen Knopf unten rechts unter dem Eingabefeld
+  popover.innerHTML = `<div class="mpx-h">Modell</div>${list.map((f) => `<button type="button" class="mpx-m${f === main ? ' selected' : ''}" data-pick="${f}"><span>${AI_NAMES[f] || f}</span><svg width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}`;
 }
-function placeKnob() {
-  const p = (state.effort / (EFFORTS.length - 1)) * 100;
-  const k = popover.querySelector('.mpx-knob'), f = popover.querySelector('.mpx-fill'); if (!k) return;
-  k.style.left = `${p}%`; f.style.width = `${p}%`;
-  popover.querySelector('.mpx-eh b').textContent = EFF_DE[EFFORTS[state.effort]];
-  popover.querySelectorAll('.mpx-ticks span').forEach((t, i) => t.classList.toggle('on', i === state.effort));
-}
-let effDrag = null;
-const effFrom = (e) => { const r = effDrag.getBoundingClientRect(); return Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (EFFORTS.length - 1)); };
-popover.addEventListener('pointerdown', (e) => {
-  const r = e.target.closest('.mpx-range'); if (!r) return;
-  effDrag = r; r.setPointerCapture(e.pointerId); popover.classList.add('dragging');
-  const v = effFrom(e); if (v !== state.effort) { state.effort = v; placeKnob(); render(false); }
-});
-popover.addEventListener('pointermove', (e) => { if (!effDrag) return; const v = effFrom(e); if (v !== state.effort) { state.effort = v; placeKnob(); render(false); } });
-popover.addEventListener('pointerup', () => { effDrag = null; popover.classList.remove('dragging'); });
-popover.addEventListener('keydown', (e) => {
-  if (!e.target.closest('.mpx-range')) return;
-  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); state.effort = Math.max(0, Math.min(EFFORTS.length - 1, state.effort + (e.key === 'ArrowRight' ? 1 : -1))); placeKnob(); render(false); }
-});
 popover.addEventListener('click', (e) => {
   const m = e.target.closest('[data-pick]');
   if (m) { window.setAiMain?.(m.dataset.pick); popover.querySelectorAll('.mpx-m').forEach((b) => b.classList.toggle('selected', b === m)); render(false); setTimeout(() => setPopover(false), 160); }
 });
 
+/* Aufwand: eigener kleiner Knopf unten rechts UNTER dem Eingabefeld („Mittel ˅“) mit einer Liste wie früher (Auto · Niedrig · Mittel · Hoch · Max) */
+const effBar = el('div', 'composer-sub');
+effBar.innerHTML = '<span class="grow"></span><button type="button" class="eff-chip" id="effChip" aria-haspopup="menu" aria-expanded="false"><span></span><svg width="11" height="11" aria-hidden="true"><use href="#f-chevron-down"/></svg></button>';
+document.querySelector('.composer-area')?.append(effBar);
+const effChip = effBar.querySelector('#effChip');
+const effMenu = el('div', 'lb2-menu eff-menu'); effMenu.hidden = true; effMenu.setAttribute('role', 'menu'); document.body.append(effMenu);
+function openEffMenu() {
+  if (!effMenu.hidden) { effMenu.hidden = true; effChip.setAttribute('aria-expanded', 'false'); return; }
+  effMenu.innerHTML = `<div class="lb2-ml">Aufwand</div>${EFFORTS.map((e, i) => `<button type="button" role="menuitemradio" class="lb2-mi" data-eff="${i}"><span>${EFF_DE[e]}</span>${i === state.effort ? `<i class="lb2-tick"><svg width="13" height="13"><use href="#f-check"/></svg></i>` : ''}</button>`).join('')}`;
+  effMenu.hidden = false; effChip.setAttribute('aria-expanded', 'true');
+  const r = effChip.getBoundingClientRect(), w = effMenu.offsetWidth, h = effMenu.offsetHeight;
+  effMenu.style.left = `${Math.round(Math.min(innerWidth - w - 8, r.right - w))}px`;
+  effMenu.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? r.top - h - 6 : r.bottom + 6)}px`;
+}
+effChip.addEventListener('click', (e) => { e.stopPropagation(); openEffMenu(); });
+effMenu.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-eff]'); if (!b) return; state.effort = +b.dataset.eff; render(false); effMenu.hidden = true; effChip.setAttribute('aria-expanded', 'false'); });
+document.addEventListener('click', () => { if (!effMenu.hidden) { effMenu.hidden = true; effChip.setAttribute('aria-expanded', 'false'); } });
+
 function render(redraw = true) {
   if (redraw) drawModelMenu();
   $('chipModel').textContent = AI_NAMES[aiMain()] || 'Gemini';
-  $('chipEffort').textContent = state.effort ? EFF_DE[EFFORTS[state.effort]] : '';
-  chip.classList.toggle('has-effort', !!state.effort);
+  $('chipEffort').textContent = '';
+  effChip.querySelector('span').textContent = EFF_DE[EFFORTS[state.effort]];
+  chip.classList.remove('has-effort');
   chip.querySelectorAll('span').forEach((x) => { x.style.width = ''; });
   try { localStorage.setItem('modelState', JSON.stringify(state)); } catch {}
 }
 window.renderModelChip = () => render();
+window.Effort = { get: () => state.effort, set: (i) => { state.effort = Math.max(0, Math.min(EFFORTS.length - 1, +i || 0)); render(false); } }; // derselbe Aufwand im KI-Chat des Dokuments
 
 /* Texte haben krumme Breiten (z. B. 87,4 px) – alles dahinter würde auf halbe
    Pixel rutschen und unscharf wirken. Deshalb Breiten auf ganze Pixel aufrunden. */
@@ -640,6 +637,7 @@ function joinText(a, b) {
 }
 
 function showListening(text, isHint = false) {
+  if (!isHint) return; // Wunsch 10.11.: kein „Hört zu“/„Satzzeichen setzen“ unter dem Feld – nur echte Hinweise (z. B. Mikro gesperrt)
   clearTimeout(hintTimer);
   listeningText.textContent = text;
   listeningEl.classList.toggle('hint', isHint);
@@ -666,6 +664,38 @@ let dictFrom = null; // Feldinhalt vor dem Diktat → danach wird nur das Diktie
 let finalsEnd = 0, lastInterim = '', liveT = 0, livePolishing = false, liveDone = '';
 const polishHints = () => [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
   'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
+/* Ton-Mitschnitt fürs genaue Verstehen (Wunsch 10.11.: Browser-Erkennung versteht zu wenig): neben der Sofort-Erkennung läuft eine Aufnahme;
+   nach jeder Pause und beim Stoppen hört Gemini sie an (/api/transcribe) und der Text im Feld wird durch die genaue Mitschrift ersetzt.
+   Klappt die Aufnahme nicht (kein Recht, Gerät erlaubt nicht beides, kein Gemini-Schlüssel), bleibt es bei Erkennung + Glättung. */
+const dictRec = { rec: null, stream: null, chunks: [], mime: '', off: false };
+async function dictRecStart() {
+  if (dictRec.off || dictRec.rec || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return;
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    if (!listening) { stream.getTracks().forEach((t) => t.stop()); return; }
+    const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((m) => MediaRecorder.isTypeSupported?.(m)) || '';
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : undefined);
+    dictRec.rec = rec; dictRec.stream = stream; dictRec.chunks = []; dictRec.mime = rec.mimeType || mime || 'audio/webm';
+    rec.ondataavailable = (e) => { if (e.data?.size) dictRec.chunks.push(e.data); };
+    rec.start(1000);
+  } catch { dictRec.off = true; }
+}
+function dictRecStop() {
+  try { dictRec.rec?.stop(); } catch {}
+  dictRec.stream?.getTracks().forEach((t) => t.stop());
+  dictRec.rec = null; dictRec.stream = null;
+}
+async function dictTranscribe(context) {
+  if (!dictRec.chunks.length) return '';
+  const blob = new Blob(dictRec.chunks, { type: dictRec.mime });
+  if (blob.size < 3000 || blob.size > 7 * 1024 * 1024) return '';
+  const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ok(''); fr.readAsDataURL(blob); });
+  if (!data) return '';
+  try {
+    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context }) });
+    return String((await r.json()).text || '').trim();
+  } catch { return ''; }
+}
 async function livePolish() {
   if (!listening || livePolishing || dictFrom == null) return;
   const raw = joinText(baseText, finalText);
@@ -675,9 +705,13 @@ async function livePolish() {
   const snapBase = baseText, snapFinal = finalText, snapEnd = finalsEnd;
   livePolishing = true;
   let out = '';
+  const ctx = dictFrom.slice(-300) || chatOf(activeTab())?.title || '';
   try {
-    const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg.trim(), hints: polishHints(), context: dictFrom.slice(-300) || chatOf(activeTab())?.title || '' }) });
-    out = String((await r.json()).text || '').trim();
+    out = await dictTranscribe(ctx); // genaue Mitschrift aus dem Ton; sonst nur glätten
+    if (!out) {
+      const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg.trim(), hints: polishHints(), context: ctx }) });
+      out = String((await r.json()).text || '').trim();
+    }
   } catch {} finally { livePolishing = false; }
   if (!listening || !out) return;
   if (baseText !== snapBase || finalText !== snapFinal || input.value !== written) { clearTimeout(liveT); liveT = setTimeout(livePolish, 700); return; } // inzwischen weitergeredet → gleich nochmal
@@ -739,6 +773,7 @@ function startListening() {
   };
 
   try { recognition.start(); } catch {}
+  dictRec.chunks = []; setTimeout(dictRecStart, 400); // Aufnahme erst nach dem Start der Erkennung
   setMicUI(true);
   showListening('Hört zu');
 }
@@ -752,7 +787,7 @@ function stopListening(hard = false) {
   }
   setMicUI(false);
   hideListening();
-  const from = dictFrom; dictFrom = null; clearTimeout(liveT);
+  const from = dictFrom; dictFrom = null; clearTimeout(liveT); dictRecStop(); if (hard) dictRec.chunks = [];
   if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten (nur der noch nicht geglättete Rest ändert sich spürbar)
 }
 /* Nach dem Diktat: Satzzeichen und Rechtschreibung NUR im diktierten Teil (beim normalen Tippen gibt es keine Korrektur).
@@ -766,6 +801,8 @@ async function polishDictation(from) {
   try {
     // Wörterliste: Tags, Projekte, Titel von Dokumenten und Chats – so erkennt die Glättung Fachbegriffe und Namen (Wunsch 10.11.)
     const hints = polishHints();
+    const heard = await dictTranscribe((from || '').slice(-300) || chatOf(activeTab())?.title || ''); dictRec.chunks = [];
+    if (heard) { if (input.value !== now) return; input.value = from + said.match(/^\s*/)[0] + heard; input.dispatchEvent(new Event('dictation')); autoGrow(); return; }
     const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim(), hints, context: (from || '').slice(-300) || chatOf(activeTab())?.title || '' }) });
     const { text } = await r.json();
     if (input.value !== now || !text) return; // weitergeschrieben/abgeschickt → nichts überschreiben
@@ -5653,6 +5690,9 @@ const TagMenu = (() => {
   pop.addEventListener('click', (e) => {
     e.stopPropagation();
     const pen = e.target.closest('[data-tedit]'); if (pen) { editing = pen.dataset.tedit; draw(); return; }
+    if (e.target.closest('.tk-picker')) return;
+    const cu0 = e.target.closest('[data-custom]');
+    if (cu0) { const g0 = all().find((x) => x.id === editing); UIKit.customPick(cu0, g0?.c, (hex) => { if (g0) { const list = all(), g = list.find((x) => x.id === g0.id); if (g) { g.c = hex; saveAll(list); draw(); } } else create(hex); }); return; }
     if (editing) {
       const list = all(), g = list.find((x) => x.id === editing);
       const ec = e.target.closest('[data-tecolor]'); if (ec && g && ec.dataset.tecolor) { g.c = ec.dataset.tecolor; saveAll(list); draw(); return; }

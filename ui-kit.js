@@ -48,69 +48,12 @@ const UIKit = (() => {
     paint(false);
     return el;
   }
-  /* Farbauswahl (Wunsch 10.11., Menü wie im Nutzer-Bild „Themes“ – aber ohne Regenbogen und ohne Punkte im Feld):
-     oben eine ruhige Vorschau der gewählten Farbe (weicher Schein), darunter die Farbkreise (‹ › blättert, mehr Farben),
-     unten „Helligkeit“ mit Prozent und Regler – der Regler macht die gewählte Farbe heller/dunkler.
-     Überall gleich (Tags, Projekte, Icons, Termine …). Aufrufer brauchen nichts Neues: Farbkreis = Klick auf [attr]=hex,
-     Regler loslassen = Klick auf einen versteckten Knopf [attr]=hex. */
-  const MORE = ['#e0737a', '#d6bf5e', '#5db8b3', '#8f9bb3', '#c48bd6', '#7fa7e8', '#e09a6b', '#9fc27a'];
+  // Farbreihe: feste Farben + ganz rechts eigene Farbe (eigene Farbe → Feld zum Ziehen + Farbton-Regler, colorPicker). Wunsch 10.11.: wieder wie vorher
   const colorRow = (cur, attr) => {
-    const start = cur || COLORS[6];
-    const { h, s, v } = hexToHsv(start);
-    const all = [...COLORS, ...MORE.filter((c) => !COLORS.includes(c))];
-    return `<div class="cp-panel" data-cp-h="${h.toFixed(1)}" data-cp-s="${s.toFixed(3)}" data-cp-v="${v.toFixed(3)}">`
-      + `<div class="cp-prev" style="--pc:${start}"></div>`
-      + `<div class="cp-row"><button type="button" class="cp-nav" data-cp-nav="-1" aria-label="Zurück">${fi('back', 11)}</button>`
-      + `<div class="tk-colors">${all.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" ${attr}="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div>`
-      + `<button type="button" class="cp-nav" data-cp-nav="1" aria-label="Weiter">${fi('forward', 11)}</button></div>`
-      + `<div class="cp-light"><span>Helligkeit</span><em>${Math.round(v * 100)} %</em></div>`
-      + `<div class="cp-slider"><i style="width:${v * 100}%"></i><b style="left:${v * 100}%"></b></div>`
-      + `<button type="button" class="cp-commit" hidden ${attr}="" tabindex="-1"></button></div><div class="tk-picker-host"></div>`;
+    const custom = cur && !COLORS.includes(cur);
+    return `<div class="tk-colors">${COLORS.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" ${attr}="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}`
+      + `<button type="button" class="tk-custom${custom ? ' on' : ''}" data-custom="${attr}" ${custom ? `style="--c:${cur}"` : ''} aria-label="Eigene Farbe" title="Eigene Farbe"></button></div><div class="tk-picker-host"></div>`;
   };
-  // Regler (Helligkeit), Blättern und Vorschau – ein Handler für alle Farbauswahlen (nur im Browser; Tests laden ui-kit.js ohne DOM)
-  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') (() => {
-    let drag = null;
-    const hexOf = (p) => hsvToHex({ h: +p.dataset.cpH, s: +p.dataset.cpS, v: +p.dataset.cpV });
-    const paint = (p) => {
-      const hex = hexOf(p), v = +p.dataset.cpV;
-      p.querySelector('.cp-prev').style.setProperty('--pc', hex);
-      p.querySelector('.cp-slider i').style.width = `${v * 100}%`; p.querySelector('.cp-slider b').style.left = `${v * 100}%`;
-      p.querySelector('.cp-light em').textContent = `${Math.round(v * 100)} %`;
-    };
-    const move = (e) => {
-      if (!drag) return;
-      const r = drag.area.getBoundingClientRect();
-      drag.p.dataset.cpV = Math.max(0.3, Math.min(1, (e.clientX - r.left) / r.width)).toFixed(3);
-      drag.p.querySelectorAll('.tk-colors button').forEach((b) => b.classList.remove('on'));
-      paint(drag.p);
-    };
-    document.addEventListener('pointerdown', (e) => {
-      const area = e.target.closest?.('.cp-slider'); if (!area) return;
-      e.preventDefault(); e.stopPropagation();
-      drag = { area, p: area.closest('.cp-panel') };
-      move(e);
-    }, true);
-    document.addEventListener('pointermove', move, true);
-    const up = () => {
-      if (!drag) return;
-      const p = drag.p; drag = null;
-      const btn = p.querySelector('.cp-commit'), attr = [...btn.attributes].find((a) => a.name.startsWith('data-'))?.name;
-      if (attr) { btn.setAttribute(attr, hexOf(p)); btn.click(); }
-    };
-    document.addEventListener('pointerup', up, true);
-    document.addEventListener('pointercancel', up, true);
-    // Farbkreis angetippt → Vorschau und Regler zeigen diese Farbe (die Aufrufer übernehmen sie selbst)
-    document.addEventListener('click', (e) => {
-      const nav = e.target.closest?.('.cp-nav');
-      if (nav) { e.stopPropagation(); const row = nav.parentElement.querySelector('.tk-colors'); row.scrollBy({ left: +nav.dataset.cpNav * (row.clientWidth - 30), behavior: 'smooth' }); return; }
-      const dot = e.target.closest?.('.cp-panel .tk-colors button'); if (!dot) return;
-      const p = dot.closest('.cp-panel'), attr = [...dot.attributes].find((a) => a.name.startsWith('data-'))?.name; const hex = attr && dot.getAttribute(attr);
-      if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return;
-      const hsv = hexToHsv(hex); p.dataset.cpH = hsv.h.toFixed(1); p.dataset.cpS = hsv.s.toFixed(3); p.dataset.cpV = hsv.v.toFixed(3);
-      p.querySelectorAll('.tk-colors button').forEach((b) => b.classList.toggle('on', b === dot));
-      paint(p);
-    }, true);
-  })();
 
   /* ---------- Kalender zum Anklicken ---------- */
   const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -271,6 +214,12 @@ const UIKit = (() => {
     requestAnimationFrame(placeAll);
   }
 
-  return { pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  // „Eigene Farbe“ (Knopf rechts in der Farbreihe): Feld + Regler darunter auf-/zuklappen; onDone(hex) beim Knopf „Übernehmen“
+  const customPick = (btn, start, onDone, onLive) => {
+    const host = btn.closest('.tk-colors')?.nextElementSibling; if (!host) return;
+    if (host.firstChild) { host.replaceChildren(); return; }
+    host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
+  };
+  return { customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;
