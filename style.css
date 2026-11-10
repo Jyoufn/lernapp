@@ -12258,3 +12258,30 @@ html[data-glass="on"] .sidebar .nav-item.active, html[data-glass="on"] .sidebar 
 html[data-glass="on"] .composer { border-radius: 22px; }
 html[data-glass="on"] .boot-main { border-color: transparent; border-radius: 14px; }
 html[data-glass="on"] .boot-in { border-color: transparent; border-radius: 22px; }
+
+/* ===== 10.11. spät: Vorschläge leiser und kleiner ===== */
+.next-sug { min-height: 26px; padding: 3px 9px 3px 6px; font-size: 12.5px; color: var(--text-4); }
+.next-sug .next-arr { width: 12px; height: 12px; opacity: 0.8; }
+.next-sug:hover { color: var(--text-2); }
+
+/* ===== Markieren (10.11. spät): nur echter Text lässt sich markieren – Knöpfe, Icons, Bilder, Zeitleiste und Leisten nicht (keine leeren
+   blauen Flächen); Markierung in ruhigem Ton, überall gleich, auch auf dem iPad ===== */
+* { -webkit-tap-highlight-color: transparent; }
+button, svg, img, .sidebar, .msg-actions, .src-covers, .next-sugs, .work-head, .step-line, .marker, .cs-pill, .tab, .chip, .chips, .agent-hint, .ap-modes, .st-side,
+.lb2-dock, .composer-tools, .pd-actor, figure, .boot, .plan-list .pi-mark, .chat-tags, .tk-head, .cal-head { -webkit-user-select: none; user-select: none; }
+.md, .md *, .out-bubble, .thought-text, input, textarea, [contenteditable="true"], [contenteditable="true"] *, .dc-content, .dc-content *, pre, code, .katex, td, th { -webkit-user-select: text; user-select: text; }
+::selection { background: color-mix(in srgb, var(--accent) 32%, transparent); color: inherit; }
+
+/* ===== 10.11. spät: Dokument-Kopf – Icon/Cover-Knöpfe bündig mit dem Titel, mehr Abstand zur Info-Tabelle; Icons wackeln nicht ===== */
+.dc-view .dc-page .dc-adds { margin-left: -12px !important; }
+.dc-ip2-ic, .dc-ip2-ic:hover, .dc-ip2-ic:active, .dc-itile:hover, .dc-itile:focus-visible, .dc-icon:hover .dc-icon-g { transform: none !important; }
+.dc-ip2-grid { grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.dc-meta .dc-ptable { margin-top: 18px; }
+
+/* ===== 10.11. spät: Projekte = Ordner ohne Farbe; auf/zu weich ineinander ===== */
+.sbp-ic, .dc-pj-pic, .dc-pj-mi { color: var(--text-3) !important; display: inline-grid; place-items: center; }
+.pj-folder path { transform-box: fill-box; transform-origin: 50% 85%; transition: opacity 220ms ease, transform 300ms var(--spring, ease); }
+.pj-folder .pf-open { opacity: 0; transform: scaleY(0.82); }
+.dc-proj.open > .sbp-head .pj-folder .pf-shut { opacity: 0; transform: scaleY(0.9); }
+.dc-proj.open > .sbp-head .pj-folder .pf-open { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .pj-folder path { transition: none; } }

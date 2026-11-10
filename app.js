@@ -4631,7 +4631,7 @@ async function sendMessage(text, images, extra = {}) {
   if (pa) { // Rückfrage übersprungen → ganz normal weiter
     finishStep(pa.step, 'Frage übersprungen');
     pa.msgEl._askActor?.finish(false); pa.msgEl._askActor = null;
-    swapText(pa.work.head.querySelector('.work-title'), 'Fertig');
+    swapText(pa.work.head.querySelector('.work-title'), 'Gearbeitet für');
     pa.work.head.querySelector('.t').hidden = false;
     activeTab()._pendingAsk = null;
   }
@@ -6409,7 +6409,7 @@ function writeChats() {
    Klick auf einen Gedanken zeigt seinen Text */
 function savedThoughts(h) {
   const w = createWork();
-  w.head.querySelector('.work-title').textContent = 'Fertig';
+  w.head.querySelector('.work-title').textContent = 'Gearbeitet für';
   const t = w.head.querySelector('.t');
   t.classList.remove('live');
   t.textContent = h.workTime || '';

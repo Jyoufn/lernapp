@@ -565,6 +565,8 @@ const Docs = (() => {
 
   /* ---------- Seitenleiste: Projekte (aufklappbar) mit ihren Dokumenten ---------- */
   const open$ = new Set(JSON.parse(localStorage.getItem('docs.openProjects') || '[]'));
+  // Projekt = Ordner ohne Farbe (Wunsch 10.11. spät): zu und offen als zwei Formen, die beim Auf-/Zuklappen weich ineinander übergehen
+  const folderSvg = (size = 15) => `<svg class="pj-folder" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="pf-shut" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path class="pf-open" d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>`;
   // „Dokumente“ in der Sidebar: einklappbar wie „Chats“ (Überschrift und Zustand aus app.js)
   const side = el('nav', 'nav dc-side sb-sec');
   side.dataset.sec = 'docs';
@@ -587,7 +589,7 @@ const Docs = (() => {
     side.hidden = !loose.length && !folders.length; // ohne Dokumente keine leere Überschrift
     side.innerHTML = (window.sbSectionHead?.('Dokumente', 'docs') || '<div class="section-label">Dokumente</div>')
       + `<div class="sb-sec-body"><div class="sb-sec-in">${folders.map(({ p, list: l }) => `<div class="dc-proj sbp${open$.has(p.id) ? ' open' : ''}" data-proj="${p.id}">
-          <a class="nav-item sbp-head" href="#" data-side="toggle"><span class="sbp-ic" style="color:${esc(p.c)}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'folder', 15, '', !!p.fill)}</span><span>${esc(p.name)}</span><span class="sbp-chev">${fi('chevron-right', 10)}</span></a>
+          <a class="nav-item sbp-head" href="#" data-side="toggle"><span class="sbp-ic">${folderSvg(15)}</span><span>${esc(p.name)}</span><span class="sbp-chev">${fi('chevron-right', 10)}</span></a>
           <div class="sbp-kids"><div class="sbp-in">${l.slice(0, 12).map(link).join('')}</div></div></div>`).join('')}${loose.map(link).join('')}</div></div>`;
     if (side.querySelector('.dc-newp')) side.querySelector('.dc-newp input').focus();
     window.dispatchEvent(new Event('docs-changed'));
@@ -1913,7 +1915,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const tagRow = row('tag', 'Tags', `<button type="button" class="dc-mbtn dc-mtags${ts.length ? '' : ' empty'}" data-act="tags">${ts.length ? ts.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') : 'Keine Tags'}</button>`);
       box.innerHTML = `<div class="dc-tagline" hidden>${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('clock', 'Erstellt', esc(fmtDate(doc.created)))
         + row('pencil', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
-        + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic" style="color:${esc(pr.c)}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'folder', 14, '', !!pr.fill)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
+        + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic">${folderSvg(14)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
         + tagRow
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
@@ -1983,7 +1985,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const found = projects.filter((p) => p.name.toLowerCase().includes(ql));
       const exact = projects.some((p) => p.name.toLowerCase() === ql);
       list.innerHTML = (q && !exact ? `<span class="tk-mi tk-tag-add" data-mproj-new role="button" tabindex="0">${fi('plus', 12)}<span><b>${esc(q)}</b> hinzufügen</span></span>` : '')
-        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi" style="color:${p.c}">${DocIcons.svg(p.icon && DocIcons.has(p.icon) ? p.icon : 'folder', 15, '', !!p.fill)}</span><span>${esc(p.name)}</span>${fi('check', 12)}<button type="button" class="tk-tag-pen" data-pjedit="${p.id}" aria-label="Projekt bearbeiten">${fi('pencil', 11)}</button></span>`).join('')
+        + found.map((p) => `<span class="tk-mi tag${doc.projectId === p.id ? ' on' : ''}" data-mproj="${p.id}" role="button" tabindex="0"><span class="dc-pj-mi">${folderSvg(15)}</span><span>${esc(p.name)}</span>${fi('check', 12)}</span>`).join('')
         + (!found.length && !q ? '<span class="tk-ml dc-pj-none">Noch keine Projekte</span>' : '');
     }
     function drawProj() {
@@ -2043,7 +2045,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
       document.addEventListener('pointerdown', (e) => { if (box.isConnected && !box.contains(e.target)) pop.classList.remove('open'); });
     }
-    const newProj = (name) => { if (!name) return; projNew = name.slice(0, 40); projIcon = 'folder'; projColor = ''; drawMetaProj(); };
+    // neues Projekt: Name eintippen → „hinzufügen“ → fertig (ein Ordner ohne Farbe/Icon-Auswahl, Wunsch 10.11. spät)
+    const newProj = (name) => { if (!name) return; projNew = name.slice(0, 40); projIcon = 'folder'; makeProj('#9a9a9a'); };
     const makeProj = (c) => { const pr = { id: newId('p'), name: projNew, c, icon: projIcon }; projects.push(pr); projNew = ''; projColor = ''; save(); setProj(pr.id); };
     let metaNew = '', metaEdit = null; // Tag wird gerade angelegt (Name) bzw. bearbeitet (id)
     const tagPop = () => view.querySelector('.dc-meta .dc-mpop:has(.tk-tag-in)');
@@ -2069,7 +2072,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           if (pp.classList.contains('open')) { pp.classList.remove('open'); return; }
           chip.click();
           const r = rowBtn.getBoundingClientRect();
-          Object.assign(m.style, { position: 'fixed', right: 'auto', left: `${Math.round(r.left)}px`, top: `${Math.round(r.bottom + 6)}px`, zIndex: 60 });
+          // „fixed“ bezieht sich auf einen Vorfahren mit transform/filter (Ansichts-Animation) → dessen Lage abziehen, sonst landet das Menü rechts daneben
+          let cb = m.parentElement; while (cb && cb !== document.body) { const cs = getComputedStyle(cb); if (cs.transform !== 'none' || cs.filter !== 'none' || cs.contain.includes('paint') || cs.willChange.includes('transform')) break; cb = cb.parentElement; }
+          const o = cb && cb !== document.body ? cb.getBoundingClientRect() : { left: 0, top: 0 };
+          Object.assign(m.style, { position: 'fixed', right: 'auto', left: `${Math.round(r.left - o.left)}px`, top: `${Math.round(r.bottom + 6 - o.top)}px`, zIndex: 60 });
           return;
         }
         const pr = e.target.closest('[data-prio]');
@@ -2308,7 +2314,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const cur = iconOf(doc)?.name;
         if (step === 'icons') {
           pop.innerHTML = `<div class="dc-ip2-head top"><span class="st-seg dc-ip2-kind" role="radiogroup" aria-label="Stil"><button type="button" data-kind="line" class="${pick.fill ? '' : 'on'}">Linie</button><button type="button" data-kind="fill" class="${pick.fill ? 'on' : ''}">Gefüllt</button></span><span class="grow"></span>${cur ? `<button type="button" class="dc-ip2-del" data-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}</div>
-            <div class="dc-ip2-grid">${DocIcons.pickList(cur).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 18, '', pick.fill)}</button>`).join('')}</div>`;
+            <div class="dc-ip2-grid">${DocIcons.pickList(cur).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 20, '', pick.fill)}</button>`).join('')}</div>`;
         } else {
           pop.innerHTML = `<div class="dc-ip2-head"><button type="button" class="dc-ip2-back" data-back aria-label="Zurück">${fi('back', 12)}<span>Farbe</span></button><span class="grow"></span><span class="dc-ip2-cur" style="color:${esc(pick.c)}">${DocIcons.svg(pick.name, 20, '', pick.fill)}</span></div>${UIKit.colorRow(iconOf(doc)?.c || '', 'data-c')}`;
         }
