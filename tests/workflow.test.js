@@ -336,19 +336,12 @@ test('12a API-Fehler: Limit bei Gemini → DeepSeek V4.1 (NVIDIA) übernimmt mit
   assert.ok(!fx.calls.some((x) => /groq\.com|openrouter\.ai/.test(x.url)));
   assert.ok(!fx.calls.some((x) => /nemotron/.test(String(x.body?.model || '')))); // Nemotron wird für Antworten nicht mehr benutzt
 });
-test('12a2 Kimi als Haupt-KI: K3.1 Pro zuerst, bei 404 weiter mit Kimi K3; Denk-Parameter unbekannt (400) → ohne sie wiederholt', async () => {
-  fx = M.installFetch([
-    { match: nvModel(/kimi-k3\.1-pro$/), respond: (c) => (c.body.reasoning_effort ? M.json({ error: { message: 'unknown field reasoning_effort' } }, 400) : M.json({ error: { message: 'Function not found for account' } }, 404)) },
-    { match: nvModel(/kimi-k3$/), respond: nvReply('Moin zurück') },
-  ]);
-  const c = M.collect();
-  await W.runChat({ env: { ...M.ENV, KIMI_API_KEY: 'nvapi-kimi-key', AI_ORDER: 'kimi' }, body: { log: false, ...msg('Wie funktioniert ein Elektromotor?'), effort: 'medium' }, send: c.send, signal: new AbortController().signal });
-  assert.equal(c.text(), 'Moin zurück');
-  assert.match(c.of('status').at(-1).meta.provider, /^Kimi \(kimi-k3\)/);
-  const pro = fx.calls.filter(nvModel(/kimi-k3\.1-pro$/));
-  assert.ok(pro.some((x) => x.body.reasoning_effort) && pro.some((x) => !x.body.reasoning_effort), 'erst mit, dann ohne Denk-Parameter');
-  assert.equal(pro[0].init.headers.Authorization, 'Bearer nvapi-kimi-key');
+test('12a2 Kimi ist entfernt: alte Wahl „kimi“ → Gemini, kein Kimi-Modell mehr', () => {
+  const P = require('../lib/providers');
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'kimi' }), ['gemini', 'minimax', 'deepseek']);
+  assert.equal(P.FAMILY_MODELS.kimi, undefined);
 });
+
 test('12b API-Fehler: alle Modelle fallen aus → generation_failed mit verständlicher Meldung', async () => {
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.json({ error: { message: 'boom' } }, 500) },
@@ -1018,14 +1011,12 @@ test('Dateien an der Frage: keine Einschätzung (spart Zeit), schnelle Nachschau
 
 test('Haupt-KI je Anbieter: gewählte zuerst, abgeschaltete Ersatz-Anbieter fallen weg', () => {
   const P = require('../lib/providers');
-  assert.deepEqual(P.familiesFor({}), ['gemini', 'minimax', 'deepseek', 'kimi']);
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'kimi' }), ['kimi', 'gemini', 'minimax', 'deepseek']);
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'deepseek', 'kimi']);
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,deepseek' }), ['minimax', 'gemini', 'kimi'], 'die Haupt-KI lässt sich nicht abschalten');
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'groq' }), ['gemini', 'minimax', 'deepseek', 'kimi'], 'alte Wahl Groq/OpenRouter → Gemini');
+  assert.deepEqual(P.familiesFor({}), ['gemini', 'minimax', 'deepseek']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'deepseek']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,deepseek' }), ['minimax', 'gemini'], 'die Haupt-KI lässt sich nicht abschalten');
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'groq' }), ['gemini', 'minimax', 'deepseek'], 'alte Wahl Groq/OpenRouter → Gemini');
   // ein NVIDIA-Schlüssel reicht für alle drei; ein eigener geht vor
-  assert.deepEqual(P.familyKeys({ FLUX3_API_KEY: 'nvapi-flux-key' }, 'kimi'), ['nvapi-flux-key']);
-  assert.deepEqual(P.familyKeys({ FLUX3_API_KEY: 'nvapi-flux-key', KIMI_API_KEY: 'nvapi-kimi-key' }, 'kimi'), ['nvapi-kimi-key']);
+  assert.deepEqual(P.familyKeys({ FLUX3_API_KEY: 'nvapi-flux-key' }, 'deepseek'), ['nvapi-flux-key']);
   assert.deepEqual(P.familyKeys({ DEEPSEEK_API_KEY: 'nvapi-deepseek' }, 'minimax'), ['nvapi-deepseek']);
   assert.deepEqual(P.familyKeys({ NVIDIA_API_KEY: 'nvapi-old-server' }, 'deepseek'), [], 'alter Server-Schlüssel (Nemotron) zählt nicht');
 });

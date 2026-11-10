@@ -244,7 +244,7 @@ MODELS.filter(() => false).forEach((m) => {
 
 /* Modell + Aufwand in EINEM schlichten Menü (Wunsch 10.11., zweite Runde): oben nur die VERBUNDENEN Modelle – antippen macht es zur
    Haupt-KI (wie Einstellungen → Agenten → Rolle); darunter „Aufwand“ mit Regler (Auto · Niedrig · Mittel · Hoch · Max). Stil wie die Menüs der App. */
-const AI_NAMES = { gemini: 'Gemini', deepseek: 'DeepSeek V4.1', kimi: 'Kimi K3.1 Pro', minimax: 'MiniMax M3.1' };
+const AI_NAMES = { gemini: 'Gemini', deepseek: 'DeepSeek V4.1', minimax: 'MiniMax M3.1' };
 const EFF_DE = { Auto: 'Auto', Low: 'Niedrig', Medium: 'Mittel', High: 'Hoch', Max: 'Max' };
 const aiMain = () => window.AiMain?.() || 'gemini';
 popover.classList.add('mpx');
@@ -3211,8 +3211,19 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   /* To-dos (Ereignis „todos“): der Arbeitsplan der KI bei anspruchsvollen Aufgaben – eigene Zeile „To-dos 1/4“ mit der Liste darunter.
      Der erste offene Punkt läuft, abgehakt wird, was in der Antwort behandelt ist; ist die Antwort ganz fertig, sind alle erledigt
      (bei Abbruch bleiben die offenen offen). */
-  const onTodos = (items) => {
-    if (!Array.isArray(items) || items.length < 2 || plan.items.length || pictureAsk || quiet) return;
+  const onTodos = (items, done, fixed) => {
+    if (!Array.isArray(items) || !items.length || pictureAsk || quiet) return;
+    if (fixed) plan.fixed = (done || []).map(Boolean);
+    if (plan.items.length && plan.kind === 'todos') { // neue Fassung der Liste (Agent hat abgehakt oder Punkte geändert)
+      const same = plan.items.length === items.length && plan.items.every((it, i) => it.row.querySelector('.pi-text').textContent === String(items[i]));
+      if (same) { updatePlan(); return; }
+      const list = plan.items[0].row.parentElement;
+      list.replaceChildren(); plan.items = [];
+      items.map(String).forEach((p) => { const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(p)}</span>`); row.dataset.state = 'todo'; list.append(row); plan.items.push({ row, terms: planTerms(p), state: 'todo' }); });
+      msgEl._plan = items.map(String).slice(0, 12);
+      updatePlan(); return;
+    }
+    if (plan.items.length || (!fixed && items.length < 2)) return;
     ensureWork();
     const step = stepLine('dot', '<strong>To-dos</strong> <span class="t todo-n"></span>');
     step.classList.add('todo-step');
@@ -3227,13 +3238,14 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     let active = false;
     // Wortformen zählen mit („Plattformen“ ↔ „Plattform“): verglichen wird der Wortanfang ohne die letzten zwei Buchstaben
     const has = (w) => text.includes(w.length > 6 ? w.slice(0, -2) : w);
-    const covered = plan.items.map((it) => it.terms.length > 0 && it.terms.filter(has).length >= Math.ceil(it.terms.length / 2));
+    const covered = plan.fixed ? plan.items.map((_, i) => !!plan.fixed[i]) // Agent hakt selbst ab
+      : plan.items.map((it) => it.terms.length > 0 && it.terms.filter(has).length >= Math.ceil(it.terms.length / 2));
     plan.items.forEach((it, i) => {
       // Die Antwort folgt dem Plan: ist ein späterer Punkt behandelt, war der erste Punkt (oft „Definition …“, direkt erklärt)
       // bzw. ein Punkt ohne eigene Kernbegriffe schon dran
       const later = covered.slice(i + 1).some(Boolean);
       const todo = plan.kind === 'todos';
-      const done = covered[i] || ((i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has))
+      const done = covered[i] || (!plan.fixed && (i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has))
         || (todo && final && !signal.aborted && text.length > 200); // To-dos: Antwort ganz fertig → Arbeit erledigt
       const state = done ? 'done' : !final && (answerR || todo) && !active ? ((active = true), 'active') : 'todo';
       if (state === it.state) return;
@@ -3590,7 +3602,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     st.head.textContent = st.title;
   };
   const onThought = (text) => {
-    if (answerR || !text || pictureAsk || quiet) return; // Bildwunsch: nur „Generating picture“; Kurznachricht: gar nichts
+    if ((answerR && !coding) || !text || pictureAsk || quiet) return; // Coding-Agent: denkt zwischen den Arbeitsschritten weiter → Gedanken bleiben sichtbar. Bildwunsch: nur „Generating picture“; Kurznachricht: gar nichts
     if (!thought) {
       ensureWork();
       if (stages.answering) stages.answering.step.hidden = true;
@@ -3723,7 +3735,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
-      else if (event === 'todos') onTodos(data.items);
+      else if (event === 'todos') onTodos(data.items, data.done, data.fixed);
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort
       else if (event === 'reset') {
         // Prüfung hat Fehler gefunden: Entwurf weich ausblenden, korrigierte Fassung neu schreiben
@@ -3740,7 +3752,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'text') {
         if (!answerR) {
           if ((thought && !thought.done) || stages.answering?.step.hidden) { // Denken vorbei, jetzt erscheint der Text
-            endThought();
+            if (coding && thought) thought.steps.forEach(finishThoughtStep); else endThought(); // Coding: weitere Gedanken folgen zwischen den Schritten
             if (stages.answering) stages.answering.step.hidden = false;
             phase('work');
           }

@@ -12094,3 +12094,10 @@ html.auth-opening .auth { opacity: 0; transform: none; }
 .ce-card .ce-switch:not(.on) { background: #2a2a2a; }
 .ce-card .ce-switch:not(.on) i { background: #8a8a8a; }
 .ce-switch i { transition: transform 280ms var(--spring), background-color 200ms ease; }
+/* Coding-Agent: Websuche als Arbeitsschritt (10.11.) – rechts die Logos der Treffer, aufgeklappt die Quellen als Links (wie die Datei-Liste) */
+.ca-favs { display: inline-flex; align-items: center; gap: 3px; margin-left: 8px; }
+.ca-fav { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.ca-srcs { display: grid; justify-items: start; margin: 0 0 4px 16px; }
+.ca-src { display: flex; align-items: center; gap: 9px; max-width: 100%; height: 28px; padding: 0 8px; border-radius: 7px; color: var(--text-2); font-size: 12.5px; text-decoration: none; transition: color 160ms ease; }
+.ca-src:hover { color: var(--text); }
+.ca-src .ca-fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }

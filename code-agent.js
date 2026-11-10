@@ -10,7 +10,7 @@
    - Befehle werden vorerst nur angezeigt, nicht ausgeführt
    =================================================================== */
 const CodeAgent = (() => {
-  const OPEN = /^(`{3,})(?:file:\s*(\S[^`]*?)|(terminal|check|read|plan|run))\s*$/;
+  const OPEN = /^(`{3,})(?:file:\s*(\S[^`]*?)|(terminal|check|read|plan|run|search))\s*$/;
 
   /* Text in Abschnitte zerlegen: Text · Datei · Befehl · Prüfung (offene Blöcke am Ende = wird gerade geschrieben) */
   function split(text) {
@@ -33,6 +33,7 @@ const CodeAgent = (() => {
       else if (m[3] === 'check') { if (done) out.push({ type: 'check', ...parseCheck(body.join('\n')) }); }
       else if (m[3] === 'run') { if (done) { try { out.push({ type: 'run', ...JSON.parse(body.join('\n')) }); } catch {} } }
       else if (m[3] === 'read') { if (done) out.push({ type: 'read', path: body.join('\n').trim() }); }
+      else if (m[3] === 'search') { if (done) { try { const o = JSON.parse(body.join('\n')); out.push({ type: 'search', q: String(o.q || ''), results: Array.isArray(o.results) ? o.results : [] }); } catch {} } }
       else if (m[3] === 'plan') { if (done) { try { out.push({ type: 'plan', steps: JSON.parse(body.join('\n')).steps || [] }); } catch {} } }
       else out.push({ type: 'file', path: cleanPath(m[2]), content: body.join('\n'), done });
     }
@@ -124,6 +125,14 @@ const CodeAgent = (() => {
     return '<div class="ca-step ca-plan">'
       + `<div class="ca-plan-list">${pl.steps.map((x) => `<div class="ca-pi${x.done ? ' done' : ''}"><span class="ca-pm">${x.done ? icon('f-check-circle', 13) : ''}</span>${escapeHtml(x.text)}</div>`).join('')}</div></div>`;
   }
+  // Websuche des Agenten: „Im Web gesucht <Suchbegriff>“, rechts die Logos der Treffer; aufgeklappt die Quellen als Links
+  function searchRow(sr) {
+    const res = (sr.results || []).filter((r) => /^https?:\/\//.test(r.url || ''));
+    const fav = (d) => `<img class="ca-fav" src="/api/icon?domain=${encodeURIComponent(d || '')}" alt="" loading="lazy" onerror="this.remove()">`;
+    const logos = res.length ? `<span class="ca-favs">${res.slice(0, 3).map((r) => fav(r.domain)).join('')}${res.length > 3 ? `<span class="ca-m">+${res.length - 3}</span>` : ''}</span>` : '';
+    const body = res.length ? `<div class="ca-srcs">${res.map((r) => `<a class="ca-src" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">${fav(r.domain)}<span class="ca-fname">${escapeHtml(r.title || r.domain)}</span><span class="ca-dir">${escapeHtml(r.domain || '')}</span></a>`).join('')}</div>` : '';
+    return row(`<span class="ca-fic dir">${icon('f-globe', 14)}</span>`, `<span class="ca-v">Im Web gesucht</span> <span class="ca-m">${escapeHtml(sr.q)}${res.length ? '' : ' · nichts Passendes'}</span>`, logos, body);
+  }
   // Lauftest: App im unsichtbaren Browser gestartet, Knöpfe geklickt, Tasten gedrückt
   function runRow(r) {
     const errs = r.errors || [];
@@ -196,7 +205,7 @@ const CodeAgent = (() => {
       let html = '';
       if (r.single) {
         const part = r.single;
-        html = part.type === 'term' ? termRow(part) : part.type === 'read' ? readRow(part) : part.type === 'run' ? runRow(part) : checkRow(part);
+        html = part.type === 'term' ? termRow(part) : part.type === 'search' ? searchRow(part) : part.type === 'read' ? readRow(part) : part.type === 'run' ? runRow(part) : checkRow(part);
       } else {
         const read = [], newDirs = [], created = new Map(), changed = new Map();
         r.items.forEach((it) => {

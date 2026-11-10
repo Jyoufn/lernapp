@@ -13,7 +13,7 @@ const ENV = { NVIDIA_CODE_API_KEY: 'test-code-key', APPTEST: 'off', CODE_AGENT_F
 
 test('Agenten-Schleife: Plan → Dateien schreiben → Prüfung findet Fehler → gezielt ändern → Prüfung ok → fertig', async () => {
   const steps = [
-    reply('Ich lege zuerst die Aufgaben an.', [['update_plan', { steps: [{ text: 'Spielfeld' }, { text: 'Steuerung' }] }]], 'Erst planen.'),
+    reply('Ich lege zuerst die Aufgaben an.', [['update_plan', { steps: [{ text: 'Spielfeld' }, { text: 'Steuerung' }] }]], 'Ich überlege, wie das Spielfeld und die Steuerung zusammenhängen, und plane zuerst die Dateien für das Spiel.'),
     reply('', [['write_file', { path: 'index.html', content: '<canvas id="game"></canvas>\n<script src="game.js"></script>' }],
       ['write_file', { path: 'game.js', content: 'const c = document.getElementById("board");' }]]),
     reply('', [['check_project', {}]]),
@@ -36,7 +36,11 @@ test('Agenten-Schleife: Plan → Dateien schreiben → Prüfung findet Fehler �
     assert.match(toolMsgs.at(-1).content, /#board/, 'Prüfergebnis kommt beim Modell an');
     assert.ok(toolMsgs.every((m) => m.tool_call_id));
     const a = result.answer;
-    assert.match(a, /```plan\n/);
+    assert.doesNotMatch(a, /```plan\n/, 'die Aufgabenliste steht als To-dos in der Zeitleiste, nicht im Text');
+    const todos = c.events.find((e) => e.event === 'todos');
+    assert.deepEqual(todos?.data.items, ['Spielfeld', 'Steuerung']);
+    assert.equal(todos.data.fixed, true);
+    assert.match(a, /Ich lege jetzt index\.html, game\.js an\.\s*````file:index\.html/, 'vor den Dateien steht ein kurzer Satz, was gebaut wird');
     assert.match(a, /````file:game\.js\nconst c = document\.getElementById\("game"\);\n````/, 'geänderte Datei steht vollständig im Text');
     const checks = [...a.matchAll(/```check\n(.*)\n```/g)].map((m) => JSON.parse(m[1]).problems.length);
     assert.deepEqual(checks, [1, 0]);
@@ -158,10 +162,10 @@ test('Agenten-Schleife: NVIDIA-Ratenlimit (HTTP 429 mit retry-after) → warten 
   const fx = M.installFetch([{ match: isCode, respond: () => steps[n++] }]);
   try {
     const c = M.collect();
-    const result = await W.runChat({ env: { ...ENV, CODE_RETRY_SCALE: 0 }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Leg a.txt an' }] }, send: (e, d) => { if (e === 'thought') thoughts.push(d.text); c.send(e, d); }, signal: new AbortController().signal });
+    const result = await W.runChat({ env: { ...ENV, CODE_RETRY_SCALE: 0 }, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Leg a.txt an' }] }, send: (e, d) => { if (e === 'codestatus') thoughts.push(d.text); c.send(e, d); }, signal: new AbortController().signal });
     assert.equal(n, 3);
     assert.match(result.answer, /````file:a\.txt\nHallo\n````/);
-    assert.ok(thoughts.some((t) => /Ratenlimit/.test(t)), 'Hinweis aufs Ratenlimit im Thinking');
+    assert.ok(thoughts.some((t) => /Ratenlimit/.test(t)), 'Hinweis aufs Ratenlimit als Live-Zeile (nicht in den Gedanken)');
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
 
@@ -216,7 +220,7 @@ test('Gestreamter Schritt: Werkzeug-Aufruf kommt stückweise, Live-Status „Dat
   const sse = (chunks) => new Response(chunks.map((c) => `data: ${JSON.stringify(c)}\n\n`).join('') + 'data: [DONE]\n\n', { status: 200, headers: { 'Content-Type': 'text/event-stream' } });
   const steps = [
     sse([
-      { choices: [{ delta: { reasoning: 'Ich lege die Datei an.' } }] },
+      { choices: [{ delta: { reasoning: 'Ich lege die Datei an, damit das Spiel einen eigenen Ordner für den Code bekommt.' } }] },
       { choices: [{ delta: { tool_calls: [{ index: 0, id: 'c1', function: { name: 'write_file', arguments: '{"path":"src/ga' } }] } }] },
       { choices: [{ delta: { tool_calls: [{ index: 0, function: { arguments: 'me.js","content":"let a = 1;"}' } }] } }] },
     ]),
@@ -270,5 +274,28 @@ test('Allgemein-Agent programmiert normal im Chat: keine Werkzeug-Schleife, kein
     assert.match(sys, /AGENT: ALLGEMEIN/);
     assert.doesNotMatch(sys, /AGENT: CODEN|file:index\.html/, 'kein Coding-Prompt');
     assert.match(result.answer, /```html/);
+  } finally { fx.restore(); W.cooldowns.clear(); }
+});
+
+test('Agenten-Schleife: Websuche mit eigenen Suchbegriffen – Treffer als Schritt im Chat, Ergebnis mit Hinweis „keinen Code übernehmen“', async () => {
+  const steps = [
+    reply('', [['web_search', { query: 'canvas devicePixelRatio crisp' }]]),
+    reply('Ich baue jetzt die Seite.', [['write_file', { path: 'index.html', content: '<p>Hallo</p>' }]]),
+    reply('', [['check_project', {}]]),
+    reply('Fertig.'),
+  ];
+  let n = 0;
+  const fx = M.installFetch([
+    { match: isCode, respond: () => steps[n++] },
+    { match: (c) => /bing\.com|duckduckgo|mojeek|qwant|ecosia|brave|yahoo|startpage/.test(c.url), respond: () => M.text('') },
+    { match: (c) => /generativelanguage/.test(c.url), respond: () => M.json({ error: { message: 'x' } }, 500) },
+  ]);
+  try {
+    const c = M.collect();
+    const result = await W.runChat({ env: ENV, body: { log: false, agent: 'code', messages: [{ role: 'user', text: 'Bau eine scharfe Canvas-Seite' }] }, send: c.send, signal: new AbortController().signal });
+    assert.match(result.answer, /```search\n\{"q":"canvas devicePixelRatio crisp"/, 'eigener Suchbegriff des Modells, nicht die Nachricht');
+    assert.match(result.answer, /Ich baue jetzt die Seite\.\s*````file:index\.html/, 'Satz des Modells vor der ersten Datei');
+    const toolMsg = fx.calls.filter(isCode)[1].body.messages.find((m) => m.role === 'tool');
+    assert.ok(toolMsg && /Keine passenden Treffer|keinen Code übernehmen/.test(toolMsg.content));
   } finally { fx.restore(); W.cooldowns.clear(); }
 });
