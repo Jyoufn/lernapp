@@ -1155,7 +1155,7 @@ test('Aufwand wirkt (04.11.): gewählte Stufe = eigene Denktiefe und eigener Sti
   assert.ok(seen.medium.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.medium.tc.thinkingBudget), 'Medium: denkt wie das Modell von sich aus');
   assert.doesNotMatch(seen.medium.sys, /AUFWAND: Medium/, 'Medium: keine Stil-Vorgabe');
   assert.ok(seen.auto.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.auto.tc.thinkingBudget), 'Auto: Gemini entscheidet selbst');
-  assert.match(seen.low.sys, /Aufwand: Low|AUFWAND: Low/); assert.match(seen.high.sys, /AUFWAND: High/); assert.match(seen.max.sys, /AUFWAND: Max/);
+  assert.match(seen.low.sys, /AUFWAND: Niedrig = FÜR DEN UNTERRICHT/); assert.match(seen.high.sys, /AUFWAND: High/); assert.match(seen.max.sys, /AUFWAND: Max/);
   assert.ok(!seen.low.tools.includes('google_search'), 'Low: keine Suche');
   assert.notEqual(seen.low.sys.length, seen.high.sys.length, 'Stufen unterscheiden sich im Prompt');
 });

@@ -87,6 +87,7 @@ Darstellung von Blöcken ändert man in `app.js`/`style.css`, nicht in den Promp
 - Deutsche Quellen haben Vorrang (`isGerman`, `rankGerman`); Fachliteratur (OpenAlex) nur beim Lern-Agenten.
 
 ## Aufwand ist verbindlich (WICHTIGSTE REGEL – nie zurückbauen, außer der Nutzer will es)
+- **Niedrig = Unterricht (Wunsch 10.11.)**: `LOW_UNTERRICHT` in `lib/workflow.js` – Antwort in 1–3 sagbaren Sätzen, darunter 2–4 Stichpunkte Begründung mit Fundstelle (Z. …), fachlich Wichtiges kurz (Latein: KNG-Kongruenz, Kasus/Funktion, AcI/Abl. abs. …), Übersetzung zuerst, je Teilaufgabe ein Block; keine Einleitung/Exkurse. Läuft mit Gemini-Schlüssel immer bei Gemini (schnell), auch wenn MiniMax/DeepSeek Haupt-KI ist (nicht beim Coden). Denken kurz, keine Suche.
 - **Stand 10.11. (Nutzer)**: Medium = die ganz normale Antwort des Modells (Denken dynamisch wie das Modell es selbst macht, KEIN Stil-Satz);
   High = Nachdenken bewusst hoch (Gemini level high / Budget 16 384, DeepSeek/Kimi reasoning high); Max = Maximum (Budget 24 576, höchste Stufe).
   Gilt für jeden Anbieter gleich: `think` in `generate` (low · auto · true · 'max') → `P.thinkExtra(provider, think)` – neue Anbieter dort eintragen.
