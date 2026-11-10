@@ -1599,7 +1599,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       if (!doc) { view.innerHTML = '<div class="dc-empty big">Dieses Dokument gibt es nicht mehr.</div>'; return; }
       view.innerHTML = `<div class="dc-topbar"><div class="dc-hist"><button type="button" class="icon-btn" data-act="undo" aria-label="Rückgängig" title="Rückgängig (Strg+Z)">${fi('undo', 15)}</button><button type="button" class="icon-btn redo" data-act="redo" aria-label="Wiederholen" title="Wiederholen (Strg+Umschalt+Z)">${fi('undo', 15)}</button></div><span class="grow"></span>
           <span class="dc-busy" hidden></span>
-          <button type="button" class="dc-toptags" data-act="tags" aria-label="Tags"></button>
+
           <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('focus', 16)}</button>
           <button type="button" class="icon-btn dc-pinbtn${doc.pinned ? ' on' : ''}" data-act="pin" aria-label="${doc.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 15)}</button>
           <button type="button" class="icon-btn dc-setbtn" data-act="settings" aria-label="Einstellungen des Dokuments">${fi('sliders', 15)}</button>
@@ -1909,9 +1909,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const tagsHtml = `${ts.map((g) => `<span class="dc-tag" style="--c:${g.c}"><i class="tag-dot"></i>${esc(g.name)}</span>`).join('')}
             <span class="tk-pop dc-mpop"><button type="button" class="dc-madd dc-tagadd" data-mopen="tags" aria-label="Tag hinzufügen">${fi('tag', 12)}${ts.length ? '' : '<span>Tags</span>'}</button>
             <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Suchen" maxlength="24" aria-label="Tag suchen oder anlegen" /></span><span class="tk-tag-list"></span></span></span>`;
-      box.innerHTML = `<div class="dc-tagline">${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('clock', 'Erstellt', esc(fmtDate(doc.created)))
+      // Tags stehen als Zeile in der Tabelle (unter „Projekt“), nicht mehr unter dem Titel oder oben rechts (Wunsch 10.11.)
+      const tagRow = row('tag', 'Tags', `<button type="button" class="dc-mbtn dc-mtags${ts.length ? '' : ' empty'}" data-act="tags">${ts.length ? ts.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') : 'Keine Tags'}</button>`);
+      box.innerHTML = `<div class="dc-tagline" hidden>${tagsHtml}</div><div class="dc-ptable"${docSet().infos === false ? ' hidden' : ''}>` + row('clock', 'Erstellt', esc(fmtDate(doc.created)))
         + row('pencil', 'Bearbeitet', esc(fmtDate(doc.updated || doc.created)))
         + (() => { const pr = projOf(doc.projectId); return row('folder', 'Projekt', `<button type="button" class="dc-mbtn${pr ? '' : ' empty'}" data-projrow>${pr ? `<span class="dc-pj-pic" style="color:${esc(pr.c)}">${DocIcons.svg(pr.icon && DocIcons.has(pr.icon) ? pr.icon : 'folder', 14, '', !!pr.fill)}</span>${esc(pr.name)}` : 'Kein Projekt'}</button>`); })()
+        + tagRow
         + row('flag', 'Priorität', `<span class="tk-pop dc-mpop"><button type="button" class="dc-mbtn${pid === 'none' ? ' empty' : ''}${pid === 'urgent' ? ' urgent' : ''}" data-mopen="prio">${prioIcon(prio.id, 14)}${esc(pid === 'none' ? 'Keine' : prio.name)}</button>
             <span class="tk-menu dc-mmenu">${PRIOS.map((p) => `<button type="button" class="tk-mi${p.id === pid ? ' on' : ''}" data-prio="${p.id}">${prioIcon(p.id, 15)}<span>${esc(p.name)}</span>${fi('check', 12)}</button>`).join('')}</span></span>`)
         + row('align-left', 'Umfang', `${words.toLocaleString('de-DE')} ${words === 1 ? 'Wort' : 'Wörter'}${words >= 200 ? `<span class="dc-mval-sub"> · ${Math.max(1, Math.round(words / 200))} Min. Lesezeit</span>` : ''}`)
@@ -2304,7 +2307,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const draw = (dir = 0) => {
         const cur = iconOf(doc)?.name;
         if (step === 'icons') {
-          pop.innerHTML = `<div class="dc-ip2-head"><span class="cs-pill dc-ip2-kind" role="radiogroup" aria-label="Stil"><button type="button" data-kind="line" class="${pick.fill ? '' : 'on'}">Linie</button><button type="button" data-kind="fill" class="${pick.fill ? 'on' : ''}">Gefüllt</button></span><span class="grow"></span>${cur ? '<button type="button" class="dc-ip2-del" data-del>Entfernen</button>' : ''}</div>
+          pop.innerHTML = `<div class="dc-ip2-head top"><span class="st-seg dc-ip2-kind" role="radiogroup" aria-label="Stil"><button type="button" data-kind="line" class="${pick.fill ? '' : 'on'}">Linie</button><button type="button" data-kind="fill" class="${pick.fill ? 'on' : ''}">Gefüllt</button></span><span class="grow"></span>${cur ? `<button type="button" class="dc-ip2-del" data-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}</div>
             <div class="dc-ip2-grid">${DocIcons.pickList(cur).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 18, '', pick.fill)}</button>`).join('')}</div>`;
         } else {
           pop.innerHTML = `<div class="dc-ip2-head"><button type="button" class="dc-ip2-back" data-back aria-label="Zurück">${fi('back', 12)}<span>Farbe</span></button><span class="grow"></span><span class="dc-ip2-cur" style="color:${esc(pick.c)}">${DocIcons.svg(pick.name, 20, '', pick.fill)}</span></div>${UIKit.colorRow(iconOf(doc)?.c || '', 'data-c')}`;

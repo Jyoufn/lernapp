@@ -172,3 +172,4 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Funde (```links): jeder Eintrag eine eigene Website – Beispiele aus einem Artikel mit eigener "url"; die Galerie nimmt die eigene Adresse vor der Quellen-Nummer.
 - Präsentation: Rahmen fest (Titel nur Thema mittig ohne Bild → Grundbegriffe → frei → Fazit → „ende“), die App ergänzt fehlenden Titel/Schluss; Bilder auf Inhaltsfolien (mind. 4).
 - Bildprüfung `visionJson` (app-server.js): Prompt-Variable heißt `text` – nichts im Block so nennen (sonst HTTP 400, 04./05.11. passiert).
+- **Leere Chats**: Chats mit Frage, aber ohne Antwort der KI (abgebrochen, Fehler, „(keine Antwort)“) löscht `sweepEmptyChats()` in `app.js` automatisch – nicht den offenen Chat, nichts Laufendes, nichts Angeheftetes, frühestens nach 3 Minuten.
