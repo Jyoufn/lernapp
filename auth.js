@@ -169,14 +169,12 @@
     wrap.setAttribute('aria-label', 'Anmelden');
     wrap.innerHTML = `
       <form class="auth-card" novalidate autocomplete="on">
-        <img class="auth-logo" src="icon-180.png?v=2" alt="" width="44" height="44" />
-        <h1 class="auth-title">Bei Agenten anmelden</h1>
-        <p class="auth-sub">Mit deiner E-Mail und deinem Passwort.</p>
+        <h1 class="auth-title">Willkommen bei Agenten</h1>
         <div class="auth-fields">
           <label class="auth-label" for="authEmail">E-Mail</label>
-          <div class="auth-field">${fi('user', 14)}<input id="authEmail" name="email" type="text" inputmode="email" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="E-Mail oder Benutzername" required /></div>
+          <div class="auth-field"><input id="authEmail" name="username" type="text" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
           <label class="auth-label" for="authPw">Passwort</label>
-          <div class="auth-field">${fi('lock', 14)}<input id="authPw" name="password" type="password" autocomplete="current-password" placeholder="Passwort" required />
+          <div class="auth-field"><input id="authPw" name="password" type="password" autocomplete="current-password" required />
             <button type="button" class="auth-eye" aria-label="Passwort anzeigen" aria-pressed="false">${fi('eye', 14)}</button></div>
         </div>
         <div class="auth-code-wrap" aria-hidden="true"><div class="auth-code-in">

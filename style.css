@@ -11982,3 +11982,21 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .dc-mtags { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 5px; height: auto; min-height: 26px; max-width: 100%; }
 .dc-mtags .lb2-tag { display: inline-flex; align-items: center; }
 .dc-tagline[hidden] { display: none !important; }
+/* Anmeldung (Stand 10.11.): mittig auf ruhiger Fläche, ohne Icon – Titel, zwei Felder, heller Knopf; Farben aus dem Designschema */
+html.auth-locked #app { left: 0; top: 0; width: 100vw; height: 100dvh; border-radius: 0; transition: none; }
+html.auth-locked:not(.auth-opening) #app { visibility: hidden; }
+.auth { left: 0; width: 100%; padding: 32px 22px; background: #141414; transition: opacity 320ms ease; }
+html.auth-opening .auth { opacity: 0; transform: none; }
+.auth-card { width: min(430px, 100%); }
+.auth-title { margin: 0 0 34px; font-size: 26px; font-weight: 650; letter-spacing: -0.02em; }
+.auth-label { margin: 0 0 8px; color: var(--text); font-size: 13.5px; font-weight: 600; }
+.auth-fields .auth-field + .auth-label { margin-top: 18px; }
+.auth-field { height: 44px; padding: 0 6px 0 14px; border: 1px solid #242424; border-radius: 10px; background: #181818; transition: border-color 140ms ease, background-color 140ms ease; }
+.auth-field:focus-within { border-color: #3a3a3a; background: #1b1b1b; }
+.auth-field input { font-size: 15px; }
+.auth-field input:-webkit-autofill { -webkit-box-shadow: 0 0 0 40px #181818 inset; }
+.auth-btn { height: 44px; margin-top: 20px; border-radius: 10px; background: #e6e6e6; color: #141414; font-weight: 600; }
+.auth-btn:hover { background: #f4f4f4; }
+.auth-spin { border-color: rgba(20, 20, 20, 0.2); border-top-color: #141414; }
+.auth.step-code .auth-btn:not(.ready) { background: #212121; color: var(--text-3); }
+.auth-digit { border-radius: 10px; }
