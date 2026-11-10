@@ -11944,3 +11944,27 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .dc-ipop2 .tk-colors { padding: 8px 6px 6px; }
 .dc-ipop2 .tk-picker-host { padding: 0 6px; }
 .dc-ip2-grid { color: var(--text-2); max-height: 300px; overflow-y: auto; }
+/* „Neue Aufgabe“ als Karte im Stil des Kalender-Termins (gleiche .ce-card-Regeln) */
+.tk-modal .tk-form.ce-card.tk-taskcard { width: 360px; max-width: calc(100vw - 24px); padding: 6px; border: 1px solid var(--line); border-radius: 16px; background: var(--win-bg); }
+.tk-taskcard .ce-rows .tk-pop.tk-swpop { position: relative; }
+.tk-taskcard .ce-rows .tk-rowsw { position: absolute; right: 8px; top: 8px; }
+.tk-taskcard .ce-rows .tk-pill .tk-rv { color: var(--text-2); }
+.tk-taskcard .ce-foot .tk-progress { display: none; }
+.tk-taskcard .ce-rows .tk-menu { position: static; }
+/* Aufwand im Eingabefeld rechts neben dem Mikrofon; Tag-Icon im Chat-Kopf; Einstellungen ohne Seitenfenster */
+.composer-sub { display: none; }
+.eff-chip { margin-right: 2px; height: 28px; }
+.chat-tags .ct-ic { color: var(--text-3); flex: none; }
+.chat-tags.empty { padding: 0 7px; }
+.chat-tags { display: inline-flex; align-items: center; gap: 5px; }
+.chat-tags[hidden] { display: none; }
+.app.settings-open .rpane, .app.settings-open .rpane-grip, .app.settings-open #rpaneBtn, .app.settings-open .rpane-toggle { display: none !important; }
+.app.settings-open.rpane-open .panel { margin-right: 0 !important; }
+/* Dokument-Einstellungen: gleiche Karten und Maße wie die Einstellungen, keine Untertitel */
+.dcs-body h2 { margin: 22px 2px 10px; font-size: 15.5px; letter-spacing: -0.005em; }
+.dcs-body .st-card { border: 1px solid rgba(255, 255, 255, 0.075); border-radius: 12px; background: var(--win-bg); }
+.dcs-body .st-row { min-height: 54px; }
+.dcs-body .st-name { font-size: 14px; font-weight: 500; }
+.dcs-body .st-row { padding: 12px 12px 12px 14px; }
+.dcs-body .st-sw.on { box-shadow: 0 0 0 2px var(--win-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.55); }
+.app.settings-open.rpane-open .tabbar { margin-right: 0 !important; }

@@ -415,12 +415,13 @@ const Tasks = (() => {
     const pill = (k, menu, cls = '', sw = '') => `<div class="tk-pop${sw ? ' tk-swpop' : ''}" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button>${sw ? `<button type="button" class="ce-switch tk-rowsw" ${sw} role="switch" aria-label="Datum"><i></i></button>` : ''}<div class="tk-menu ${cls}">${listMode ? `<div class="tk-box">${menu}</div>` : menu}</div></div>`;
     let lastDate = t.date || ''; // Datum ausgeschaltet → das zuletzt gewählte bleibt grau stehen
     // Liste: Fenster mit Zeilen wie das Termin-Fenster der Kalender-Vorlage – nur Beschreibung, Datum, Priorität, Tags; unten Agent + Aktionen
-        if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet" autocomplete="off">
-      <div class="tk-sheet-main">
+        // Karte im selben Stil wie der Kalender-Termin (.ce-card: Kopf-Kasten, Zeilen als Kästen, kleiner Fuß) – Wunsch 10.11.
+        if (listMode) modal.innerHTML = `<form class="tk-form tk-sheet ce-card tk-taskcard" autocomplete="off">
+      <div class="tk-sheet-main ce-headbox">
         <input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="120" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="notes" rows="1" placeholder="Beschreibung hinzufügen" maxlength="1000" aria-label="Beschreibung">${esc(t.notes)}</textarea>
       </div>
-      <div class="tk-sheet-rows">
+      <div class="tk-sheet-rows ce-rows">
         ${pill('date', `<div class="tk-cal"></div>
           <div class="tk-dt-time"><span class="tk-dt-l">${fi('clock', 13)}Uhrzeit</span><button type="button" class="ce-switch" data-ttime role="switch" aria-label="Uhrzeit"><i></i></button></div>
           <div class="tk-dt-wheel" hidden><div data-wheel="due"></div></div>`, 'date', 'data-dsw')}
@@ -438,7 +439,7 @@ const Tasks = (() => {
         ${listMode && agents && !locked ? `<div class="tk-pop tk-swpop" data-k="auto"><button type="button" class="tk-pill" data-autosw></button><button type="button" class="ce-switch tk-rowsw" data-autosw role="switch" aria-label="Automatisierung"><i></i></button></div>` : ''}
         ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
       </div>
-      <div class="tk-sheet-foot">
+      <div class="tk-sheet-foot ce-foot">
         <span class="grow"></span>
         ${t0?.run?.state === 'done' ? `<button type="button" class="tk-sheet-ib" data-result="${t0.id}" aria-label="Ergebnis öffnen" title="Ergebnis öffnen">${fi(t0.output === 'doc' ? 'file' : 'chat', 13)}</button>` : ''}
         ${t0 && !(t0.agent && t0.run) ? `<button type="button" class="tk-sheet-ib" data-act="done" aria-label="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}" title="${t0.status === 'done' ? 'Wieder öffnen' : 'Als erledigt markieren'}">${fi(t0.status === 'done' ? 'refresh' : 'check', 13)}</button>` : ''}

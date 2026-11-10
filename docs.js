@@ -1603,7 +1603,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           <button type="button" class="icon-btn dc-focusbtn" data-act="focus" aria-label="Fokusmodus" title="Fokusmodus">${fi('focus', 16)}</button>
           <button type="button" class="icon-btn dc-pinbtn${doc.pinned ? ' on' : ''}" data-act="pin" aria-label="${doc.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 15)}</button>
           <button type="button" class="icon-btn dc-setbtn" data-act="settings" aria-label="Einstellungen des Dokuments">${fi('sliders', 15)}</button>
-          <button type="button" class="icon-btn dc-panebtn" data-act="pane" aria-label="KI-Chat zum Dokument" title="KI-Chat">${fi('aichat', 16)}</button></div>
+          <button type="button" class="icon-btn dc-panebtn" data-act="pane" aria-label="Seitenfenster rechts ein-/ausklappen" title="Seitenfenster">${icon('i-sidebar', 16)}</button></div>
         <div class="dc-body"><div class="dc-scroll">
           <div class="dc-page">
           <div class="dc-adds"><span class="tk-pop dc-mpop dc-ppop"><button type="button" class="dc-pchip" data-popen></button>
@@ -1923,7 +1923,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const b = view.querySelector('.dc-toptags'); if (!b || !doc) return;
       const ts = (doc.tags || []).map(tagOf).filter(Boolean);
       b.classList.toggle('empty', !ts.length);
-      b.innerHTML = ts.length ? ts.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') + (ts.length > 2 ? `<span class="lb2-tag more">+${ts.length - 2}</span>` : '') : fi('tag', 15);
+      b.innerHTML = fi('tag', 15); // nur das Icon – die Tags selbst stehen im Dokument unter dem Titel (Chats zeigen sie neben dem Icon)
     }
     function drawMetaTags() {
       const list = view.querySelector('.dc-meta .tk-tag-list'), inp = view.querySelector('.dc-meta .tk-tag-in'); if (!list) return;
@@ -2195,7 +2195,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     /* ---------- Einstellungen des Dokuments (Knopf oben rechts, Fenster in der Mitte) ----------
        doc.settings: accent ('auto' = aus dem Cover | Farbe), font (sans/serif/mono), width (normal/wide), small, nav, spell
  */
-    const ACCENTS = ['#2f86ff', '#6aa8ff', '#b49cff', '#f472b6', '#f07a6e', '#f0913a', '#facc15', '#4fcf8a', '#2dd4bf', '#a3a3a3'];
+    const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80']; // dieselben sechs wie in Einstellungen → Aussehen
     const docSet = () => ({ accent: 'auto', font: 'sans', width: 'normal', small: false, nav: true, spell: true, infos: true, ...(doc?.settings || {}) });
     // Akzent automatisch: Farbe des Covers (Farb-Cover direkt, Motiv aus seiner Palette, eigenes Bild = mittlere kräftige Farbe)
     function autoAccent() {
@@ -2219,7 +2219,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     function applySettings() {
       if (!doc) return;
       const s = docSet(), page = view.querySelector('.dc-page'); if (!page) return;
-      const acc = s.accent === 'auto' ? autoAccent() : s.accent;
+      const acc = s.accent === 'auto' ? null : s.accent; // „Auto“ (Farbe vom Cover) ist abgeschaltet – ohne Wahl gilt die App-Farbe
       if (acc) view.style.setProperty('--accent', acc); else view.style.removeProperty('--accent');
       page.classList.toggle('f-serif', s.font === 'serif'); page.classList.toggle('f-mono', s.font === 'mono');
       page.classList.toggle('wide', s.width === 'wide'); page.classList.toggle('small', !!s.small);
@@ -2237,15 +2237,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const sw = (k, on) => `<button type="button" class="ce-switch${on ? ' on' : ''}" data-sw="${k}" role="switch" aria-checked="${on}" aria-label="umschalten"><i></i></button>`;
       const row = (label, hint, ctrl) => `<div class="st-row dcs-row"><div class="dcs-l"><span class="st-name">${label}</span>${hint ? `<em>${hint}</em>` : ''}</div><span class="grow"></span>${ctrl}</div>`;
       const body = `<h2>Darstellung</h2><div class="st-card">
-          <div class="st-row dcs-row dcs-acc-row"><div class="dcs-l"><span class="st-name">Akzentfarbe</span><em>${s.accent === 'auto' ? 'passt sich dem Cover an' : 'für Haken, Markierungen und Links'}</em></div>
-            <div class="dc-acc"><button type="button" data-acc="auto" class="dc-acc-auto${s.accent === 'auto' ? ' on' : ''}">Auto</button>${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="dc-dot${s.accent === c ? ' on' : ''}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div></div>
+          <div class="st-row dcs-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span>
+            <span class="st-swatches">${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="st-sw${s.accent === c ? ' on' : ''}" style="--sw:${c}" aria-label="Akzent ${c}"></button>`).join('')}</span></div>
           ${row('Schrift', '', seg('font', [['sans', 'Standard'], ['serif', 'Serif'], ['mono', 'Mono']], s.font))}
           ${row('Breite', '', seg('width', [['normal', 'Normal'], ['wide', 'Breit']], s.width))}
           ${row('Kleine Schrift', '', sw('small', !!s.small))}
         </div>
         <h2>Dokument</h2><div class="st-card">
-          ${row('Infos', 'Tabelle unter dem Titel', sw('infos', s.infos !== false))}
-          ${row('Gliederung links', 'Striche zu den Überschriften', sw('nav', s.nav))}
+          ${row('Infos', '', sw('infos', s.infos !== false))}
+          ${row('Gliederung links', '', sw('nav', s.nav))}
           ${row('Rechtschreibprüfung', '', sw('spell', s.spell))}
         </div>`;
       const old = p.querySelector('.dcs-pane .dcs-body');
@@ -2256,7 +2256,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const t = e.target.closest('button'); if (!t || !doc) return;
         if (t.hasAttribute('data-close')) { setOpen = false; delete p.dataset.set; drawPane(); return; }
         const set = (patch) => { doc.settings = { ...docSet(), ...patch }; touch(doc); save(); applySettings(); drawSettingsPane(); };
-        if (t.dataset.acc) { set({ accent: t.dataset.acc }); return; }
+        if (t.dataset.acc) { set({ accent: docSet().accent === t.dataset.acc ? 'auto' : t.dataset.acc }); return; } // nochmal antippen = wieder die App-Farbe
         if (t.dataset.sw) { set({ [t.dataset.sw]: !docSet()[t.dataset.sw] }); return; }
         const sg = t.closest('[data-k]'); if (sg && t.dataset.v) set({ [sg.dataset.k]: t.dataset.v });
       });

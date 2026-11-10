@@ -261,14 +261,15 @@ popover.addEventListener('click', (e) => {
 });
 
 /* Aufwand: eigener kleiner Knopf unten rechts UNTER dem Eingabefeld („Mittel ˅“) mit einer Liste wie früher (Auto · Niedrig · Mittel · Hoch · Max) */
-const effBar = el('div', 'composer-sub');
-effBar.innerHTML = '<span class="grow"></span><button type="button" class="eff-chip" id="effChip" aria-haspopup="menu" aria-expanded="false"><span></span><svg width="11" height="11" aria-hidden="true"><use href="#f-chevron-down"/></svg></button>';
-document.querySelector('.composer-area')?.append(effBar);
-const effChip = effBar.querySelector('#effChip');
+// Platz (Wunsch 10.11. mittags): im Eingabefeld rechts, direkt links neben dem Mikrofon; Liste ohne Überschrift
+const effChip = el('button', 'eff-chip');
+effChip.type = 'button'; effChip.id = 'effChip'; effChip.setAttribute('aria-haspopup', 'menu'); effChip.setAttribute('aria-expanded', 'false'); effChip.setAttribute('aria-label', 'Aufwand');
+effChip.innerHTML = '<span></span><svg width="11" height="11" aria-hidden="true"><use href="#f-chevron-down"/></svg>';
+$('micBtn')?.before(effChip);
 const effMenu = el('div', 'lb2-menu eff-menu'); effMenu.hidden = true; effMenu.setAttribute('role', 'menu'); document.body.append(effMenu);
 function openEffMenu() {
   if (!effMenu.hidden) { effMenu.hidden = true; effChip.setAttribute('aria-expanded', 'false'); return; }
-  effMenu.innerHTML = `<div class="lb2-ml">Aufwand</div>${EFFORTS.map((e, i) => `<button type="button" role="menuitemradio" class="lb2-mi" data-eff="${i}"><span>${EFF_DE[e]}</span>${i === state.effort ? `<i class="lb2-tick"><svg width="13" height="13"><use href="#f-check"/></svg></i>` : ''}</button>`).join('')}`;
+  effMenu.innerHTML = `${EFFORTS.map((e, i) => `<button type="button" role="menuitemradio" class="lb2-mi" data-eff="${i}"><span>${EFF_DE[e]}</span>${i === state.effort ? `<i class="lb2-tick"><svg width="13" height="13"><use href="#f-check"/></svg></i>` : ''}</button>`).join('')}`;
   effMenu.hidden = false; effChip.setAttribute('aria-expanded', 'true');
   const r = effChip.getBoundingClientRect(), w = effMenu.offsetWidth, h = effMenu.offsetHeight;
   effMenu.style.left = `${Math.round(Math.min(innerWidth - w - 8, r.right - w))}px`;
@@ -5578,8 +5579,10 @@ function renderChatTags() {
   const tab = activeTab(), c = tab && !tab.dataset.view ? chatOf(tab) : null;
   const all = window.ChatTags ? window.ChatTags.all() : [];
   const gs = (c?.tags || []).map((id) => all.find((g) => g.id === id)).filter(Boolean);
-  box.hidden = !gs.length;
-  box.innerHTML = gs.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${escapeHtml(g.c)}"><span>${escapeHtml(g.name)}</span></span>`).join('') + (gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : '');
+  // Tag-Icon oben rechts ist in jedem Chat da (Wunsch 10.11.); gesetzte Tags stehen daneben
+  box.hidden = !c;
+  box.classList.toggle('empty', !gs.length);
+  box.innerHTML = '<svg class="ct-ic" width="15" height="15" aria-hidden="true"><use href="#f-tag"/></svg>' + gs.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${escapeHtml(g.c)}"><span>${escapeHtml(g.name)}</span></span>`).join('') + (gs.length > 2 ? `<span class="lb2-tag more">+${gs.length - 2}</span>` : '');
 }
 $('chatTags')?.addEventListener('click', (e) => { e.stopPropagation(); const t = activeTab(); if (t && !t.dataset.view) ChatTags.open(t, $('chatTags')); });
 window.addEventListener('chat-tab-switched', () => renderChatTags());
@@ -5904,6 +5907,20 @@ const chatsView = (() => {
   return { show, hide, toggle: () => (open ? hide() : show()), render, get open() { return open; } };
 })();
 // „+“ in der Chats-Ansicht: neuer leerer Chat
+/* Leere Chats aufräumen (Wunsch 10.11.): Chats, in denen eine Frage steht, aber nie eine Antwort ankam (abgebrochen, Fehler, nur gedacht),
+   werden automatisch gelöscht – nicht der offene Chat, nichts was gerade läuft, und erst wenn er ein paar Minuten alt ist. */
+function sweepEmptyChats() {
+  const now = Date.now();
+  [...tabsEl.querySelectorAll('.tab')].forEach((tab) => {
+    if (tab.dataset.view || tab.classList.contains('active') || runOf(tab) || !tab.dataset.cid) return;
+    const c = chatOf(tab), h = tabChats.get(tab)?.history || [];
+    if (!h.length || c?.pinned || now - (Number(c?.updated) || now) < 3 * 60 * 1000) return;
+    const answered = h.some((m) => m.role === 'assistant' && (m.doc || m.images?.length || !['', '(keine Antwort)'].includes(String(m.text || m.content || '').trim())));
+    if (!answered) deleteChat(tab);
+  });
+}
+setTimeout(sweepEmptyChats, 6000);
+setInterval(sweepEmptyChats, 5 * 60 * 1000);
 window.newChatFromList = () => { chatsView.hide(); createTab('Neuer Chat'); setTimeout(() => $('input')?.focus(), 50); };
 
 /* Bibliothek (docs.js) zeigt Chats und Dokumente zusammen (Wunsch 04.11.: kein eigener Chatverlauf mehr) – dafür die Chats als Liste */
