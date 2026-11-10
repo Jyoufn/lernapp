@@ -12056,7 +12056,7 @@ html.auth-opening .auth { opacity: 0; transform: none; }
 @keyframes auth-fill { from { -webkit-text-fill-color: transparent; } to { -webkit-text-fill-color: #f7f7f7; } }
 .auth-field input:-webkit-autofill, .auth-field input:-webkit-autofill:hover, .auth-field input:-webkit-autofill:focus, .auth-field input:autofill {
   -webkit-text-fill-color: #f7f7f7; -webkit-box-shadow: 0 0 0 40px #1c1c1c inset; box-shadow: 0 0 0 40px #1c1c1c inset; caret-color: #f7f7f7;
-  transition: background-color 99999s ease-out 99999s; animation: auth-fill 420ms ease both; font: inherit; font-size: 13px; }
+  transition: background-color 99999s ease-out 99999s; animation: none; font: inherit; font-size: 13px; }
 .auth-field { overflow: hidden; }
 .ws-menu .ws-av svg, .ws-menu .ws-av img { width: 18px; height: 18px; }
 
@@ -12130,24 +12130,20 @@ html.auth-opening .auth { opacity: 0; transform: none; }
    Schwarz: Hauptteil reines Schwarz, Sidebar einen Hauch heller. Glas: NUR die Sidebar ist gläsern (Hintergrundbild + Weichzeichner dahinter),
    der Hauptteil bleibt fest – Wunsch des Nutzers, Ausnahme vom früheren „kein Glas“. Hell: neutrale Töne (vorher Blaustich), weiße Karten, dunklere Schrift. */
 html[data-glass="on"], html[data-glass="on"] body {
-  /* ruhiger Verlauf in der Glasfarbe – keine Formen, keine Linien */
-  background:
-    radial-gradient(120% 85% at 0% 0%, color-mix(in srgb, var(--glass) 27%, #18181a) 0%, transparent 62%),
-    radial-gradient(90% 80% at 10% 100%, color-mix(in srgb, var(--glass) 20%, #141416) 0%, transparent 70%),
-    radial-gradient(80% 70% at 100% 0%, color-mix(in srgb, var(--glass) 14%, #121214) 0%, transparent 70%),
-    #0e0e10 fixed;
+  /* eine durchgehende, ruhige Fläche in der Glasfarbe – links (Sidebar) und rund um den Hauptteil derselbe Ton, kein dunkler Rand unten */
+  background: linear-gradient(160deg, color-mix(in srgb, var(--glass) 30%, #19191b) 0%, color-mix(in srgb, var(--glass) 22%, #161618) 55%, color-mix(in srgb, var(--glass) 18%, #141416) 100%) fixed;
 }
 html[data-glass="on"] .sidebar {
-  background: color-mix(in srgb, var(--glass) 11%, transparent);
-  -webkit-backdrop-filter: blur(30px) saturate(120%); backdrop-filter: blur(30px) saturate(120%);
-  border-right: 0;
+  /* Milchglas ohne Weichzeichner (backdrop-filter machte beim Ansichtswechsel schwarze Flächen und kostet auf dem iPad) */
+  background: linear-gradient(180deg, color-mix(in srgb, var(--glass) 7%, transparent), transparent 70%);
+  -webkit-backdrop-filter: none; backdrop-filter: none; border-right: 0;
 }
 html[data-glass="on"] .sidebar .nav-item:hover, html[data-glass="on"] .sidebar .st-item:hover, html[data-glass="on"] .sidebar :is(.sb-chat:hover) { background: color-mix(in srgb, var(--glass) 10%, transparent); }
 html[data-glass="on"] .sidebar .nav-item.active, html[data-glass="on"] .sidebar .st-item.active, html[data-glass="on"] .sidebar .sb-chat.active { background: color-mix(in srgb, var(--glass) 16%, transparent); }
 /* Hauptteil passend: fest, aber mit einem Hauch Glasfarbe; Karten, Menüs und Ränder im selben Ton */
-html[data-glass="on"] { --win-bg: color-mix(in srgb, var(--glass) 7%, #141415); --card: color-mix(in srgb, var(--glass) 7%, #141415); --pop-bg: color-mix(in srgb, var(--glass) 10%, #1a1a1b);
-  --menu-bg: color-mix(in srgb, var(--glass) 6%, #121213); --menu-hover: color-mix(in srgb, var(--glass) 10%, #18181a); --hover: color-mix(in srgb, var(--glass) 9%, #17171a);
-  --active: color-mix(in srgb, var(--glass) 12%, #1a1a1c); --line: color-mix(in srgb, var(--glass) 13%, #1d1d1f); --menu-border: var(--line); --divider: var(--line); --card-border: var(--line); }
+html[data-glass="on"] { --win-bg: color-mix(in srgb, var(--glass) 12%, #18181a); --card: color-mix(in srgb, var(--glass) 12%, #18181a); --pop-bg: color-mix(in srgb, var(--glass) 15%, #1c1c1e);
+  --menu-bg: color-mix(in srgb, var(--glass) 10%, #161618); --menu-hover: color-mix(in srgb, var(--glass) 15%, #1c1c1e); --hover: color-mix(in srgb, var(--glass) 14%, #1b1b1d);
+  --active: color-mix(in srgb, var(--glass) 17%, #1d1d1f); --line: color-mix(in srgb, var(--glass) 17%, #202022); --menu-border: var(--line); --divider: var(--line); --card-border: var(--line); }
 html[data-glass="on"] .panel { border-color: color-mix(in srgb, var(--glass) 16%, transparent); }
 html[data-glass="on"] .out-bubble { background: color-mix(in srgb, var(--glass) 11%, #19191b); }
 html[data-glass="on"] .cs-pill { background: color-mix(in srgb, var(--glass) 6%, #121213); border-color: var(--line); }
@@ -12193,3 +12189,28 @@ html[data-theme="light"] .st-sw { filter: invert(1) hue-rotate(180deg); }
 ::view-transition-old(main-panel) { animation: 140ms ease both vt-out; }
 ::view-transition-new(main-panel) { animation: 240ms var(--spring, ease) both vt-in; }
 ::view-transition-group(main-panel) { animation-duration: 0s; }
+
+/* ===== 10.11. abends: Ladebild der App (Grundriss mit Platzhaltern) und weicher Übergang Anmeldung → App ===== */
+html.booting #app { opacity: 0; }
+html.booted #app { opacity: 1; transition: opacity 380ms ease; }
+.boot { display: none; }
+html.booting .boot { position: fixed; inset: 0; z-index: 9000; display: flex; background: var(--sidebar-bg, #141414); transition: opacity 380ms ease; pointer-events: none; }
+html[data-glass="on"].booting .boot { background: transparent; }
+html[data-glass="on"] .boot { background: transparent; }
+html.booted .boot { opacity: 0; }
+html.auth-leaving .boot:not(.show) { opacity: 0; }
+html.auth-leaving .auth { opacity: 0 !important; transform: scale(0.985) !important; transition: opacity 260ms ease, transform 300ms var(--spring, ease) !important; }
+.boot-side { flex: none; width: var(--sidebar-w, 264px); display: flex; flex-direction: column; gap: 14px; padding: 24px 18px; box-sizing: border-box; }
+html.boot-noside .boot-side { display: none; }
+.boot i { display: block; height: 9px; border-radius: 5px; background: color-mix(in srgb, var(--text, #f7f7f7) 8%, transparent); animation: boot-pulse 1.4s ease-in-out infinite; }
+.boot-side .w1 { width: 46%; height: 12px; margin-bottom: 10px; } .boot-side .w2 { width: 58%; } .boot-side .w3 { width: 40%; } .boot-side .w4 { width: 52%; } .boot-side .w5 { width: 44%; }
+.boot-main { flex: 1; position: relative; margin: 8px 8px 8px 0; border: 1px solid var(--line, #1d1d1d); border-radius: 12px; background: var(--main-bg, #141414); }
+html.boot-noside .boot-main { margin-left: 8px; }
+.boot-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; }
+.boot-head i { width: 18px; height: 14px; } .boot-head .pill { width: 210px; height: 28px; border-radius: 14px; margin-right: calc(50% - 123px); }
+.boot-mid { position: absolute; left: 50%; top: 50%; width: min(600px, 80%); transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.boot-mid .dog { width: 56px; height: 56px; border-radius: 14px; } .boot-mid .t { width: 46%; height: 16px; }
+.boot-in { width: 100%; height: 108px; margin-top: 18px; border: 1px solid var(--field-border, #242424); border-radius: 18px; background: var(--field-bg, #181818); padding: 18px; box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between; }
+.boot-in i { width: 32%; } .boot-in .s { width: 18%; align-self: flex-end; }
+@keyframes boot-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .boot i { animation: none; } html.booted #app, .boot { transition: none; } }

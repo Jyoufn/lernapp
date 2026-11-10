@@ -624,7 +624,7 @@ let hintTimer = null;
 input.addEventListener('input', () => {
   if (!listening || input.value === written) return;
   // selbst getippt/gelöscht: ab hier neu mitschreiben (auch die Ton-Aufnahme beginnt neu, damit die Mitschrift nur Neues enthält)
-  baseText = written = dictFrom = input.value; rawBase = ''; finalText = ''; lastInterim = ''; consumed = seen; liveFix = null; liveN = 0;
+  baseText = written = dictFrom = input.value; rawBase = ''; finalText = ''; lastInterim = ''; consumed = seen; liveFix = null; liveN = 0; liveDone = ''; liveDoneN = 0;
   dictRecStop(); dictRec.chunks = []; setTimeout(dictRecStart, 50);
 });
 
@@ -669,11 +669,15 @@ let finalsEnd = 0, lastInterim = '', liveT = 0, livePolishing = false, liveDone 
    alle paar Sekunden schreibt Groq Whisper (sonst Gemini) die bisherige Aufnahme genau mit – mit Satzzeichen, auch mitten im Satz, im Zusammenhang
    neu gehört. liveFix = { text, n }: die Mitschrift deckt die ersten n Wörter des Rohtexts ab; was danach gesprochen wurde, hängt roh dahinter. */
 let rawBase = '', liveFix = null, liveN = 0, liveVia = '', liveLast = 0, liveTick = 0;
+// Groq-Kontingent schonen (20 Anfragen/Min., 2 Std. Ton/Std.): ist die laufende Aufnahme länger als ~15 s, wird sie beim nächsten Mitschreiben
+// abgeschlossen (liveDone/liveDoneN = fertig mitgeschriebener Teil) und eine neue begonnen – so geht nie die ganze lange Aufnahme erneut hin
+let liveDoneN = 0, segStart = 0;
 const rawSaid = () => joinText(joinText(rawBase, finalText), lastInterim);
 const wordsOf = (t) => String(t || '').split(/\s+/).filter(Boolean);
 function renderDictation() {
   const raw = rawSaid();
-  const said = liveFix ? joinText(liveFix.text, wordsOf(raw).slice(liveFix.n).join(' ')) : raw;
+  const w = wordsOf(raw);
+  const said = liveFix ? joinText(joinText(liveDone, liveFix.text), w.slice(liveFix.n).join(' ')) : joinText(liveDone, w.slice(liveDoneN).join(' '));
   baseText = dictFrom ?? baseText;
   written = input.value = joinText(baseText, said);
   input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint, sobald Text da ist (eigenes Ereignis – „input“ würde den Diktier-Stand zurücksetzen)
@@ -694,18 +698,32 @@ async function dictRecStart() {
     const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((m) => MediaRecorder.isTypeSupported?.(m)) || '';
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : undefined);
     dictRec.rec = rec; dictRec.stream = stream; dictRec.chunks = []; dictRec.mime = rec.mimeType || mime || 'audio/webm';
-    rec.ondataavailable = (e) => { if (e.data?.size) dictRec.chunks.push(e.data); };
-    rec.start(1000);
+    const mine = dictRec.chunks;
+    rec.ondataavailable = (e) => { if (e.data?.size) mine.push(e.data); };
+    rec.start(1000); segStart = Date.now();
   } catch { dictRec.off = true; }
+}
+// neue Aufnahme auf demselben Mikrofon-Strom (kein erneutes Freigeben nötig) – die alte ist damit abgeschlossen.
+// Jede Aufnahme sammelt in IHRE Liste; zurück kommt die Liste der alten, sobald deren letztes Stück da ist.
+function dictRecRoll() {
+  const stream = dictRec.stream, old = dictRec.rec, oldChunks = dictRec.chunks;
+  if (!stream || !old) return Promise.resolve(oldChunks);
+  const done = new Promise((ok) => { old.addEventListener('stop', () => ok(oldChunks), { once: true }); setTimeout(() => ok(oldChunks), 1500); });
+  try { old.stop(); } catch {}
+  const rec = new MediaRecorder(stream, dictRec.mime ? { mimeType: dictRec.mime, audioBitsPerSecond: 32000 } : undefined);
+  const mine = dictRec.chunks = [];
+  rec.ondataavailable = (e) => { if (e.data?.size) mine.push(e.data); };
+  dictRec.rec = rec; rec.start(1000); segStart = Date.now();
+  return done;
 }
 function dictRecStop() {
   try { dictRec.rec?.stop(); } catch {}
   dictRec.stream?.getTracks().forEach((t) => t.stop());
   dictRec.rec = null; dictRec.stream = null;
 }
-async function dictTranscribe(context, partial = false) {
-  if (!dictRec.chunks.length) return '';
-  const blob = new Blob(dictRec.chunks, { type: dictRec.mime });
+async function dictTranscribe(context, partial = false, chunks = dictRec.chunks) {
+  if (!chunks.length) return '';
+  const blob = new Blob(chunks, { type: dictRec.mime });
   if (blob.size < 3000 || blob.size > 7 * 1024 * 1024) return '';
   const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ok(''); fr.readAsDataURL(blob); });
   if (!data) return '';
@@ -721,18 +739,23 @@ async function livePolish() {
   if (n < 2 || n === liveN) return;
   const snapFrom = dictFrom;
   livePolishing = true; liveLast = Date.now();
+  // lange Aufnahme: jetzt abschließen und sofort eine neue beginnen (was ab jetzt gesagt wird, landet in der neuen)
+  const close = !!dictRec.rec && Date.now() - segStart > 15000;
+  const chunks = close ? await dictRecRoll() : dictRec.chunks;
   let out = '';
-  const ctx = dictFrom.slice(-300) || chatOf(activeTab())?.title || '';
+  const ctx = (joinText(dictFrom, liveDone)).slice(-300) || chatOf(activeTab())?.title || '';
   try {
-    out = await dictTranscribe(ctx, true); // genaue Mitschrift aus dem Ton (läuft weiter, während man spricht)
+    out = await dictTranscribe(ctx, true, chunks); // genaue Mitschrift aus dem Ton (läuft weiter, während man spricht)
     if (!out && dictRec.off) { // keine Aufnahme möglich: wenigstens den Rohtext glätten
-      const seg = wordsOf(rawSaid()).slice(0, n).join(' ');
+      const seg = wordsOf(rawSaid()).slice(liveDoneN, n).join(' ');
       const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg, hints: polishHints(), context: ctx }) });
       out = String((await r.json()).text || '').trim();
     }
   } catch {} finally { livePolishing = false; }
-  if (!listening || !out || dictFrom !== snapFrom) return; // inzwischen selbst etwas geändert → diese Mitschrift gilt nicht mehr
-  liveN = n; liveFix = { text: out, n };
+  if (!listening || dictFrom !== snapFrom) return; // inzwischen selbst etwas geändert → diese Mitschrift gilt nicht mehr
+  if (close) { // abgeschlossener Teil: steht fest (ohne Mitschrift bleibt der Rohtext)
+    liveDone = joinText(liveDone, out || wordsOf(rawSaid()).slice(liveDoneN, n).join(' ')); liveDoneN = n; liveFix = null; liveN = n;
+  } else if (out) { liveN = n; liveFix = { text: out, n }; } else return;
   renderDictation();
 }
 function startListening() {
@@ -743,10 +766,10 @@ function startListening() {
   listening = true;
   baseText = written = input.value;
   dictFrom = input.value;
-  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now();
-  // alle ~2,5 s (Groq) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
+  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now(); liveDoneN = 0;
+  // alle ~3,5 s (Groq: höchstens 20 Anfragen/Min.) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
   clearInterval(liveTick);
-  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 2500)) livePolish(); }, 500);
+  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 3500)) livePolish(); }, 500);
 
   recognition = new SpeechRecognition();
   recognition.lang = SPEECH_LANG;
@@ -811,8 +834,10 @@ async function polishDictation(from) {
   try {
     // Wörterliste: Tags, Projekte, Titel von Dokumenten und Chats – so erkennt die Glättung Fachbegriffe und Namen (Wunsch 10.11.)
     const hints = polishHints();
-    const heard = await dictTranscribe((from || '').slice(-300) || chatOf(activeTab())?.title || ''); dictRec.chunks = [];
-    if (heard) { if (input.value !== now) return; input.value = from + said.match(/^\s*/)[0] + heard; input.dispatchEvent(new Event('dictation')); autoGrow(); return; }
+    const done = liveDone; // schon fest mitgeschriebene Teile (lange Diktate) – die letzte Aufnahme kommt dahinter
+    const heard = await dictTranscribe((joinText(from || '', done)).slice(-300) || chatOf(activeTab())?.title || ''); dictRec.chunks = [];
+    if (heard) { if (input.value !== now) return; input.value = from + said.match(/^\s*/)[0] + joinText(done, heard); input.dispatchEvent(new Event('dictation')); autoGrow(); return; }
+    if (done) return; // ohne letzte Mitschrift: so lassen, wie es dasteht (der feste Teil ist schon sauber)
     const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim(), hints, context: (from || '').slice(-300) || chatOf(activeTab())?.title || '' }) });
     const { text } = await r.json();
     if (input.value !== now || !text) return; // weitergeschrieben/abgeschickt → nichts überschreiben
@@ -7136,7 +7161,7 @@ document.addEventListener('click', (e) => {
       pv: { main: '#000000', side: '#0a0a0a', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
     // Glas (10.11. abends, überarbeitet): helles, milchiges Glas NUR in der Sidebar über einem ruhigen Verlauf in der Glasfarbe (ohne Formen/Linien);
     // Hauptteil, Karten und Eingabefeld bekommen einen Hauch derselben Farbe. Glasfarbe wählbar (cfg.glass, Standard Weiß).
-    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 5%, #111112)', side: 'transparent', field: 'color-mix(in srgb, var(--glass) 7%, #141415)', fieldBorder: 'color-mix(in srgb, var(--glass) 14%, #1e1e1f)', glass: true,
+    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 9%, #141416)', side: 'transparent', field: 'color-mix(in srgb, var(--glass) 12%, #18181a)', fieldBorder: 'color-mix(in srgb, var(--glass) 20%, #222224)', glass: true,
       pv: { main: '#151516', side: 'linear-gradient(160deg,#6b6b70 0%,#3a3a3e 55%,#222224 100%)', line: 'rgba(255,255,255,.35)', field: 'rgba(255,255,255,.18)' } },
     // Hell: Werte VOR der Umkehrung (style.css → [data-theme="light"]) – neutral (kein Blaustich): Hauptteil weiß, Sidebar #f4f4f4, Felder weiß mit feinem Rand
     light: { label: 'Hell', main: '#000000', side: '#0b0b0b', field: '#000000', fieldBorder: '#1c1c1c', light: true,
@@ -7145,7 +7170,7 @@ document.addEventListener('click', (e) => {
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff' };
   // Glasfarben (Einstellungen → Aussehen, nur im Modus Glas): Weiß zuerst, dann sanfte Töne
-  const GLASS = ['#ffffff', '#c9d6ff', '#d8c6ff', '#ffc9de', '#ffd8b8', '#c8f0d4', '#bfe8f0'];
+  const GLASS = ['#ffffff', '#9a9aa2', '#5a5a62', '#c9d6ff', '#d8c6ff', '#ffc9de', '#ffd8b8']; // Weiß, Grau, dunkles Rauchglas, sanfte Töne (kein Grün)
   const cfg = { ...DEFAULTS };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
   if (!MODES[cfg.mode]) cfg.mode = 'dark'; // frühere Einstellung „Graphit“ gibt es nicht mehr
@@ -7163,6 +7188,12 @@ document.addEventListener('click', (e) => {
     // im hellen Modus wird umgekehrt → die Akzentfarbe vorher „gegenkehren“, damit sie am Ende stimmt
     root.style.setProperty('--accent', m.light ? invertHex(cfg.accent) : cfg.accent);
     root.style.setProperty('--plaza-strength', String(Math.max(0, Math.min(100, cfg.tiles)) / 100));
+    // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
+    try {
+      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
+      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) data.glass = root.dataset.glass;
+      localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
+    } catch {}
   }
   // Hell kehrt die Oberfläche um (invert(1) hue-rotate(180deg)). Diese Umkehr ist (fast) ihre eigene Umkehrung –
   // also die Akzentfarbe vorab genauso umkehren, dann erscheint am Ende genau die gewählte Farbe.

@@ -27,6 +27,29 @@
 
   let user = null;
   try { user = JSON.parse(lsGet(USER_KEY) || 'null'); } catch {}
+
+  /* ---------- Darstellung sofort (vor den App-Skripten) – sonst erscheint erst „Dunkel“ und dann der gewählte Modus (Glas lud „dreimal“) ---------- */
+  try {
+    const ap = JSON.parse(lsGet('appearance.vars') || 'null');
+    if (ap) { Object.entries(ap.vars || {}).forEach(([k, v]) => root.style.setProperty(k, v)); Object.entries(ap.data || {}).forEach(([k, v]) => { root.dataset[k] = v; }); }
+  } catch {}
+  /* ---------- Ladebild (Wunsch 10.11.): bis die App ganz fertig ist, steht ihr Grundriss mit grauen Platzhaltern da (wie die Mini-Vorschau
+     in Aussehen) – erst dann blendet die fertige App in einem Zug ein. Nach dem Anmelden erscheint es sofort und bleibt über den Neustart. ---------- */
+  function bootSkeleton() { // das Ladebild steht fest in index.html (sichtbar mit html.booting)
+    root.classList.toggle('boot-noside', lsGet('sidebarCollapsed') === '1');
+    root.classList.add('booting');
+  }
+  function bootDone() {
+    if (!root.classList.contains('booting') || root.classList.contains('booted')) return;
+    root.classList.add('booted');
+    setTimeout(() => root.classList.remove('booting', 'booted'), 420);
+  }
+  if (user) {
+    bootSkeleton();
+    const ready = new Promise((r) => addEventListener('app-layout-ready', r, { once: true }));
+    Promise.race([Promise.all([ready, document.fonts?.ready].filter(Boolean)).then(() => new Promise((r) => setTimeout(r, 180))), new Promise((r) => setTimeout(r, 5000))])
+      .then(() => requestAnimationFrame(() => requestAnimationFrame(bootDone)));
+  }
   let locked = !user;
 
   /* ---------- fetch: gesperrt → /api-Anfragen der App warten einfach (die App wird nach dem Anmelden neu geladen);
@@ -159,6 +182,7 @@
      =================================================================== */
   const fi = (n, s = 14) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#f-${n}"/></svg>`;
   function showLogin() {
+    root.classList.remove('booting', 'booted'); // abgemeldet: kein Ladebild, gleich die Anmeldung
     root.classList.add('auth-locked');
     const app = document.getElementById('app');
     app?.setAttribute('inert', '');
@@ -371,14 +395,13 @@
 
     // Vorschau wird groß (gleiches Timing wie die App), dann startet die App mit den Kontodaten neu
     function open() {
-      const appEl = document.getElementById('app');
-      const collapsed = lsGet('sidebarCollapsed') === '1';
-      root.classList.add('auth-opening');
-      // der Agent aus der Vorschau bleibt nach dem Neustart derselbe (sonst springt der Hund am Ende der Animation)
+      // Anmeldung blendet aus, das Ladebild der App blendet ein – nach dem Neustart steht es schon da und die App erscheint darin (kein Springen)
       try { sessionStorage.setItem('auth.dog', window.PixelDogs?.mode || 'general'); } catch {}
-      appEl?.classList.toggle('collapsed', collapsed);
       const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-      setTimeout(() => location.reload(), reduce ? 60 : 620);
+      root.classList.add('auth-leaving');
+      bootSkeleton();
+      requestAnimationFrame(() => requestAnimationFrame(() => document.querySelector('.boot')?.classList.add('show')));
+      setTimeout(() => location.reload(), reduce ? 60 : 380);
     }
 
     /* ---------- Bedienung ---------- */
