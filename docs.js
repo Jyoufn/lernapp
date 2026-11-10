@@ -570,7 +570,8 @@ const Docs = (() => {
   side.setAttribute('aria-label', 'Dokumente');
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M5.6 16.3A6.7 6.7 0 1 0 2.75 13.4l-.75 3.4z"/><path class="pg-ln" d="M6.3 9h5.4M6.3 11.8h3.4"/></svg>';
+  // Chat in Home/Chats (10.11.): eckig-runde Sprechblase mit zwei Zeilen – gleicher Strich und Stil wie das Blatt der Dokumente
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M4.1 3.2h9.8a2.6 2.6 0 0 1 2.6 2.6v6.6a2.6 2.6 0 0 1-2.6 2.6H8.6l-3.3 2.6c-.45.35-.95.1-.95-.45V15A2.6 2.6 0 0 1 1.5 12.4V5.8a2.6 2.6 0 0 1 2.6-2.6z"/><path class="pg-ln" d="M5 7.9h8M5 10.8h5"/></svg>';
   const PAGE_SHAPE = '<path class="pg-out" d="M3.6 1.5h6.3l4.6 4.6v10.3a2.1 2.1 0 0 1-2.1 2.1H3.6a2.1 2.1 0 0 1-2.1-2.1V3.6a2.1 2.1 0 0 1 2.1-2.1z"/><path class="pg-fold" d="M9.9 1.5v3a1.6 1.6 0 0 0 1.6 1.6h3"/><path class="pg-ln" d="M4.6 10h6.8M4.6 13h6.8M4.6 16h4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
   function renderSide() {
@@ -735,10 +736,16 @@ const Docs = (() => {
     function openMenu(btn, html, onPick) {
       if (menuFor === btn) { closeMenu(); return; }
       closeMenu(); menuFor = btn; btn.classList.add('on');
-      menu.innerHTML = html; menu.hidden = false;
+      menu.innerHTML = html; menu.style.maxHeight = ''; menu.hidden = false;
+      // Platz unten bevorzugt; reicht er nicht, nach oben – aber nie über den Rand hinaus (vorher rutschte das Filter-Menü oben aus dem Bild, 10.11.)
       const r = btn.getBoundingClientRect(), w = menu.offsetWidth, h = menu.offsetHeight;
+      const below = window.innerHeight - r.bottom - 14, above = r.top - 14;
+      const down = h <= below || below >= above;
+      const room = Math.max(160, down ? below : above);
+      menu.style.maxHeight = `${Math.min(h, room)}px`;
       menu.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))}px`;
-      menu.style.top = `${r.bottom + 6 + h > window.innerHeight - 8 ? r.top - h - 6 : r.bottom + 6}px`;
+      menu.style.top = `${down ? r.bottom + 6 : Math.max(8, r.top - 6 - Math.min(h, room))}px`;
+      menu.classList.toggle('up', !down);
       menu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) { e.stopPropagation(); onPick(b.dataset.v, b); } };
     }
     const item = (v, label, on, icon = '', cls = '') => `<button type="button" role="menuitem" class="lb2-mi${cls}" data-v="${esc(v)}">${icon}<span>${esc(label)}</span>${on ? `<i class="lb2-tick">${fi('check', 13)}</i>` : ''}</button>`;
@@ -791,7 +798,7 @@ const Docs = (() => {
           else if (v.startsWith('g:')) { const id = v.slice(2); fx.tags.has(id) ? fx.tags.delete(id) : fx.tags.add(id); }
           else if (v === 'p') fx.pinned = !fx.pinned;
           else if (v === 'reset') { filter = CH ? 'chat' : 'all'; if (!CH) localStorage.setItem(FKEY, 'all'); fx.time = 'any'; fx.tags.clear(); fx.pinned = false; }
-          saveFx(); api.render(); menu.innerHTML = html(); // Menü bleibt offen
+          const st = menu.scrollTop; saveFx(); api.render(); menu.innerHTML = html(); menu.scrollTop = st; // Menü bleibt offen, an derselben Stelle (sprang vorher nach oben)
         });
         return;
       }
@@ -846,10 +853,14 @@ const Docs = (() => {
     const api = { open: false, focusTitle: false };
     const app = () => document.getElementById('app');
     // Rechtes Seitenfenster (#rpane neben dem Hauptteil): KI-Chat, der sich nur auf dieses Dokument bezieht
+    let setOpen = false; // Einstellungen des Dokuments im Seitenfenster (statt KI-Chat)
     function drawPane() {
-      const on = api.open && paneOpen && !focusOn;
+      const on = api.open && (paneOpen || setOpen) && !focusOn;
       app()?.classList.toggle('rpane-open', on);
-      if (on) { drawDocChat(); paneResizer(); }
+      app()?.classList.toggle('rpane-set', on && setOpen); // Einstellungen: feste Breite, kein Griff
+      view.querySelector('.dc-setbtn')?.classList.toggle('on', on && setOpen);
+      if (!on) return;
+      if (setOpen) drawSettingsPane?.(); else { drawDocChat(); paneResizer(); }
     }
     // Seitenfenster nach links breiter ziehen (Griff am linken Rand). 360 px ist das Minimum, die Breite wird gemerkt.
     const PANE_MIN = 360;
@@ -2194,49 +2205,39 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const pt = view.querySelector('.dc-ptable'); if (pt) pt.hidden = s.infos === false;
       view.querySelector('.dc-content')?.setAttribute('spellcheck', String(!!s.spell));
     }
-    /* Einstellungen des Dokuments (Wunsch 10.11.): gleiten als Seitenfenster von rechts herein (nicht mehr mittig) und sehen aus wie die
-       normalen Einstellungen – Abschnitts-Titel, darunter Karten mit Zeilen (st-card/st-row/st-seg), nur ohne eigene Sidebar. */
-    function openSettings() {
-      const old = document.querySelector('.dc-set-ov');
-      if (old) { old._close?.(); return; }
-      const ov = document.createElement('div'); ov.className = 'dc-set-ov side';
+    /* Einstellungen des Dokuments (Wunsch 10.11., 2. Runde): öffnen im selben rechten Seitenfenster wie der KI-Chat (schiebt den Inhalt,
+       keine Überlagerung), feste Breite, Hintergrund und Karten wie die normalen Einstellungen (st-card/st-row/st-seg). Nochmal tippen schließt. */
+    function openSettings() { setOpen = !setOpen; const p = pane(); if (p) delete p.dataset.doc; drawPane(); }
+    function drawSettingsPane() {
+      const p = pane(); if (!p || !doc) return;
+      const s = docSet();
       const seg = (k, opts, cur) => `<span class="st-seg" data-k="${k}" role="radiogroup">${opts.map(([v, l]) => `<button type="button" role="radio" aria-checked="${cur === v}" data-v="${v}"${cur === v ? ' class="on"' : ''}>${l}</button>`).join('')}</span>`;
       const sw = (k, on) => `<button type="button" class="ce-switch${on ? ' on' : ''}" data-sw="${k}" role="switch" aria-checked="${on}" aria-label="umschalten"><i></i></button>`;
-      const row = (label, hint, ctrl, cls = '') => `<div class="st-row dcs-row${cls}"><div class="dcs-l"><span class="st-name">${label}</span>${hint ? `<em>${hint}</em>` : ''}</div><span class="grow"></span>${ctrl}</div>`;
-      const draw = () => {
-        const s = docSet();
-        const body = `<h2>Darstellung</h2><div class="st-card">
-            <div class="st-row dcs-row dcs-acc-row"><div class="dcs-l"><span class="st-name">Akzentfarbe</span><em>${s.accent === 'auto' ? 'passt sich dem Cover an' : 'für Haken, Markierungen und Links'}</em></div>
-              <div class="dc-acc"><button type="button" data-acc="auto" class="dc-acc-auto${s.accent === 'auto' ? ' on' : ''}">Auto</button>${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="dc-dot${s.accent === c ? ' on' : ''}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div></div>
-            ${row('Schrift', '', seg('font', [['sans', 'Standard'], ['serif', 'Serif'], ['mono', 'Mono']], s.font))}
-            ${row('Breite', '', seg('width', [['normal', 'Normal'], ['wide', 'Breit']], s.width))}
-            ${row('Kleine Schrift', '', sw('small', !!s.small))}
-          </div>
-          <h2>Dokument</h2><div class="st-card">
-            ${row('Infos', 'Tabelle unter dem Titel', sw('infos', s.infos !== false))}
-            ${row('Gliederung links', 'Striche zu den Überschriften', sw('nav', s.nav))}
-            ${row('Rechtschreibprüfung', '', sw('spell', s.spell))}
-          </div>`;
-        const scroll = ov.querySelector('.dcs-body');
-        if (scroll) { const top = scroll.scrollTop; scroll.innerHTML = body; scroll.scrollTop = top; return; }
-        ov.innerHTML = `<aside class="dcs-sheet" role="dialog" aria-label="Einstellungen des Dokuments">
-          <div class="dcs-head"><span class="dcs-title">Einstellungen</span><span class="grow"></span><button type="button" class="dcs-x" data-close aria-label="Schließen">${fi('x', 13)}</button></div>
-          <div class="dcs-body">${body}</div></aside>`;
-      };
-      const set = (patch) => { doc.settings = { ...docSet(), ...patch }; touch(doc); save(); applySettings(); draw(); };
-      const close = () => { if (ov.classList.contains('closing')) return; ov.classList.add('closing'); document.removeEventListener('keydown', key, true); setTimeout(() => ov.remove(), 320); };
-      ov._close = close;
-      const key = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
-      ov.addEventListener('pointerdown', (e) => { if (e.target === ov) close(); });
-      ov.addEventListener('click', (e) => {
-        const t = e.target.closest('button'); if (!t) return;
-        if (t.hasAttribute('data-close')) { close(); return; }
+      const row = (label, hint, ctrl) => `<div class="st-row dcs-row"><div class="dcs-l"><span class="st-name">${label}</span>${hint ? `<em>${hint}</em>` : ''}</div><span class="grow"></span>${ctrl}</div>`;
+      const body = `<h2>Darstellung</h2><div class="st-card">
+          <div class="st-row dcs-row dcs-acc-row"><div class="dcs-l"><span class="st-name">Akzentfarbe</span><em>${s.accent === 'auto' ? 'passt sich dem Cover an' : 'für Haken, Markierungen und Links'}</em></div>
+            <div class="dc-acc"><button type="button" data-acc="auto" class="dc-acc-auto${s.accent === 'auto' ? ' on' : ''}">Auto</button>${ACCENTS.map((c) => `<button type="button" data-acc="${c}" class="dc-dot${s.accent === c ? ' on' : ''}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div></div>
+          ${row('Schrift', '', seg('font', [['sans', 'Standard'], ['serif', 'Serif'], ['mono', 'Mono']], s.font))}
+          ${row('Breite', '', seg('width', [['normal', 'Normal'], ['wide', 'Breit']], s.width))}
+          ${row('Kleine Schrift', '', sw('small', !!s.small))}
+        </div>
+        <h2>Dokument</h2><div class="st-card">
+          ${row('Infos', 'Tabelle unter dem Titel', sw('infos', s.infos !== false))}
+          ${row('Gliederung links', 'Striche zu den Überschriften', sw('nav', s.nav))}
+          ${row('Rechtschreibprüfung', '', sw('spell', s.spell))}
+        </div>`;
+      const old = p.querySelector('.dcs-pane .dcs-body');
+      if (old && p.dataset.set === doc.id) { const top = old.scrollTop; old.innerHTML = body; old.scrollTop = top; return; }
+      p.dataset.set = doc.id; delete p.dataset.doc;
+      p.innerHTML = `<div class="dcs-pane"><div class="dcs-head"><span class="dcs-title">Einstellungen</span><span class="grow"></span><button type="button" class="dcs-x" data-close aria-label="Schließen">${fi('x', 13)}</button></div><div class="dcs-body">${body}</div></div>`;
+      p.querySelector('.dcs-pane').addEventListener('click', (e) => {
+        const t = e.target.closest('button'); if (!t || !doc) return;
+        if (t.hasAttribute('data-close')) { setOpen = false; delete p.dataset.set; drawPane(); return; }
+        const set = (patch) => { doc.settings = { ...docSet(), ...patch }; touch(doc); save(); applySettings(); drawSettingsPane(); };
         if (t.dataset.acc) { set({ accent: t.dataset.acc }); return; }
         if (t.dataset.sw) { set({ [t.dataset.sw]: !docSet()[t.dataset.sw] }); return; }
         const sg = t.closest('[data-k]'); if (sg && t.dataset.v) set({ [sg.dataset.k]: t.dataset.v });
       });
-      document.addEventListener('keydown', key, true);
-      draw(); document.body.append(ov);
     }
     // für den Sprach-Agenten: Einstellungen des offenen Dokuments ändern oder das Fenster öffnen
     api.openSettings = () => { if (doc) openSettings(); return !!doc; };
@@ -2286,7 +2287,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const place = () => {
         const a = (anchor && anchor.isConnected ? anchor : null) || view.querySelector('.dc-icon:not([hidden])') || view.querySelector('[data-add="icon"]');
         const r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
-        pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
+        // linksbündig mit dem Text des Dokuments (Wunsch 10.11.: nicht nach rechts versetzt unter „Icon hinzufügen“)
+        const left = (view.querySelector('.dc-page')?.querySelector('.dc-title-in, .dc-adds, [contenteditable]') || a).getBoundingClientRect().left;
+        pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, Math.min(left, r.left))))}px`;
         pop.style.top = `${Math.round(r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8)}px`;
       };
       place();
@@ -2939,7 +2942,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         api.open = true; view.hidden = false; panel()?.classList.add('view-docs');
         if (ready || doc) draw();
       },
-      hide() { if (!api.open) return; setFocus(false); api.open = false; view.hidden = true; hideFmt(); if (!list.open) panel()?.classList.remove('view-docs'); drawPane(); },
+      hide() { if (!api.open) return; setFocus(false); setOpen = false; api.open = false; view.hidden = true; hideFmt(); if (!list.open) panel()?.classList.remove('view-docs'); drawPane(); },
       redraw() { if (tab) { doc = docOf(tab.dataset.doc); draw(); } },
       isShowing: (id) => api.open && doc?.id === id,
       typeIn, insertBlocks, setWriting, remember: (prev, next) => remember(prev, next),

@@ -242,34 +242,50 @@ MODELS.filter(() => false).forEach((m) => {
   modelList.append(item);
 });
 
-/* Modell + Aufwand in EINEM Menü (Wunsch 10.11., wie bei Claude): neben dem Plus steht das Modell (statt „Auto“).
-   Oben die Modelle (Automatisch = Haupt-KI aus Einstellungen → Agenten, wechselt bei Limit selbst; sonst fest ein Anbieter für alles),
-   darunter „Aufwand“ als gleitender Umschalter Auto · Niedrig · Mittel · Hoch · Max. Die Wahl geht über den Kopf X-App-Keys (AI_PICK) an den Server. */
-const AI_PICKS = [
-  { id: 'auto', label: 'Automatisch', sub: 'Haupt-KI, wechselt bei Limit selbst' },
-  { id: 'gemini', label: 'Gemini', sub: 'Google · schnell, mit Websuche' },
-  { id: 'deepseek', label: 'DeepSeek V4.1', sub: 'gründlich beim Denken und Rechnen' },
-  { id: 'kimi', label: 'Kimi K3.1 Pro', sub: 'lange Texte, sorgfältig' },
-  { id: 'minimax', label: 'MiniMax M3.1', sub: 'schnell, gut für Code' },
-];
+/* Modell + Aufwand in EINEM schlichten Menü (Wunsch 10.11., zweite Runde): oben nur die VERBUNDENEN Modelle – antippen macht es zur
+   Haupt-KI (wie Einstellungen → Agenten → Rolle); darunter „Aufwand“ mit Regler (Auto · Niedrig · Mittel · Hoch · Max). Stil wie die Menüs der App. */
+const AI_NAMES = { gemini: 'Gemini', deepseek: 'DeepSeek V4.1', kimi: 'Kimi K3.1 Pro', minimax: 'MiniMax M3.1' };
 const EFF_DE = { Auto: 'Auto', Low: 'Niedrig', Medium: 'Mittel', High: 'Hoch', Max: 'Max' };
-const aiPick = () => { try { const v = localStorage.getItem('ai.pick'); return AI_PICKS.some((p) => p.id === v) ? v : 'auto'; } catch { return 'auto'; } };
-const pickLabel = () => { const p = aiPick(); if (p !== 'auto') return AI_PICKS.find((x) => x.id === p).label; const m = window.AiMain?.() || 'gemini'; return AI_PICKS.find((x) => x.id === m)?.label || 'Gemini'; };
+const aiMain = () => window.AiMain?.() || 'gemini';
 popover.classList.add('mpx');
-popover.innerHTML = `<div class="mpx-h">Modell</div><div class="mpx-models" role="listbox" aria-label="Modell">${AI_PICKS.map((p) => `<button type="button" class="mpx-m" role="option" data-pick="${p.id}"><span class="mpx-mt"><b>${p.label}</b><em>${p.sub}</em></span><svg width="14" height="14" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}</div>
-  <div class="mpx-sep"></div><div class="mpx-h">Aufwand</div><div class="cs-pill mpx-eff" role="radiogroup" aria-label="Aufwand">${EFFORTS.map((e, i) => `<button type="button" role="radio" data-eff="${i}">${EFF_DE[e]}</button>`).join('')}</div>`;
+function drawModelMenu() {
+  const fams = window.AiConnected?.() || [];
+  const list = fams.length ? fams : [aiMain()];
+  const main = aiMain();
+  popover.innerHTML = `<div class="mpx-h">Modell</div>${list.map((f) => `<button type="button" class="mpx-m${f === main ? ' selected' : ''}" data-pick="${f}"><span>${AI_NAMES[f] || f}</span><svg width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}
+    <div class="mpx-sep"></div><div class="mpx-eh"><span>Aufwand</span><b>${EFF_DE[EFFORTS[state.effort]]}</b></div>
+    <div class="mpx-range" role="slider" aria-label="Aufwand" aria-valuemin="0" aria-valuemax="${EFFORTS.length - 1}" aria-valuenow="${state.effort}" tabindex="0"><i class="mpx-fill"></i>${EFFORTS.map((_, i) => `<span class="mpx-stop" style="left:${(i / (EFFORTS.length - 1)) * 100}%"></span>`).join('')}<b class="mpx-knob"></b></div>
+    <div class="mpx-ticks">${EFFORTS.map((e, i) => `<span style="left:${(i / (EFFORTS.length - 1)) * 100}%">${EFF_DE[e]}</span>`).join('')}</div>`;
+  placeKnob();
+}
+function placeKnob() {
+  const p = (state.effort / (EFFORTS.length - 1)) * 100;
+  const k = popover.querySelector('.mpx-knob'), f = popover.querySelector('.mpx-fill'); if (!k) return;
+  k.style.left = `${p}%`; f.style.width = `${p}%`;
+  popover.querySelector('.mpx-eh b').textContent = EFF_DE[EFFORTS[state.effort]];
+  popover.querySelectorAll('.mpx-ticks span').forEach((t, i) => t.classList.toggle('on', i === state.effort));
+}
+let effDrag = null;
+const effFrom = (e) => { const r = effDrag.getBoundingClientRect(); return Math.round(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * (EFFORTS.length - 1)); };
+popover.addEventListener('pointerdown', (e) => {
+  const r = e.target.closest('.mpx-range'); if (!r) return;
+  effDrag = r; r.setPointerCapture(e.pointerId); popover.classList.add('dragging');
+  const v = effFrom(e); if (v !== state.effort) { state.effort = v; placeKnob(); render(false); }
+});
+popover.addEventListener('pointermove', (e) => { if (!effDrag) return; const v = effFrom(e); if (v !== state.effort) { state.effort = v; placeKnob(); render(false); } });
+popover.addEventListener('pointerup', () => { effDrag = null; popover.classList.remove('dragging'); });
+popover.addEventListener('keydown', (e) => {
+  if (!e.target.closest('.mpx-range')) return;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); state.effort = Math.max(0, Math.min(EFFORTS.length - 1, state.effort + (e.key === 'ArrowRight' ? 1 : -1))); placeKnob(); render(false); }
+});
 popover.addEventListener('click', (e) => {
   const m = e.target.closest('[data-pick]');
-  if (m) { try { localStorage.setItem('ai.pick', m.dataset.pick); } catch {} render(); setTimeout(() => setPopover(false), 180); return; }
-  const f = e.target.closest('[data-eff]');
-  if (f) { state.effort = +f.dataset.eff; render(); }
+  if (m) { window.setAiMain?.(m.dataset.pick); popover.querySelectorAll('.mpx-m').forEach((b) => b.classList.toggle('selected', b === m)); render(false); setTimeout(() => setPopover(false), 160); }
 });
 
-function render() {
-  const pick = aiPick();
-  popover.querySelectorAll('[data-pick]').forEach((b) => { const on = b.dataset.pick === pick; b.classList.toggle('selected', on); b.setAttribute('aria-selected', String(on)); });
-  popover.querySelectorAll('[data-eff]').forEach((b, i) => { b.classList.toggle('on', i === state.effort); b.setAttribute('aria-checked', String(i === state.effort)); });
-  $('chipModel').textContent = pickLabel();
+function render(redraw = true) {
+  if (redraw) drawModelMenu();
+  $('chipModel').textContent = AI_NAMES[aiMain()] || 'Gemini';
   $('chipEffort').textContent = state.effort ? EFF_DE[EFFORTS[state.effort]] : '';
   chip.classList.toggle('has-effort', !!state.effort);
   chip.querySelectorAll('span').forEach((x) => { x.style.width = ''; });
@@ -314,6 +330,7 @@ function setPopover(open) {
 
 chip.addEventListener('click', (e) => {
   e.stopPropagation();
+  if (!popover.classList.contains('open')) drawModelMenu(); // verbundene Modelle können sich geändert haben
   setPopover(!popover.classList.contains('open'));
 });
 popover.addEventListener('click', (e) => e.stopPropagation());
@@ -643,6 +660,35 @@ function setMicUI(active) {
 }
 
 let dictFrom = null; // Feldinhalt vor dem Diktat → danach wird nur das Diktierte geglättet
+/* Glätten WÄHREND des Sprechens (Wunsch 10.11., wie bei Claude): der Text erscheint sofort; nach jeder kurzen Pause wird das bisher fest
+   Erkannte im Hintergrund geglättet (Satzzeichen, Groß-/Kleinschreibung, falsch erkannte Begriffe) und still ersetzt, während man weiterredet.
+   Nur wenn sich inzwischen nichts geändert hat (kein neues fertiges Stück, nichts getippt) – sonst beim nächsten Mal. */
+let finalsEnd = 0, lastInterim = '', liveT = 0, livePolishing = false, liveDone = '';
+const polishHints = () => [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
+  'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
+async function livePolish() {
+  if (!listening || livePolishing || dictFrom == null) return;
+  const raw = joinText(baseText, finalText);
+  if (!raw.startsWith(dictFrom)) return;
+  const seg = raw.slice(dictFrom.length);
+  if (seg.trim().split(/\s+/).length < 3 || seg === liveDone) return;
+  const snapBase = baseText, snapFinal = finalText, snapEnd = finalsEnd;
+  livePolishing = true;
+  let out = '';
+  try {
+    const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: seg.trim(), hints: polishHints(), context: dictFrom.slice(-300) || chatOf(activeTab())?.title || '' }) });
+    out = String((await r.json()).text || '').trim();
+  } catch {} finally { livePolishing = false; }
+  if (!listening || !out) return;
+  if (baseText !== snapBase || finalText !== snapFinal || input.value !== written) { clearTimeout(liveT); liveT = setTimeout(livePolish, 700); return; } // inzwischen weitergeredet → gleich nochmal
+  const lead = seg.match(/^\s*/)[0];
+  baseText = dictFrom + lead + out;
+  liveDone = baseText.slice(dictFrom.length);
+  finalText = ''; consumed = snapEnd;
+  written = input.value = joinText(baseText, lastInterim);
+  input.dispatchEvent(new Event('dictation'));
+  autoGrow();
+}
 function startListening() {
   if (!SpeechRecognition) {
     showHint('Spracheingabe: Chrome, Edge oder Safari nutzen');
@@ -651,7 +697,7 @@ function startListening() {
   listening = true;
   baseText = written = input.value;
   dictFrom = input.value;
-  finalText = ''; consumed = 0; seen = 0;
+  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = '';
 
   recognition = new SpeechRecognition();
   recognition.lang = SPEECH_LANG;
@@ -661,13 +707,15 @@ function startListening() {
   recognition.onresult = (e) => {
     if (!listening && !input.value) return; // schon abgeschickt → nichts mehr hineinschreiben
     // nur Ergebnisse ab „consumed“ – was davor lag, steckt schon in baseText (bzw. wurde vom Nutzer gelöscht)
-    let fin = '', interim = '';
+    let fin = '', interim = '', end = consumed;
     for (let i = consumed; i < e.results.length; i++) {
       const r = e.results[i];
-      if (r.isFinal) fin = joinText(fin, r[0].transcript);
+      if (r.isFinal) { fin = joinText(fin, r[0].transcript); end = i + 1; }
       else interim = joinText(interim, r[0].transcript);
     }
-    finalText = fin; seen = e.results.length;
+    const grew = fin !== finalText;
+    finalText = fin; seen = e.results.length; finalsEnd = end; lastInterim = interim;
+    if (grew) { clearTimeout(liveT); liveT = setTimeout(livePolish, 900); } // kurz Pause nach einem fertigen Stück → im Hintergrund glätten
     written = input.value = joinText(joinText(baseText, finalText), interim);
     input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint, sobald Text da ist (eigenes Ereignis – „input“ würde den Diktier-Stand zurücksetzen)
     autoGrow();
@@ -685,7 +733,7 @@ function startListening() {
     if (!listening) return;
     // Nicht von selbst aufhören: neuen Abschnitt starten
     baseText = joinText(baseText, finalText);
-    finalText = ''; consumed = 0; seen = 0; // neuer Abschnitt zählt von vorn
+    finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; // neuer Abschnitt zählt von vorn
     recognition.lang = SPEECH_LANG;
     try { recognition.start(); } catch {}
   };
@@ -704,8 +752,8 @@ function stopListening(hard = false) {
   }
   setMicUI(false);
   hideListening();
-  const from = dictFrom; dictFrom = null;
-  if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten
+  const from = dictFrom; dictFrom = null; clearTimeout(liveT);
+  if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten (nur der noch nicht geglättete Rest ändert sich spürbar)
 }
 /* Nach dem Diktat: Satzzeichen und Rechtschreibung NUR im diktierten Teil (beim normalen Tippen gibt es keine Korrektur).
    Hat man inzwischen weitergetippt, bleibt alles, wie es ist. */
@@ -717,8 +765,7 @@ async function polishDictation(from) {
   showListening('Satzzeichen setzen');
   try {
     // Wörterliste: Tags, Projekte, Titel von Dokumenten und Chats – so erkennt die Glättung Fachbegriffe und Namen (Wunsch 10.11.)
-    const hints = [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
-      'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
+    const hints = polishHints();
     const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim(), hints, context: (from || '').slice(-300) || chatOf(activeTab())?.title || '' }) });
     const { text } = await r.json();
     if (input.value !== now || !text) return; // weitergeschrieben/abgeschickt → nichts überschreiben

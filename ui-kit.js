@@ -48,69 +48,68 @@ const UIKit = (() => {
     paint(false);
     return el;
   }
-  /* Farbauswahl (Wunsch 09.11., nach Nutzer-Bild „Themes“): oben ein Farbfeld zum Ziehen (links→rechts Farbton, oben→unten Sättigung,
-     ein runder Griff in der gewählten Farbe), darunter die festen Farbkreise, unten der Regler „Helligkeit“ mit Prozent.
-     Überall gleich (Tags, Projekte, Icons, Termine …). Die Aufrufer müssen nichts wissen: Farbkreis antippen = Klick auf [attr]=hex;
-     Ziehen im Feld/Regler zeigt die Farbe live am Griff und gibt sie beim Loslassen über einen versteckten Knopf [attr]=hex ab. */
+  /* Farbauswahl (Wunsch 10.11., Menü wie im Nutzer-Bild „Themes“ – aber ohne Regenbogen und ohne Punkte im Feld):
+     oben eine ruhige Vorschau der gewählten Farbe (weicher Schein), darunter die Farbkreise (‹ › blättert, mehr Farben),
+     unten „Helligkeit“ mit Prozent und Regler – der Regler macht die gewählte Farbe heller/dunkler.
+     Überall gleich (Tags, Projekte, Icons, Termine …). Aufrufer brauchen nichts Neues: Farbkreis = Klick auf [attr]=hex,
+     Regler loslassen = Klick auf einen versteckten Knopf [attr]=hex. */
+  const MORE = ['#e0737a', '#d6bf5e', '#5db8b3', '#8f9bb3', '#c48bd6', '#7fa7e8', '#e09a6b', '#9fc27a'];
   const colorRow = (cur, attr) => {
     const start = cur || COLORS[6];
     const { h, s, v } = hexToHsv(start);
-    const custom = !!cur && !COLORS.includes(cur);
+    const all = [...COLORS, ...MORE.filter((c) => !COLORS.includes(c))];
     return `<div class="cp-panel" data-cp-h="${h.toFixed(1)}" data-cp-s="${s.toFixed(3)}" data-cp-v="${v.toFixed(3)}">`
-      + `<div class="cp-field" style="${fieldBg(v)}"><b class="cp-knob${cur ? '' : ' idle'}" style="left:${(h / 360) * 100}%;top:${sTop(s) * 100}%;background:${start}"></b></div>`
-      + `<div class="tk-colors">${COLORS.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" ${attr}="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div>`
+      + `<div class="cp-prev" style="--pc:${start}"></div>`
+      + `<div class="cp-row"><button type="button" class="cp-nav" data-cp-nav="-1" aria-label="Zurück">${fi('back', 11)}</button>`
+      + `<div class="tk-colors">${all.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" ${attr}="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}</div>`
+      + `<button type="button" class="cp-nav" data-cp-nav="1" aria-label="Weiter">${fi('forward', 11)}</button></div>`
       + `<div class="cp-light"><span>Helligkeit</span><em>${Math.round(v * 100)} %</em></div>`
-      + `<div class="cp-slider"><i style="width:${v * 100}%;background:${start}"></i><b style="left:${v * 100}%"></b></div>`
-      + `<button type="button" class="cp-commit" hidden ${attr}="${custom ? cur : ''}" tabindex="-1"></button></div><div class="tk-picker-host"></div>`;
+      + `<div class="cp-slider"><i style="width:${v * 100}%"></i><b style="left:${v * 100}%"></b></div>`
+      + `<button type="button" class="cp-commit" hidden ${attr}="" tabindex="-1"></button></div><div class="tk-picker-host"></div>`;
   };
-  // Feld: ruhige Farbtöne nebeneinander, nach oben hin grau ausgeblichen (in der gewählten Helligkeit). Sättigung 10–75 % – bleibt pastellig wie die Farbkreise
-  const S_MIN = 0.1, S_SPAN = 0.65;
-  const sTop = (s) => Math.min(1, Math.max(0, (s - S_MIN) / S_SPAN));
-  function fieldBg(v) {
-    const vv = Math.max(0.3, v) * 0.92;
-    const stops = [0, 40, 80, 130, 180, 220, 260, 300, 340, 360].map((hh) => hsvToHex({ h: hh, s: 0.5, v: vv * 0.9 })).join(', ');
-    const top = hsvToHex({ h: 0, s: 0, v: vv * 0.82 });
-    return `background: linear-gradient(to bottom, ${top} 0%, ${top}b3 30%, ${top}00 100%), linear-gradient(to right, ${stops});`;
-  }
-  // Ziehen im Feld / am Regler – ein Handler für alle Farbauswahlen (nur im Browser; Tests laden ui-kit.js ohne DOM)
+  // Regler (Helligkeit), Blättern und Vorschau – ein Handler für alle Farbauswahlen (nur im Browser; Tests laden ui-kit.js ohne DOM)
   if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') (() => {
     let drag = null;
     const hexOf = (p) => hsvToHex({ h: +p.dataset.cpH, s: +p.dataset.cpS, v: +p.dataset.cpV });
     const paint = (p) => {
       const hex = hexOf(p), v = +p.dataset.cpV;
-      const k = p.querySelector('.cp-knob');
-      k.classList.remove('idle');
-      k.style.left = `${(+p.dataset.cpH / 360) * 100}%`; k.style.top = `${sTop(+p.dataset.cpS) * 100}%`; k.style.background = hex;
-      p.querySelector('.cp-field').style.cssText = fieldBg(v);
-      p.querySelector('.cp-slider i').style.width = `${v * 100}%`; p.querySelector('.cp-slider i').style.background = hex; p.querySelector('.cp-slider b').style.left = `${v * 100}%`;
+      p.querySelector('.cp-prev').style.setProperty('--pc', hex);
+      p.querySelector('.cp-slider i').style.width = `${v * 100}%`; p.querySelector('.cp-slider b').style.left = `${v * 100}%`;
       p.querySelector('.cp-light em').textContent = `${Math.round(v * 100)} %`;
-      p.querySelectorAll('.tk-colors button').forEach((b) => b.classList.remove('on'));
     };
     const move = (e) => {
       if (!drag) return;
       const r = drag.area.getBoundingClientRect();
-      const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-      if (drag.kind === 'field') { drag.p.dataset.cpH = (x * 359.9).toFixed(1); drag.p.dataset.cpS = (S_MIN + y * S_SPAN).toFixed(3); }
-      else drag.p.dataset.cpV = Math.max(0.25, x).toFixed(3);
+      drag.p.dataset.cpV = Math.max(0.3, Math.min(1, (e.clientX - r.left) / r.width)).toFixed(3);
+      drag.p.querySelectorAll('.tk-colors button').forEach((b) => b.classList.remove('on'));
       paint(drag.p);
     };
     document.addEventListener('pointerdown', (e) => {
-      const area = e.target.closest?.('.cp-field, .cp-slider'); if (!area) return;
+      const area = e.target.closest?.('.cp-slider'); if (!area) return;
       e.preventDefault(); e.stopPropagation();
-      drag = { area, p: area.closest('.cp-panel'), kind: area.classList.contains('cp-field') ? 'field' : 'light' };
-      if (drag.kind === 'light' && drag.p.querySelector('.cp-knob.idle')) drag.p.dataset.cpS = Math.max(+drag.p.dataset.cpS, 0.45).toFixed(3);
+      drag = { area, p: area.closest('.cp-panel') };
       move(e);
     }, true);
     document.addEventListener('pointermove', move, true);
     const up = () => {
       if (!drag) return;
       const p = drag.p; drag = null;
-      const btn = p.querySelector('.cp-commit'), attr = [...btn.attributes].find((a) => a.name.startsWith('data-') && a.name !== 'data-cp')?.name;
+      const btn = p.querySelector('.cp-commit'), attr = [...btn.attributes].find((a) => a.name.startsWith('data-'))?.name;
       if (attr) { btn.setAttribute(attr, hexOf(p)); btn.click(); }
     };
     document.addEventListener('pointerup', up, true);
     document.addEventListener('pointercancel', up, true);
-    // ein Klick direkt nach dem Ziehen soll nichts anderes auslösen (z. B. Menü schließen)
+    // Farbkreis angetippt → Vorschau und Regler zeigen diese Farbe (die Aufrufer übernehmen sie selbst)
+    document.addEventListener('click', (e) => {
+      const nav = e.target.closest?.('.cp-nav');
+      if (nav) { e.stopPropagation(); const row = nav.parentElement.querySelector('.tk-colors'); row.scrollBy({ left: +nav.dataset.cpNav * (row.clientWidth - 30), behavior: 'smooth' }); return; }
+      const dot = e.target.closest?.('.cp-panel .tk-colors button'); if (!dot) return;
+      const p = dot.closest('.cp-panel'), attr = [...dot.attributes].find((a) => a.name.startsWith('data-'))?.name; const hex = attr && dot.getAttribute(attr);
+      if (!/^#[0-9a-f]{6}$/i.test(hex || '')) return;
+      const hsv = hexToHsv(hex); p.dataset.cpH = hsv.h.toFixed(1); p.dataset.cpS = hsv.s.toFixed(3); p.dataset.cpV = hsv.v.toFixed(3);
+      p.querySelectorAll('.tk-colors button').forEach((b) => b.classList.toggle('on', b === dot));
+      paint(p);
+    }, true);
   })();
 
   /* ---------- Kalender zum Anklicken ---------- */

@@ -342,14 +342,14 @@ const DocIcons = (() => {
   const svg = (name, size = 24, cls = '', line = false) => `<svg class="di${cls ? ` ${cls}` : ''}" width="${size}" height="${size}" aria-hidden="true"><use href="#d-${name}"/></svg>`;
   // Icon eines Dokuments/Projekts ({ name, c }) als <svg> in seiner Farbe – immer gefüllt (Linien-Fassung wird nicht mehr angeboten)
   const of = (ic, size = 16, extra = '') => (ic && NAMES.includes(ic.name) ? `<svg width="${size}" height="${size}" style="color:${ic.c || 'currentColor'};${extra}" aria-hidden="true"><use href="#d-${ic.name}"/></svg>` : '');
-  /* Einheitliche Icon-Auswahl (Wunsch 09.11.): überall, wo man ein Icon wählt (Dokument, Projekt, Termin, Block …), dieselben 48 Icons
+  /* Einheitliche Icon-Auswahl (Wunsch 09./10.11.): überall, wo man ein Icon wählt (Dokument, Projekt, Block …), dieselben 72 Icons (ohne Sterne)
      im runden Linien-Stil – nach Themen: Lernen · Fächer · Welt & Medien · Zahlen & Ziele · Symbole · Alltag. Ältere Icons bleiben gültig. */
-  const BASE = ['book', 'notebook', 'cap', 'pencil', 'bookmark', 'list', 'folder', 'calendar',
-    'sigma', 'pi', 'calc', 'atom', 'flask', 'dna', 'sprout', 'clock',
-    'globe', 'map', 'landmark', 'language', 'music', 'palette', 'code', 'laptop',
-    'chart', 'trend', 'pie', 'coins', 'scale', 'bulb', 'target', 'trophy',
-    'star', 'heart', 'sparkle', 'flag', 'bolt', 'flame', 'leaf', 'sun',
-    'home', 'chat', 'users', 'briefcase', 'rocket', 'puzzle', 'gamepad', 'dumbbell'].filter((n) => I[n]);
+  const BASE = ['book', 'notebook', 'cap', 'pencil', 'eraser', 'ruler', 'paperclip', 'bookmark', 'list', 'folder', 'calendar', 'clock',
+    'sigma', 'pi', 'calc', 'atom', 'flask', 'dna', 'sprout', 'plant', 'chart', 'trend', 'pie', 'coins',
+    'globe', 'map', 'pin', 'landmark', 'language', 'scale', 'music', 'headphones', 'mic', 'palette', 'camera', 'image',
+    'video', 'code', 'laptop', 'layers', 'cube', 'bulb', 'target', 'trophy', 'flag', 'bolt', 'flame', 'heart',
+    'leaf', 'sun', 'moon', 'cloud', 'drop', 'umbrella', 'mountain', 'paw', 'home', 'chat', 'mail', 'users',
+    'briefcase', 'rocket', 'puzzle', 'gamepad', 'dumbbell', 'coffee', 'gift', 'key', 'lock', 'bell', 'shield', 'eye'].filter((n) => I[n]);
   // Auswahl-Liste: die 48 Grund-Icons; ein schon gesetztes älteres Icon steht vorne, damit es sichtbar bleibt
   const pickList = (cur) => (cur && NAMES.includes(cur) && !BASE.includes(cur) ? [cur, ...BASE] : BASE);
   return { names: NAMES, base: BASE, pickList, svg, of, has: (n) => NAMES.includes(n) };

@@ -40,8 +40,6 @@
   }
   const keyHeader = () => {
     const list = Object.entries(deviceKeys).filter(([, v]) => v);
-    // Modell-Auswahl im Eingabefeld (app.js): fester Anbieter für diese Anfragen statt der Haupt-KI
-    try { const pk = localStorage.getItem('ai.pick'); if (pk && pk !== 'auto') list.push(['AI_PICK', pk]); } catch {}
     return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
   };
   const nativeFetch = window.fetch.bind(window);
@@ -130,7 +128,19 @@
      Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
   const FAMS = ['gemini', 'minimax', 'deepseek', 'kimi'];
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
-  window.AiMain = () => mainFam(); // Name im Modell-Knopf, wenn „Automatisch“ gewählt ist
+  window.AiMain = () => mainFam(); // Name im Modell-Knopf
+  /* Modell-Auswahl im Eingabefeld (Wunsch 10.11.): nur verbundene Anbieter (eigener Schlüssel oder Server-Schlüssel),
+     antippen macht ihn zur Haupt-KI – genau wie Einstellungen → Agenten → Rolle „Haupt-KI“ */
+  const FAM_KEY = { gemini: 'GEMINI_API_KEY', minimax: 'MINIMAX_API_KEY', deepseek: 'DEEPSEEK_API_KEY', kimi: 'KIMI_API_KEY' };
+  window.AiConnected = () => FAMS.filter((f) => keyList(FAM_KEY[f]).length || fileKeys[FAM_KEY[f]]);
+  window.setAiMain = (f) => {
+    if (!FAMS.includes(f)) return;
+    if (f === 'gemini') delete deviceKeys.AI_ORDER; else deviceKeys.AI_ORDER = f;
+    const off = new Set(offFams()); off.delete(f); if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF;
+    delete deviceKeys.CODE_ORDER;
+    write(KEYS_KEY, deviceKeys);
+    if (app.classList.contains('settings-open')) drawView();
+  };
   const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
   function rolesHtml(p, has) {
     if (!p.fam) return '';
@@ -345,7 +355,7 @@
       if (v === 'main') { if (f === 'gemini') delete deviceKeys.AI_ORDER; else deviceKeys.AI_ORDER = f; off.delete(f); delete deviceKeys.CODE_ORDER; }
       else if (v === 'off') off.add(f); else off.delete(f);
       if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF;
-      write(KEYS_KEY, deviceKeys); drawView(); return;
+      write(KEYS_KEY, deviceKeys); drawView(); window.renderModelChip?.(); return;
     }
     if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');

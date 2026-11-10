@@ -11641,26 +11641,27 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 /* =====================================================================
    10.11. (nachts) – Überarbeitung nach zwei Nutzer-Listen
    ===================================================================== */
-/* Farbauswahl überall gleich (Feld zum Ziehen · Farbkreise · Helligkeit), nach Nutzer-Bild „Themes“ */
-.cp-panel { display: flex; flex-direction: column; gap: 10px; padding: 8px; }
-.cp-field { position: relative; height: 112px; border-radius: 12px; cursor: crosshair; touch-action: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
-.cp-knob { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; box-shadow: 0 0 0 3px #fff; pointer-events: none; transition: transform 160ms var(--spring); }
-.cp-knob.idle { opacity: 0; transform: scale(0.6); }
-.cp-field:active .cp-knob { transform: scale(1.12); }
-.cp-panel .tk-colors { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 6px; padding: 0 2px; }
-.cp-panel .tk-colors button { flex: none; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 50%; background: var(--c); cursor: pointer; transition: transform 160ms var(--spring); }
+/* Farbauswahl überall gleich (Menü wie Nutzer-Bild „Themes“): Vorschau · Farbkreise mit ‹ › · Helligkeit-Regler */
+.cp-panel { display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; width: 100%; padding: 8px; }
+.cp-prev { height: 84px; border-radius: 12px; background: radial-gradient(120% 90% at 50% 40%, color-mix(in srgb, var(--pc) 70%, transparent) 0%, color-mix(in srgb, var(--pc) 24%, transparent) 46%, transparent 78%), #161616; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); transition: background 240ms ease; }
+.cp-row { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.cp-nav { flex: none; display: grid; place-items: center; width: 20px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; }
+.cp-nav:hover { color: var(--text); background: #212121; }
+.cp-panel .tk-colors { display: flex !important; flex: 1; flex-wrap: nowrap !important; gap: 8px !important; min-width: 0; padding: 4px 3px !important; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.cp-panel .tk-colors::-webkit-scrollbar { display: none; }
+.cp-panel .tk-colors button { flex: none; width: 22px !important; height: 22px !important; padding: 0; border: 0; border-radius: 50%; background: var(--c); cursor: pointer; scroll-snap-align: start; transition: transform 160ms var(--spring); }
 .cp-panel .tk-colors button:hover { transform: scale(1.1); }
 .cp-panel .tk-colors button.on { box-shadow: 0 0 0 2px var(--menu-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.9); }
 .cp-light { display: flex; align-items: baseline; justify-content: space-between; padding: 0 2px; color: var(--text-2); font-size: 12.5px; font-weight: 500; }
 .cp-light em { color: var(--text-4); font-style: normal; font-size: 12px; font-variant-numeric: tabular-nums; }
 .cp-slider { position: relative; height: 18px; margin: -4px 9px 2px; cursor: pointer; touch-action: none; }
 .cp-slider::before { content: ""; position: absolute; left: -9px; right: -9px; top: 7px; height: 4px; border-radius: 99px; background: #262626; }
-.cp-slider i { position: absolute; left: -9px; top: 7px; height: 4px; border-radius: 99px; background: var(--text-3); }
+.cp-slider i { position: absolute; left: -9px; top: 7px; height: 4px; border-radius: 99px; background: var(--accent); }
 .cp-slider b { position: absolute; top: 0; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #141414; box-shadow: inset 0 0 0 2.5px var(--text-2); transition: transform 160ms var(--spring); }
 .cp-slider:active b { transform: scale(1.12); }
 .cp-commit { display: none; }
-.tk-menu .cp-panel, .tk-box .cp-panel { width: 220px; box-sizing: border-box; }
-.tk-sheet-rows .cp-panel { width: auto; max-width: 300px; padding: 4px 0 6px; }
+.tk-menu .cp-panel, .tk-box .cp-panel { width: 228px; }
+.tk-sheet-rows .cp-panel { width: auto; max-width: 320px; padding: 4px 0 6px; }
 /* Scrollleisten überall schmal und ohne Pfeile (Wunsch 10.11.: kein dicker Balken mit Hoch/Runter rechts) */
 *::-webkit-scrollbar { width: 10px; height: 10px; background: transparent; }
 *::-webkit-scrollbar-track { background: transparent; }
@@ -11695,7 +11696,6 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .tagm-pop:not(.open) .tk-menu { pointer-events: none; }
 .tagm .tk-tag-list { display: block; max-height: min(60vh, 420px); overflow-y: auto; }
 .tagm .tk-mi.tag > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cp-panel .tk-colors button { width: 20px; height: 20px; }
 .lb2-pin.on { background: #212121 !important; }
 /* Dokument-Infos: Menüs (Priorität …) dürfen über die Karte hinausragen; Karte im Fenster-Ton */
 .dc-ptable { overflow: visible; background: var(--win-bg); }
@@ -11792,40 +11792,36 @@ html.vt-on :is(.dc-view, .tk-view, .cal-view, .dc-list .cl-wrap, .hm-next) { ani
 .apv-in em { position: absolute; right: 2px; top: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 .st-ap-modes .ap-mode.on .ap-prev, .ap-mode.on .ap-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07), 0 0 0 2px var(--main-bg), 0 0 0 3.5px rgba(255, 255, 255, 0.85) !important; }
 .ap-mode:not(.on):hover .ap-prev { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); }
-/* Workspace-Menü: Icons gleich groß wie in der Sidebar, weicheres Auf-/Zuklappen */
-.ws-menu .ws-mi { gap: 8px; }
-.ws-menu .ws-mi-ic { display: grid; place-items: center; width: 24px; height: 24px; color: var(--text-3); }
-.ws-menu .ws-mi-ic svg { width: 15px !important; height: 15px !important; margin: 0 !important; }
-.ws-menu .ws-mi:hover .ws-mi-ic { color: var(--text); }
-.ws-menu { transform-origin: 16px 0; transform: translateY(-4px) scale(0.97); transition: opacity 140ms ease, transform 260ms cubic-bezier(0.32, 0.72, 0, 1), visibility 0s linear 260ms; }
-.ws-menu.open { transform: none; transition: opacity 180ms ease, transform 380ms var(--spring), visibility 0s; }
-.ws-menu.open .ws-row, .ws-menu.open .ws-mi, .ws-menu.open .ws-sep { animation: ws-row-in 360ms var(--spring) both; animation-delay: calc(var(--i, 0) * 28ms + 20ms); }
-@keyframes ws-row-in { from { opacity: 0; transform: translateY(-4px); } }
-.sb-ws-btn svg:last-child, .sb-ws svg.sb-ws-chev { transition: transform 300ms var(--spring); }
 /* Einstellungen: ruhigere Abstände zwischen den Abschnitten */
 .st-page h2 { margin: 30px 2px 10px; }
 .st-page > h2:first-child, .st-page > :first-child h2:first-child { margin-top: 0; }
 .st-page .st-card + .st-ws-note, .st-page .st-card + p { margin: 8px 4px 0; color: var(--text-4); font-size: 12px; line-height: 1.5; }
 .st-row .st-name { color: var(--text-2); font-weight: 500; }
-/* Modell + Aufwand im Eingabefeld (wie bei Claude): Modelle mit Untertitel, darunter Aufwand als gleitender Umschalter */
-.model-popover.mpx { width: 292px !important; min-width: 0; padding: 6px !important; border-radius: 14px; transform-origin: bottom left; transform: translateY(6px) scale(0.97); transition: opacity 160ms ease, transform 340ms var(--spring); }
+/* Modell + Aufwand im Eingabefeld (2. Runde, 10.11.): schlichtes Menü wie die anderen der App – Modelle als Zeilen mit Haken,
+   darunter „Aufwand“ mit Wert rechts und Regler (5 Stufen, rastet ein) */
+.model-popover.mpx { width: 232px !important; min-width: 0; padding: 4px !important; border: 1px solid var(--menu-border); border-radius: 12px; background: var(--menu-bg); transform-origin: bottom left; transform: translateY(6px) scale(0.97); transition: opacity 160ms ease, transform 300ms var(--spring); }
 .model-popover.mpx.below { transform-origin: top left; transform: translateY(-6px) scale(0.97); }
 .model-popover.mpx.open { transform: none; }
-.mpx-h { padding: 6px 8px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
-.mpx-models { display: flex; flex-direction: column; gap: 1px; }
-.mpx-m { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 6px 10px; border: 0; border-radius: 9px; background: none; color: var(--text-2); font: inherit; text-align: left; cursor: pointer; transition: background-color 90ms ease; }
-.mpx-m:hover { background: var(--menu-hover); }
-.mpx-mt { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 1px; }
-.mpx-mt b { color: var(--text-2); font-size: 13px; font-weight: 500; }
-.mpx-mt em { overflow: hidden; color: var(--text-4); font-size: 11.5px; font-style: normal; white-space: nowrap; text-overflow: ellipsis; }
-.mpx-m.selected .mpx-mt b { color: var(--text); }
+.mpx-h { padding: 7px 9px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+.mpx-m { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 9px; border: 0; border-radius: 7px; background: none; color: var(--text-2); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; transition: background-color 90ms ease, color 90ms ease; }
+.mpx-m span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mpx-m:hover { background: var(--menu-hover); color: var(--text); }
 .mpx-m > svg { flex: none; color: var(--text); opacity: 0; transform: scale(0.6); transition: opacity 140ms ease, transform 260ms var(--spring); }
+.mpx-m.selected { color: var(--text); }
 .mpx-m.selected > svg { opacity: 1; transform: none; }
-.mpx-sep { height: 1px; margin: 6px 6px 2px; background: #242424; }
-.mpx-eff { position: relative; display: flex; gap: 0; margin: 2px 4px 6px; padding: 3px; height: 36px; box-sizing: border-box; border: 1px solid var(--line); border-radius: 12px; background: var(--main-bg); }
-.mpx-eff > button { position: relative; z-index: 1; flex: 1; height: 28px; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-4); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; transition: color 160ms ease; }
-.mpx-eff > button.on { color: var(--text); }
-.mpx-eff > .cs-thumb { transition: transform 360ms var(--spring), width 360ms var(--spring), opacity 160ms ease; }
+.mpx-sep { height: 1px; margin: 4px 5px; background: #242424; }
+.mpx-eh { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 9px 2px; color: var(--text-2); font-size: 12.5px; }
+.mpx-eh b { color: var(--text); font-weight: 500; }
+.mpx-range { position: relative; height: 26px; margin: 2px 16px 0; cursor: pointer; touch-action: none; outline: none; }
+.mpx-range::before { content: ""; position: absolute; left: -7px; right: -7px; top: 11px; height: 4px; border-radius: 99px; background: #262626; }
+.mpx-fill { position: absolute; left: -7px; top: 11px; height: 4px; border-radius: 99px; background: var(--text-3); transition: width 260ms var(--spring); }
+.mpx-stop { position: absolute; top: 11px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #3a3a3a; }
+.mpx-knob { position: absolute; top: 4px; width: 18px; height: 18px; margin-left: -9px; border-radius: 50%; background: #e6e6e6; transition: left 260ms var(--spring), transform 160ms var(--spring); }
+.mpx.dragging .mpx-knob, .mpx.dragging .mpx-fill { transition: none; }
+.mpx-range:active .mpx-knob { transform: scale(1.1); }
+.mpx-ticks { position: relative; height: 15px; margin: 1px 16px 7px; }
+.mpx-ticks span { position: absolute; top: 0; color: var(--text-4); font-size: 10.5px; white-space: nowrap; transform: translateX(-50%); transition: color 160ms ease; }
+.mpx-ticks span.on { color: var(--text-2); }
 /* Knopf neben dem Plus: Modellname, Aufwand leise dahinter */
 .model-chip #chipModel { display: inline !important; }
 .model-chip #chipEffort:empty { display: none; }
@@ -11902,3 +11898,14 @@ html.va-on .dh-title { opacity: 0; transform: translateY(-4px); transition: opac
 .ce-card .cp-panel .tk-colors button.on { box-shadow: 0 0 0 2px var(--ce-box), 0 0 0 3.5px rgba(255, 255, 255, 0.9); }
 .ce-card .cp-slider b { background: var(--ce-hi); }
 .ce-card .cp-slider::before { background: var(--ce-hi); }
+.lb2-page.lb2-chat { width: 18px !important; }
+/* Dokument-Einstellungen im rechten Seitenfenster (wie der KI-Chat): feste Breite, Hintergrund wie die Einstellungen */
+.app.rpane-set .rpane { width: 360px !important; }
+.app.rpane-set .rpane-grip { display: none; }
+.dcs-pane { display: flex; flex-direction: column; height: 100%; background: var(--main-bg); animation: dcs-pane-in 320ms var(--spring) both; }
+@keyframes dcs-pane-in { from { opacity: 0; transform: translateX(8px); } }
+.dcs-pane .dcs-head { flex: none; }
+.dcs-pane .dcs-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 24px; }
+.dc-setbtn.on { background: var(--pop-bg); color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .dcs-pane { animation: none; } }
+.dcs-acc-row .dc-acc { gap: 6px; } .dcs-acc-row .dc-dot { width: 20px; height: 20px; }
