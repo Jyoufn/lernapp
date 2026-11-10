@@ -1188,11 +1188,18 @@ test('DeepSeek & Co. (10.11.): Nachdenken ohne öffnendes <think> landet nicht i
   const P = require('../lib/providers');
   const chunks = ['Okay, the user wants ', 'a short answer about motors.</think>', 'Ein Elektromotor ', 'wandelt Strom in Bewegung um.'].map((c) => ({ choices: [{ delta: { content: c } }] }));
   const prev = global.fetch;
-  global.fetch = async () => M.sseResponse(chunks);
+  let sent = null;
+  global.fetch = async (url, o) => { sent = JSON.parse(o.body); return M.sseResponse(chunks); };
   try {
     let text = '', thought = '';
     await P.openaiChat({ provider: 'deepseek', key: 'k', model: 'deepseek-ai/deepseek-v4.1-flash', system: 's', messages: [{ role: 'user', text: 'x' }], stream: true, think: true, onText: (t) => { text += t; }, onThought: (t) => { thought += t; } });
     assert.equal(text, 'Ein Elektromotor wandelt Strom in Bewegung um.');
+    // DeepSeek: Denken ausdrücklich an, Stufe in chat_template_kwargs (kein „medium“ – das gibt es bei V4.1 nicht)
+    assert.deepEqual(sent.chat_template_kwargs, { thinking: true, reasoning_effort: 'xhigh' });
+    assert.equal(sent.reasoning_effort, undefined);
+    assert.deepEqual(P.thinkExtra('deepseek', 'auto'), { chat_template_kwargs: { thinking: true, reasoning_effort: 'high' } });
+    assert.deepEqual(P.thinkExtra('deepseek', 'max'), { chat_template_kwargs: { thinking: true, reasoning_effort: 'max' } });
+    assert.deepEqual(P.thinkExtra('deepseek', false), { chat_template_kwargs: { thinking: false } });
     assert.match(thought, /the user wants/);
     // ohne </think>: kurze Antwort kommt ganz normal als Text
     global.fetch = async () => M.sseResponse([{ choices: [{ delta: { content: 'Hallo!' } }] }]);

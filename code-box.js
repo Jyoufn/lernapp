@@ -472,6 +472,45 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     return chip;
   }
 
+  /* ---------- ```termin / ```aufgabe: die KI trägt einen Kalendertermin bzw. eine Aufgabe ein (Wunsch 10.11.) ----------
+     Gleiches Kärtchen wie bei ```einstellung: Bestätigung mit „Rückgängig“ und einem Knopf zum Kalender bzw. zu den Aufgaben.
+     Eingetragen wird nur einmal – beim Schreiben der Antwort (live); im Verlauf steht nur noch der Hinweis. */
+  const PRIO_DE = { keine: 'none', niedrig: 'low', mittel: 'medium', hoch: 'high', dringend: 'urgent' };
+  function planChip(lang, raw, live) {
+    let o = null;
+    try { o = JSON.parse(String(raw).replace(/[„“]/g, '"')); } catch {}
+    if (!o || typeof o !== 'object') return null;
+    const isEvent = lang === 'termin';
+    const title = String(o.titel || o.title || '').replace(/\s+/g, ' ').trim().slice(0, 80);
+    if (!title) return null;
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(o.datum || o.date || '')) ? String(o.datum || o.date) : '';
+    const time = /^\d{1,2}:\d{2}$/.test(String(o.zeit || o.time || '')) ? String(o.zeit || o.time).padStart(5, '0') : '';
+    const when = date ? new Date(`${date}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+    const sub = [title, when, isEvent && time ? `${time} Uhr` : ''].filter(Boolean).join(' · ');
+    const chip = document.createElement('div');
+    chip.className = 'cbx-set';
+    if (!live) {
+      chip.innerHTML = `<span class="cbx-set-ic">${fi(isEvent ? 'calendar' : 'tasks', 13)}</span><span class="cbx-set-t">${isEvent ? 'Termin eingetragen' : 'Aufgabe angelegt'}<span class="cbx-set-s">${esc(sub)}</span></span>`;
+      return chip;
+    }
+    let made = null;
+    try {
+      made = isEvent ? window.Calendar?.add({ title, date, time, description: String(o.beschreibung || o.description || '') })
+        : window.Tasks?.add({ title, notes: String(o.notiz || o.notes || ''), prio: PRIO_DE[String(o.prio || '').toLowerCase()] || o.prio, ...(date ? { date } : {}) });
+    } catch {}
+    if (!made) { chip.innerHTML = `<span class="cbx-set-ic">${fi('alert', 13)}</span><span class="cbx-set-t">${isEvent ? 'Termin' : 'Aufgabe'} konnte nicht eingetragen werden<span class="cbx-set-s">${esc(sub)}</span></span>`; return chip; }
+    chip.innerHTML = `<span class="cbx-set-ic ok">${fi('check', 12)}</span><span class="cbx-set-t">${isEvent ? 'Termin eingetragen' : 'Aufgabe angelegt'}<span class="cbx-set-s">${esc(sub)}</span></span><span class="cbx-grow"></span>`
+      + `<button type="button" class="cbx-set-b" data-undo>Rückgängig</button><button type="button" class="cbx-set-b" data-open>${isEvent ? 'Kalender' : 'Aufgaben'}</button>`;
+    chip.addEventListener('click', (e) => {
+      if (e.target.closest('[data-undo]')) {
+        if (isEvent) window.Calendar?.remove({ title, date: made.date }); else window.Tasks?.remove(made.title);
+        chip.querySelector('.cbx-set-t').firstChild.textContent = 'Rückgängig gemacht'; e.target.closest('[data-undo]').remove();
+      }
+      if (e.target.closest('[data-open]')) window.openViewTab?.(isEvent ? 'calendar' : 'tasks');
+    });
+    return chip;
+  }
+
   /* ---------- reparierte Mini-App im Chat-Verlauf ersetzen (dieselbe Nachricht, keine neue) ---------- */
   function replaceInHistory(target, old, nu) {
     try {
@@ -489,19 +528,26 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
   const seen = new Set(read(SEEN_KEY, [])); // von der KI schon automatisch gespeichert (nach dem Löschen nicht wieder anlegen)
   function render(target, text, opts = {}) {
     if (opts.live) target._cbxLive = true;
-    const pres = target.querySelectorAll('pre:has(code.language-widget), pre:has(code.language-hintergrund), pre:has(code.language-einstellung)');
+    const pres = target.querySelectorAll('pre:has(code.language-widget), pre:has(code.language-hintergrund), pre:has(code.language-einstellung), pre:has(code.language-termin), pre:has(code.language-aufgabe)');
     if (!pres.length) return;
     const closed = (lang) => (String(text).match(new RegExp('```' + lang + '[^\\n]*\\n[\\s\\S]*?\\n```', 'g')) || []).length;
     const keep = (target._cbxKeep ||= new Map());
-    const counts = { widget: 0, hintergrund: 0, einstellung: 0 };
-    const done = { widget: closed('widget'), hintergrund: closed('hintergrund'), einstellung: closed('einstellung') };
+    const counts = { widget: 0, hintergrund: 0, einstellung: 0, termin: 0, aufgabe: 0 };
+    const done = { widget: closed('widget'), hintergrund: closed('hintergrund'), einstellung: closed('einstellung'), termin: closed('termin'), aufgabe: closed('aufgabe') };
     let lastBg = null;
     pres.forEach((pre) => {
       const code = pre.querySelector('code'), raw = code.textContent;
-      const lang = code.classList.contains('language-widget') ? 'widget' : code.classList.contains('language-hintergrund') ? 'hintergrund' : 'einstellung';
+      const lang = ['widget', 'hintergrund', 'termin', 'aufgabe'].find((l) => code.classList.contains(`language-${l}`)) || 'einstellung';
       const i = counts[lang]++;
       const finished = !opts.live || i < done[lang];
       const key = `${lang}|${i}`;
+      if (lang === 'termin' || lang === 'aufgabe') {
+        if (!finished) { pre.remove(); return; }
+        const k = `${key}|${raw}`;
+        if (!keep.has(k)) { const c = planChip(lang, raw, !!target._cbxLive); if (!c) { pre.remove(); return; } keep.set(k, c); }
+        pre.replaceWith(keep.get(k));
+        return;
+      }
       if (lang === 'einstellung') {
         if (!finished) { pre.remove(); return; }
         const k = `${key}|${raw}`;

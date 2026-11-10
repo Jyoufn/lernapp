@@ -218,7 +218,7 @@ const Tasks = (() => {
   }
   // Wiederholung als Text: „Täglich um 07:00“, „Werktags um 07:00“, „Jeden Montag um 08:30“
   // Aufwand für Agenten-Aufgaben (wie im Chat); Standard: Hoch
-  const EFFORTS_T = [['auto', 'Auto', 'Agent entscheidet'], ['low', 'Niedrig', 'schnell, kurz'], ['medium', 'Mittel', ''], ['high', 'Hoch', 'gründlich'], ['max', 'Max', 'am gründlichsten, dauert länger']];
+  const EFFORTS_T = [['auto', 'Auto'], ['low', 'Niedrig'], ['medium', 'Mittel'], ['high', 'Hoch'], ['max', 'Max']];
   const repText = (r) => (r.every === 'daily' ? `Täglich um ${r.time}` : r.every === 'weekdays' ? `Werktags um ${r.time}` : `Jeden ${WD_LONG[r.day ?? 1]} um ${r.time}`);
   const repShort = (r) => (r.every === 'daily' ? `Täglich ${r.time}` : r.every === 'weekdays' ? `Mo–Fr ${r.time}` : `${WD_LONG[r.day ?? 1].slice(0, 2)} ${r.time}`);
   // Dokumente als Quelle: Titel + Text (je höchstens 12 000 Zeichen) gehen mit dem Auftrag an den Agenten
@@ -433,8 +433,8 @@ const Tasks = (() => {
         ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}"><span class="tk-mi-ic">${prioIcon(p.id, 15)}</span><span>${p.id === 'none' ? 'Keine Priorität' : p.name}</span>${fi('check', 12)}</button>`).join(''))}
         ${pill('tags', `<div class="tk-tag-row"><input class="tk-tag-in" placeholder="Tag suchen oder neu" maxlength="24" aria-label="Tag suchen oder anlegen" /></div><div class="tk-tag-list"></div><div class="tk-side"></div>`, 'tags')}
         ${pill('comments', '<div class="tk-cm-list"></div><div class="tk-cm-row"><input class="tk-cm-in" /></div>', 'comments')}
-        ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`) : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
-        ${listMode && agents && !locked ? pill('effort', EFFORTS_T.map(([id, n, d]) => `<button type="button" class="tk-mi" data-teffort="${id}"><span class="tk-mi-ic">${fi('sliders', 12)}</span><span>${n}<i class="tk-mi-sub">${d}</i></span>${fi('check', 12)}</button>`).join('')) : ''}
+        ${agents && !locked ? pill('agent', `<button type="button" class="tk-mi" data-tagent=""><span class="tk-mi-ic">${fi('user', 13)}</span><span>Ohne Agent</span>${fi('check', 12)}</button>${Object.entries(AGENT_NAMES).map(([aid, n]) => `<button type="button" class="tk-mi" data-tagent="${aid}"><span class="tk-mi-ic">${dog(aid, 20)}</span><span>${n}</span>${fi('check', 12)}</button>`).join('')}`, 'agents') : agents && t0?.agent ? `<div class="tk-pop"><span class="tk-pill static"><span class="tk-si"><span class="tk-dog">${dog(t0.agent, 20)}</span></span><span class="tk-rv">${AGENT_NAMES[t0.agent] || ''} · ${t0.run?.state === 'done' ? 'fertig' : t0.run?.state === 'failed' ? 'hat nicht geklappt' : 'arbeitet …'}</span></span></div>` : ''}
+        ${listMode && agents && !locked ? pill('effort', EFFORTS_T.map(([id, n]) => `<button type="button" class="tk-mi" data-teffort="${id}"><span>${n}</span>${fi('check', 12)}</button>`).join(''), 'plain') : ''}
         ${listMode && agents && !locked ? pill('src', '<div class="tk-src"></div>', 'srcs') : ''}
         ${listMode && agents && !locked ? `<div class="tk-pop tk-swpop" data-k="auto"><button type="button" class="tk-pill" data-autosw></button><button type="button" class="ce-switch tk-rowsw" data-autosw role="switch" aria-label="Automatisierung"><i></i></button></div>` : ''}
         ${listMode && agents && !locked ? pill('limit', [0, 1, 3, 5, 10, 20].map((n) => `<button type="button" class="tk-mi" data-limit="${n}"><span class="tk-mi-ic">${n ? `<b class="tk-lim-n">${n}</b>` : fi('refresh', 12)}</span><span>${n ? `${n}-mal` : 'Kein Limit'}</span>${fi('check', 12)}</button>`).join('')) : ''}
@@ -475,6 +475,8 @@ const Tasks = (() => {
     if (!listMode) notes.addEventListener('input', grow);
 
     let swapping = false; // läuft gerade der Wechsel Datum ↔ Zeitplan
+    let drawn = false; // erstes Zeichnen: Zeilen stehen sofort; danach gleiten sie weich herein/heraus
+    const rowVis = (pop, show, delay = 0) => { if (!pop) return; if (!drawn) pop.hidden = !show; else slideRow(pop, show, delay); };
     /* Pillen beschriften */
     /* Quellen (nur mit Agent): gestrichelter Kasten zum Hochladen von Fotos (Arbeitsblatt, Buchseite …) und darunter Websites (Link + Enter).
        t.srcFiles = verkleinerte Fotos (JPEG, höchstens 4), t.srcLinks = Links; t.sources = Links als Text für den Agenten. */
@@ -522,7 +524,7 @@ const Tasks = (() => {
       // mehrere Tags: Farbpunkte überlappend, erster Name, „+N“
       form.querySelector('[data-open="tags"]').innerHTML = ts.length
         ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${esc(ts[0].name)}${ts.length > 1 ? `<b>+${ts.length - 1}</b>` : ''}`
-        : `${fi('bookmark', 13)}Tags`;
+        : `${fi('tag', 13)}Tags`;
       form.querySelector('[data-open="comments"]').innerHTML = `${fi('chat', 13)}${t.comments.length ? t.comments.length : 'Kommentar'}`;
       form.querySelector('[data-open="comments"]').classList.toggle('empty', !t.comments.length);
       ['date', 'tags'].forEach((k) => form.querySelector(`[data-open="${k}"]`).classList.toggle('empty', k === 'date' ? !t.date : !ts.length));
@@ -549,16 +551,16 @@ const Tasks = (() => {
         set('date', [fi('calendar', 14), `${gd.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}${dd && t.time ? `, ${t.time} Uhr` : ''}${dd && du && du.diff <= 1 && du.diff >= -1 ? ` · ${du.text}` : ''}`], !dd);
         form.querySelector('[data-dsw]')?.classList.toggle('on', !!dd);
         set('prio', [prioIcon(pr.id, 15), pr.id === 'none' ? 'Priorität hinzufügen' : `Priorität: ${pr.name}`], pr.id === 'none');
-        set('tags', [fi('bookmark', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
+        set('tags', [fi('tag', 14), ts.length ? `<span class="tk-dots">${ts.map((g) => `<i style="background:${g.c}"></i>`).join('')}</span>${ts.map((g) => esc(g.name)).join(', ')}` : 'Tags hinzufügen'], !ts.length);
         form.querySelector('.tk-pop[data-k="comments"]').hidden = true; // keine Kommentare in der Liste
         const ef = EFFORTS_T.find(([id]) => id === (t.effort || 'high'));
         set('effort', [fi('sliders', 14), `Aufwand: ${ef[1]}`], false);
         form.querySelectorAll('[data-teffort]').forEach((b) => b.classList.toggle('on', b.dataset.teffort === ef[0]));
-        const efp = form.querySelector('.tk-pop[data-k="effort"]'); if (efp) efp.hidden = !t.agent;
+        rowVis(form.querySelector('.tk-pop[data-k="effort"]'), !!t.agent);
         // Quellen (nur mit Agent): Links/Quellen, die der Agent lesen und nutzen soll
         const srcN = (t.srcFiles || []).length + (t.srcLinks || []).length + (t.srcDocs || []).length;
         set('src', [fi('link', 14), srcN ? `${srcN} ${srcN === 1 ? 'Quelle' : 'Quellen'}` : 'Quellen angeben'], !srcN);
-        const srp = form.querySelector('.tk-pop[data-k="src"]'); if (srp) srp.hidden = !t.agent;
+        rowVis(form.querySelector('.tk-pop[data-k="src"]'), !!t.agent, 60);
         set('agent', [t.agent ? `<span class="tk-dog">${dog(t.agent, 20)}</span>` : fi('user', 14), t.agent ? `Agent: ${AGENT_NAMES[t.agent]}` : 'Agent auswählen'], !t.agent);
         // Datum: Uhrzeit-Schalter + Rad
         const tsw = form.querySelector('[data-ttime]');
@@ -708,15 +710,17 @@ const Tasks = (() => {
     if (dueWheel) dueWheelHost.append(dueWheel);
     // Zeile weich ein-/ausblenden (Höhe + Deckkraft) – für den Wechsel Datum ↔ Zeitplan und die Wiederholungs-Zeile
     const slideRow = (pop, show, delay = 0) => {
-      if (!pop || pop.hidden === !show) return;
+      if (!pop || (pop._slide ? pop._want : !pop.hidden) === show) return; // läuft schon dorthin (wiederholtes Zeichnen startet nichts neu)
       pop.getAnimations().forEach((a) => a.cancel());
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { pop.hidden = !show; return; }
+      pop._want = show;
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) { pop.hidden = !show; pop._slide = null; return; }
       pop.hidden = false;
       const h = pop.offsetHeight, ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+      const gap = `-${parseFloat(getComputedStyle(pop.parentElement).rowGap) || 0}px`; // der Zeilenabstand läuft mit – sonst springt das Fenster um 6 px
       pop.style.overflow = 'hidden';
-      const an = pop.animate(show ? [{ height: '0px', opacity: 0, transform: 'translateY(-4px)' }, { height: `${h}px`, opacity: 1, transform: 'none' }]
-        : [{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: show ? 360 : 260, delay, easing: ease, fill: 'backwards' });
-      an.onfinish = () => { pop.style.overflow = ''; if (!show) pop.hidden = true; };
+      const an = pop._slide = pop.animate(show ? [{ height: '0px', opacity: 0, marginBottom: gap }, { height: `${h}px`, opacity: 1, marginBottom: '0px' }]
+        : [{ height: `${h}px`, opacity: 1, marginBottom: '0px' }, { height: '0px', opacity: 0, marginBottom: gap }], { duration: show ? 340 : 300, delay, easing: ease, fill: 'both' });
+      an.onfinish = () => { if (pop._slide !== an) return; pop._slide = null; an.cancel(); pop.style.overflow = ''; if (!show) pop.hidden = true; };
     };
     const setAuto = (on) => {
       if (!!t.repeat === on) return;
@@ -727,9 +731,9 @@ const Tasks = (() => {
       q('date').classList.remove('open'); q('sched').classList.remove('open');
       // erst geht die alte Zeile, dann kommt die neue an derselben Stelle (und darunter die Wiederholungen)
       slideRow(q(on ? 'date' : 'sched'), false);
-      slideRow(q(on ? 'sched' : 'date'), true, 120);
-      slideRow(q('limit'), on, on ? 200 : 0);
-      setTimeout(() => { swapping = false; }, 600);
+      slideRow(q(on ? 'sched' : 'date'), true);
+      slideRow(q('limit'), on, on ? 80 : 0);
+      setTimeout(() => { swapping = false; }, 520);
     };
     const openPop = (k) => {
       form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open')));

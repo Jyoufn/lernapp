@@ -12059,3 +12059,38 @@ html.auth-opening .auth { opacity: 0; transform: none; }
   transition: background-color 99999s ease-out 99999s; animation: auth-fill 420ms ease both; font: inherit; font-size: 13px; }
 .auth-field { overflow: hidden; }
 .ws-menu .ws-av svg, .ws-menu .ws-av img { width: 18px; height: 18px; }
+
+/* ===== 10.11. (abends) – Chat: Zahlen vor Listen, weiches Schreiben, To-dos; Aufgabenfenster: Feinschliff ===== */
+/* Nummerierte Listen: die Ziffern standen in Tabellen-Ziffern (Browser-Standard für ::marker) und sahen wie eine andere Schrift aus → gleiche Schrift wie der Text, gut lesbar */
+.md ol > li::marker, .think-body ol > li::marker, .dc-content ol > li::marker { font-family: inherit; font-variant-numeric: normal; font-feature-settings: normal; font-weight: 500; color: var(--text-3); }
+/* Schreiben der Antwort: neue Wörter tauchen langsam und gleichmäßig auf (vorher fast sofort voll da) – Dauer wie INK_FADE_MS in app.js */
+.ink { animation: ink-soft 900ms cubic-bezier(0.33, 0, 0.3, 1) both; }
+@keyframes ink-soft { from { opacity: 0; } to { opacity: 1; } }
+.md-in { animation-duration: 600ms; }
+@keyframes md-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ink, .md-in { animation: none; } }
+/* To-dos in der Denk-Zeitleiste (anspruchsvolle Aufgaben): Liste mit feinen Trennlinien, offen = gestrichelter Kreis, läuft = gefüllter Kreis mit Pfeil, erledigt = Haken */
+.todo-step .todo-n { margin-left: 6px; }
+.step.has-box > .fold:has(> .fold-in > .plan-list.todo) { margin-left: 0; }
+.step.has-box > .fold > .fold-in > .plan-list.todo { margin-left: 0; }
+.plan-list.todo { gap: 0; max-width: 520px; padding: 2px 12px; border: 1px solid #242424; border-radius: 12px; background: #181818; }
+.plan-list.todo .plan-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-radius: 0; background: none; font-size: 13px; color: var(--text-3); }
+.plan-list.todo .plan-item + .plan-item { border-top: 1px solid #242424; }
+.plan-list.todo .plan-item .pi-mark { position: static; flex: none; width: 16px; height: 16px; margin: 0; border: 1.5px dashed #4a4a4a; border-radius: 50%; background: none; color: #141414; animation: none; transition: background-color 240ms ease, border-color 240ms ease; }
+.plan-list.todo .plan-item .pi-mark svg { width: 10px; height: 10px; }
+.plan-list.todo .plan-item[data-state="active"] { background: none; }
+.plan-list.todo .plan-item[data-state="active"] .pi-text { color: var(--text); }
+.plan-list.todo .plan-item[data-state="active"] .pi-mark { border: 0; background: #ededed; }
+.plan-list.todo .plan-item[data-state="done"] .pi-mark { border: 0; background: #3a3a3a; color: #bbbbbb; animation: pi-pop 320ms var(--spring); }
+.plan-list.todo .plan-item[data-state="done"] .pi-text { color: var(--text-4); }
+/* Aufgabenfenster: Aufwand ohne Icons/Erklärungen, Agenten mit größeren Kacheln, „Dokument als Quelle“ so rund wie das Website-Feld, Schalter aus = sichtbar grau */
+.tk-menu.plain .tk-mi { padding-left: 12px; }
+.tk-menu.agents .tk-mi { min-height: 38px; gap: 11px; }
+.tk-sheet-rows .tk-menu.agents .tk-mi .tk-mi-ic { display: grid; place-items: center; width: 26px; height: 26px; margin-right: 0; border-radius: 8px; background: #212121; }
+.tk-menu.agents .tk-mi-ic svg { width: 18px; height: 18px; }
+.tk-sheet-rows .tk-pill .tk-dog { width: 24px; height: 24px; margin: -2px 0 -2px -4px; border-radius: 7px; }
+.tk-src-docadd { display: flex; width: 100%; height: 32px; gap: 8px; border-radius: 10px; }
+.tk-src-web { border-radius: 10px; }
+.ce-card .ce-switch:not(.on) { background: #2a2a2a; }
+.ce-card .ce-switch:not(.on) i { background: #8a8a8a; }
+.ce-switch i { transition: transform 280ms var(--spring), background-color 200ms ease; }

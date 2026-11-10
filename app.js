@@ -1829,9 +1829,10 @@ window.renderDocViz = (kind, raw, host) => {
    Überschrift blendet zusätzlich weich ein. */
 const REVEAL_TICK = 24;      // ms zwischen zwei Schritten
 const REVEAL_MIN_CHARS = 2;  // mindestens so viele Zeichen pro Schritt (~80 Zeichen/s)
-const REVEAL_CATCHUP = 12;   // Rückstand wird in ~12 Schritten aufgeholt
+const REVEAL_CATCHUP = 26;   // Rückstand wird in ~26 Schritten aufgeholt – gleichmäßiger Fluss statt Schüben (Wunsch 10.11.); nach dem Ende schneller (REVEAL_END)
+const REVEAL_END = 12;
 const BLOCK_FADE_MS = 420;   // Dauer des Einblendens neuer Blöcke
-const INK_FADE_MS = 560;     // neue Zeichen „tauchen auf“: weich von durchsichtig zu voll (wie bei großen KI-Chats)
+const INK_FADE_MS = 900;     // (gleiche Dauer wie .ink in style.css) neue Zeichen „tauchen auf“: weich von durchsichtig zu voll (wie bei großen KI-Chats)
 const REDUCE_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 /* Weicher Schreib-Saum: Die zuletzt hinzugekommenen Zeichen (je Schritt ein Stück) werden nach jedem Neuzeichnen in Spans mit negativer
    Animations-Verzögerung gelegt – so blendet jedes Stück über ~0,5 s ein, auch wenn der Text bei jedem Schritt neu gerendert wird.
@@ -1908,7 +1909,7 @@ function makeRenderer(target, opts = {}) {
       finishWaiters = [];
       return;
     }
-    let step = Math.max(REVEAL_MIN_CHARS, Math.ceil(backlog / REVEAL_CATCHUP));
+    let step = Math.max(REVEAL_MIN_CHARS, Math.ceil(backlog / (ended ? REVEAL_END : REVEAL_CATCHUP)));
     // nicht mitten in einer Formel oder einem Wort stoppen, wenn es knapp ist
     const nextSpace = text.slice(shown + step).search(/[\s$]/);
     if (nextSpace >= 0 && nextSpace < 6) step += nextSpace;
@@ -1927,6 +1928,7 @@ function makeRenderer(target, opts = {}) {
     /* warten, bis der Rest sauber zu Ende animiert ist */
     finish() { ended = true; if (shown >= text.length) { draw(); return Promise.resolve(); } start(); return new Promise((r) => finishWaiters.push(r)); },
     get text() { return text; },
+    get shownText() { return text.slice(0, shown); }, // was schon sichtbar ist (To-dos haken danach ab)
   };
 }
 
@@ -2310,7 +2312,7 @@ async function fileToInline(file, max = 1600, onProgress = null, opts = {}) {
 // gespeicherte Gedanken einer Antwort (für den Verlauf) – gehen nicht mit an die KI
 // Gedanken und Plan bleiben gespeichert → „Worked for“ zeigt nach dem Neuladen wieder den Plan (zuerst) und die Gedanken
 const thoughtsOf = (msgEl) => (msgEl._thoughts?.length || msgEl._plan?.length
-  ? { ...(msgEl._thoughts?.length ? { thoughts: msgEl._thoughts } : {}), ...(msgEl._plan?.length ? { plan: msgEl._plan } : {}), workTime: msgEl._workTime } : {});
+  ? { ...(msgEl._thoughts?.length ? { thoughts: msgEl._thoughts } : {}), ...(msgEl._plan?.length ? { plan: msgEl._plan, ...(msgEl._planKind ? { planKind: msgEl._planKind } : {}) } : {}), workTime: msgEl._workTime } : {});
 
 /* Alle Dateien sollen mit – aber EINE Anfrage darf auf Vercel höchstens ~4,5 MB groß sein. Neueste zuerst als echte Datei (Gemini sieht
    Bilder, Tabellen, Skizzen); passt ein PDF nicht mehr, geht sein gelesener Text mit. Was gar nicht passt, zählt `dropped` (die KI sagt es). */
@@ -3183,10 +3185,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const PLAN_STOP = new Set(['erklären', 'erklärung', 'beispiel', 'beispiele', 'bedeutung', 'überblick', 'zusammenhang', 'zusammenhänge', 'wichtige', 'wichtigsten', 'verschiedene', 'einfach', 'kurze', 'kurzer',
     'definition', 'definitionen', 'grundkonzept', 'grundkonzepte', 'konzept', 'einleitung', 'einführung', 'grundlagen', 'grundidee', 'begriff', 'begriffe', 'begriffsklärung', 'zusammenfassung', 'fazit', 'ausblick', 'hintergrund', 'merkmale', 'aspekte', 'funktion', 'funktionen', 'funktionsweise', 'entwicklung', 'vorteile', 'nachteile']);
   const planTerms = (p) => [...new Set(String(p).toLowerCase().split(/[^a-zäöüß0-9]+/).filter((w) => w.length >= 5 && !PLAN_STOP.has(w)))];
-  const attachPlan = (step, points) => {
+  const attachPlan = (step, points, kind = '') => {
     if (!points?.length || step.querySelector('.plan-list')) return;
     msgEl._plan = points.slice(0, 12);
-    const list = el('div', 'plan-list');
+    msgEl._planKind = kind;
+    plan.kind = kind;
+    const list = el('div', `plan-list${kind === 'todos' ? ' todo' : ''}`);
     points.forEach((p) => {
       const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(p)}</span>`);
       row.dataset.state = 'todo';
@@ -3201,11 +3205,25 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     step.classList.add('foldable', 'has-box'); // Plan eingeklappt – Klick auf „Identifying requirements“ klappt ihn auf
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`);
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
+    if (kind === 'todos') step.classList.add('open'); // To-dos stehen offen da (Klick klappt zu)
     updatePlan();
+  };
+  /* To-dos (Ereignis „todos“): der Arbeitsplan der KI bei anspruchsvollen Aufgaben – eigene Zeile „To-dos 1/4“ mit der Liste darunter.
+     Der erste offene Punkt läuft, abgehakt wird, was in der Antwort behandelt ist; ist die Antwort ganz fertig, sind alle erledigt
+     (bei Abbruch bleiben die offenen offen). */
+  const onTodos = (items) => {
+    if (!Array.isArray(items) || items.length < 2 || plan.items.length || pictureAsk || quiet) return;
+    ensureWork();
+    const step = stepLine('dot', '<strong>To-dos</strong> <span class="t todo-n"></span>');
+    step.classList.add('todo-step');
+    work.steps.insertBefore(step, stages.answering?.step || null);
+    attachPlan(step, items.map(String), 'todos');
+    scrollToBottom();
   };
   const updatePlan = (final = false) => {
     if (!plan.items.length) return;
-    const text = (answerR?.text || '').toLowerCase();
+    // To-dos: abgehakt wird nach dem, was schon sichtbar geschrieben ist (am Ende nach der ganzen Antwort)
+    const text = ((plan.kind === 'todos' && !final ? answerR?.shownText : answerR?.text) || '').toLowerCase();
     let active = false;
     // Wortformen zählen mit („Plattformen“ ↔ „Plattform“): verglichen wird der Wortanfang ohne die letzten zwei Buchstaben
     const has = (w) => text.includes(w.length > 6 ? w.slice(0, -2) : w);
@@ -3214,13 +3232,17 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       // Die Antwort folgt dem Plan: ist ein späterer Punkt behandelt, war der erste Punkt (oft „Definition …“, direkt erklärt)
       // bzw. ein Punkt ohne eigene Kernbegriffe schon dran
       const later = covered.slice(i + 1).some(Boolean);
-      const done = covered[i] || ((i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has));
-      const state = done ? 'done' : !final && answerR && !active ? ((active = true), 'active') : 'todo';
+      const todo = plan.kind === 'todos';
+      const done = covered[i] || ((i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has))
+        || (todo && final && !signal.aborted && text.length > 200); // To-dos: Antwort ganz fertig → Arbeit erledigt
+      const state = done ? 'done' : !final && (answerR || todo) && !active ? ((active = true), 'active') : 'todo';
       if (state === it.state) return;
       it.state = state;
       it.row.dataset.state = state;
-      it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg('check-circle', 13) : '';
+      it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 10 : 13) : todo && state === 'active' ? FadeIcons.svg('arrow-right', 10) : '';
     });
+    const n = plan.items[0]?.row.closest('.step')?.querySelector('.todo-n');
+    if (n) n.textContent = `${plan.items.filter((it) => it.state === 'done').length}/${plan.items.length}`;
   };
 
   /* Tiefen-Recherche (Research-Agent): ganz normale Schritte auf der Zeitleiste, Unterpunkte als Abzweig (wie der Plan):
@@ -3701,6 +3723,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
+      else if (event === 'todos') onTodos(data.items);
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort
       else if (event === 'reset') {
         // Prüfung hat Fehler gefunden: Entwurf weich ausblenden, korrigierte Fassung neu schreiben
@@ -6210,9 +6233,10 @@ function savedThoughts(h) {
   t.classList.remove('live');
   t.textContent = h.workTime || '';
   if (h.plan?.length) { // Plan zuerst – wie während der Arbeit, alle Punkte erledigt
-    const step = stepLine('dot', '<strong>Plan</strong>');
-    const list = el('div', 'plan-list');
-    h.plan.forEach((p) => list.append(el('div', 'plan-item', `<span class="pi-mark">${FadeIcons.svg('check-circle', 13)}</span><span class="pi-text">${escapeHtml(p)}</span>`)));
+    const todo = h.planKind === 'todos';
+    const step = stepLine('dot', todo ? `<strong>To-dos</strong> <span class="t todo-n">${h.plan.length}/${h.plan.length}</span>` : '<strong>Plan</strong>');
+    const list = el('div', `plan-list${todo ? ' todo' : ''}`);
+    h.plan.forEach((p) => list.append(el('div', 'plan-item', `<span class="pi-mark">${FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 10 : 13)}</span><span class="pi-text">${escapeHtml(p)}</span>`)));
     list.querySelectorAll('.plan-item').forEach((r) => { r.dataset.state = 'done'; });
     const fold = el('div', 'fold');
     const inner = el('div', 'fold-in');
