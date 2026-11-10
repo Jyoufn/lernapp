@@ -566,7 +566,7 @@ const Docs = (() => {
   /* ---------- Seitenleiste: Projekte (aufklappbar) mit ihren Dokumenten ---------- */
   const open$ = new Set(JSON.parse(localStorage.getItem('docs.openProjects') || '[]'));
   // Projekt = Ordner ohne Farbe (Wunsch 10.11. spät): zu und offen als zwei Formen, die beim Auf-/Zuklappen weich ineinander übergehen
-  const folderSvg = (size = 15) => `<svg class="pj-folder" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path class="pf-shut" d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/><path class="pf-open" d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>`;
+  const folderSvg = (size = 15) => `<svg class="pj-folder" width="${size}" height="${size}" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path class="pf-shut" d="M3 8a4 4 0 0 1 4-4h2.2c1 0 1.8.4 2.4 1.2l.5.6c.6.8 1.4 1.2 2.4 1.2H17a4 4 0 0 1 4 4v5a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4Z"/><path class="pf-open" d="M3 16V8a4 4 0 0 1 4-4h2.2c1 0 1.8.4 2.4 1.2l.5.6c.6.8 1.4 1.2 2.4 1.2h2a3.5 3.5 0 0 1 3.5 3.3M3 16l1.9-4.1A3.3 3.3 0 0 1 7.9 10h12.3a1.8 1.8 0 0 1 1.7 2.3l-1.2 4A5 5 0 0 1 16 20H7a4 4 0 0 1-4-4Z"/></svg>`;
   // „Dokumente“ in der Sidebar: einklappbar wie „Chats“ (Überschrift und Zustand aus app.js)
   const side = el('nav', 'nav dc-side sb-sec');
   side.dataset.sec = 'docs';
