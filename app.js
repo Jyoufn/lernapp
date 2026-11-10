@@ -253,7 +253,7 @@ function drawModelMenu() {
   const list = fams.length ? fams : [aiMain()];
   const main = aiMain();
   // nur die Modelle (Wunsch 10.11., 4. Runde) – der Aufwand hat einen eigenen Knopf unten rechts unter dem Eingabefeld
-  popover.innerHTML = `<div class="mpx-h">Modell</div>${list.map((f) => `<button type="button" class="mpx-m${f === main ? ' selected' : ''}" data-pick="${f}"><span>${AI_NAMES[f] || f}</span><svg width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}`;
+  popover.innerHTML = `${list.map((f) => `<button type="button" class="mpx-m${f === main ? ' selected' : ''}" data-pick="${f}"><span>${AI_NAMES[f] || f}</span><svg width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg></button>`).join('')}`;
 }
 popover.addEventListener('click', (e) => {
   const m = e.target.closest('[data-pick]');

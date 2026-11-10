@@ -12027,3 +12027,5 @@ html.auth-opening .auth { opacity: 0; transform: none; }
   .auth-field input { font-size: 16px; }
   .auth-label, .auth-btn, .auth-soc, .auth-links .auth-link, .auth-foot .auth-link, .auth-or { font-size: 13px; }
 }
+/* Modell-Menü: nur die Modelle, ohne Überschrift – schmal wie die Aufwand-Liste */
+.model-popover.mpx { width: 168px !important; }
