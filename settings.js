@@ -284,7 +284,6 @@
     } else {
       const modes = window.PixelDogs?.MODES || [];
       body = `<h2>Verbindung</h2><div class="st-card">${PROVIDERS.map(providerRow).join('')}</div>`
-        + '<p class="st-ai-note">Anbieter antippen: Schlüssel hinzufügen und festlegen, welche KI die Haupt-KI ist. Ist ihr Kontingent aufgebraucht, springen die anderen als Ersatz ein.</p>'
         + (modes.length ? `<h2>Agenten</h2><div class="st-card">${modes.filter((m) => !m.custom).map(agentRow).join('')}${window.AgentSettingsRows?.() || ''}</div>` : '')
         + hooksHtml('agents');
     }

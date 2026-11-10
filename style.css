@@ -12111,3 +12111,56 @@ html.auth-opening .auth { opacity: 0; transform: none; }
 .dc-make .dc-into-i span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dc-make .dc-into-none { padding: 8px 12px; color: var(--text-4); font-size: 12.5px; }
 .dc-make-cancel { height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--text-3); font: 500 13px Inter, sans-serif; cursor: pointer; }
+
+/* ===== 10.11. abends: Suchfeld ohne „Gehe zu“ – feste Höhe (Aktionen + 4 Chats), mehr per Scrollen ===== */
+.cmdk-list { max-height: 312px; flex: none; overscroll-behavior: contain; }
+
+/* ===== 10.11. abends: Kopieren unter der eigenen Nachricht (nur beim Darüberfahren, ohne Verschieben) ===== */
+.msg-out { position: relative; }
+.msg-out .out-actions { position: absolute; top: 100%; right: -5px; margin-top: 2px; animation: none; opacity: 0; pointer-events: none; transition: opacity 160ms ease; }
+.msg-out .out-actions .msg-btn { width: 26px; height: 26px; }
+.msg-out:hover .out-actions, .msg-out.show-actions .out-actions, .msg-out .out-actions:focus-within { opacity: 1; pointer-events: auto; }
+
+/* ===== 10.11. abends: Denk-Anzeige – laufender Gedanke aufgeklappt mit Inhalt, danach zusammengeklappt ===== */
+.step.thought.live > .fold .thought-text { color: var(--text-4); font-size: 13px; line-height: 1.55; margin: 5px 0 4px; max-height: 9.5em; overflow-y: auto; scrollbar-width: none; }
+.thought-text .ink { animation-duration: 700ms; }
+
+
+/* ===== 10.11. abends: Modi Schwarz (umgedreht), Glas (neu) und Hell (aufgeräumt) =====
+   Schwarz: Hauptteil reines Schwarz, Sidebar einen Hauch heller. Glas: NUR die Sidebar ist gläsern (Hintergrundbild + Weichzeichner dahinter),
+   der Hauptteil bleibt fest – Wunsch des Nutzers, Ausnahme vom früheren „kein Glas“. Hell: neutrale Töne (vorher Blaustich), weiße Karten, dunklere Schrift. */
+html[data-glass="on"], html[data-glass="on"] body {
+  background: #0a0a16 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 1000' preserveAspectRatio='xMidYMid slice'%3E%3Cdefs%3E%3CradialGradient id='a' cx='.35' cy='.25' r='.9'%3E%3Cstop offset='0' stop-color='%232b2a57'/%3E%3Cstop offset='1' stop-color='%23111124'/%3E%3C/radialGradient%3E%3CradialGradient id='b' cx='.6' cy='.8' r='.9'%3E%3Cstop offset='0' stop-color='%2322214a'/%3E%3Cstop offset='1' stop-color='%230f0f20'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1600' height='1000' fill='%230a0a16'/%3E%3Ccircle cx='-60' cy='1000' r='640' fill='url(%23a)' stroke='%236a68c4' stroke-opacity='.42' stroke-width='3'/%3E%3Ccircle cx='560' cy='-300' r='600' fill='url(%23b)' stroke='%237472d0' stroke-opacity='.45' stroke-width='3'/%3E%3Ccircle cx='1240' cy='-360' r='560' fill='%23151530' stroke='%23615fb8' stroke-opacity='.38' stroke-width='3'/%3E%3Ccircle cx='1720' cy='1180' r='680' fill='%2314142c' stroke='%235c5aae' stroke-opacity='.36' stroke-width='3'/%3E%3C/svg%3E") center / cover no-repeat fixed;
+}
+html[data-glass="on"] .sidebar {
+  background: rgba(22, 22, 40, 0.38);
+  -webkit-backdrop-filter: blur(26px) saturate(135%); backdrop-filter: blur(26px) saturate(135%);
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+html[data-glass="on"] .sidebar .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+html[data-glass="on"] .sidebar .nav-item.active { background: rgba(255, 255, 255, 0.1); }
+html[data-glass="on"] .panel { border-color: rgba(255, 255, 255, 0.07); }
+/* Schwarz: Ränder und Fenster passend dunkler (sonst stehen #181818-Karten grau im Schwarz) */
+html[data-mode="black"] { --win-bg: #0d0d0d; --card: #0d0d0d; --pop-bg: #161616; --menu-bg: #0d0d0d; --menu-hover: #161616; --hover: #141414; --active: #161616; --line: #1c1c1c; --menu-border: #1c1c1c; --divider: #1c1c1c; }
+html[data-mode="black"] .panel { border-color: #161616; }
+html[data-mode="black"] .sidebar .nav-item:hover { background: #161616; }
+html[data-mode="black"] .sidebar .nav-item.active { background: #1c1c1c; }
+html[data-mode="black"] .out-bubble { background: #161616; }
+/* Hell: Werte VOR der Umkehrung (invert + hue-rotate) – Ergebnis: Schrift #121212/#232323/#545454/#7a7a7a, Karten weiß bzw. #fafafa, Ränder #e5e5e5 */
+html[data-theme="light"] {
+  --text: #ededed; --text-2: #dcdcdc; --text-3: #ababab; --text-4: #858585;
+  --win-bg: #050505; --card: #050505; --card-2: #0b0b0b; --pop-bg: #0b0b0b; --menu-bg: #000000; --menu-hover: #0b0b0b;
+  --hover: #0b0b0b; --active: #0f0f0f; --line: #1a1a1a; --menu-border: #1a1a1a; --divider: #1a1a1a; --card-border: #1a1a1a;
+}
+html[data-theme="light"] .panel { border-color: #161616; }
+html[data-theme="light"] .out-bubble { background: #0f0f0f; }
+html[data-theme="light"] .sidebar .nav-item:hover { background: #121212; }
+html[data-theme="light"] .sidebar .nav-item.active { background: #181818; }
+html[data-theme="light"] body { -webkit-font-smoothing: antialiased; }
+html[data-theme="light"] .md strong, html[data-theme="light"] .md h2, html[data-theme="light"] .md h3 { color: var(--text); }
+.st-ap-modes { grid-template-columns: repeat(4, minmax(0, 138px)); gap: 12px; }
+@media (max-width: 720px) { .st-ap-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+html[data-theme="light"] .st-sw { filter: invert(1) hue-rotate(180deg); }
+html[data-glass="on"] .sidebar .st-item:hover { background: rgba(255, 255, 255, 0.06); }
+html[data-glass="on"] .sidebar .st-item.active { background: rgba(255, 255, 255, 0.1); }
+html[data-glass="on"] .sidebar :is(.sb-chat:hover, .sb-chat.active) { background: rgba(255, 255, 255, 0.08); }

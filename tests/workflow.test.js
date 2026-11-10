@@ -1199,3 +1199,21 @@ test('DeepSeek & Co. (10.11.): Nachdenken ohne öffnendes <think> landet nicht i
     assert.equal(text, 'Hallo!');
   } finally { global.fetch = prev; }
 });
+
+test('Allgemein erkennt Aktienfragen (Börsen-Ablauf) – auch kurze Folgefragen, aber keine fremden Themen', () => {
+  const W = require('../lib/workflow');
+  assert.equal(W.stockAsk([{ role: 'user', text: 'In welche Aktie kann ich am besten investieren?' }]), true);
+  assert.equal(W.stockAsk([{ role: 'user', text: 'Wie sieht mein Depot aus?' }]), true);
+  const prev = { role: 'assistant', text: 'Hier der Chart:\n```stock\n{"symbol":"AAPL"}\n```' };
+  assert.equal(W.stockAsk([{ role: 'user', text: 'Apple?' }, prev, { role: 'user', text: 'Und lohnt sich der Kauf noch?' }]), true);
+  assert.equal(W.stockAsk([{ role: 'user', text: 'Apple?' }, prev, { role: 'user', text: 'Erklär mir die Photosynthese' }]), false);
+  assert.equal(W.stockAsk([{ role: 'user', text: 'Erklär mir den Kurs der Französischen Revolution' }]), false);
+});
+
+test('Prompt nennt die Fähigkeiten der App und Quellen nur unten', () => {
+  const W = require('../lib/workflow');
+  const s = W.systemNative('medium', { agent: 'general' });
+  assert.match(s, /WAS DU IN DIESER APP ZEIGEN KANNST/);
+  assert.match(s, /Strukturformel/);
+  assert.match(s, /zeigt die App automatisch UNTER der Antwort/);
+});

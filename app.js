@@ -901,9 +901,32 @@ function addUserMessage(text, images) {
     });
     msg.append(row);
   }
-  if (text) msg.append(userBubble(text, 'out-bubble'));
+  if (text) msg.append(userBubble(text, 'out-bubble'), userFooter(text, msg));
   chat.append(msg);
   scrollToBottom(true);
+}
+/* Unter der eigenen Nachricht: Kopieren – erscheint nur beim Darüberfahren (Touch: nach Antippen der Nachricht), schiebt nichts */
+function userFooter(text, msg) {
+  const bar = el('div', 'msg-actions out-actions');
+  const copy = el('button', 'msg-btn', icon('i-copy'));
+  copy.type = 'button';
+  copy.setAttribute('aria-label', 'Nachricht kopieren');
+  copy.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    try { await navigator.clipboard.writeText(text); } catch { return; }
+    copy.innerHTML = icon('i-check');
+    copy.classList.add('done');
+    setTimeout(() => { copy.innerHTML = icon('i-copy'); copy.classList.remove('done'); }, 1400);
+  });
+  bar.append(copy);
+  if (window.matchMedia?.('(hover: none)').matches) {
+    msg.addEventListener('click', (e) => {
+      if (e.target.closest('button, a, .oi, .out-pdfs')) return;
+      document.querySelectorAll('.msg-out.show-actions').forEach((m) => m !== msg && m.classList.remove('show-actions'));
+      msg.classList.toggle('show-actions');
+    });
+  }
+  return bar;
 }
 
 /* Eigene Nachricht als Blase. Lange Nachrichten (nur die eigenen, nie die der KI) sind eingeklappt:
@@ -1828,9 +1851,10 @@ window.renderDocViz = (kind, raw, host) => {
    Rückstand automatisch schneller). Jeder neue Absatz / Listenpunkt / jede
    Überschrift blendet zusätzlich weich ein. */
 const REVEAL_TICK = 24;      // ms zwischen zwei Schritten
-const REVEAL_MIN_CHARS = 2;  // mindestens so viele Zeichen pro Schritt (~80 Zeichen/s)
-const REVEAL_CATCHUP = 26;   // Rückstand wird in ~26 Schritten aufgeholt – gleichmäßiger Fluss statt Schüben (Wunsch 10.11.); nach dem Ende schneller (REVEAL_END)
-const REVEAL_END = 12;
+/* Tempo nach Zeit statt nach Schritten (10.11. abends, Nutzer: „soll leicht und angenehm erscheinen, nicht ganz schnell“):
+   der Rückstand wird über ~2,4 s verteilt, aber nie schneller als ~380 Zeichen/s (≈ ruhiges Lesetempo) und nie langsamer als ~60/s.
+   Ist die Antwort komplett da, darf es zügiger werden (bis ~950/s), damit lange Antworten nicht ewig nachlaufen. */
+const REVEAL_WINDOW_S = 2.4, REVEAL_CPS_MIN = 60, REVEAL_CPS_MAX = 380, REVEAL_CPS_END = 950;
 const BLOCK_FADE_MS = 420;   // Dauer des Einblendens neuer Blöcke
 const INK_FADE_MS = 900;     // (gleiche Dauer wie .ink in style.css) neue Zeichen „tauchen auf“: weich von durchsichtig zu voll (wie bei großen KI-Chats)
 const REDUCE_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -1872,10 +1896,48 @@ function inkTail(root, steps, now) {
   }
 }
 
+/* Gedanken-Text ruhig einblenden: Wort für Wort (~140 Zeichen/s); jedes neue Stück taucht weich auf (.ink mit negativer Verzögerung
+   je nach Alter – so läuft die Blende über Neuzeichnungen hinweg weiter statt neu zu starten) */
+function thoughtTyper(box) {
+  const FADE = 700;
+  let full = '', shown = 0, raf = 0, last = 0, carry = 0, marks = []; // marks: { at, t } – ab Zeichen „at“ sichtbar seit t
+  const paint = (now) => {
+    marks = marks.filter((m) => now - m.t < FADE);
+    const young = marks;
+    const from = young.length ? young[0].at : shown;
+    box.textContent = full.slice(0, from);
+    young.forEach((m, i) => {
+      const end = i + 1 < young.length ? young[i + 1].at : shown;
+      if (end <= m.at) return;
+      const sp = document.createElement('span'); sp.className = 'ink'; sp.style.animationDelay = `-${Math.round(now - m.t)}ms`; sp.textContent = full.slice(m.at, end); box.append(sp);
+    });
+    box.scrollTop = box.scrollHeight; // langer Gedanke: die neuesten Zeilen bleiben sichtbar
+  };
+  const step = (t) => {
+    raf = 0;
+    const dt = last ? Math.min(80, t - last) : 16; last = t;
+    carry += dt * 0.14 * Math.max(1, (full.length - shown) / 260); // großer Rückstand → etwas schneller
+    const n = Math.floor(carry); carry -= n;
+    if (n) {
+      const at = shown;
+      shown = Math.min(full.length, shown + n);
+      const sp = full.slice(shown).search(/\s/); if (sp >= 0 && sp < 8) shown += sp;
+      marks.push({ at, t });
+    }
+    paint(t);
+    if (shown < full.length || marks.some((m) => t - m.t < FADE)) raf = requestAnimationFrame(step);
+  };
+  return {
+    set(text) { if (!text.startsWith(full.slice(0, shown))) { shown = 0; marks = []; } full = text; if (!raf && shown < full.length) { last = 0; raf = requestAnimationFrame(step); } },
+    end() { if (raf) cancelAnimationFrame(raf); raf = 0; shown = full.length; marks = []; box.textContent = full; },
+  };
+}
+
 function makeRenderer(target, opts = {}) {
   let text = '';        // alles, was bisher angekommen ist
   let shown = 0;        // davon schon sichtbar
   let timer = null;
+  let carry = 0;        // angefangene Zeichen (Tempo in Zeichen/s → ganze Zeichen je Schritt)
   let finishWaiters = [];
   const firstSeen = [];  // Zeitpunkt, an dem Block Nr. i zuerst erschien
 
@@ -1909,7 +1971,11 @@ function makeRenderer(target, opts = {}) {
       finishWaiters = [];
       return;
     }
-    let step = Math.max(REVEAL_MIN_CHARS, Math.ceil(backlog / (ended ? REVEAL_END : REVEAL_CATCHUP)));
+    const cps = Math.min(ended ? REVEAL_CPS_END : REVEAL_CPS_MAX, Math.max(REVEAL_CPS_MIN, backlog / REVEAL_WINDOW_S));
+    carry += cps * REVEAL_TICK / 1000;
+    let step = Math.floor(carry);
+    if (step < 1) { timer = setTimeout(tick, REVEAL_TICK); return; }
+    carry -= step;
     // nicht mitten in einer Formel oder einem Wort stoppen, wenn es knapp ist
     const nextSpace = text.slice(shown + step).search(/[\s$]/);
     if (nextSpace >= 0 && nextSpace < 6) step += nextSpace;
@@ -2460,7 +2526,7 @@ function createWork() {
   const solo = head.querySelector('.work-solo');
   const sync = () => {
     const rows = [...steps.children].filter((s) => s.classList.contains('step'));
-    const one = rows.length === 1 && stepActive(rows[0]) ? stepLabel(rows[0]) : '';
+    const one = rows.length === 1 && stepActive(rows[0]) && !rows[0].classList.contains('thought') ? stepLabel(rows[0]) : ''; // ein laufender Gedanke steht mit Inhalt in der Liste (nicht nur als Kopfzeile)
     if (one && solo.textContent !== one) solo.textContent = one;
     work.classList.toggle('solo', !!one);
   };
@@ -3598,16 +3664,22 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const finishThoughtStep = (st) => {
     if (st.done) return;
     st.done = true;
+    st.typer?.end();
     finishStep(st.step);
     st.head.textContent = st.title;
+    st.step.classList.remove('live', 'open'); // live aufgeklappter Gedanke klappt zum Oberpunkt zusammen (antippen öffnet ihn wieder)
   };
   const onThought = (text) => {
-    if ((answerR && !coding) || !text || pictureAsk || quiet) return; // Coding-Agent: denkt zwischen den Arbeitsschritten weiter → Gedanken bleiben sichtbar. Bildwunsch: nur „Generating picture“; Kurznachricht: gar nichts
+    if (!text || pictureAsk || quiet) return; // Bildwunsch: nur „Generating picture“; Kurznachricht: gar nichts
+    // Gedanken, die erst nach dem Antwortbeginn übersetzt ankommen (kurzes Denken bei Niedrig), gehen nicht mehr verloren:
+    // sie landen als fertige, zugeklappte Schritte in der Zeitleiste (Coding-Agent: denkt zwischen den Arbeitsschritten ohnehin weiter)
+    const late = !!answerR && !coding;
+    if (late && !work) return;
     if (!thought) {
       ensureWork();
-      if (stages.answering) stages.answering.step.hidden = true;
-      phase('thoughts');
-      thought = { from: Date.now(), raw: '', done: false, steps: [] };
+      if (!late && stages.answering) stages.answering.step.hidden = true;
+      if (!late) phase('thoughts');
+      thought = { from: Date.now(), raw: '', done: late, steps: [] };
     }
     thought.raw += text;
     ChatVisuals.thoughtSteps(thought.raw).forEach((seg, i) => {
@@ -3628,13 +3700,19 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st = thought.steps[i] = { step, head, box, title: '', done: false };
         head.addEventListener('click', () => { if (st.done && st.box.textContent) step.classList.toggle('open'); });
         work.steps.insertBefore(step, stages.answering?.step || null);
+        // der laufende Gedanke steht aufgeklappt da: sein Inhalt erscheint ruhig Wort für Wort unter dem Oberpunkt (Wunsch 10.11.: „zeigt zu wenig“)
+        if (!late) { step.classList.add('live'); requestAnimationFrame(() => { if (!st.done) step.classList.add('open'); }); }
       }
       if (st.title !== seg.title) {
         st.title = seg.title;
         if (st.done) st.head.textContent = seg.title;
         else st.head.innerHTML = `<span class="shimmer">${escapeHtml(seg.title)}</span>`;
       }
-      if (seg.body !== seg.title) st.box.textContent = seg.body;
+      if (seg.body !== seg.title) {
+        if (st.done || REDUCE_MOTION) st.box.textContent = seg.body;
+        else (st.typer ||= thoughtTyper(st.box)).set(seg.body);
+      }
+      if (late) finishThoughtStep(st);
     });
     scrollToBottom();
   };
@@ -3715,7 +3793,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ messages: await withTiles(historyForRequest(await withFiles(historyOf(tab)))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, ...agentBody, ...(prefix ? { partial: prefix } : {}) }),
+      body: JSON.stringify({ messages: await withTiles(historyForRequest(await withFiles(historyOf(tab)))), materialDropped, model: state.model, effort: EFFORTS[state.effort].toLowerCase(), fast: state.fast, lang: window.I18n?.lang?.() || 'de', ...agentBody, ...(prefix ? { partial: prefix } : {}) }),
       signal: idle ? AbortSignal.any([signal, idle.signal]) : signal,
     });
     if (!response.ok || !response.body) throw new Error(response.status === 413 ? 'Die Anfrage ist zu groß (zu viele oder zu große Dateien). Bitte weniger anhängen.' : `Server antwortet nicht (HTTP ${response.status}).`);
@@ -7033,7 +7111,7 @@ document.addEventListener('click', (e) => {
 })();
 
 /* ---------- Darstellung (Einstellungen → Aussehen) ----------
-   Modus (Dunkel, Schwarz, Hell – mit Mini-Vorschau), Akzentfarbe (Vorgaben oder eigene) und wie stark die Kacheln
+   Modus (Dunkel, Schwarz, Glas, Hell – mit Mini-Vorschau), Akzentfarbe (Vorgaben oder eigene) und wie stark die Kacheln
    im Hintergrund zu sehen sind. Wird im Browser gespeichert und beim Start angewendet.
    Hell: die ganze Oberfläche wird farbtreu umgekehrt (style.css → [data-theme="light"]); Bilder bleiben unverändert. */
 (() => {
@@ -7044,12 +7122,15 @@ document.addEventListener('click', (e) => {
   const MODES = {
     dark: { label: 'Dunkel', main: '#141414', side: '#141414', field: '#181818', fieldBorder: '#242424', // drei Flächen (04.11.)
       pv: { main: '#141414', side: '#141414', line: 'rgba(255,255,255,.16)', field: 'rgba(255,255,255,.16)' } },
-    black: { label: 'Schwarz', main: '#0a0a0a', side: '#060606', field: '#111111', fieldBorder: '#1f1f1f',
-      pv: { main: '#0a0a0a', side: '#060606', line: 'rgba(255,255,255,.14)', field: 'rgba(255,255,255,.14)' } },
-    // Hell: Werte vor der Umkehrung (#101010 wird zu #efefef)
-    // Hell: Werte VOR der Umkehrung – ergibt ein ruhiges, warmes Hellgrau (Hauptteil #f7f7f5, Sidebar #efefed, Felder weiß), nicht grelles Weiß
-    light: { label: 'Hell', main: '#08080a', side: '#101012', field: '#000000', fieldBorder: '#1d1d1f', light: true,
-      pv: { main: '#f7f7f5', side: '#efefed', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
+    // Schwarz (10.11. abends, umgedreht): Hauptteil reines Schwarz, Sidebar einen Hauch heller (grau statt dunkler als der Hauptteil)
+    black: { label: 'Schwarz', main: '#000000', side: '#0d0d0d', field: '#0d0d0d', fieldBorder: '#1c1c1c',
+      pv: { main: '#000000', side: '#121212', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
+    // Glas (10.11. abends, Nutzer-Bild): nur die Sidebar ist gläsern – dahinter ein ruhiges, dunkles Hintergrundbild; der Hauptteil bleibt fest
+    glass: { label: 'Glas', main: '#121214', side: 'transparent', field: '#18181b', fieldBorder: '#26262a', glass: true,
+      pv: { main: '#121214', side: 'linear-gradient(160deg,#2a2950 0%,#191936 45%,#0e0e1c 100%)', line: 'rgba(255,255,255,.2)', field: 'rgba(255,255,255,.15)' } },
+    // Hell: Werte VOR der Umkehrung (style.css → [data-theme="light"]) – neutral (kein Blaustich): Hauptteil weiß, Sidebar #f4f4f4, Felder weiß mit feinem Rand
+    light: { label: 'Hell', main: '#000000', side: '#0b0b0b', field: '#000000', fieldBorder: '#1c1c1c', light: true,
+      pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33 };
@@ -7060,6 +7141,8 @@ document.addEventListener('click', (e) => {
   function apply() {
     const m = MODES[cfg.mode];
     root.dataset.theme = m.light ? 'light' : 'dark';
+    if (m.glass) root.dataset.glass = 'on'; else delete root.dataset.glass;
+    root.dataset.mode = cfg.mode; // für modusgenaue Feinheiten in style.css (Schwarz)
     root.style.setProperty('--main-bg', m.main);
     root.style.setProperty('--sidebar-bg', m.side);
     root.style.setProperty('--field-bg', m.field);

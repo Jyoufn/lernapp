@@ -1,7 +1,8 @@
 /* ===================================================================
    Suchfeld (Lupe oben in der Seitenleiste, ⌘K / Strg+K) und Workspace-Menü (Name oben links)
    - Suchfeld wie eine Befehlspalette: oben das Eingabefeld, darunter Gruppen
-     leer:   Aktionen (Neuer Chat, Neues Dokument, Neue Aufgabe) · Zuletzt (Chats mit Hund) · Gehe zu
+     leer:   Aktionen (Neuer Chat, Neues Dokument, Neue Aufgabe) · Zuletzt (Chats mit Hund, weitere per Scrollen)
+             – keine „Gehe zu“-Gruppe mehr (10.11.); Home/Aufgaben/Kalender findet man weiter beim Tippen
      tippen: passende Aktionen, Agenten-Chats (Titel und Inhalt, davor der Hund des zuletzt genutzten Agenten), Dokumente (Titel und Text)
      Pfeile wählen, Enter öffnet, Esc schließt. Fundstelle im Inhalt erscheint grau dahinter.
    - Workspaces (höchstens 3): jeder mit eigenem Hund und eigenen Chats/Dokumenten. Menü oben links: Liste (Haken am aktiven),
@@ -72,8 +73,8 @@ const AppSearch = (() => {
     const out = [];
     const acts = ACTIONS().filter((a) => !q || norm(`${a.label} ${a.keys}`).includes(q));
     if (!q) {
-      const recent = chats().slice(0, 4).map((c) => ({ group: 'Zuletzt', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, meta: when(c.updated), run: () => openChat(c.tab) }));
-      out.push(...acts.filter((a) => a.group === 'Aktionen'), ...recent, ...acts.filter((a) => a.group !== 'Aktionen'));
+      const recent = chats().slice(0, 20).map((c) => ({ group: 'Zuletzt', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, meta: when(c.updated), run: () => openChat(c.tab) }));
+      out.push(...acts.filter((a) => a.group === 'Aktionen'), ...recent);
     } else {
       const cs = chats().filter((c) => norm(c.title).includes(q) || norm(c.text).includes(q)).slice(0, 8)
         .map((c) => ({ group: 'Chats', icon: `<span class="cmdk-dog">${dog(c.agent)}</span>`, label: c.title, html: mark(c.title, q), meta: when(c.updated), run: () => openChat(c.tab) }));
