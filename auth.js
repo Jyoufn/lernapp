@@ -166,38 +166,38 @@
 
     const wrap = document.createElement('section');
     wrap.className = 'auth';
-    wrap.setAttribute('aria-label', 'Anmelden');
+    wrap.setAttribute('aria-label', 'Sign in');
     wrap.innerHTML = `
       <form class="auth-card" novalidate autocomplete="on">
-        <h1 class="auth-title">Willkommen bei Agenten</h1>
+        <h1 class="auth-title">Welcome to Agenten</h1>
         <div class="auth-fields">
-          <label class="auth-label" for="authEmail">E-Mail</label>
+          <label class="auth-label" for="authEmail">Email</label>
           <div class="auth-field"><input id="authEmail" name="username" type="text" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
-          <label class="auth-label" for="authPw">Passwort</label>
+          <label class="auth-label" for="authPw">Password</label>
           <div class="auth-field"><input id="authPw" name="password" type="password" autocomplete="current-password" required />
-            <button type="button" class="auth-eye" aria-label="Passwort anzeigen" aria-pressed="false">${fi('eye', 14)}</button></div>
+            <button type="button" class="auth-eye" aria-label="Show password" aria-pressed="false">${fi('eye', 14)}</button></div>
         </div>
         <div class="auth-code-wrap" aria-hidden="true"><div class="auth-code-in">
           <div class="auth-code-head"><span class="auth-label">Code</span><span class="auth-sent"></span></div>
-          <div class="auth-code" role="group" aria-label="6-stelliger Code">
-            ${Array.from({ length: 6 }, (_, i) => `<input class="auth-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" ${i === 0 ? 'autocomplete="one-time-code"' : 'autocomplete="off"'} aria-label="Ziffer ${i + 1}" tabindex="-1" />`).join('')}
+          <div class="auth-code" role="group" aria-label="6-digit code">
+            ${Array.from({ length: 6 }, (_, i) => `<input class="auth-digit" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" ${i === 0 ? 'autocomplete="one-time-code"' : 'autocomplete="off"'} aria-label="Digit ${i + 1}" tabindex="-1" />`).join('')}
           </div>
         </div></div>
         <p class="auth-err" role="alert"></p>
-        <button type="submit" class="auth-btn"><span class="auth-btn-text">Anmelden</span><span class="auth-spin" aria-hidden="true"></span></button>
+        <button type="submit" class="auth-btn"><span class="auth-btn-text">Sign in</span><span class="auth-spin" aria-hidden="true"></span></button>
         <div class="auth-foot">
-          <button type="button" class="auth-link" data-act="change" hidden>E-Mail ändern</button>
-          <button type="button" class="auth-link" data-act="resend" hidden>Code erneut senden</button>
+          <button type="button" class="auth-link" data-act="change" hidden>Change email</button>
+          <button type="button" class="auth-link" data-act="resend" hidden>Resend code</button>
         </div>
         <div class="auth-alt">
-          <p class="auth-or">Oder</p>
+          <p class="auth-or">Or</p>
           <div class="auth-social">
-            <button type="button" class="auth-soc" data-soc="Google">Google</button>
-            <button type="button" class="auth-soc" data-soc="GitHub">GitHub</button>
+            <button type="button" class="auth-soc" data-soc="Google" aria-label="Google"><img src="logo-google.svg" alt="" width="16" height="16" hidden /><span>Google</span></button>
+            <button type="button" class="auth-soc" data-soc="GitHub" aria-label="GitHub"><img src="logo-github.svg" alt="" width="16" height="16" hidden /><span>GitHub</span></button>
           </div>
           <div class="auth-links">
-            <button type="button" class="auth-link" data-mode="create">Konto erstellen</button>
-            <button type="button" class="auth-link" data-mode="reset">Passwort vergessen?</button>
+            <button type="button" class="auth-link" data-mode="create">Create an account</button>
+            <button type="button" class="auth-link" data-mode="reset">Forgot password?</button>
           </div>
         </div>
       </form>`;
@@ -219,20 +219,22 @@
     // kein automatischer Fokus: erst das eigene Antippen eines Felds lässt Apple/den Browser die gespeicherten Passwörter anbieten
     /* Modus: anmelden | Konto erstellen | Passwort zurücksetzen – gleiche Felder, anderer Titel/Knopf (Server: /api/auth/start, bei „reset“ mit reset: true) */
     let mode = 'login';
-    const MODES = { login: ['Willkommen bei Agenten', 'Passwort', 'Anmelden', 'current-password'], create: ['Konto erstellen', 'Passwort', 'Konto erstellen', 'new-password'], reset: ['Passwort zurücksetzen', 'Neues Passwort', 'Code senden', 'new-password'] };
+    const MODES = { login: ['Welcome to Agenten', 'Password', 'Sign in', 'current-password'], create: ['Create an account', 'Password', 'Create account', 'new-password'], reset: ['Reset password', 'New password', 'Send code', 'new-password'] };
     const titleEl = wrap.querySelector('.auth-title'), pwLabel = wrap.querySelector('label[for="authPw"]');
     const linkA = wrap.querySelector('.auth-links [data-mode="create"]'), linkB = wrap.querySelector('.auth-links [data-mode="reset"]');
     function setMode(m) {
       mode = m;
       const [t, l, b, ac] = MODES[m];
       titleEl.textContent = t; pwLabel.textContent = l; btnText.textContent = b; pw.autocomplete = ac;
-      linkA.textContent = m === 'login' ? 'Konto erstellen' : 'Zur Anmeldung'; linkA.dataset.mode = m === 'login' ? 'create' : 'login';
+      linkA.textContent = m === 'login' ? 'Create an account' : 'Back to sign in'; linkA.dataset.mode = m === 'login' ? 'create' : 'login';
       linkB.hidden = m !== 'login';
       if (m !== 'login') pw.value = '';
       setErr('');
     }
     wrap.querySelector('.auth-links').addEventListener('click', (e) => { const b = e.target.closest('[data-mode]'); if (b && !busy && step === 'login') setMode(b.dataset.mode); });
-    wrap.querySelector('.auth-social').addEventListener('click', (e) => { const b = e.target.closest('[data-soc]'); if (b) setErr(`Die Anmeldung mit ${b.dataset.soc} gibt es noch nicht.`); });
+    wrap.querySelector('.auth-social').addEventListener('click', (e) => { const b = e.target.closest('[data-soc]'); if (b) setErr(`Sign in with ${b.dataset.soc} is not available yet.`); });
+    // Logo-Dateien (logo-google.svg / logo-github.svg) sind optional: erst wenn sie geladen sind, ersetzt das Bild den Namen
+    wrap.querySelectorAll('.auth-soc img').forEach((im) => { const ok = () => { im.hidden = false; im.nextElementSibling.hidden = true; }; if (im.complete && im.naturalWidth) ok(); else im.addEventListener('load', ok); });
 
     const setErr = (msg) => { err.textContent = msg || ''; wrap.classList.toggle('has-err', !!msg); };
     const setBusy = (on) => { busy = on; btn.classList.toggle('busy', on); btn.disabled = on; };
@@ -243,21 +245,21 @@
       const r = await nativeFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       let j = {};
       try { j = await r.json(); } catch {}
-      if (!r.ok) throw new Error(j.error || 'Etwas ist schiefgelaufen. Versuch es noch einmal.');
+      if (!r.ok) throw new Error(j.error || 'Something went wrong. Please try again.');
       return j;
     }
 
-    function toCode(addr, mode) {
+    function toCode(addr, kind) {
       step = 'code';
       wrap.classList.add('step-code');
       codeWrap.setAttribute('aria-hidden', 'false');
       email.readOnly = pw.readOnly = true;
       digits.forEach((d) => { d.value = ''; d.tabIndex = 0; d.classList.remove('filled'); });
-      sentEl.textContent = mode === 'fixed' ? 'dein fester Code' : `an ${addr} gesendet`;
-      btnText.textContent = mode === 'reset' ? 'Passwort ändern' : 'Anmelden';
+      sentEl.textContent = kind === 'fixed' ? 'your fixed code' : `sent to ${addr}`;
+      btnText.textContent = mode === 'reset' ? 'Change password' : 'Sign in';
       btn.classList.remove('ready');
       change.hidden = false;
-      resend.hidden = mode === 'fixed';
+      resend.hidden = kind === 'fixed';
       startResendTimer();
       setTimeout(() => digits[0].focus({ preventScroll: true }), 260);
     }
@@ -280,7 +282,7 @@
       const tick = () => {
         const s = Math.ceil((resendAt - Date.now()) / 1000);
         resend.disabled = s > 0;
-        resend.textContent = s > 0 ? `Code erneut senden (${s} s)` : 'Code erneut senden';
+        resend.textContent = s > 0 ? `Resend code (${s} s)` : 'Resend code';
         if (s <= 0) clearInterval(resendT);
       };
       tick();
@@ -290,8 +292,8 @@
     async function sendCode() {
       setErr('');
       const addr = email.value.trim();
-      if (!addr) { setErr('Bitte gib deine E-Mail-Adresse ein.'); email.focus(); return; }
-      if (!pw.value) { setErr(mode === 'reset' ? 'Bitte gib ein neues Passwort ein.' : 'Bitte gib dein Passwort ein.'); pw.focus(); return; }
+      if (!addr) { setErr('Please enter your email.'); email.focus(); return; }
+      if (!pw.value) { setErr(mode === 'reset' ? 'Please enter a new password.' : 'Please enter your password.'); pw.focus(); return; }
       setBusy(true);
       try {
         const j = await post('/api/auth/start', { email: addr, password: pw.value, ...(mode === 'reset' ? { reset: true } : {}) });
@@ -304,7 +306,7 @@
 
     async function verify() {
       const c = code();
-      if (c.length !== 6) { setErr('Bitte gib alle 6 Ziffern ein.'); digits[c.length]?.focus(); return; }
+      if (c.length !== 6) { setErr('Please enter all 6 digits.'); digits[c.length]?.focus(); return; }
       setErr('');
       setBusy(true);
       try {
@@ -390,7 +392,7 @@
       const show = pw.type === 'password';
       pw.type = show ? 'text' : 'password';
       e.currentTarget.setAttribute('aria-pressed', String(show));
-      e.currentTarget.setAttribute('aria-label', show ? 'Passwort verbergen' : 'Passwort anzeigen');
+      e.currentTarget.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
     });
     change.addEventListener('click', toLogin);
     resend.addEventListener('click', async () => {
