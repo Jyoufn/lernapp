@@ -1234,3 +1234,11 @@ test('Gefundenes Erklärbild: zusätzliches KI-Bild fällt weg, ohne Fund kommt 
   const without = await run(null);
   assert.match(without, /```illustration/);
 });
+
+test('Gezielte Website: Plattform/Domain wird erkannt, normale Fragen nicht', () => {
+  const W = require('../lib/workflow');
+  assert.deepEqual(W.siteFocus('Such mir auf Pinterest Ideen für einen Lernzettel'), ['pinterest.com', 'pinterest.de']);
+  assert.ok(W.siteFocus('Was sagen die Leute auf Twitter zu dem neuen iPhone?').includes('x.com'));
+  assert.deepEqual(W.siteFocus('Schau mal bei studyflix.de nach, was Osmose ist'), ['studyflix.de']);
+  assert.deepEqual(W.siteFocus('Erklär mir die Osmose'), []);
+});
