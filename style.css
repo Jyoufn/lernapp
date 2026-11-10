@@ -12103,3 +12103,11 @@ html.auth-opening .auth { opacity: 0; transform: none; }
 .ca-src .ca-fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 380px; }
 /* Nur ein Agent (10.11.): Hund und Begleiter sind keine Knöpfe mehr (kein Agenten-Feld) */
 .one-agent .dh-dog, .one-agent .dog-peek { cursor: default; pointer-events: none; }
+/* Fenster „Neues Dokument“ (10.11.): gleiche Karte wie Aufgaben/Termine – alte Regeln für .dc-make (Fläche, Kopf, Abstände) überschreiben */
+.tk-modal .tk-form.ce-card.tk-taskcard.dc-make { width: 360px; padding: 6px; border-radius: 16px; background: var(--win-bg); }
+.tk-form.dc-make.dc-make-inline { width: min(360px, 100%); padding: 6px; border: 1px solid var(--line); border-radius: 16px; background: var(--win-bg); }
+.dc-make .ce-foot { margin-top: 6px; }
+.dc-make .dc-into-list { display: grid; }
+.dc-make .dc-into-i span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-make .dc-into-none { padding: 8px 12px; color: var(--text-4); font-size: 12.5px; }
+.dc-make-cancel { height: 30px; padding: 0 12px; border: 0; border-radius: 8px; background: none; color: var(--text-3); font: 500 13px Inter, sans-serif; cursor: pointer; }

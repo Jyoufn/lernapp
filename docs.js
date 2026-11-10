@@ -3014,53 +3014,56 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     return d;
   }
   /* ---------- Fenster „Dokument erstellen“ (im Chat bzw. als Fenster in der Mitte) ----------
-     Schlicht und klein: Titel (vom Chat), Beschreibung (leer lassen → die KI schreibt sie), unten „Abbrechen“ und der blaue Knopf.
-     Kein × oben rechts, keine Tags – Tags gibt es später in den Infos des Dokuments. */
-  function makeForm({ title = '', subtitle = '', cta = 'Dokument erstellen', onCreate, onCancel }) {
-    const form = el('form', 'tk-form dc-make');
+     Gleicher Aufbau wie das Aufgaben- und Termin-Fenster (Stand 10.11.): Kasten mit Titel + Beschreibung, darunter Zeilen, die weich
+     aufklappen (UIKit.foldRows), unten rechts der blaue Knopf. Zeile „In bestehendes Dokument“ (nur unter Antworten): Suche + zuletzt bearbeitete. */
+  function makeForm({ title = '', subtitle = '', cta = 'Dokument erstellen', onCreate, onCancel, onAppend }) {
+    const form = el('form', 'tk-form tk-sheet ce-card tk-taskcard dc-make');
     form.autocomplete = 'off';
-    form.innerHTML = `<div class="dc-make-head">${fi('file', 15)}<span>Neues Dokument</span></div>
-      <input class="tk-f-title" placeholder="Titel" maxlength="160" aria-label="Titel" />
-      <textarea class="tk-f-notes" rows="1" placeholder="Beschreibung – leer lassen, dann schreibt die KI sie" maxlength="400" aria-label="Beschreibung"></textarea>
-      <div class="tk-form-foot"><span class="grow"></span>${onCancel ? '<button type="button" class="dc-make-cancel" data-x>Abbrechen</button>' : ''}<button type="submit" class="tk-create">${esc(cta)}</button></div>`;
+    const into = onAppend && docs.length;
+    form.innerHTML = `<div class="tk-sheet-main ce-headbox">
+        <input class="tk-f-title" placeholder="Titel" maxlength="160" aria-label="Titel" />
+        <textarea class="tk-f-notes" rows="1" placeholder="Beschreibung – leer lassen, dann schreibt die KI sie" maxlength="400" aria-label="Beschreibung"></textarea>
+      </div>
+      ${into ? `<div class="tk-sheet-rows ce-rows"><div class="tk-pop" data-k="into"><button type="button" class="tk-pill" data-open="into"><span class="tk-si">${fi('file', 14)}</span><span class="tk-rv">In bestehendes Dokument übernehmen</span></button>
+        <div class="tk-menu"><div class="tk-box"><div class="tk-tag-row"><input class="tk-tag-in dc-into-q" placeholder="Dokument suchen …" spellcheck="false" aria-label="Dokument suchen" /></div><div class="dc-into-list"></div></div></div></div></div>` : ''}
+      <div class="tk-sheet-foot ce-foot"><span class="grow"></span>${onCancel && !into ? '<button type="button" class="dc-make-cancel" data-x>Abbrechen</button>' : ''}<button type="submit" class="tk-create tk-make">${esc(cta)}</button></div>`;
     const ti = form.querySelector('.tk-f-title'), su = form.querySelector('.tk-f-notes');
     const growSu = () => { su.style.height = 'auto'; su.style.height = `${Math.min(su.scrollHeight, 120)}px`; };
     ti.value = title; su.value = subtitle;
     setTimeout(growSu);
     [ti, su].forEach((x) => x.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && x === su) { e.preventDefault(); form.requestSubmit(); } }));
     su.addEventListener('input', growSu);
+    if (into) {
+      const pop = form.querySelector('.tk-pop[data-k="into"]'), q = form.querySelector('.dc-into-q'), listEl = form.querySelector('.dc-into-list');
+      const draw = () => {
+        const s = q.value.trim().toLowerCase();
+        const hits = docs.filter((x) => !s || (x.title || '').toLowerCase().includes(s)).sort((x, y) => (y.updated || 0) - (x.updated || 0)).slice(0, 6);
+        listEl.innerHTML = hits.map((x) => `<button type="button" class="tk-mi dc-into-i" data-id="${esc(x.id)}"><span class="tk-mi-ic">${x.icon && window.DocIcons?.has(x.icon.name) ? `<span style="color:${esc(x.icon.c)}">${DocIcons.svg(x.icon.name, 14, '', !!x.icon.line)}</span>` : fi('file', 14)}</span><span>${esc(x.title || 'Unbenannt')}</span></button>`).join('')
+          || '<div class="dc-into-none">Kein Dokument gefunden</div>';
+      };
+      q.addEventListener('input', draw);
+      q.addEventListener('keydown', (e) => e.stopPropagation());
+      draw();
+      if (window.UIKit?.foldRows) UIKit.foldRows(form);
+      form.querySelector('[data-open="into"]').addEventListener('click', () => { pop.classList.toggle('open'); if (pop.classList.contains('open')) setTimeout(() => q.focus({ preventScroll: true }), 60); });
+      listEl.addEventListener('click', (e) => { const btn = e.target.closest('[data-id]'); if (btn) onAppend(btn.dataset.id); });
+    }
     form.addEventListener('click', (e) => { if (e.target.closest('[data-x]')) onCancel?.(); });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const b = form.querySelector('.tk-create'); if (b.disabled) return;
-      b.disabled = true; b.classList.add('saving');
+      const btn = form.querySelector('.tk-create'); if (btn.disabled) return;
+      btn.disabled = true; btn.classList.add('saving');
       onCreate({ title: ti.value.trim(), subtitle: su.value.trim(), tags: [] });
     });
     return { el: form };
   }
-  // als Fenster in der Mitte (z. B. „Ins Dokument“ unter einer Antwort)
+  // als Fenster in der Mitte (z. B. „Ins Dokument“ unter einer Antwort) – wie das Aufgaben-Fenster
   function offer(opts) {
     const modal = el('div', 'tk-modal dc-make-modal');
     const close = () => { modal.classList.add('closing'); setTimeout(() => modal.remove(), 220); document.removeEventListener('keydown', esc$); };
     const esc$ = (e) => { if (e.key === 'Escape') close(); };
-    const f = makeForm({ ...opts, onCancel: close, onCreate: (v) => { close(); opts.onCreate(v); } });
+    const f = makeForm({ ...opts, onCancel: close, onCreate: (v) => { close(); opts.onCreate(v); }, onAppend: opts.onAppend ? (id) => { close(); opts.onAppend(id); } : null });
     modal.append(f.el);
-    // darunter: Antwort stattdessen ans Ende eines vorhandenen Dokuments hängen (Suche + zuletzt bearbeitete)
-    if (opts.onAppend && docs.length) {
-      const into = el('div', 'dc-make-into');
-      into.innerHTML = `<div class="dc-into-l">Oder in ein bestehendes Dokument übernehmen</div><input class="dc-into-q" placeholder="Dokument suchen …" spellcheck="false" aria-label="Dokument suchen" /><div class="dc-into-list"></div>`;
-      const q = into.querySelector('input'), listEl = into.querySelector('.dc-into-list');
-      const draw = () => {
-        const s = q.value.trim().toLowerCase();
-        const hits = docs.filter((x) => !s || (x.title || '').toLowerCase().includes(s)).sort((x, y) => (y.updated || 0) - (x.updated || 0)).slice(0, 6);
-        listEl.innerHTML = hits.map((x) => `<button type="button" class="dc-into-i" data-id="${esc(x.id)}">${x.icon && window.DocIcons?.has(x.icon.name) ? `<span style="color:${esc(x.icon.c)}">${DocIcons.svg(x.icon.name, 15, '', !!x.icon.line)}</span>` : fi('file', 14)}<span>${esc(x.title || 'Unbenannt')}</span></button>`).join('') || '<div class="dc-into-none">Kein Dokument gefunden</div>';
-      };
-      q.addEventListener('input', draw);
-      q.addEventListener('keydown', (e) => e.stopPropagation());
-      listEl.addEventListener('click', (e) => { const b = e.target.closest('[data-id]'); if (b) { close(); opts.onAppend(b.dataset.id); } });
-      draw();
-      f.el.append(into);
-    }
     modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
     document.addEventListener('keydown', esc$);
     document.body.append(modal);

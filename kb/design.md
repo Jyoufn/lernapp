@@ -102,3 +102,4 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 
 - Chat-Text (10.11.): Ziffern nummerierter Listen in der Textschrift (`font-variant-numeric: normal`, sonst Tabellen-Ziffern = „andere Schrift“). Schreiben: neue Zeichen tauchen 900 ms weich auf (`.ink`/`INK_FADE_MS`), Rückstand wird in ~26 Schritten aufgeholt (`REVEAL_CATCHUP`) – gleichmäßiger Fluss, keine Schübe.
 - To-do-Liste in der Zeitleiste: `.plan-list.todo` (Kasten #181818, Rand #242424, Trennlinien; offen = gestrichelter Kreis, läuft = heller Kreis mit Pfeil, erledigt = grauer Kreis mit Haken).
+- Fenster „Neues Dokument“ (`Docs.makeForm`/`offer`, 10.11.): gleiche Karte wie Aufgaben/Termine (`tk-sheet ce-card tk-taskcard`): Kasten Titel + Beschreibung, Zeile „In bestehendes Dokument übernehmen“ klappt weich auf (Suche + Liste), unten rechts blauer Knopf; im Chat zusätzlich „Abbrechen“.
