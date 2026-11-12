@@ -1,0 +1,35 @@
+# Baut die Mac-App (Lernapp-mac.dmg, Intel + Apple Silicon) und legt sie als GitHub-Release ab.
+# Läuft bei Änderungen in desktop/ oder per Hand (Actions → „Mac-App bauen“ → Run workflow).
+# Download immer unter: https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg
+name: Mac-App bauen
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['desktop/**', '.github/workflows/desktop.yml']
+permissions:
+  contents: write
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: App bauen
+        working-directory: desktop
+        run: |
+          cp ../icon-512.png icon.png
+          npm install --no-audit --no-fund
+          npx electron-builder --mac --universal --publish never
+      - name: Als Release veröffentlichen
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mac-v${{ github.run_number }}
+          name: Lernapp für Mac (${{ github.run_number }})
+          make_latest: true
+          body: |
+            Lernapp für den Mac (Intel + Apple Silicon).
+            Öffnen: DMG doppelklicken, Lernapp in „Programme“ ziehen. Beim ersten Start: Rechtsklick auf die App → „Öffnen“
+            (oder Systemeinstellungen → Datenschutz & Sicherheit → „Dennoch öffnen“), weil die App nicht bei Apple registriert ist.
+          files: desktop/dist/Lernapp-mac.dmg

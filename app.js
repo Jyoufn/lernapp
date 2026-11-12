@@ -7224,16 +7224,24 @@ document.addEventListener('click', (e) => {
     // Schwarz (10.11. abends, umgedreht): Hauptteil reines Schwarz, Sidebar einen Hauch heller (grau statt dunkler als der Hauptteil)
     black: { label: 'Schwarz', main: '#000000', side: '#080808', field: '#0a0a0a', fieldBorder: '#1c1c1c',
       pv: { main: '#000000', side: '#0a0a0a', line: 'rgba(255,255,255,.15)', field: 'rgba(255,255,255,.15)' } },
-    // Glas (Stand 10.11. abends, Vorbild glassapp.dev): Sidebar flach grau (Hauch Glasfarbe), Hauptteil als randlose, abgerundete dunkelgraue Fläche
-    // (etwas heller als im Vorbild), Eingabefeld eine Stufe heller ohne Rand. Glasfarbe wählbar (cfg.glass) – tönt nur ganz leicht.
-    glass: { label: 'Glas', main: 'color-mix(in srgb, var(--glass) 3%, #161618)', side: 'color-mix(in srgb, var(--glass) 6%, #1d1d1f)', field: 'color-mix(in srgb, var(--glass) 6%, #202022)', fieldBorder: 'transparent', glass: true,
-      pv: { main: '#161618', side: '#232325', line: 'rgba(255,255,255,.18)', field: 'rgba(255,255,255,.12)' } },
+    // Glas (nur in der Mac-App, 12.11.): echtes macOS-Glas – die Seite wird durchsichtig, macOS zeichnet den Schreibtisch weichgezeichnet dahinter
+    // (Vibrancy). Sidebar ganz durchsichtig, Hauptteil milchig. Ton Hell/Dunkel (cfg.glassTone) – Hell-Werte VOR der Umkehrung (wie bei Hell).
+    glass: { label: 'Glas', glass: true, desktop: true,
+      tones: {
+        dark: { main: 'rgba(22, 21, 20, 0.9)', side: 'transparent', field: 'rgba(255, 255, 255, 0.06)', fieldBorder: 'rgba(255, 255, 255, 0.07)' }, // wie Vorbild: Hauptteil fast deckend dunkel, Sidebar klares Glas
+        light: { main: 'rgba(0, 0, 0, 0.58)', side: 'transparent', field: 'rgba(0, 0, 0, 0.55)', fieldBorder: 'rgba(255, 255, 255, 0.09)', light: true },
+      },
+      pv: { main: 'rgba(255,255,255,.55)', side: 'linear-gradient(160deg,#8aa7c8,#c7b6d6)', line: 'rgba(0,0,0,.16)', field: 'rgba(0,0,0,.12)' } },
     // Hell: Werte VOR der Umkehrung (style.css → [data-theme="light"]) – neutral (kein Blaustich): Hauptteil weiß, Sidebar #f4f4f4, Felder weiß mit feinem Rand
     light: { label: 'Hell', main: '#000000', side: '#0b0b0b', field: '#000000', fieldBorder: '#1c1c1c', light: true,
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff' };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark' };
+  // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
+  const DESKTOP = !!(window.lernappDesktop && window.lernappDesktop.glass);
+  root.classList.toggle('is-desktop', DESKTOP);
+  const modeId = () => (MODES[cfg.mode] && (DESKTOP || !MODES[cfg.mode].desktop) ? cfg.mode : 'dark');
   // Glasfarben (Einstellungen → Aussehen, nur im Modus Glas): Weiß zuerst, dann sanfte Töne
   const GLASS = ['#ffffff', '#9a9aa2', '#5a5a62', '#c9d6ff', '#d8c6ff', '#ffc9de', '#ffd8b8']; // Weiß, Grau, dunkles Rauchglas, sanfte Töne (kein Grün)
   const cfg = { ...DEFAULTS };
@@ -7241,10 +7249,15 @@ document.addEventListener('click', (e) => {
   if (!MODES[cfg.mode]) cfg.mode = 'dark'; // frühere Einstellung „Graphit“ gibt es nicht mehr
 
   function apply() {
-    const m = MODES[cfg.mode];
+    const id = modeId();
+    const tone = cfg.glassTone === 'light' ? 'light' : 'dark';
+    const m = MODES[id].tones ? { ...MODES[id], ...MODES[id].tones[tone] } : MODES[id];
     root.dataset.theme = m.light ? 'light' : 'dark';
-    if (m.glass) root.dataset.glass = 'on'; else delete root.dataset.glass;
-    root.dataset.mode = cfg.mode; // für modusgenaue Feinheiten in style.css (Schwarz)
+    if (m.glass) root.dataset.glass = 'mac'; else delete root.dataset.glass;
+    if (m.glass) root.dataset.glassTone = tone; else delete root.dataset.glassTone;
+    root.dataset.mode = id; // für modusgenaue Feinheiten in style.css (Schwarz, Glas)
+    // macOS-Glas hell oder dunkel tönen (sonst folgt es dem System)
+    try { window.lernappDesktop?.setTheme?.(m.glass ? tone : (m.light ? 'light' : 'dark')); } catch {}
     root.style.setProperty('--glass', /^#[0-9a-f]{6}$/i.test(cfg.glass || '') ? cfg.glass : '#ffffff');
     root.style.setProperty('--main-bg', m.main);
     root.style.setProperty('--sidebar-bg', m.side);
@@ -7256,7 +7269,7 @@ document.addEventListener('click', (e) => {
     // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
     try {
       const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
-      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) data.glass = root.dataset.glass;
+      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}
   }
@@ -7282,18 +7295,19 @@ document.addEventListener('click', (e) => {
   apply();
   fetch('/api/appearance').then((r) => r.json()).then((srv) => {
     if (!srv || !MODES[srv.mode]) { save(); return; } // noch nichts auf dem Server → aktuellen Stand dort ablegen
-    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles, ...(srv.glass ? { glass: srv.glass } : {}) });
+    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles, ...(srv.glass ? { glass: srv.glass } : {}), ...(srv.glassTone ? { glassTone: srv.glassTone } : {}) });
     try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {}
     apply();
   }).catch(() => {});
 
   // eingestellt wird in den Einstellungen → Aussehen (settings.js); früher ein Fenster oben rechts im leeren Chat
   window.Appearance = {
-    MODES: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.label])),
+    MODES: Object.fromEntries(Object.entries(MODES).filter(([, m]) => DESKTOP || !m.desktop).map(([id, m]) => [id, m.label])),
     PREVIEW: Object.fromEntries(Object.entries(MODES).map(([id, m]) => [id, m.pv])),
     ACCENTS,
     GLASS,
-    get: () => ({ ...cfg }),
+    DESKTOP,
+    get: () => ({ ...cfg, mode: modeId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();

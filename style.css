@@ -12285,3 +12285,36 @@ button, svg, img, .sidebar, .msg-actions, .src-covers, .next-sugs, .work-head, .
 .dc-proj.open > .sbp-head .pj-folder .pf-shut { opacity: 0; transform: scaleY(0.9); }
 .dc-proj.open > .sbp-head .pj-folder .pf-open { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { .pj-folder path { transition: none; } }
+
+/* ===== Mac-App (desktop/, 12.11.): Fensterleiste und echtes macOS-Glas =====
+   html.is-desktop: Ampel-Knöpfe oben links → oben ein ziehbarer Streifen; eingeklappt rückt der Hauptteil nach unten.
+   html[data-glass="mac"]: Seite durchsichtig, macOS zeichnet den Schreibtisch weichgezeichnet dahinter (Vibrancy).
+   Hell = data-theme light → die Farben unten sind VOR der Umkehrung (Weiß wird zu Schwarz und umgekehrt). */
+html.is-desktop .app::before, html.is-desktop .app::after { content: ''; position: fixed; z-index: 5; top: 0; -webkit-app-region: drag; }
+html.is-desktop .app::before { left: 0; width: var(--sidebar-w); height: 46px; }
+html.is-desktop .app::after { left: 0; right: 0; height: 8px; }
+html.is-desktop .app.collapsed::before { display: none; }
+html.is-desktop .app.collapsed::after { height: 42px; }
+html.is-desktop .app.collapsed .panel { margin-top: 42px; }
+html.is-desktop .panel, html.is-desktop .sidebar :is(button, a, input, .sb-scroll) { -webkit-app-region: no-drag; }
+
+html[data-glass="mac"], html[data-glass="mac"] body, html[data-glass="mac"] .app, html[data-glass="mac"] .main { background: transparent !important; }
+html[data-glass="mac"] .sidebar { background: transparent; border-right: 0; }
+html[data-glass="mac"] .panel { background: var(--main-bg); border-color: rgba(255, 255, 255, 0.07); border-radius: 12px; }
+html[data-glass="mac"] .sidebar :is(.nav-item, .st-item, .sb-chat):hover, html[data-glass="mac"] .sb-head-btn:hover, html[data-glass="mac"] .sb-ws:hover { background: rgba(255, 255, 255, 0.07); }
+html[data-glass="mac"] .sidebar :is(.nav-item, .st-item, .sb-chat).active { background: rgba(255, 255, 255, 0.11); }
+html[data-glass="mac"] .out-bubble { background: rgba(255, 255, 255, 0.08); }
+html[data-glass="mac"] .boot, html[data-glass="mac"].booting .boot { background: transparent; }
+html[data-glass="mac"] .boot-main { background: var(--main-bg); border-color: rgba(255, 255, 255, 0.07); }
+/* Hell: Sidebar-Schrift kräftiger (auf hellem Glas sonst zu blass) */
+html[data-glass="mac"][data-glass-tone="light"] .sidebar { --text-3: #c2c2c2; --text-4: #9a9a9a; }
+/* Glas (Mac): Ansichten über dem Chat (Einstellungen, Home, Aufgaben, Kalender, Chats) haben keine eigene Fläche mehr –
+   der Chat darunter wird ausgeblendet, sonst schiene er durchs Glas */
+html[data-glass="mac"] :is(.st-view, .chats-view, .tk-view, .dc-view, .dcc-listview, .cal-dv) { background: transparent; }
+html[data-glass="mac"] .composer-area::before { background: transparent; }
+html[data-glass="mac"] :is(.panel[class*="view-"], .app.settings-open .panel) > :is(.content, .composer-area, .home-plaza, .chat-bg, .prompt-nav, .create-switch, .pn-card) { visibility: hidden; }
+html[data-glass="mac"] .app.settings-open .panel > :not(.st-view, .panel-toggle, .chat-bar) { visibility: hidden; }
+/* Anmeldung in der Mac-App: ebenfalls auf Glas (dunkle, fast deckende Fläche wie der Hauptteil) */
+html.is-desktop .auth { background: var(--main-bg, #0a0a0a); -webkit-app-region: drag; }
+html.is-desktop .auth :is(input, button, a, label) { -webkit-app-region: no-drag; }
+html.is-desktop:not([data-glass="mac"]) body { background: #0a0a0a; }

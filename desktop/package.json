@@ -1,0 +1,29 @@
+{
+  "name": "lernapp-desktop",
+  "productName": "Lernapp",
+  "version": "1.0.0",
+  "description": "Lernapp für den Mac – echtes Glas (macOS-Vibrancy) in Hell und Dunkel",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --universal --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "de.jyoufn.lernapp",
+    "productName": "Lernapp",
+    "files": ["main.js", "preload.js", "icon.png"],
+    "mac": {
+      "category": "public.app-category.education",
+      "icon": "icon.png",
+      "identity": "-",
+      "target": [{ "target": "dmg", "arch": ["universal"] }],
+      "artifactName": "Lernapp-mac.${ext}"
+    },
+    "dmg": { "title": "Lernapp" }
+  }
+}

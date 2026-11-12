@@ -22,7 +22,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css" />
   <link rel="stylesheet" href="style.css?v=11" />
   <!-- Vor dem ersten Bild: gewählte Darstellung setzen und (angemeldet) das Ladebild zeigen statt der halb aufgebauten App -->
-  <script>try{var d=document.documentElement,a=JSON.parse(localStorage.getItem('appearance.vars')||'null');if(a){for(var k in a.vars)if(a.vars[k])d.style.setProperty(k,a.vars[k]);for(var j in a.data)d.dataset[j]=a.data[j];}if(localStorage.getItem('auth.user')&&localStorage.getItem('auth.user')!=='null')d.classList.add('booting');if(localStorage.getItem('sidebarCollapsed')==='1')d.classList.add('boot-noside');}catch(e){}</script>
+  <script>try{var d=document.documentElement;if(window.lernappDesktop)d.classList.add('is-desktop');var a=JSON.parse(localStorage.getItem('appearance.vars')||'null');if(a){for(var k in a.vars)if(a.vars[k])d.style.setProperty(k,a.vars[k]);for(var j in a.data)d.dataset[j]=a.data[j];}if(localStorage.getItem('auth.user')&&localStorage.getItem('auth.user')!=='null')d.classList.add('booting');if(localStorage.getItem('sidebarCollapsed')==='1')d.classList.add('boot-noside');}catch(e){}</script>
 </head>
 <body>
   <div class="boot" aria-hidden="true"><div class="boot-side"><i class="w1"></i><i class="w2"></i><i class="w3"></i><i class="w4"></i><i class="w5"></i></div><div class="boot-main"><div class="boot-head"><i></i><i class="pill"></i></div><div class="boot-mid"><i class="dog"></i><i class="t"></i><div class="boot-in"><i></i><i class="s"></i></div></div></div></div>
