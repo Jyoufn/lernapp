@@ -12592,3 +12592,10 @@ html body .cm-head .cal-new { grid-column: 3; justify-self: end; }
 html body .cal-head.cm-head { position: relative; display: flex !important; justify-content: flex-end; }
 html body .cm-head .cm-switch { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
 html body .cm-switch .cm-label { color: var(--text); font-weight: 600; }
+
+/* ===== Kalender-Kopf (14.11.): Monat größer und ohne Kasten; Pfeile etwas größer und damit kräftiger ===== */
+html body .cm-switch.cm-switch.cm-switch.cm-switch { box-shadow: none !important; background: none !important; width: 240px; height: 30px; grid-template-columns: 30px minmax(0, 1fr) 30px; }
+html body .cm-switch .cm-label { font-size: 15px; line-height: 30px; letter-spacing: -0.015em; }
+html body .cm-switch .cm-arr { width: 28px; height: 28px; color: var(--text-3); }
+html body .cm-switch .cm-arr svg { width: 16px; height: 16px; }
+@media (max-width: 640px) { html body .cm-head .cm-switch.cm-switch.cm-switch.cm-switch { width: 200px; } }
