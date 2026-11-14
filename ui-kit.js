@@ -265,7 +265,7 @@ const UIKit = (() => {
   }
 
   /* ---------- Icon-Liste (14.11.): neue Linien-Icons im Stil des Vorbilds ----------
-     Regeln (am Vorbild ausgemessen): Raster 20 × 20, DÜNNER Strich 1,25, runde Enden und Ecken, keine Füllungen.
+     Regeln (am Vorbild ausgemessen): Raster 20 × 20, DÜNNER Strich 1,05, runde Enden und Ecken, keine Füllungen.
      Die Form füllt das Raster fast ganz (Rand 2,5–2,75) und ist breit und weich: Ecken als „Squircle“ (Helfer sq, Ecke 5 lang, läuft weich in die Gerade aus), kein Kreisbogen.
      Details innen sind kurze offene Striche. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
      Wird Stück für Stück ergänzt (Bereich „UI“ → Icons zeigt die Liste). */
@@ -279,14 +279,16 @@ const UIKit = (() => {
     link: { label: 'Link', d: '<path d="M8.6 11.4a3.4 3.4 0 0 0 4.8 0L15.8 9A3.4 3.4 0 0 0 11 4.2l-.9.9"/><path d="M11.4 8.6a3.4 3.4 0 0 0-4.8 0L4.2 11A3.4 3.4 0 0 0 9 15.8l.9-.9"/>' },
     plus: { label: 'Erstellen', d: '<path d="M10 3.75v12.5M3.75 10h12.5"/>' },
     // Home = „Bibliothek“ aus dem Vorbild: weicher Kasten, unten offen, dort hängt ein Lesezeichen; innen zwei kurze Zeilen
-    home: { label: 'Home', d: '<path d="M6.5 16.5c-2.65 0-3.75-1.2-3.75-5V7.75c0-3.8 1.2-5 5-5h4.5c3.8 0 5 1.2 5 5v3.75c0 3.8-1.1 5-3.75 5"/><path d="M8.25 18.1v-5.8a.9.9 0 0 1 .9-.9h1.7a.9.9 0 0 1 .9.9v5.8L10 16.75z"/><path d="M7.25 5.9h3M6.75 8.7h6.5"/>' },
+    home: { label: 'Home', d: '<path d="M5.4 16.3c-1.8-.7-2.65-1.9-2.65-4.1V7.35c0-3.5 1.1-4.6 4.6-4.6h5.3c3.5 0 4.6 1.1 4.6 4.6v4.85c0 2.2-.85 3.4-2.65 4.1"/><path d="M7.6 18.2v-5a1.2 1.2 0 0 1 1.2-1.2h2.4a1.2 1.2 0 0 1 1.2 1.2v5L10 16.6z"/><path d="M6.8 5.95h3.4M6.8 9H13"/>' },
+    // Bereiche = „Spaces“ aus dem Vorbild: Korb mit zwei gestapelten Bögen darüber
+    spaces: { label: 'Bereiche', d: '<path d="M6.2 4.1c0-1 .7-1.7 1.7-1.7h4.2c1 0 1.7.7 1.7 1.7"/><path d="M4.7 7.2c0-.9.6-1.5 1.5-1.5h7.6c.9 0 1.5.6 1.5 1.5"/><path d="M4.6 8.9h10.8c1.1 0 1.9 1 1.6 2.1l-1.3 4.9c-.25.9-1 1.5-1.95 1.5H6.25c-.95 0-1.7-.6-1.95-1.5L3 11c-.3-1.1.5-2.1 1.6-2.1z"/>' },
     tasks: { label: 'Aufgaben', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="m6.9 10.2 2.1 2.1 4.1-4.4"/>` },
     // Kalender wie bisher in der Sidebar (Kasten, Kopflinie, fünf Punkte) – nur dünn
-    calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="1.7" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
+    calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="1.45" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
     search: { label: 'Suche', d: '<circle cx="9" cy="9" r="5.75"/><path d="m13.2 13.2 3.6 3.6"/>' },
     folder: { label: 'Ordner', d: '<path d="M2.5 6.6c0-2.2.9-3.1 3.1-3.1h1.9c.75 0 1.45.3 1.97.83l.7.72c.34.35.8.55 1.3.55h2.93c2.2 0 3.1.9 3.1 3.1v4.7c0 2.2-.9 3.1-3.1 3.1H5.6c-2.2 0-3.1-.9-3.1-3.1z"/>' },
   };
-  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
+  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
 
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>
