@@ -23,11 +23,11 @@ const UILab = (() => {
   function buttons() {
     const B = window.UIKit.button;
     return section('Knöpfe', [
-      ['Arten', [B({ label: 'Hell', kind: 'light' }), B({ label: 'Standard' }), B({ label: 'Umrandet', kind: 'line' }), B({ label: 'Leise', kind: 'ghost' }), B({ label: 'Löschen', kind: 'danger' })]],
-      ['Mit Icon', [B({ label: 'Hinzufügen', icon: 'plus', kind: 'light' }), B({ label: 'Hinzufügen', icon: 'plus' }), B({ label: 'Hinzufügen', icon: 'plus', kind: 'line' }), B({ label: 'Hinzufügen', icon: 'plus', kind: 'ghost' }), B({ label: 'Löschen', icon: 'trash', kind: 'danger' })]],
-      ['Nur Icon', [B({ icon: 'plus', kind: 'light', aria: 'Hinzufügen' }), B({ icon: 'search', aria: 'Suchen' }), B({ icon: 'filter', kind: 'line', aria: 'Filter' }), B({ icon: 'plus', kind: 'ghost', aria: 'Hinzufügen' }), B({ icon: 'trash', kind: 'danger', aria: 'Löschen' })]],
+      ['Arten', [B({ label: 'Standard' }), B({ label: 'Hell', kind: 'light' }), B({ label: 'Umrandet', kind: 'line' }), B({ label: 'Leise', kind: 'ghost' }), B({ label: 'Löschen', kind: 'danger' })]],
+      ['Mit Icon', [B({ label: 'Hinzufügen', icon: 'plus' }), B({ label: 'Hinzufügen', icon: 'plus', kind: 'light' }), B({ label: 'Hinzufügen', icon: 'plus', kind: 'line' }), B({ label: 'Hinzufügen', icon: 'plus', kind: 'ghost' }), B({ label: 'Löschen', icon: 'trash', kind: 'danger' })]],
+      ['Nur Icon', [B({ icon: 'search', aria: 'Suchen' }), B({ icon: 'plus', kind: 'light', aria: 'Hinzufügen' }), B({ icon: 'filter', kind: 'line', aria: 'Filter' }), B({ icon: 'plus', kind: 'ghost', aria: 'Hinzufügen' }), B({ icon: 'trash', kind: 'danger', aria: 'Löschen' })]],
       ['Größen', [B({ label: 'Klein', size: 's' }), B({ label: 'Mittel' }), B({ label: 'Groß', size: 'l' }), B({ label: 'Klein', size: 's', kind: 'light' }), B({ label: 'Mittel', kind: 'light' }), B({ label: 'Groß', size: 'l', kind: 'light' })]],
-      ['Gesperrt', [B({ label: 'Hell', kind: 'light', disabled: true }), B({ label: 'Standard', disabled: true }), B({ label: 'Umrandet', kind: 'line', disabled: true }), B({ label: 'Leise', kind: 'ghost', disabled: true })]],
+      ['Gesperrt', [B({ label: 'Standard', disabled: true }), B({ label: 'Hell', kind: 'light', disabled: true }), B({ label: 'Umrandet', kind: 'line', disabled: true }), B({ label: 'Leise', kind: 'ghost', disabled: true })]],
     ]);
   }
 

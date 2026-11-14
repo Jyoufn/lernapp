@@ -12473,3 +12473,29 @@ html[data-glass="mac"][data-glass-tone="light"] .cs-pill { background: rgba(0, 0
 .lb2-menu, .tk-filter, .chat-pop.chat-menu, .mpx { padding: 4px; border-radius: 12px; border-color: rgba(255, 255, 255, 0.08) !important; box-shadow: none; }
 .lb2-menu .lb2-mi, .tk-filter .tk-fi, .chat-menu button, .mpx-m { border-radius: 8px; font-size: 13px; font-weight: 500; transition: background-color 110ms ease, color 110ms ease; }
 .lb2-menu .lb2-mi:hover, .tk-filter .tk-fi:hover, .chat-menu button:hover:not(:disabled), .mpx-m:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+
+/* ===== Standard-Knopf = grau gefüllt (14.11.): wie der helle Knopf, nur in Grau – ohne Ring, weiße Schrift 600 =====
+   Gilt für .ui-btn (Standard) und in der App für „Neuer Termin“, den Monats-Umschalter, „Erstellen/Speichern“ in Fenstern, „Vorschau öffnen“. */
+.ui-btn { background: rgba(255, 255, 255, 0.1); box-shadow: none; color: var(--text); font-weight: 600; }
+.ui-btn:hover { background: rgba(255, 255, 255, 0.14); }
+.ui-btn:active { background: rgba(255, 255, 255, 0.18); }
+.ui-btn-light { background: #e6e6e6; color: #141414; }
+.ui-btn-light:hover { background: #f4f4f4; } .ui-btn-light:active { background: #d2d2d2; }
+.ui-btn-line, .ui-btn-ghost, .ui-btn-danger { font-weight: 500; }
+.ui-btn-line { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); color: var(--text-2); }
+.ui-btn-ghost { background: none; color: var(--text-2); }
+.ui-btn-line:hover { background: rgba(255, 255, 255, 0.06); } .ui-btn-ghost:hover { background: rgba(255, 255, 255, 0.07); }
+.ui-btn-line:active, .ui-btn-ghost:active { background: rgba(255, 255, 255, 0.11); }
+.ui-btn-danger { background: rgba(239, 107, 95, 0.13); color: #f07a6e; }
+.ui-btn-danger:hover { background: rgba(239, 107, 95, 0.2); } .ui-btn-danger:active { background: rgba(239, 107, 95, 0.26); }
+.ui-dd.open > .ui-btn:not(.ui-btn-light):not(.ui-btn-danger):not(.ui-btn-line):not(.ui-btn-ghost) { background: rgba(255, 255, 255, 0.16); }
+html body :is(.cal-new, .tk-create, .cw-prevbtn) { height: 28px; border: 0 !important; border-radius: 10px !important; background: rgba(255, 255, 255, 0.1) !important; box-shadow: none !important; color: var(--text) !important; font: 600 13px Inter, sans-serif; transition: background-color 140ms ease; }
+html body :is(.cal-new, .tk-create, .cw-prevbtn):hover { background: rgba(255, 255, 255, 0.14) !important; }
+html body :is(.cal-new, .tk-create, .cw-prevbtn):active { background: rgba(255, 255, 255, 0.18) !important; scale: 1; }
+html body :is(.cal-new, .tk-create, .cw-prevbtn) svg { color: inherit !important; }
+html body .tk-create { padding: 0 14px; }
+html body .tk-create:disabled { opacity: 0.4; }
+/* Kalender-Kopf: Monats-Umschalter als graue Fläche wie der Knopf daneben (kein Rahmen), gleiche Höhe und Rundung */
+html body .cm-switch { height: 28px; border: 0 !important; border-radius: 10px !important; background: rgba(255, 255, 255, 0.1) !important; box-shadow: none !important; }
+html body .cm-switch button { border-radius: 8px; }
+html body .cal-new.cal-new.cal-new.cal-new, html body .cm-switch.cm-switch.cm-switch.cm-switch { border-radius: 10px !important; }
