@@ -9,7 +9,7 @@
   const lang = () => { try { return localStorage.getItem(KEY) === 'en' ? 'en' : 'de'; } catch { return 'de'; } };
   const D = {
     // Sidebar, Köpfe
-    'Erstellen': 'Create', 'Schriftstärke': 'Font weight', 'Normal': 'Normal', 'Kräftiger': 'Bolder', 'Kräftig': 'Bold', 'Home': 'Home', 'Aufgaben': 'Tasks', 'Kalender': 'Calendar', 'Angepinnt': 'Pinned', 'Chats': 'Chats', 'Dokumente': 'Documents',
+    'Erstellen': 'Create', 'Schriftstärke': 'Font weight', 'Schriftart': 'Font', 'Normal': 'Normal', 'Kräftiger': 'Bolder', 'Kräftig': 'Bold', 'Home': 'Home', 'Aufgaben': 'Tasks', 'Kalender': 'Calendar', 'Angepinnt': 'Pinned', 'Chats': 'Chats', 'Dokumente': 'Documents',
     'Agenten': 'Agents', 'Einstellungen': 'Settings', 'Zurück': 'Back', 'Allgemein': 'General', 'Aussehen': 'Appearance', 'Suchen': 'Search',
     'Workspace hinzufügen': 'Add workspace', 'Privat': 'Private', 'Neuer Chat': 'New chat', 'Neues Dokument': 'New document', 'Neue Aufgabe': 'New task',
     'Als Nächstes': 'Up next', 'Öffnen': 'Open', 'Alle Einträge': 'All items', 'Alle Chats': 'All chats', 'Gefiltert': 'Filtered',
