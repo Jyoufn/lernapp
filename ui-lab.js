@@ -45,13 +45,13 @@ const UILab = (() => {
 
   function icons() {
     const K = window.UIKit;
-    const tile = (name) => { const t = document.createElement('div'); t.className = 'uiv-ic'; t.innerHTML = `<i>${K.icon(name, 18)}</i><span></span>`; t.lastChild.textContent = K.ICONS[name].label; return t; };
+    const tile = (name) => { const t = document.createElement('div'); t.className = 'uiv-ic'; t.innerHTML = `<i>${K.icon(name, 20)}</i><span></span>`; t.lastChild.textContent = K.ICONS[name].label; return t; };
     const sized = (name, s) => { const t = document.createElement('div'); t.className = 'uiv-ic'; t.innerHTML = `<i>${K.icon(name, s)}</i><span>${s}</span>`; return t; };
     const sec = section('Icons', [
       ['Liste', Object.keys(K.ICONS).map(tile)],
-      ['Größen', [14, 16, 18, 22].map((s) => sized('home', s))],
+      ['Größen', [16, 18, 20, 24].map((s) => sized('home', s))],
     ]);
-    const note = document.createElement('p'); note.className = 'uiv-note'; note.textContent = 'Raster 18 · Strich 1,4 · runde Enden und Ecken · keine Füllungen';
+    const note = document.createElement('p'); note.className = 'uiv-note'; note.textContent = 'Raster 20 · dünner Strich 1,25 · Form füllt das Raster · breite, weiche Ecken · keine Füllungen';
     sec.querySelector('h3').after(note);
     return sec;
   }

@@ -265,20 +265,21 @@ const UIKit = (() => {
   }
 
   /* ---------- Icon-Liste (14.11.): neue Linien-Icons im Stil des Vorbilds ----------
-     Regeln: Raster 18 × 18, Strich 1,4, runde Enden und Ecken, Eckenradius der Formen 3,4–3,6, keine Füllungen,
-     Formen bleiben 2–3 Einheiten vom Rand weg. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
+     Regeln (am Vorbild ausgemessen): Raster 20 × 20, DÜNNER Strich 1,25, runde Enden und Ecken, keine Füllungen.
+     Die Form füllt das Raster fast ganz (Rand 2,5–2,75) und ist breit und weich: Eckenradius 2,7 (Ordner) bis 4,4 (Kasten).
+     Details innen sind kurze offene Striche. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
      Wird Stück für Stück ergänzt (Bereich „UI“ → Icons zeigt die Liste). */
   const ICONS = {
-    pencil: { label: 'Umbenennen', d: '<path d="M11.35 3.65a1.63 1.63 0 0 1 2.3 0l.7.7a1.63 1.63 0 0 1 0 2.3l-7.3 7.3a1.6 1.6 0 0 1-.72.42l-2.5.66a.5.5 0 0 1-.61-.61l.66-2.5a1.6 1.6 0 0 1 .42-.72z"/><path d="m10.2 4.8 3 3"/>' },
-    link: { label: 'Link', d: '<path d="M7.75 10.25a3 3 0 0 0 4.24 0l2.13-2.13a3 3 0 0 0-4.24-4.24l-.78.78"/><path d="M10.25 7.75a3 3 0 0 0-4.24 0L3.88 9.88a3 3 0 0 0 4.24 4.24l.78-.78"/>' },
-    plus: { label: 'Erstellen', d: '<path d="M9 4.2v9.6M4.2 9h9.6"/>' },
-    home: { label: 'Home', d: '<path d="M3 8.2a1.8 1.8 0 0 1 .66-1.39l4.2-3.45a1.8 1.8 0 0 1 2.28 0l4.2 3.45A1.8 1.8 0 0 1 15 8.2v5A1.8 1.8 0 0 1 13.2 15H4.8A1.8 1.8 0 0 1 3 13.2z"/><path d="M7.2 15v-3a1.8 1.8 0 0 1 3.6 0v3"/>' },
-    tasks: { label: 'Aufgaben', d: '<rect x="3" y="3" width="12" height="12" rx="3.6"/><path d="m6.5 9.2 1.75 1.75L11.6 7.4"/>' },
-    calendar: { label: 'Kalender', d: '<rect x="3" y="3.6" width="12" height="11.4" rx="3.4"/><path d="M3 7.5h12M6.4 2.3v2.4M11.6 2.3v2.4"/>' },
-    search: { label: 'Suche', d: '<circle cx="8.2" cy="8.2" r="4.7"/><path d="m11.7 11.7 3.1 3.1"/>' },
-    folder: { label: 'Ordner', d: '<path d="M3 6.2A2.2 2.2 0 0 1 5.2 4h1.9a1.8 1.8 0 0 1 1.27.53l.56.56a1.8 1.8 0 0 0 1.27.53h2.6A2.2 2.2 0 0 1 15 7.82v4.38a2.2 2.2 0 0 1-2.2 2.2H5.2A2.2 2.2 0 0 1 3 12.2z"/>' },
+    pencil: { label: 'Umbenennen', d: '<path d="M12.9 3.6a1.9 1.9 0 0 1 2.7 0l.8.8a1.9 1.9 0 0 1 0 2.7l-8.6 8.6c-.24.24-.54.41-.87.5l-2.85.75a.75.75 0 0 1-1.03-1.03l.75-2.85c.09-.33.26-.63.5-.87z"/><path d="m11.4 5.1 3.5 3.5"/>' },
+    link: { label: 'Link', d: '<path d="M8.6 11.4a3.4 3.4 0 0 0 4.8 0L15.8 9A3.4 3.4 0 0 0 11 4.2l-.9.9"/><path d="M11.4 8.6a3.4 3.4 0 0 0-4.8 0L4.2 11A3.4 3.4 0 0 0 9 15.8l.9-.9"/>' },
+    plus: { label: 'Erstellen', d: '<path d="M10 3.75v12.5M3.75 10h12.5"/>' },
+    home: { label: 'Home', d: '<path d="M2.75 8.6c0-.8.36-1.55.98-2.05l4.6-3.7a2.65 2.65 0 0 1 3.34 0l4.6 3.7c.62.5.98 1.25.98 2.05v5.25a2.65 2.65 0 0 1-2.65 2.65H5.4a2.65 2.65 0 0 1-2.65-2.65z"/><path d="M7.6 13.1h4.8"/>' },
+    tasks: { label: 'Aufgaben', d: '<rect x="2.75" y="2.75" width="14.5" height="14.5" rx="4.4"/><path d="m6.9 10.2 2.1 2.1 4.1-4.4"/>' },
+    calendar: { label: 'Kalender', d: '<rect x="2.75" y="3.5" width="14.5" height="13" rx="4"/><path d="M2.75 8h14.5M6.75 1.9v2.6M13.25 1.9v2.6"/>' },
+    search: { label: 'Suche', d: '<circle cx="9" cy="9" r="5.75"/><path d="m13.2 13.2 3.6 3.6"/>' },
+    folder: { label: 'Ordner', d: '<path d="M2.5 6.2a2.7 2.7 0 0 1 2.7-2.7h2.4c.7 0 1.37.28 1.87.77l.86.86c.3.3.7.47 1.13.47h3.34a2.7 2.7 0 0 1 2.7 2.7v5.5a2.7 2.7 0 0 1-2.7 2.7H5.2a2.7 2.7 0 0 1-2.7-2.7z"/>' },
   };
-  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
+  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
 
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>
