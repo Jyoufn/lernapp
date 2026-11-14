@@ -12599,3 +12599,4 @@ html body .cm-switch .cm-label { font-size: 15px; line-height: 30px; letter-spac
 html body .cm-switch .cm-arr { width: 28px; height: 28px; color: var(--text-3); }
 html body .cm-switch .cm-arr svg { width: 16px; height: 16px; }
 @media (max-width: 640px) { html body .cm-head .cm-switch.cm-switch.cm-switch.cm-switch { width: 200px; } }
+html body .cm-head .cm-switch.cm-switch.cm-switch.cm-switch { width: 200px; }
