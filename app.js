@@ -7229,7 +7229,10 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark' };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', weight: 'medium' };
+  // Schriftstärke (Einstellungen → Aussehen, 14.11.): die ganze Schrift etwas kräftiger – als feine Kontur um jeden Buchstaben (--font-stroke),
+  // weil die Stärken 400/500/600 überall fest gesetzt sind. Normal = wie bisher, Kräftiger = Standard.
+  const WEIGHTS = { normal: '0px', medium: '0.2px', strong: '0.35px' };
   // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
   const DESKTOP = !!(window.lernappDesktop && window.lernappDesktop.glass);
   root.classList.toggle('is-desktop', DESKTOP);
@@ -7258,9 +7261,10 @@ document.addEventListener('click', (e) => {
     // im hellen Modus wird umgekehrt → die Akzentfarbe vorher „gegenkehren“, damit sie am Ende stimmt
     root.style.setProperty('--accent', m.light ? invertHex(cfg.accent) : cfg.accent);
     root.style.setProperty('--plaza-strength', String(Math.max(0, Math.min(100, cfg.tiles)) / 100));
+    root.style.setProperty('--font-stroke', WEIGHTS[cfg.weight] || WEIGHTS.medium);
     // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
     try {
-      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
+      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-stroke'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
       const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}

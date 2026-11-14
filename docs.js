@@ -732,7 +732,7 @@ const Docs = (() => {
         if (!view.isConnected) panel()?.append(view);
         if (!dock.isConnected) panel()?.append(dock);
         api.open = true; view.hidden = false; if (!CH) panel()?.classList.add('view-docs');
-        if (CH) { search.value = ''; view.scrollTop = 0; }
+        if (CH) { find.value = ''; view.scrollTop = 0; }
         api.render();
         if (!CH) window.Home?.render(view.querySelector('.hm-next'));
       },

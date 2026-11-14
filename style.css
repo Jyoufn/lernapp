@@ -12567,3 +12567,9 @@ html body .cal-new.cal-new.cal-new.cal-new, html body .cm-switch.cm-switch.cm-sw
 .ui-input.cl-find { display: flex; width: 100%; margin-bottom: 12px; }
 .ui-input-field[type="search"] { -webkit-appearance: none; appearance: none; }
 .ui-input-field[type="search"]::-webkit-search-decoration, .ui-input-field[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
+
+/* ===== Schriftstärke (Einstellungen → Aussehen, 14.11.): ganze Schrift etwas kräftiger =====
+   Feine Kontur in der Textfarbe um jeden Buchstaben; --font-stroke setzt app.js (Normal 0 · Kräftiger 0,2 px · Kräftig 0,35 px). */
+body { -webkit-text-stroke: var(--font-stroke, 0.2px) currentColor; }
+button, input, textarea, select { -webkit-text-stroke: inherit; }
+::placeholder { -webkit-text-stroke: 0; }
