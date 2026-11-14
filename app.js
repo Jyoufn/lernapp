@@ -7258,7 +7258,6 @@ document.addEventListener('click', (e) => {
       try { localStorage.setItem(FONT_CSS, JSON.stringify({ id, css, at: Date.now() })); } catch {}
     }).catch(() => {});
   }
-  const weightPx = () => { const old = { normal: 0, medium: 0.2, strong: 0.35 }[cfg.weight]; const n = old ?? Number(cfg.weight); return Number.isFinite(n) ? Math.max(0, Math.min(WEIGHT_MAX, n)) : 0.2; };
   // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
   const DESKTOP = !!(window.lernappDesktop && window.lernappDesktop.glass);
   root.classList.toggle('is-desktop', DESKTOP);
