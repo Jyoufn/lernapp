@@ -31,6 +31,20 @@ const UILab = (() => {
     ]);
   }
 
+  function inputs() {
+    const I = window.UIKit.input, B = window.UIKit.button;
+    const grow = () => { const g = document.createElement('span'); g.style.flex = '1'; return g; };
+    const sec = section('Eingabefeld', [
+      ['Arten', [I({ placeholder: 'Text eingeben' }), I({ placeholder: 'Suchen', icon: 'search', clearable: true })]],
+      ['Größen', [I({ placeholder: 'Klein', size: 's' }), I({ placeholder: 'Mittel' }), I({ placeholder: 'Groß', size: 'l' })]],
+      ['Mehrzeilig', [I({ placeholder: 'Beschreibung hinzufügen', multiline: true, rows: 2 })]],
+      ['Nachricht', [I({ placeholder: 'Nachricht schreiben …', multiline: true, foot: [B({ icon: 'plus', kind: 'ghost', aria: 'Anhängen' }), grow(), B({ icon: 'arrow-up', kind: 'light', aria: 'Senden' })] })]],
+      ['Gesperrt', [I({ placeholder: 'Nicht änderbar', disabled: true }), I({ value: 'Fester Wert', disabled: true })]],
+    ]);
+    sec.classList.add('uiv-sec-inputs');
+    return sec;
+  }
+
   function dropdowns() {
     const D = window.UIKit.dropdown;
     const sort = [{ id: 'new', label: 'Neueste zuerst' }, { id: 'old', label: 'Älteste zuerst' }, { id: 'name', label: 'Name A–Z' }, { id: 'size', label: 'Größe' }];
@@ -60,7 +74,7 @@ const UILab = (() => {
     view.setAttribute('aria-label', 'UI');
     view.innerHTML = '<header class="uiv-head"><h2>UI</h2><div class="uiv-mid"></div><span class="uiv-right"></span></header><div class="uiv-body"></div>';
     view.querySelector('.uiv-mid').append(window.UIKit.tabBar({ items: TABS, value: 'all', label: 'Tableiste' }));
-    view.querySelector('.uiv-body').append(buttons(), dropdowns(), icons());
+    view.querySelector('.uiv-body').append(buttons(), inputs(), dropdowns(), icons());
   }
 
   function show() {

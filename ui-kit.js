@@ -278,8 +278,10 @@ const UIKit = (() => {
     pencil: { label: 'Umbenennen', d: '<path d="M12.9 3.6a1.9 1.9 0 0 1 2.7 0l.8.8a1.9 1.9 0 0 1 0 2.7l-8.6 8.6c-.24.24-.54.41-.87.5l-2.85.75a.75.75 0 0 1-1.03-1.03l.75-2.85c.09-.33.26-.63.5-.87z"/><path d="m11.4 5.1 3.5 3.5"/>' },
     link: { label: 'Link', d: '<path d="M8.6 11.4a3.4 3.4 0 0 0 4.8 0L15.8 9A3.4 3.4 0 0 0 11 4.2l-.9.9"/><path d="M11.4 8.6a3.4 3.4 0 0 0-4.8 0L4.2 11A3.4 3.4 0 0 0 9 15.8l.9-.9"/>' },
     plus: { label: 'Erstellen', d: '<path d="M10 3.75v12.5M3.75 10h12.5"/>' },
-    // Home = „Bibliothek“ aus dem Vorbild: weicher Kasten, unten offen, dort hängt ein Lesezeichen; innen zwei kurze Zeilen
-    home: { label: 'Home', d: '<path d="M5.4 16.3c-1.8-.7-2.65-1.9-2.65-4.1V7.35c0-3.5 1.1-4.6 4.6-4.6h5.3c3.5 0 4.6 1.1 4.6 4.6v4.85c0 2.2-.85 3.4-2.65 4.1"/><path d="M7.6 18.2v-5a1.2 1.2 0 0 1 1.2-1.2h2.4a1.2 1.2 0 0 1 1.2 1.2v5L10 16.6z"/><path d="M6.8 5.95h3.4M6.8 9H13"/>' },
+    // Home = Haus wie bisher in der App (weich gerundetes Dach, kurzer Strich) – im neuen Strich
+    home: { label: 'Home', d: '<path d="M2.75 8.6c0-.8.36-1.55.98-2.05l4.6-3.7a2.65 2.65 0 0 1 3.34 0l4.6 3.7c.62.5.98 1.25.98 2.05v5.25a2.65 2.65 0 0 1-2.65 2.65H5.4a2.65 2.65 0 0 1-2.65-2.65z"/><path d="M7.6 13.1h4.8"/>' },
+    // Bibliothek aus dem Vorbild: weicher Kasten, unten offen, dort hängt ein Lesezeichen; innen zwei kurze Zeilen
+    library: { label: 'Bibliothek', d: '<path d="M5.4 16.3c-1.8-.7-2.65-1.9-2.65-4.1V7.35c0-3.5 1.1-4.6 4.6-4.6h5.3c3.5 0 4.6 1.1 4.6 4.6v4.85c0 2.2-.85 3.4-2.65 4.1"/><path d="M7.6 18.2v-5a1.2 1.2 0 0 1 1.2-1.2h2.4a1.2 1.2 0 0 1 1.2 1.2v5L10 16.6z"/><path d="M6.8 5.95h3.4M6.8 9H13"/>' },
     // Bereiche = „Spaces“ aus dem Vorbild: Korb mit zwei gestapelten Bögen darüber
     spaces: { label: 'Bereiche', d: '<path d="M6.2 4.1c0-1 .7-1.7 1.7-1.7h4.2c1 0 1.7.7 1.7 1.7"/><path d="M4.7 7.2c0-.9.6-1.5 1.5-1.5h7.6c.9 0 1.5.6 1.5 1.5"/><path d="M4.6 8.9h10.8c1.1 0 1.9 1 1.6 2.1l-1.3 4.9c-.25.9-1 1.5-1.95 1.5H6.25c-.95 0-1.7-.6-1.95-1.5L3 11c-.3-1.1.5-2.1 1.6-2.1z"/>' },
     // Chat wie im zweiten Vorbild: große runde Sprechblase (Zipfel unten links), davor eine kleine (Zipfel unten rechts)
@@ -345,6 +347,43 @@ const UIKit = (() => {
     b.disabled = !!disabled;
     if (onClick) b.addEventListener('click', onClick);
     return b;
+  }
+
+  /* ---------- Eingabefeld (.ui-input, 14.11.) ----------
+     input({ placeholder, value, icon, size, clearable, disabled, multiline, rows, foot, aria, onInput(value), onEnter(value) }) → <label>
+     Einzeilig (28/32/38 px hoch) oder mehrzeilig (wächst mit dem Text bis ~8 Zeilen). icon = Name aus ICONS bzw. #f-…;
+     clearable = × rechts, sobald etwas drinsteht; foot = Elemente für eine Fußzeile im Feld (z. B. Knöpfe wie im Chat-Eingabefeld).
+     Das Feld selbst: el.field; Wert: el.value. */
+  function input({ placeholder = '', value = '', icon = '', size = 'm', clearable = false, disabled = false, multiline = false, rows = 1, foot = null, aria = '', onInput, onEnter } = {}) {
+    const el = document.createElement('label');
+    el.className = `ui-input${size !== 'm' ? ` ui-input-${size}` : ''}${multiline ? ' ui-input-multi' : ''}${foot ? ' ui-input-box' : ''}`;
+    const row = document.createElement('span'); row.className = 'ui-input-row';
+    if (icon) row.innerHTML = uiIcon(icon, size === 'l' ? 17 : 15);
+    const f = document.createElement(multiline ? 'textarea' : 'input');
+    if (multiline) f.rows = rows; else f.type = 'text';
+    f.className = 'ui-input-field'; f.placeholder = placeholder; f.value = value; f.disabled = !!disabled;
+    f.setAttribute('aria-label', aria || placeholder); f.spellcheck = false; f.autocomplete = 'off';
+    row.append(f);
+    let x = null;
+    if (clearable) {
+      x = document.createElement('button'); x.type = 'button'; x.className = 'ui-input-x'; x.setAttribute('aria-label', 'Leeren'); x.innerHTML = fi('x', 11);
+      x.addEventListener('click', (e) => { e.preventDefault(); f.value = ''; sync(); onInput?.(''); f.focus(); });
+      row.append(x);
+    }
+    const sync = () => {
+      el.classList.toggle('filled', !!f.value);
+      if (multiline) { f.style.height = 'auto'; f.style.height = `${Math.min(f.scrollHeight, 168)}px`; }
+    };
+    f.addEventListener('input', () => { sync(); onInput?.(f.value); });
+    f.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && onEnter && !e.isComposing) { e.preventDefault(); onEnter(f.value); } });
+    el.append(row);
+    if (foot) { const ft = document.createElement('span'); ft.className = 'ui-input-foot'; ft.append(...foot); el.append(ft); }
+    el.classList.toggle('disabled', !!disabled);
+    el.field = f;
+    Object.defineProperty(el, 'value', { get: () => f.value, set: (v) => { f.value = v; sync(); } });
+    sync();
+    if (multiline && typeof ResizeObserver === 'function') new ResizeObserver(sync).observe(el);
+    return el;
   }
 
   /* ---------- Dropdown-Menü (.ui-dd / .ui-menu, 14.11.) ----------
@@ -423,6 +462,6 @@ const UIKit = (() => {
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { PRIOS, prioIcon, tabBar, button, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { PRIOS, prioIcon, tabBar, button, input, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;
