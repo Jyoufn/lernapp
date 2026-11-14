@@ -386,6 +386,24 @@ const UIKit = (() => {
     return el;
   }
 
+  /* ---------- Regler (.ui-slider, 14.11.): stufenlos ziehen, gefüllte Spur links vom Knopf ----------
+     slider({ min, max, step, value, aria, onInput(v), onChange(v) }) → <label> mit .value */
+  function slider({ min = 0, max = 100, step = 1, value = 0, aria = '', onInput, onChange } = {}) {
+    const el = document.createElement('label');
+    el.className = 'ui-slider';
+    const r = document.createElement('input');
+    r.type = 'range'; r.min = min; r.max = max; r.step = step; r.value = value;
+    if (aria) r.setAttribute('aria-label', aria);
+    const sync = () => el.style.setProperty('--p', `${((r.value - min) / ((max - min) || 1)) * 100}%`);
+    r.addEventListener('input', (e) => { e.stopPropagation(); sync(); onInput?.(Number(r.value)); });
+    r.addEventListener('change', (e) => { e.stopPropagation(); onChange?.(Number(r.value)); });
+    r.addEventListener('keydown', (e) => e.stopPropagation());
+    el.append(r);
+    Object.defineProperty(el, 'value', { get: () => Number(r.value), set: (v) => { r.value = v; sync(); } });
+    sync();
+    return el;
+  }
+
   /* ---------- Dropdown-Menü (.ui-dd / .ui-menu, 14.11.) ----------
      dropdown({ label, icon, kind, size, items, value, select, align, onPick(id) }) → Element (Knopf + Menü darunter)
      items: { id, label, icon?, hint?, danger? } · { sep: true } (Trennlinie) · { title: 'Abschnitt' }
@@ -462,6 +480,6 @@ const UIKit = (() => {
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { PRIOS, prioIcon, tabBar, button, input, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { PRIOS, prioIcon, tabBar, button, input, slider, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

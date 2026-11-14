@@ -183,7 +183,7 @@
         ${cfg.mode === 'glass' && ap.DESKTOP ? `<div class="st-row"><span class="st-name">Glas</span><span class="grow"></span>${seg('data-ap-glasstone', [['Hell', 'light'], ['Dunkel', 'dark']], cfg.glassTone === 'light' ? 'light' : 'dark')}</div>` : ''}
         ${!ap.DESKTOP && /Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) && navigator.maxTouchPoints < 2 ? `<div class="st-row"><span class="st-name">Mac-App (mit Glas)</span><span class="grow"></span><a class="st-btn light" href="https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg" target="_blank" rel="noopener">Herunterladen</a></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
-        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span>${seg('data-ap-weight', [['Normal', 'normal'], ['Kräftiger', 'medium'], ['Kräftig', 'strong']], ['normal', 'strong'].includes(cfg.weight) ? cfg.weight : 'medium')}</div>
+        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span><span class="st-weight"><span class="st-weight-a" aria-hidden="true">Aa</span><span class="st-weight-slot"></span><span class="st-weight-b" aria-hidden="true">Aa</span></span></div>
         <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
   }
@@ -298,6 +298,9 @@
     drawView.page = page; drawView.top = keepTop;
     view.innerHTML = `<div class="st-top">${title}</div><div class="st-scroll"><div class="st-page">${body}</div></div>`;
     const sc = view.querySelector('.st-scroll'), pg = sc.querySelector('.st-page');
+    // Aussehen → Schriftstärke: stufenloser Regler (Baustein UIKit.slider), wirkt sofort beim Ziehen – ohne neu zu zeichnen
+    const wSlot = view.querySelector('.st-weight-slot'), ap = window.Appearance;
+    if (wSlot && ap && window.UIKit?.slider) wSlot.replaceWith(window.UIKit.slider({ min: 0, max: ap.WEIGHT_MAX, step: 0.01, value: ap.get().weight, aria: 'Schriftstärke', onInput: (v) => ap.set({ weight: v }) }));
     if (keepTop) {
       if (keepH) pg.style.minHeight = `${keepH}px`;
       sc.scrollTop = keepTop;
@@ -374,8 +377,6 @@
     if (gt) { window.Appearance?.set({ glassTone: gt.dataset.apGlasstone }); drawView(); return; }
     const lg = e.target.closest('[data-lang]');
     if (lg) { window.I18n?.set(lg.dataset.lang); drawView(); return; }
-    const fw = e.target.closest('[data-ap-weight]');
-    if (fw) { window.Appearance?.set({ weight: fw.dataset.apWeight }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }

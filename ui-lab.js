@@ -52,6 +52,11 @@ const UILab = (() => {
     return sec;
   }
 
+  function sliders() {
+    const S = window.UIKit.slider;
+    return section('Regler', [['Stufenlos', [S({ value: 35, aria: 'Beispiel' })]], ['In Schritten', [S({ min: 0, max: 4, step: 1, value: 2, aria: 'Beispiel in Schritten' })]]]);
+  }
+
   function dropdowns() {
     const D = window.UIKit.dropdown;
     const sort = [{ id: 'new', label: 'Neueste zuerst' }, { id: 'old', label: 'Älteste zuerst' }, { id: 'name', label: 'Name A–Z' }, { id: 'size', label: 'Größe' }];
@@ -81,7 +86,7 @@ const UILab = (() => {
     view.setAttribute('aria-label', 'UI');
     view.innerHTML = '<header class="uiv-head"><h2>UI</h2><div class="uiv-mid"></div><span class="uiv-right"></span></header><div class="uiv-body"></div>';
     view.querySelector('.uiv-mid').append(window.UIKit.tabBar({ items: TABS, value: 'all', label: 'Tableiste' }));
-    view.querySelector('.uiv-body').append(buttons(), inputs(), dropdowns(), icons());
+    view.querySelector('.uiv-body').append(buttons(), inputs(), sliders(), dropdowns(), icons());
   }
 
   function show() {
