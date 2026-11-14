@@ -12447,3 +12447,29 @@ html[data-mode="black"] .ui-menu { background: #0d0d0d; }
 .uiv-ic { width: 76px; }
 .uiv-ic { width: 68px; }
 .uiv-ic { width: 76px; }
+
+/* ===== Bausteine aus dem Bereich „UI“ in der App (14.11.): Umschalter, graue Knöpfe und Menüs im neuen Stil =====
+   Nur Aussehen – Aufbau und Verhalten der vorhandenen Klassen bleiben. Blaue Hauptknöpfe und das Workspace-Menü unverändert. */
+/* Umschalter „Agenten | Dokumente“ (.cs-pill) = Tableiste */
+.cs-pill { height: 28px; padding: 0 2px; gap: 0; border: 0; border-radius: 11px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.cs-pill > button { height: 24px; min-width: 100px; padding: 0 12px; border-radius: 9px; font: 500 13px Inter, sans-serif; transition: color 220ms ease; }
+.cs-pill > button.on { font-weight: 600; }
+.cs-thumb { height: 24px; margin-top: -12px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.13);
+  transition: transform 420ms cubic-bezier(0.32, 0.72, 0, 1), width 420ms cubic-bezier(0.32, 0.72, 0, 1), opacity 160ms ease; }
+html[data-mode="black"] .cs-pill { background: rgba(255, 255, 255, 0.04); border: 0; }
+html[data-mode="black"] .cs-pill .cs-thumb { background: rgba(255, 255, 255, 0.12); }
+html[data-glass="on"] .cs-pill, html[data-glass="mac"] .cs-pill { background: rgba(255, 255, 255, 0.07); }
+html[data-glass="on"] .cs-pill .cs-thumb, html[data-glass="mac"] .cs-pill .cs-thumb { background: rgba(255, 255, 255, 0.16); }
+html[data-theme="light"] .cs-pill { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
+html[data-theme="light"] .cs-pill .cs-thumb { background: #000; }
+html[data-glass="mac"][data-glass-tone="light"] .cs-pill { background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3); }
+@media (prefers-reduced-motion: reduce) { .cs-thumb { transition: none; } }
+/* Graue Knöpfe („Neue Aufgabe“, „Neuer Termin“) = Knopf Standard */
+.tk-new, .cal-new { height: 28px; padding: 0 12px 0 10px; border: 0 !important; border-radius: 10px !important; background: rgba(255, 255, 255, 0.07) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-2) !important; font: 500 13px Inter, sans-serif; transition: background-color 140ms ease, color 140ms ease; }
+.tk-new:hover, .cal-new:hover { background: rgba(255, 255, 255, 0.11) !important; color: var(--text) !important; }
+.tk-new:active, .cal-new:active { background: rgba(255, 255, 255, 0.15) !important; scale: 1; }
+.tk-new svg, .cal-new svg { color: inherit; }
+/* Menüs = Dropdown-Menü */
+.lb2-menu, .tk-filter, .chat-pop.chat-menu, .mpx { padding: 4px; border-radius: 12px; border-color: rgba(255, 255, 255, 0.08) !important; box-shadow: none; }
+.lb2-menu .lb2-mi, .tk-filter .tk-fi, .chat-menu button, .mpx-m { border-radius: 8px; font-size: 13px; font-weight: 500; transition: background-color 110ms ease, color 110ms ease; }
+.lb2-menu .lb2-mi:hover, .tk-filter .tk-fi:hover, .chat-menu button:hover:not(:disabled), .mpx-m:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }

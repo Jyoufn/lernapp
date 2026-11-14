@@ -295,6 +295,24 @@ const UIKit = (() => {
   };
   const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
 
+  /* Neue Icons in der ganzen App (14.11.): die Formen aus ICONS ersetzen den Inhalt der vorhandenen Symbole
+     (#o-… Sidebar, #f-…/#i-… überall sonst) – jede Stelle mit <use href="#…"> zieht mit. Läuft nach line-icons.js.
+     Gefüllte Varianten (#df-…) und Dokument-Icons (#d-…) bleiben, wie sie sind. */
+  const ICON_USE = {
+    plus: ['o-plus', 'f-plus', 'i-plus'], search: ['o-search', 'f-search', 'i-search'], home: ['o-home', 'f-home'],
+    tasks: ['o-tasks', 'f-tasks', 'i-tasks'], calendar: ['o-calendar', 'f-calendar', 'i-calendar'], chat: ['o-chat', 'f-chat'],
+    doc: ['o-doc', 'f-file', 'i-file'], folder: ['f-folder'], pencil: ['f-pencil', 'i-pencil'], link: ['f-link'],
+  };
+  if (typeof document !== 'undefined' && typeof document.getElementById === 'function') {
+    for (const [name, ids] of Object.entries(ICON_USE)) {
+      for (const id of ids) {
+        const sym = document.getElementById(id); if (!sym) continue;
+        sym.setAttribute('viewBox', '0 0 20 20');
+        sym.innerHTML = `<g fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">${ICONS[name].d}</g>`;
+      }
+    }
+  }
+
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>
      kind: 'soft' (Standard, leicht getönt) · 'light' (hell gefüllt, wichtigste Aktion) · 'line' (nur Rand) · 'ghost' (ohne Fläche) · 'danger'
