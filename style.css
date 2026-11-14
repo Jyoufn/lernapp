@@ -12573,3 +12573,7 @@ html body .cal-new.cal-new.cal-new.cal-new, html body .cm-switch.cm-switch.cm-sw
 body { -webkit-text-stroke: var(--font-stroke, 0.2px) currentColor; }
 button, input, textarea, select { -webkit-text-stroke: inherit; }
 ::placeholder { -webkit-text-stroke: 0; }
+
+/* ===== Eingabefeld: kein heller Rand beim Anklicken (14.11.) – Feld sieht beim Schreiben aus wie in Ruhe ===== */
+.ui-input:focus-within, .ui-input:hover { background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.ui-input-field:focus, .ui-input-field:focus-visible { outline: 0 !important; box-shadow: none !important; }
