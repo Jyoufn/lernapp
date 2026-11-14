@@ -12396,3 +12396,10 @@ html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0
 .ui-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } }
 @media (max-width: 640px) { .uiv-row { grid-template-columns: 1fr; gap: 0; padding-top: 10px; } .uiv-items { padding-top: 6px; } }
+
+/* ===== Tableiste und Knöpfe runder (14.11., wie im Vorbild) ===== */
+.ui-tabs { border-radius: 11px; }
+.ui-tab, .ui-tabs-thumb { border-radius: 9px; }
+.ui-btn { border-radius: 10px; }
+.ui-btn-s { border-radius: 8px; }
+.ui-btn-l { border-radius: 12px; }
