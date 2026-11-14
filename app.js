@@ -7232,18 +7232,17 @@ document.addEventListener('click', (e) => {
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
      Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
-     Stärken: Im CSS stehen überall fest 400/500/600. Damit dünne und mittlere Texte nicht wie zwei Schriften wirken (Wunsch 14.11.) und Inter
-     „ein Millistück“ kräftiger ist, lädt die App jede Schrift in leicht verschobenen Stärken und hängt sie unter den üblichen Nummern ein:
-     Googles Schrift-CSS für z. B. 470/530/630/720 holen, die Stärken auf 400/500/600/700 umschreiben, Familienname „<Name> UI“,
-     als <style id="app-font"> einsetzen (Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start sofort).
-     Klappt das Holen nicht, greift die normale Schrift (<link id="app-font-link">) bzw. Inter. */
+     Stärke: normaler Text steht im ganzen CSS in 500 (nie 400) – eine Stärke für Menüs, Einstellungen, Listen, Chat (Wunsch 14.11.).
+     Nur Inter soll „ein Millistück“ kräftiger sein: dafür holt die App Googles Schrift-CSS in 530/630/720, schreibt die Stärken auf 500/600/700 um
+     und hängt sie als Familie „Inter UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start).
+     Klappt das Holen nicht, bleibt normales Inter. Die anderen Schriften laden ganz normal per <link id="app-font-link">. */
   const FONTS = {
-    geist: { label: 'Geist', name: 'Geist', q: 'Geist', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
-    inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 470, 500: 530, 600: 630, 700: 720 } },
-    dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
-    manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
+    geist: { label: 'Geist', name: 'Geist', q: 'Geist' },
+    inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 530, 500: 530, 600: 630, 700: 720 } },
+    dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' },
+    manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' },
   };
-  const FONT_CSS = 'appearance.fontcss', FONT_V = 2;
+  const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
   const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
   const fontHref = (f) => (f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
   const putFont = (css, id) => {
@@ -7262,7 +7261,8 @@ document.addEventListener('click', (e) => {
       if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
       if (link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
-    root.style.setProperty('--font-ui', `"${f.name} UI", "${f.name}", Inter`);
+    root.style.setProperty('--font-ui', f.w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
+    if (!f.w) { putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
     const fresh = cached?.id === id && cached.v === FONT_V && cached.css;
     if (fresh) { putFont(cached.css, id); if (Date.now() - (cached.at || 0) < 7 * 86400000) return; } else putFont('', id);
