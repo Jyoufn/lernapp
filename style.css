@@ -12602,3 +12602,8 @@ html body .cm-switch .cm-arr svg { width: 16px; height: 16px; }
 html body .cm-head .cm-switch.cm-switch.cm-switch.cm-switch { width: 200px; }
 /* „Neuer Termin“: Schrift einen Hauch kleiner und kräftiger (12,5 px / 600), Kasten unverändert */
 html body .cal-new.cal-new.cal-new.cal-new { font-size: 12.5px; font-weight: 600; }
+
+/* ===== Home-Liste und Sidebar-Einträge (14.11.): Titel in derselben Stärke und Laufweite wie die Hauptnavigation (500), nicht mehr dünn (400) ===== */
+.lb2-title { font-weight: 500; letter-spacing: inherit; }
+.sidebar .nav-item, .sidebar .sb-sec .nav-item, .sidebar .nav-bookmarks .nav-item, .sidebar .sb-chat, .dc-side a { font-weight: 500; letter-spacing: inherit; }
+.lb2-time { font-weight: 500; }
