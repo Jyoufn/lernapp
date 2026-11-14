@@ -265,7 +265,7 @@ const UIKit = (() => {
   }
 
   /* ---------- Icon-Liste (14.11.): neue Linien-Icons im Stil des Vorbilds ----------
-     Regeln (am Vorbild ausgemessen): Raster 20 × 20, DÜNNER Strich 1,05, runde Enden und Ecken, keine Füllungen.
+     Regeln (am Vorbild ausgemessen): Raster 20 × 20, Strich 1,65 (gleich dick wie die bisherigen Icons „Anheften“/„Duplizieren“: 2 im 24er-Raster), runde Enden und Ecken, keine Füllungen.
      Die Form füllt das Raster fast ganz (Rand 2,5–2,75) und ist breit und weich: Ecken als „Squircle“ (Helfer sq, Ecke 5 lang, läuft weich in die Gerade aus), kein Kreisbogen.
      Details innen sind kurze offene Striche. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
      Wird Stück für Stück ergänzt (Bereich „UI“ → Icons zeigt die Liste). */
@@ -284,11 +284,11 @@ const UIKit = (() => {
     spaces: { label: 'Bereiche', d: '<path d="M6.2 4.1c0-1 .7-1.7 1.7-1.7h4.2c1 0 1.7.7 1.7 1.7"/><path d="M4.7 7.2c0-.9.6-1.5 1.5-1.5h7.6c.9 0 1.5.6 1.5 1.5"/><path d="M4.6 8.9h10.8c1.1 0 1.9 1 1.6 2.1l-1.3 4.9c-.25.9-1 1.5-1.95 1.5H6.25c-.95 0-1.7-.6-1.95-1.5L3 11c-.3-1.1.5-2.1 1.6-2.1z"/>' },
     tasks: { label: 'Aufgaben', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="m6.9 10.2 2.1 2.1 4.1-4.4"/>` },
     // Kalender wie bisher in der Sidebar (Kasten, Kopflinie, fünf Punkte) – nur dünn
-    calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="1.45" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
+    calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="2" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
     search: { label: 'Suche', d: '<circle cx="9" cy="9" r="5.75"/><path d="m13.2 13.2 3.6 3.6"/>' },
     folder: { label: 'Ordner', d: '<path d="M2.5 6.6c0-2.2.9-3.1 3.1-3.1h1.9c.75 0 1.45.3 1.97.83l.7.72c.34.35.8.55 1.3.55h2.93c2.2 0 3.1.9 3.1 3.1v4.7c0 2.2-.9 3.1-3.1 3.1H5.6c-2.2 0-3.1-.9-3.1-3.1z"/>' },
   };
-  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
+  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
 
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>

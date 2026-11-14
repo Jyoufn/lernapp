@@ -49,7 +49,7 @@ const UILab = (() => {
     const sec = section('Icons', [
       ['Liste', Object.keys(K.ICONS).map(tile)],
     ]);
-    const note = document.createElement('p'); note.className = 'uiv-note'; note.textContent = 'Raster 20 · dünner Strich 1,05 · Form füllt das Raster · weiche Ecken · keine Füllungen';
+    const note = document.createElement('p'); note.className = 'uiv-note'; note.textContent = 'Raster 20 · Strich 1,65 · Form füllt das Raster · weiche Ecken · keine Füllungen';
     sec.querySelector('h3').after(note);
     return sec;
   }
