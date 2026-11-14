@@ -266,18 +266,25 @@ const UIKit = (() => {
 
   /* ---------- Icon-Liste (14.11.): neue Linien-Icons im Stil des Vorbilds ----------
      Regeln (am Vorbild ausgemessen): Raster 20 × 20, DÜNNER Strich 1,25, runde Enden und Ecken, keine Füllungen.
-     Die Form füllt das Raster fast ganz (Rand 2,5–2,75) und ist breit und weich: Eckenradius 2,7 (Ordner) bis 4,4 (Kasten).
+     Die Form füllt das Raster fast ganz (Rand 2,5–2,75) und ist breit und weich: Ecken als „Squircle“ (Helfer sq, Ecke 5 lang, läuft weich in die Gerade aus), kein Kreisbogen.
      Details innen sind kurze offene Striche. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
      Wird Stück für Stück ergänzt (Bereich „UI“ → Icons zeigt die Liste). */
+  // Weiche Ecke wie im Vorbild („Squircle“): die Kurve läuft länger in die Gerade aus als ein Kreisbogen. r = Länge der Ecke je Seite.
+  const sq = (x, y, w, h, r = 5) => {
+    const k = +(r * 0.76).toFixed(2), m = +(r - k).toFixed(2);
+    return `<path d="M${x + r} ${y}h${w - 2 * r}c${k} 0 ${r} ${m} ${r} ${r}v${h - 2 * r}c0 ${k}-${m} ${r}-${r} ${r}h-${w - 2 * r}c-${k} 0-${r}-${m}-${r}-${r}v-${h - 2 * r}c0-${k} ${m}-${r} ${r}-${r}z"/>`;
+  };
   const ICONS = {
     pencil: { label: 'Umbenennen', d: '<path d="M12.9 3.6a1.9 1.9 0 0 1 2.7 0l.8.8a1.9 1.9 0 0 1 0 2.7l-8.6 8.6c-.24.24-.54.41-.87.5l-2.85.75a.75.75 0 0 1-1.03-1.03l.75-2.85c.09-.33.26-.63.5-.87z"/><path d="m11.4 5.1 3.5 3.5"/>' },
     link: { label: 'Link', d: '<path d="M8.6 11.4a3.4 3.4 0 0 0 4.8 0L15.8 9A3.4 3.4 0 0 0 11 4.2l-.9.9"/><path d="M11.4 8.6a3.4 3.4 0 0 0-4.8 0L4.2 11A3.4 3.4 0 0 0 9 15.8l.9-.9"/>' },
     plus: { label: 'Erstellen', d: '<path d="M10 3.75v12.5M3.75 10h12.5"/>' },
-    home: { label: 'Home', d: '<path d="M2.75 8.6c0-.8.36-1.55.98-2.05l4.6-3.7a2.65 2.65 0 0 1 3.34 0l4.6 3.7c.62.5.98 1.25.98 2.05v5.25a2.65 2.65 0 0 1-2.65 2.65H5.4a2.65 2.65 0 0 1-2.65-2.65z"/><path d="M7.6 13.1h4.8"/>' },
-    tasks: { label: 'Aufgaben', d: '<rect x="2.75" y="2.75" width="14.5" height="14.5" rx="4.4"/><path d="m6.9 10.2 2.1 2.1 4.1-4.4"/>' },
-    calendar: { label: 'Kalender', d: '<rect x="2.75" y="3.5" width="14.5" height="13" rx="4"/><path d="M2.75 8h14.5M6.75 1.9v2.6M13.25 1.9v2.6"/>' },
+    // Home = „Bibliothek“ aus dem Vorbild: weicher Kasten, unten offen, dort hängt ein Lesezeichen; innen zwei kurze Zeilen
+    home: { label: 'Home', d: '<path d="M6.5 16.5c-2.65 0-3.75-1.2-3.75-5V7.75c0-3.8 1.2-5 5-5h4.5c3.8 0 5 1.2 5 5v3.75c0 3.8-1.1 5-3.75 5"/><path d="M8.25 18.1v-5.8a.9.9 0 0 1 .9-.9h1.7a.9.9 0 0 1 .9.9v5.8L10 16.75z"/><path d="M7.25 5.9h3M6.75 8.7h6.5"/>' },
+    tasks: { label: 'Aufgaben', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="m6.9 10.2 2.1 2.1 4.1-4.4"/>` },
+    // Kalender wie bisher in der Sidebar (Kasten, Kopflinie, fünf Punkte) – nur dünn
+    calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="1.7" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
     search: { label: 'Suche', d: '<circle cx="9" cy="9" r="5.75"/><path d="m13.2 13.2 3.6 3.6"/>' },
-    folder: { label: 'Ordner', d: '<path d="M2.5 6.2a2.7 2.7 0 0 1 2.7-2.7h2.4c.7 0 1.37.28 1.87.77l.86.86c.3.3.7.47 1.13.47h3.34a2.7 2.7 0 0 1 2.7 2.7v5.5a2.7 2.7 0 0 1-2.7 2.7H5.2a2.7 2.7 0 0 1-2.7-2.7z"/>' },
+    folder: { label: 'Ordner', d: '<path d="M2.5 6.6c0-2.2.9-3.1 3.1-3.1h1.9c.75 0 1.45.3 1.97.83l.7.72c.34.35.8.55 1.3.55h2.93c2.2 0 3.1.9 3.1 3.1v4.7c0 2.2-.9 3.1-3.1 3.1H5.6c-2.2 0-3.1-.9-3.1-3.1z"/>' },
   };
   const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
 
