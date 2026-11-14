@@ -12361,3 +12361,38 @@ html[data-glass="mac"] .ui-tabs-thumb { background: rgba(255, 255, 255, 0.16); }
 html[data-theme="light"] .ui-tabs { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
 html[data-theme="light"] .ui-tabs-thumb, html[data-glass="mac"][data-glass-tone="light"] .ui-tabs-thumb { background: #000; }
 html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0, 0, 0.35); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.3); }
+
+/* ===== Bereich „UI“: Abschnitte + Knöpfe (.ui-btn, UIKit.button, 14.11.) – gleiche Sprache wie die Tableiste =====
+   Flächen als durchscheinendes Weiß (wirkt in Dunkel, Schwarz und Glas gleich; Hell kehrt es um). Drücken ändert nur die Fläche. */
+.uiv-body { overflow-y: auto; padding-top: 34px; }
+.uiv-sec { width: 100%; max-width: 720px; margin: 0 auto 36px; }
+.uiv-sec h3 { margin: 0 0 6px; color: var(--text); font: 600 15px Inter, sans-serif; letter-spacing: -0.1px; }
+.uiv-row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 12px; min-height: 58px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
+.uiv-row:first-of-type { border-top: 0; }
+.uiv-name { color: var(--text-4); font: 500 12.5px Inter, sans-serif; }
+.uiv-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; }
+
+.ui-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-2); font: 500 13px Inter, sans-serif; white-space: nowrap; cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease, opacity 140ms ease; }
+.ui-btn svg { flex: none; margin-left: -2px; }
+.ui-btn:hover { background: rgba(255, 255, 255, 0.11); color: var(--text); }
+.ui-btn:active { background: rgba(255, 255, 255, 0.15); }
+.ui-btn-light { background: #e6e6e6; box-shadow: none; color: #141414; font-weight: 600; }
+.ui-btn-light:hover { background: #f4f4f4; color: #141414; }
+.ui-btn-light:active { background: #d2d2d2; }
+.ui-btn-line { background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+.ui-btn-line:hover { background: rgba(255, 255, 255, 0.06); }
+.ui-btn-line:active { background: rgba(255, 255, 255, 0.1); }
+.ui-btn-ghost { background: none; box-shadow: none; }
+.ui-btn-ghost:hover { background: rgba(255, 255, 255, 0.07); }
+.ui-btn-ghost:active { background: rgba(255, 255, 255, 0.11); }
+.ui-btn-danger { background: rgba(239, 107, 95, 0.13); box-shadow: none; color: #f07a6e; }
+.ui-btn-danger:hover { background: rgba(239, 107, 95, 0.2); color: #f07a6e; }
+.ui-btn-danger:active { background: rgba(239, 107, 95, 0.26); }
+.ui-btn-s { height: 24px; padding: 0 9px; border-radius: 7px; font-size: 12px; gap: 5px; }
+.ui-btn-l { height: 34px; padding: 0 16px; border-radius: 10px; font-size: 14px; gap: 7px; }
+.ui-btn-icon { width: 28px; padding: 0; }
+.ui-btn-icon.ui-btn-s { width: 24px; } .ui-btn-icon.ui-btn-l { width: 34px; }
+.ui-btn-icon svg { margin: 0; }
+.ui-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } }
+@media (max-width: 640px) { .uiv-row { grid-template-columns: 1fr; gap: 0; padding-top: 10px; } .uiv-items { padding-top: 6px; } }

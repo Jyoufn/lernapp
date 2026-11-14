@@ -264,12 +264,27 @@ const UIKit = (() => {
     return el;
   }
 
+  /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
+     button({ label, icon, kind, size, disabled, onClick }) → <button>
+     kind: 'soft' (Standard, leicht getönt) · 'light' (hell gefüllt, wichtigste Aktion) · 'line' (nur Rand) · 'ghost' (ohne Fläche) · 'danger'
+     size: 's' 24 px · 'm' 28 px (Standard) · 'l' 34 px; ohne label = quadratischer Icon-Knopf (dann label als aria über „aria“) */
+  function button({ label = '', icon = '', kind = 'soft', size = 'm', disabled = false, aria = '', onClick } = {}) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `ui-btn ui-btn-${kind}${size !== 'm' ? ` ui-btn-${size}` : ''}${label ? '' : ' ui-btn-icon'}`;
+    if (icon) b.innerHTML = fi(icon, size === 'l' ? 15 : size === 's' ? 12 : 14);
+    if (label) { const s = document.createElement('span'); s.textContent = label; b.append(s); } else if (aria) b.setAttribute('aria-label', aria);
+    b.disabled = !!disabled;
+    if (onClick) b.addEventListener('click', onClick);
+    return b;
+  }
+
   // „Eigene Farbe“ (Knopf rechts in der Farbreihe): Feld + Regler darunter auf-/zuklappen; onDone(hex) beim Knopf „Übernehmen“
   const customPick = (btn, start, onDone, onLive) => {
     const host = btn.closest('.tk-colors')?.nextElementSibling; if (!host) return;
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { tabBar, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { tabBar, button, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;
