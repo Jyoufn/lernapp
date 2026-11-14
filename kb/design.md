@@ -23,6 +23,12 @@
 - **Einstellungen → Agenten**: je Schlüssel Auge (ganz anzeigen), Stift (bearbeiten, Speichern ersetzt genau diesen) und ×.
 - **Aussehen**: Vorschau als kleine App, gewählt = heller Ring (kein Blau); Kacheln und Sprache (Deutsch/English, `i18n.js`) im selben Kasten. Kein Abschnitt „Chat-Hintergrund“ mehr.
 
+## KASTEN IM KASTEN (verbindlich, Wunsch 14.11.)
+- Steht in einem Kasten (Karte, Fenster, Menü) noch ein Kasten (Feld, Spur eines Umschalters, Schalter, Innenkarte), ist der innere IMMER eine Spur HELLER als der äußere – durchscheinendes Weiß (5–13 %), nie Schwarz, nie `--main-bg`, nie dunkler. In `.st-card`, `.ce-card`, `.tk-sheet`, `.tk-box`, `.dcs-body`, Menüs zeigt `--main-bg` deshalb auf einen helleren Ton. Vor jeder UI-Änderung prüfen.
+- **Einstellungen im UI-Stil** (14.11.): Umschalter `.st-seg` = Tableiste mit gleitender Fläche (`.cs-thumb`, `placeThumb` in `ui-kit.js`; gleitet auch über das Neuzeichnen der Einstellungen hinweg), Knöpfe `.st-btn` = Standard-Knopf, Felder = Eingabefeld-Stil, Schalter aus = helle Spur.
+- **Sidebar** (14.11.): Chats, Dokumente und Projekt-Ordner in 13,5 px/500 wie die Hauptnavigation; der Ordner-Pfeil erscheint nur beim Darüberfahren (nicht dauerhaft, wenn offen); Dokumente im Ordner eingerückt mit feiner Linie links.
+- **Bereich „UI“** zeigt zusätzlich die vorhandenen Bausteine der App mit ihren echten Klassen: Umschalter, Schalter `.ce-switch`, Farbauswahl, Tags `.lb2-tag`, Karte mit Zeilen `.st-card`, Kalender, Uhrzeit-Rad.
+
 ## DESIGNSCHEMA (verbindlich seit 04.11. – überall anwenden, vor jeder UI-Änderung prüfen)
 Vorbild: die „Thought for 3s“-Karte (Nutzer-Screenshot). Ruhig, dunkel, flach, wenig Kontrast über Flächen, Kontrast über Text.
 

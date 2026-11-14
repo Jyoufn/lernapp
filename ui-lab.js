@@ -1,6 +1,6 @@
 /* ===================================================================
    Bereich „UI“ (Sidebar, 14.11.): Sammlung der Bausteine, aus denen später das Design der App entsteht.
-   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button) Dropdown-Menüs (UIKit.dropdown) und die Icon-Liste (UIKit.ICONS).
+   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button) Regler, Dropdown-Menüs (UIKit.dropdown), die vorhandenen Bausteine der App (Umschalter, Schalter, Farben, Tags, Karte, Kalender, Uhrzeit) und die Icon-Liste (UIKit.ICONS).
    Öffnet als eigener Tab (app.js → VIEW_TABS.ui).
    =================================================================== */
 const UILab = (() => {
@@ -57,6 +57,38 @@ const UILab = (() => {
     return section('Regler', [['Stufenlos', [S({ value: 35, aria: 'Beispiel' })]], ['In Schritten', [S({ min: 0, max: 4, step: 1, value: 2, aria: 'Beispiel in Schritten' })]]]);
   }
 
+  /* Bausteine, die es in der App schon gibt (14.11.): hier gesammelt, damit man sie an einer Stelle sieht und beurteilen kann.
+     Es sind dieselben Klassen wie in der App (kein Nachbau) – ändert sich dort etwas, ändert es sich hier mit. */
+  function existing() {
+    const K = window.UIKit, frag = document.createDocumentFragment();
+    const html = (h) => { const t = document.createElement('template'); t.innerHTML = h.trim(); return t.content.firstElementChild; };
+    const seg = (items, on) => { const e = html(`<span class="st-seg" role="radiogroup">${items.map((l, i) => `<button type="button" role="radio" aria-checked="${i === on}" class="${i === on ? 'on' : ''}">${l}</button>`).join('')}</span>`);
+      e.addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; e.querySelectorAll('button').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }); }); return e; };
+    const sw = (on) => { const e = html(`<button type="button" class="ce-switch${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="umschalten"><i></i></button>`); e.addEventListener('click', () => { const v = !e.classList.contains('on'); e.classList.toggle('on', v); e.setAttribute('aria-checked', String(v)); }); return e; };
+    const tag = (name, c) => html(`<span class="lb2-tag" style="--c:${c}"><span>${name}</span></span>`);
+    frag.append(section('Umschalter', [['Zwei', [seg(['Deutsch', 'English'], 0)]], ['Mehrere', [seg(['Aus', 'Leicht', 'Mittel', 'Stark'], 2)]]]));
+    frag.append(section('Schalter', [['An und aus', [sw(true), sw(false)]]]));
+    const colors = html(`<div class="uiv-colors">${K.colorRow(K.COLORS[6], 'data-uiv-color')}</div>`);
+    colors.addEventListener('click', (ev) => { const b = ev.target.closest('[data-uiv-color]'); if (!b) return; colors.querySelectorAll('.tk-colors button').forEach((x) => x.classList.toggle('on', x === b)); });
+    frag.append(section('Farben und Tags', [['Farbauswahl', [colors]], ['Tags', [tag('Biologie', '#7db993'), tag('Mathe', '#6bb0d7'), tag('Klausur', '#d38b7d'), tag('Vokabeln', '#9799ec')]]]));
+    // Karte mit Zeilen (wie Einstellungen): Name links, Wert oder Bedienelement rechts
+    const card = html(`<div class="st-card uiv-card">
+        <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><span class="uiv-slot" data-s="field"></span></div>
+        <div class="st-row"><span class="st-name">Ansicht</span><span class="grow"></span><span class="uiv-slot" data-s="seg"></span></div>
+        <div class="st-row"><span class="st-name">Benachrichtigungen</span><span class="grow"></span><span class="uiv-slot" data-s="sw"></span></div>
+        <div class="st-row"><span class="st-name">Konto</span><span class="grow"></span><span class="st-muted">Im Konto</span><button type="button" class="st-btn">Abmelden</button></div></div>`);
+    card.querySelector('[data-s="field"]').replaceWith(K.input({ value: 'Julian', size: 's' }));
+    card.querySelector('[data-s="seg"]').replaceWith(seg(['Kacheln', 'Liste'], 0));
+    card.querySelector('[data-s="sw"]').replaceWith(sw(true));
+    const cs = section('Karte mit Zeilen', []); cs.append(card); frag.append(cs);
+    // Kalender zum Anklicken und Uhrzeit-Rad (aus dem Termin-Fenster)
+    let day = K.isoOf(new Date());
+    const calBox = html('<div class="tk-cal uiv-cal"></div>'); const cal = K.miniCalendar(calBox, () => day, (iso) => { day = iso; }); cal.open();
+    const wheel = html('<div class="uiv-wheel"></div>'); wheel.append(K.timeWheel('09:30', () => {}, 5));
+    frag.append(section('Datum und Uhrzeit', [['Kalender', [calBox]], ['Uhrzeit', [wheel]]]));
+    return frag;
+  }
+
   function dropdowns() {
     const D = window.UIKit.dropdown;
     const sort = [{ id: 'new', label: 'Neueste zuerst' }, { id: 'old', label: 'Älteste zuerst' }, { id: 'name', label: 'Name A–Z' }, { id: 'size', label: 'Größe' }];
@@ -86,7 +118,7 @@ const UILab = (() => {
     view.setAttribute('aria-label', 'UI');
     view.innerHTML = '<header class="uiv-head"><h2>UI</h2><div class="uiv-mid"></div><span class="uiv-right"></span></header><div class="uiv-body"></div>';
     view.querySelector('.uiv-mid').append(window.UIKit.tabBar({ items: TABS, value: 'all', label: 'Tableiste' }));
-    view.querySelector('.uiv-body').append(buttons(), inputs(), sliders(), dropdowns(), icons());
+    view.querySelector('.uiv-body').append(buttons(), inputs(), sliders(), dropdowns(), existing(), icons());
   }
 
   function show() {

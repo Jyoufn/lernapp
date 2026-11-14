@@ -190,13 +190,24 @@ const UIKit = (() => {
     return out.filter(([, list]) => list.length);
   }
 
-  /* Umschalter (.cs-pill, z. B. „Agenten | Dokumente“): der helle Teil gleitet weich zum gewählten Knopf (Wunsch 09.11.; setzt sich selbst, wo immer ein .cs-pill steht) */
+  /* Umschalter (.cs-pill „Agenten | Dokumente“ und .st-seg in Einstellungen/Dokument): die helle Fläche gleitet weich zum gewählten Knopf
+     (Wunsch 09.11./14.11.; setzt sich selbst, wo immer so ein Umschalter steht). Die Einstellungen zeichnen sich nach jedem Klick neu –
+     damit die Fläche trotzdem gleitet, merkt sich segFrom die Stelle des zuletzt angeklickten Umschalters und der neue startet dort. */
+  const SEG = '.cs-pill, .st-seg';
+  const segKey = (pill) => { const b = pill.querySelector(':scope > button'); return b ? [...b.attributes].map((a) => a.name).filter((n) => n.startsWith('data-')).join(',') + '|' + pill.querySelectorAll(':scope > button').length : ''; };
+  let segFrom = null;
   function placeThumb(pill) {
     if (!pill.isConnected) return;
-    const on = pill.querySelector(':scope > button.on');
+    const on = pill.querySelector(':scope > button.on, :scope > button[aria-checked="true"]');
     let t = pill.querySelector(':scope > .cs-thumb');
     if (!on || !on.offsetWidth) { if (t) t.style.opacity = '0'; return; }
-    if (!t) { t = document.createElement('i'); t.className = 'cs-thumb'; t.style.transition = 'none'; pill.prepend(t); requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; })); }
+    if (!t) {
+      t = document.createElement('i'); t.className = 'cs-thumb'; t.style.transition = 'none'; pill.prepend(t);
+      const from = segFrom && segFrom.key === segKey(pill) && Date.now() - segFrom.at < 600 ? segFrom : null;
+      if (from) { // frisch neu gezeichnet: an der alten Stelle beginnen, dann gleiten
+        t.style.opacity = '1'; t.style.width = `${from.w}px`; t.style.transform = `translateX(${from.x}px)`; void t.offsetWidth; t.style.transition = ''; segFrom = null;
+      } else requestAnimationFrame(() => requestAnimationFrame(() => { t.style.transition = ''; }));
+    }
     t.style.opacity = '1'; t.style.width = `${on.offsetWidth}px`; t.style.transform = `translateX(${on.offsetLeft}px)`;
   }
   // nur im Browser (Tests laden ui-kit.js ohne DOM)
@@ -204,12 +215,21 @@ const UIKit = (() => {
     // sichtbar werden (z. B. „Erstellen“ geöffnet) ändert die Größe → neu setzen
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver((es) => es.forEach((e) => placeThumb(e.target))) : null;
     const watch = (pill) => { if (ro && !pill._csWatch) { pill._csWatch = true; ro.observe(pill); } };
-    const placeAll = () => document.querySelectorAll('.cs-pill').forEach((p) => { watch(p); placeThumb(p); });
+    const placeAll = () => document.querySelectorAll(SEG).forEach((p) => { watch(p); placeThumb(p); });
     window.addEventListener('chat-tab-switched', () => requestAnimationFrame(placeAll));
+    document.addEventListener('pointerdown', (e) => {
+      const pill = e.target.closest?.('.st-seg'); if (!pill) return;
+      const on = pill.querySelector(':scope > button.on, :scope > button[aria-checked="true"]');
+      if (on && on.offsetWidth) segFrom = { key: segKey(pill), x: on.offsetLeft, w: on.offsetWidth, at: Date.now() };
+    }, true);
     new MutationObserver((ms) => {
-      const pills = new Set(ms.map((m) => m.target.closest?.('.cs-pill')).filter(Boolean));
+      const pills = new Set();
+      for (const m of ms) {
+        if (m.type === 'attributes') { const p = m.target.closest?.(SEG); if (p) pills.add(p); continue; }
+        m.addedNodes.forEach((n) => { if (n.nodeType !== 1) return; if (n.matches?.(SEG)) pills.add(n); n.querySelectorAll?.(SEG).forEach((p) => pills.add(p)); });
+      }
       pills.forEach((p) => { watch(p); placeThumb(p); });
-    }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'aria-checked'] });
     window.addEventListener('resize', placeAll);
     requestAnimationFrame(placeAll);
   }

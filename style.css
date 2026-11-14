@@ -12612,3 +12612,53 @@ html body .cal-new.cal-new.cal-new.cal-new { font-size: 12.5px; font-weight: 600
    Im ganzen Stylesheet steht jetzt 500 statt 400 (und „letter-spacing: inherit“ statt 0). Diese Regeln fangen alles ohne eigene Angabe ab. */
 html, body { font-weight: 500; }
 button, input, textarea, select, optgroup { font-family: inherit; font-weight: 500; letter-spacing: inherit; }
+
+/* ===== 14.11. nachts: Grundsatz „Kasten im Kasten wird nie dunkler“ =====
+   Felder, Spuren und Flächen INNERHALB einer Karte/eines Fensters sind immer eine Spur HELLER als der Kasten (durchscheinendes Weiß), nie schwarz/dunkler.
+   1) In Karten und Fenstern zeigt --main-bg (die dunkelste Fläche) auf einen helleren Ton – alles, was dort damit gefüllt ist, zieht mit. */
+.st-card, .ce-card, .tk-sheet, .tk-box, .dcs-body, .ui-menu, .lb2-menu { --main-bg: color-mix(in srgb, var(--win-bg) 95%, #fff); }
+/* 2) Felder in den Einstellungen wie der Baustein „Eingabefeld“ */
+.st-view .st-field, .dcs-body .st-field, .stk-add, .stk-key, .st-ws-name { border: 0 !important; border-radius: 10px; background: rgba(255, 255, 255, 0.05) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.stk-add:focus-within { border-color: transparent; }
+/* 3) Schalter: aus = helle, durchscheinende Spur (kein dunkles Loch) */
+.ce-switch:not(.on), .ce-card .ce-switch:not(.on) { background: rgba(255, 255, 255, 0.12); }
+.ce-switch:not(.on) i, .ce-card .ce-switch:not(.on) i { background: #b4b4b4; }
+
+/* ===== Einstellungen im UI-Stil (14.11.): Umschalter wie die Tableiste (gleitende Fläche), Knöpfe wie der Standard-Knopf ===== */
+.st-seg, .dc-ip2-kind.st-seg { position: relative; isolation: isolate; display: inline-flex; align-items: center; height: 28px; padding: 0 2px; gap: 0; border: 0; border-radius: 11px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.st-seg > button, .dc-ip2-kind.st-seg > button { position: relative; z-index: 1; height: 24px; padding: 0 12px; border: 0 !important; border-radius: 9px; background: none !important; box-shadow: none !important; color: var(--text-4); font: 500 13px var(--font-ui, Inter), sans-serif; transition: color 220ms ease; }
+.st-seg > button:hover:not(:disabled) { color: var(--text-2); }
+.st-seg > button.on, .st-seg > button[aria-checked="true"], .dc-ip2-kind.st-seg > button.on { background: none !important; color: var(--text); font-weight: 600; }
+.st-seg > .cs-thumb { top: 2px; margin-top: 0; height: 24px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.13); }
+/* ohne gleitende Fläche (falls das Skript nicht läuft): gewählter Teil trägt die Fläche selbst */
+.st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.13) !important; }
+html[data-mode="black"] .st-seg { background: rgba(255, 255, 255, 0.04); }
+html[data-mode="black"] .st-seg > button:is(.on, [aria-checked="true"]) { background: none !important; }
+html[data-theme="light"] .st-seg > .cs-thumb { background: #000; }
+html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { background: none !important; }
+.st-btn, .st-btn.dark, .st-btn.light { height: 28px; padding: 0 12px; border: 0 !important; border-radius: 10px; background: rgba(255, 255, 255, 0.07) !important; box-shadow: none !important; color: var(--text) !important; font: 600 13px var(--font-ui, Inter), sans-serif; transition: background-color 140ms ease; }
+.st-btn:hover { background: rgba(255, 255, 255, 0.1) !important; }
+.st-btn:active { background: rgba(255, 255, 255, 0.13) !important; }
+.st-btn.light { background: #e6e6e6 !important; color: #141414 !important; }
+.st-btn.light:hover { background: #f4f4f4 !important; }
+.st-btn.danger, .st-btn.red { background: rgba(239, 107, 95, 0.13) !important; color: #f07a6e !important; }
+
+/* ===== Sidebar: Chats, Dokumente und Projekt-Ordner in derselben Größe wie die Hauptnavigation; Ordner-Pfeil nur beim Darüberfahren ===== */
+.sidebar .sb-sec .nav-item, .sidebar .nav-bookmarks .nav-item, .sidebar .sb-chat, .sidebar .dc-side .dc-loose, .sidebar .dc-side .dc-loose:hover, .sidebar .dc-side a, .sidebar .sbp-head { font-size: 13.5px !important; font-weight: 500; }
+.sidebar .sbp-head { gap: 11px; color: var(--text-2); }
+.sidebar .sbp-ic { width: 16px; height: 16px; }
+.sidebar .sbp-ic svg { width: 16px; height: 16px; }
+.sbp.open .sbp-chev { opacity: 0; }
+.sbp-head:hover .sbp-chev, .sbp.open .sbp-head:hover .sbp-chev { opacity: 1; }
+.sidebar .sbp-in { padding-left: 0; margin-left: 17px; padding-left: 10px; box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.07); }
+.sidebar .sbp.open { margin-bottom: 2px; }
+
+/* ===== Bereich „UI“: vorhandene Bausteine der App (Umschalter, Schalter, Farben, Tags, Karte, Kalender, Uhrzeit) ===== */
+.uiv-card { width: 100%; }
+.uiv-card .st-row { gap: 10px; }
+.uiv-colors { min-width: 280px; }
+.uiv-cal { width: 250px; padding: 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.uiv-wheel { padding: 6px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.uiv-sec > .uiv-card { margin-top: 10px; }
+.stk-add .stk-btn, .st-key-add .stk-btn { background: rgba(255, 255, 255, 0.08) !important; border: 0 !important; border-radius: 8px; color: var(--text) !important; }
+.stk-add .stk-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
