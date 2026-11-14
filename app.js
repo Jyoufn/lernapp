@@ -7229,10 +7229,7 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', weight: 0.2, font: 'geist' };
-  // Schriftstärke (Einstellungen → Aussehen, 14.11.): die ganze Schrift stufenlos kräftiger – als feine Kontur um jeden Buchstaben (--font-stroke),
-  // weil die Stärken 400/500/600 überall fest gesetzt sind. cfg.weight = Kontur in px, 0 (wie früher) bis WEIGHT_MAX; Regler in den Einstellungen.
-  const WEIGHT_MAX = 0.8;
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter (bisher) · DM Sans · Manrope.
      Überall im CSS steht fest „Inter“. Statt das umzuschreiben, wird die gewählte Schrift unter dem NAMEN „Inter“ nachgeladen:
      Googles Schrift-CSS holen, den Familiennamen auf 'Inter' setzen und als <style id="app-font"> hinter den Inter-Link hängen
@@ -7290,11 +7287,10 @@ document.addEventListener('click', (e) => {
     // im hellen Modus wird umgekehrt → die Akzentfarbe vorher „gegenkehren“, damit sie am Ende stimmt
     root.style.setProperty('--accent', m.light ? invertHex(cfg.accent) : cfg.accent);
     root.style.setProperty('--plaza-strength', String(Math.max(0, Math.min(100, cfg.tiles)) / 100));
-    root.style.setProperty('--font-stroke', `${weightPx()}px`);
     applyFont();
     // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
     try {
-      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-stroke'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
+      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
       const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}
@@ -7333,9 +7329,8 @@ document.addEventListener('click', (e) => {
     ACCENTS,
     GLASS,
     DESKTOP,
-    WEIGHT_MAX,
     FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
-    get: () => ({ ...cfg, mode: modeId(), weight: weightPx(), font: fontId() }),
+    get: () => ({ ...cfg, mode: modeId(), font: fontId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();
