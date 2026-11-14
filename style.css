@@ -12590,3 +12590,8 @@ button, input, textarea, select { -webkit-text-stroke: inherit; }
 .st-weight { display: inline-flex; align-items: center; gap: 10px; color: var(--text-3); font-size: 13px; }
 .st-weight-a { font-weight: 400; -webkit-text-stroke: 0; }
 .st-weight-b { font-weight: 600; color: var(--text); -webkit-text-stroke: 0.6px currentColor; }
+
+/* ===== Schriftstärke gilt für alles (14.11.): auch Platzhalter in Feldern und Beschriftungen in Grafiken (SVG-Text) ===== */
+::placeholder { -webkit-text-stroke: var(--font-stroke, 0.2px) currentColor; }
+*, *::before, *::after { -webkit-text-stroke-width: var(--font-stroke, 0.2px); }
+.st-weight-a { -webkit-text-stroke-width: 0; } .st-weight-b { -webkit-text-stroke-width: 0.6px; }

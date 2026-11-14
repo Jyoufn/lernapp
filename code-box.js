@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     const font = FONTS[design.font] || FONTS.inter;
     const head = `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="${CSP}">`
       + `<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=${font.link}&display=swap">`
-      + `<style id="cbx-theme">${themeVars()}</style><style>${BASE_CSS}${extraCss}</style><script>${RUNTIME(id)}<\/script>${extraJs ? `<script>${extraJs}<\/script>` : ''}`;
+      + `<style id="cbx-theme">${themeVars()}</style><style>${BASE_CSS}${extraCss}*,*::before,*::after,::placeholder{-webkit-text-stroke-width:${getComputedStyle(document.documentElement).getPropertyValue('--font-stroke').trim() || '0.2px'}}</style><script>${RUNTIME(id)}<\/script>${extraJs ? `<script>${extraJs}<\/script>` : ''}`;
     // externe Skripte mit crossorigin laden → echte Fehlermeldungen statt „Script error.“
     const src = String(code || '').replace(/<script(?![^>]*\bcrossorigin\b)([^>]*\bsrc=["']https:)/gi, '<script crossorigin="anonymous"$1');
     const icons = sprite();
