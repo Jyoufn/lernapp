@@ -32,13 +32,20 @@ const UILab = (() => {
   }
 
   function inputs() {
-    const I = window.UIKit.input, B = window.UIKit.button;
+    const I = window.UIKit.input, B = window.UIKit.button, D = window.UIKit.dropdown;
     const grow = () => { const g = document.createElement('span'); g.style.flex = '1'; return g; };
     const sec = section('Eingabefeld', [
       ['Arten', [I({ placeholder: 'Text eingeben' }), I({ placeholder: 'Suchen', icon: 'search', clearable: true })]],
       ['Größen', [I({ placeholder: 'Klein', size: 's' }), I({ placeholder: 'Mittel' }), I({ placeholder: 'Groß', size: 'l' })]],
       ['Mehrzeilig', [I({ placeholder: 'Beschreibung hinzufügen', multiline: true, rows: 2 })]],
-      ['Nachricht', [I({ placeholder: 'Nachricht schreiben …', multiline: true, foot: [B({ icon: 'plus', kind: 'ghost', aria: 'Anhängen' }), grow(), B({ icon: 'arrow-up', kind: 'light', aria: 'Senden' })] })]],
+      // wie das Chat-Eingabefeld der App: Plus, Modell-Wahl · Aufwand, Mikrofon, Sprachmodus (dieselben Icons)
+      ['Nachricht', [I({ placeholder: 'Schreib dem Agenten …', multiline: true, foot: [
+        B({ icon: 'plus', kind: 'ghost', aria: 'Foto hinzufügen' }),
+        D({ select: true, value: 'gemini', kind: 'ghost', items: [{ id: 'gemini', label: 'Gemini' }, { id: 'minimax', label: 'MiniMax' }, { id: 'deepseek', label: 'DeepSeek' }] }),
+        grow(),
+        D({ select: true, value: 'auto', kind: 'ghost', align: 'right', items: ['Auto', 'Niedrig', 'Mittel', 'Hoch', 'Max'].map((n) => ({ id: n.toLowerCase(), label: n })) }),
+        B({ icon: 'mic', kind: 'ghost', aria: 'Sprachaufnahme starten' }), B({ icon: 'voice', kind: 'ghost', aria: 'Sprachmodus' }),
+      ] })]],
       ['Gesperrt', [I({ placeholder: 'Nicht änderbar', disabled: true }), I({ value: 'Fester Wert', disabled: true })]],
     ]);
     sec.classList.add('uiv-sec-inputs');
