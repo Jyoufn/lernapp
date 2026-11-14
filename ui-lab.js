@@ -1,6 +1,6 @@
 /* ===================================================================
    Bereich „UI“ (Sidebar, 14.11.): Sammlung der Bausteine, aus denen später das Design der App entsteht.
-   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button).
+   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button) und Dropdown-Menüs (UIKit.dropdown).
    Öffnet als eigener Tab (app.js → VIEW_TABS.ui).
    =================================================================== */
 const UILab = (() => {
@@ -31,13 +31,25 @@ const UILab = (() => {
     ]);
   }
 
+  function dropdowns() {
+    const D = window.UIKit.dropdown;
+    const sort = [{ id: 'new', label: 'Neueste zuerst' }, { id: 'old', label: 'Älteste zuerst' }, { id: 'name', label: 'Name A–Z' }, { id: 'size', label: 'Größe' }];
+    const acts = [{ id: 'rename', label: 'Umbenennen', icon: 'pencil' }, { id: 'copy', label: 'Duplizieren', icon: 'copy' }, { id: 'pin', label: 'Anheften', icon: 'pin' }, { id: 'link', label: 'Link kopieren', icon: 'link' }, { sep: true }, { id: 'del', label: 'Löschen', icon: 'trash', danger: true }];
+    const groups = [{ title: 'Ansicht' }, { id: 'grid', label: 'Kacheln' }, { id: 'list', label: 'Liste' }, { title: 'Zeigen' }, { id: 'all', label: 'Alles' }, { id: 'mine', label: 'Nur meine' }];
+    return section('Dropdown-Menü', [
+      ['Auswahl', [D({ select: true, value: 'new', items: sort }), D({ select: true, value: 'name', items: sort, kind: 'line' }), D({ select: true, value: 'old', items: sort, kind: 'ghost' })]],
+      ['Aktionen', [D({ label: 'Aktionen', items: acts }), D({ label: 'Neu', icon: 'plus', kind: 'light', items: [{ id: 'chat', label: 'Neuer Chat', icon: 'chat' }, { id: 'doc', label: 'Neues Dokument', icon: 'file' }, { id: 'folder', label: 'Neuer Ordner', icon: 'folder' }] }), D({ icon: 'sliders', kind: 'ghost', aria: 'Optionen', items: acts })]],
+      ['Abschnitte', [D({ label: 'Ansicht', kind: 'line', items: groups }), D({ label: 'Rechtsbündig', align: 'right', items: acts })]],
+    ]);
+  }
+
   function build() {
     view = document.createElement('section');
     view.className = 'uiv-view';
     view.setAttribute('aria-label', 'UI');
     view.innerHTML = '<header class="uiv-head"><h2>UI</h2><div class="uiv-mid"></div><span class="uiv-right"></span></header><div class="uiv-body"></div>';
     view.querySelector('.uiv-mid').append(window.UIKit.tabBar({ items: TABS, value: 'all', label: 'Tableiste' }));
-    view.querySelector('.uiv-body').append(buttons());
+    view.querySelector('.uiv-body').append(buttons(), dropdowns());
   }
 
   function show() {

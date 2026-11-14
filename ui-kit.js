@@ -279,12 +279,82 @@ const UIKit = (() => {
     return b;
   }
 
+  /* ---------- Dropdown-Menü (.ui-dd / .ui-menu, 14.11.) ----------
+     dropdown({ label, icon, kind, size, items, value, select, align, onPick(id) }) → Element (Knopf + Menü darunter)
+     items: { id, label, icon?, hint?, danger? } · { sep: true } (Trennlinie) · { title: 'Abschnitt' }
+     select: true → Auswahl-Menü: der Knopf zeigt den gewählten Eintrag, im Menü steht dort ein Haken.
+     Öffnet weich aus der Ecke des Knopfs (nur transform/opacity); schließt bei Klick daneben, Escape, Auswahl. Pfeiltasten wandern. */
+  let openDd = null;
+  function dropdown({ label = '', icon = '', kind = 'soft', size = 'm', items = [], value, select = false, align = 'left', aria = '', onPick } = {}) {
+    const el = document.createElement('div');
+    el.className = `ui-dd${align === 'right' ? ' ui-dd-right' : ''}`;
+    let cur = value;
+    const curLabel = () => (select ? items.find((x) => x.id === cur)?.label || label : label);
+    const btn = button({ label: curLabel(), icon, kind, size, aria });
+    btn.setAttribute('aria-haspopup', 'menu'); btn.setAttribute('aria-expanded', 'false');
+    if (label || select) btn.insertAdjacentHTML('beforeend', `<svg class="ui-dd-chev" width="12" height="12" aria-hidden="true"><use href="#f-chevron-down"/></svg>`);
+    const menu = document.createElement('div');
+    menu.className = 'ui-menu'; menu.setAttribute('role', 'menu');
+    const draw = () => {
+      menu.replaceChildren(...items.map((it) => {
+        if (it.sep) { const x = document.createElement('i'); x.className = 'ui-menu-sep'; return x; }
+        if (it.title) { const x = document.createElement('div'); x.className = 'ui-menu-title'; x.textContent = it.title; return x; }
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = `ui-menu-item${it.danger ? ' danger' : ''}`; b.dataset.id = it.id; b.tabIndex = -1;
+        b.setAttribute('role', select ? 'menuitemradio' : 'menuitem');
+        if (it.icon) b.innerHTML = fi(it.icon, 14);
+        const t = document.createElement('span'); t.className = 'ui-menu-label'; t.textContent = it.label; b.append(t);
+        if (it.hint) { const h = document.createElement('span'); h.className = 'ui-menu-hint'; h.textContent = it.hint; b.append(h); }
+        if (select) { b.setAttribute('aria-checked', String(it.id === cur)); b.insertAdjacentHTML('beforeend', `<svg class="ui-menu-tick" width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg>`); if (it.id === cur) b.classList.add('on'); }
+        return b;
+      }));
+    };
+    const close = (focus) => {
+      if (!el.classList.contains('open')) return;
+      el.classList.remove('open'); btn.setAttribute('aria-expanded', 'false');
+      if (openDd === el) openDd = null;
+      if (focus) btn.focus();
+    };
+    const open = () => {
+      openDd?._close();
+      draw();
+      // nach oben öffnen, wenn unten kein Platz ist
+      el.classList.remove('ui-dd-up');
+      el.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+      const r = menu.getBoundingClientRect();
+      if (r.bottom > innerHeight - 8 && btn.getBoundingClientRect().top > r.height + 16) el.classList.add('ui-dd-up');
+      openDd = el;
+    };
+    el._close = close;
+    btn.addEventListener('click', () => (el.classList.contains('open') ? close() : open()));
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('.ui-menu-item'); if (!b) return;
+      if (select) { cur = b.dataset.id; btn.querySelector('span').textContent = curLabel(); }
+      close(true); onPick?.(b.dataset.id);
+    });
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && el.classList.contains('open')) { e.stopPropagation(); close(true); return; }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+      e.preventDefault();
+      if (!el.classList.contains('open')) open();
+      const list = [...menu.querySelectorAll('.ui-menu-item')], i = list.indexOf(document.activeElement);
+      list[(i + (e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length]?.focus();
+    });
+    el.append(btn, menu);
+    Object.defineProperty(el, 'value', { get: () => cur });
+    return el;
+  }
+  if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('pointerdown', (e) => { if (openDd && !openDd.contains(e.target)) openDd._close(); });
+    if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('chat-tab-switched', () => openDd?._close());
+  }
+
   // „Eigene Farbe“ (Knopf rechts in der Farbreihe): Feld + Regler darunter auf-/zuklappen; onDone(hex) beim Knopf „Übernehmen“
   const customPick = (btn, start, onDone, onLive) => {
     const host = btn.closest('.tk-colors')?.nextElementSibling; if (!host) return;
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { tabBar, button, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { tabBar, button, dropdown, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;
