@@ -264,6 +264,22 @@ const UIKit = (() => {
     return el;
   }
 
+  /* ---------- Icon-Liste (14.11.): neue Linien-Icons im Stil des Vorbilds ----------
+     Regeln: Raster 18 × 18, Strich 1,4, runde Enden und Ecken, Eckenradius der Formen 3,4–3,6, keine Füllungen,
+     Formen bleiben 2–3 Einheiten vom Rand weg. Farbe = currentColor. Nutzung: UIKit.icon('pencil', 16).
+     Wird Stück für Stück ergänzt (Bereich „UI“ → Icons zeigt die Liste). */
+  const ICONS = {
+    pencil: { label: 'Umbenennen', d: '<path d="M11.35 3.65a1.63 1.63 0 0 1 2.3 0l.7.7a1.63 1.63 0 0 1 0 2.3l-7.3 7.3a1.6 1.6 0 0 1-.72.42l-2.5.66a.5.5 0 0 1-.61-.61l.66-2.5a1.6 1.6 0 0 1 .42-.72z"/><path d="m10.2 4.8 3 3"/>' },
+    link: { label: 'Link', d: '<path d="M7.75 10.25a3 3 0 0 0 4.24 0l2.13-2.13a3 3 0 0 0-4.24-4.24l-.78.78"/><path d="M10.25 7.75a3 3 0 0 0-4.24 0L3.88 9.88a3 3 0 0 0 4.24 4.24l.78-.78"/>' },
+    plus: { label: 'Erstellen', d: '<path d="M9 4.2v9.6M4.2 9h9.6"/>' },
+    home: { label: 'Home', d: '<path d="M3 8.2a1.8 1.8 0 0 1 .66-1.39l4.2-3.45a1.8 1.8 0 0 1 2.28 0l4.2 3.45A1.8 1.8 0 0 1 15 8.2v5A1.8 1.8 0 0 1 13.2 15H4.8A1.8 1.8 0 0 1 3 13.2z"/><path d="M7.2 15v-3a1.8 1.8 0 0 1 3.6 0v3"/>' },
+    tasks: { label: 'Aufgaben', d: '<rect x="3" y="3" width="12" height="12" rx="3.6"/><path d="m6.5 9.2 1.75 1.75L11.6 7.4"/>' },
+    calendar: { label: 'Kalender', d: '<rect x="3" y="3.6" width="12" height="11.4" rx="3.4"/><path d="M3 7.5h12M6.4 2.3v2.4M11.6 2.3v2.4"/>' },
+    search: { label: 'Suche', d: '<circle cx="8.2" cy="8.2" r="4.7"/><path d="m11.7 11.7 3.1 3.1"/>' },
+    folder: { label: 'Ordner', d: '<path d="M3 6.2A2.2 2.2 0 0 1 5.2 4h1.9a1.8 1.8 0 0 1 1.27.53l.56.56a1.8 1.8 0 0 0 1.27.53h2.6A2.2 2.2 0 0 1 15 7.82v4.38a2.2 2.2 0 0 1-2.2 2.2H5.2A2.2 2.2 0 0 1 3 12.2z"/>' },
+  };
+  const uiIcon = (name, size = 16) => (ICONS[name] ? `<svg class="ui-ic" width="${size}" height="${size}" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name].d}</svg>` : fi(name, size));
+
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>
      kind: 'soft' (Standard, leicht getönt) · 'light' (hell gefüllt, wichtigste Aktion) · 'line' (nur Rand) · 'ghost' (ohne Fläche) · 'danger'
@@ -302,7 +318,7 @@ const UIKit = (() => {
         const b = document.createElement('button');
         b.type = 'button'; b.className = `ui-menu-item${it.danger ? ' danger' : ''}`; b.dataset.id = it.id; b.tabIndex = -1;
         b.setAttribute('role', select ? 'menuitemradio' : 'menuitem');
-        if (it.icon) b.innerHTML = fi(it.icon, 14);
+        if (it.icon) b.innerHTML = uiIcon(it.icon, 16); // neue Icons aus ICONS, sonst das bisherige #f-…
         const t = document.createElement('span'); t.className = 'ui-menu-label'; t.textContent = it.label; b.append(t);
         if (it.hint) { const h = document.createElement('span'); h.className = 'ui-menu-hint'; h.textContent = it.hint; b.append(h); }
         if (select) { b.setAttribute('aria-checked', String(it.id === cur)); b.insertAdjacentHTML('beforeend', `<svg class="ui-menu-tick" width="13" height="13" aria-hidden="true"><use href="#f-check"/></svg>`); if (it.id === cur) b.classList.add('on'); }
@@ -355,6 +371,6 @@ const UIKit = (() => {
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { tabBar, button, dropdown, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { tabBar, button, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

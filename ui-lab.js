@@ -1,6 +1,6 @@
 /* ===================================================================
    Bereich „UI“ (Sidebar, 14.11.): Sammlung der Bausteine, aus denen später das Design der App entsteht.
-   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button) und Dropdown-Menüs (UIKit.dropdown).
+   Noch fast leer – die Bausteine kommen einzeln dazu. Bisher: Tableiste (UIKit.tabBar) oben mittig, darunter Knöpfe (UIKit.button) Dropdown-Menüs (UIKit.dropdown) und die Icon-Liste (UIKit.ICONS).
    Öffnet als eigener Tab (app.js → VIEW_TABS.ui).
    =================================================================== */
 const UILab = (() => {
@@ -43,13 +43,26 @@ const UILab = (() => {
     ]);
   }
 
+  function icons() {
+    const K = window.UIKit;
+    const tile = (name) => { const t = document.createElement('div'); t.className = 'uiv-ic'; t.innerHTML = `<i>${K.icon(name, 18)}</i><span></span>`; t.lastChild.textContent = K.ICONS[name].label; return t; };
+    const sized = (name, s) => { const t = document.createElement('div'); t.className = 'uiv-ic'; t.innerHTML = `<i>${K.icon(name, s)}</i><span>${s}</span>`; return t; };
+    const sec = section('Icons', [
+      ['Liste', Object.keys(K.ICONS).map(tile)],
+      ['Größen', [14, 16, 18, 22].map((s) => sized('home', s))],
+    ]);
+    const note = document.createElement('p'); note.className = 'uiv-note'; note.textContent = 'Raster 18 · Strich 1,4 · runde Enden und Ecken · keine Füllungen';
+    sec.querySelector('h3').after(note);
+    return sec;
+  }
+
   function build() {
     view = document.createElement('section');
     view.className = 'uiv-view';
     view.setAttribute('aria-label', 'UI');
     view.innerHTML = '<header class="uiv-head"><h2>UI</h2><div class="uiv-mid"></div><span class="uiv-right"></span></header><div class="uiv-body"></div>';
     view.querySelector('.uiv-mid').append(window.UIKit.tabBar({ items: TABS, value: 'all', label: 'Tableiste' }));
-    view.querySelector('.uiv-body').append(buttons(), dropdowns());
+    view.querySelector('.uiv-body').append(buttons(), dropdowns(), icons());
   }
 
   function show() {

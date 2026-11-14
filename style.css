@@ -12436,3 +12436,12 @@ html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0
 .ui-menu-title:not(:first-child) { margin-top: 3px; }
 html[data-mode="black"] .ui-menu { background: #0d0d0d; }
 @media (prefers-reduced-motion: reduce) { .ui-menu, .ui-dd.open > .ui-menu, .ui-dd-chev, .ui-menu-tick { transition: none; } }
+
+/* ===== Bereich „UI“: Icon-Liste (UIKit.ICONS, 14.11.) – Kacheln mit Icon und Name ===== */
+.uiv-note { margin: -2px 0 8px; color: var(--text-4); font: 400 12.5px Inter, sans-serif; }
+.uiv-ic { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 78px; }
+.uiv-ic > i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-2); }
+.uiv-ic > span { color: var(--text-4); font: 500 11.5px Inter, sans-serif; font-variant-numeric: tabular-nums; }
+.ui-ic { flex: none; display: block; }
+.uiv-items:has(> .uiv-ic) { gap: 14px 0; }
+.uiv-ic { width: 76px; }
