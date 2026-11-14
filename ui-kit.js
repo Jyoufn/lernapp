@@ -367,7 +367,7 @@ const UIKit = (() => {
     let x = null;
     if (clearable) {
       x = document.createElement('button'); x.type = 'button'; x.className = 'ui-input-x'; x.setAttribute('aria-label', 'Leeren'); x.innerHTML = fi('x', 11);
-      x.addEventListener('click', (e) => { e.preventDefault(); f.value = ''; sync(); onInput?.(''); f.focus(); });
+      x.addEventListener('click', (e) => { e.preventDefault(); f.value = ''; f.dispatchEvent(new Event('input', { bubbles: true })); f.focus(); }); // löst „input“ aus, damit auch fremde Zuhörer (z. B. Home-Suche) mitziehen
       row.append(x);
     }
     const sync = () => {

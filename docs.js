@@ -636,11 +636,15 @@ const Docs = (() => {
     view.innerHTML = `<div class="cl-wrap lb2">
       <div class="cl-head hm-top"><h2>${CH ? 'Chats' : 'Home'}</h2></div>
       ${CH ? '' : '<section class="hm-next" aria-label="Als Nächstes" hidden></section>'}
-      <label class="cl-search">${fi('search', 14)}<input type="search" placeholder="${CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen'}" aria-label="${CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen'}" /></label>
+      <span class="cl-find-slot"></span>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
       <div class="cl-list"></div></div>`;
-    const rows = view.querySelector('.cl-list'), search = view.querySelector('.cl-search input');
+    // Suchfeld = Baustein „Eingabefeld“ (UIKit.input: Lupe links, × zum Leeren)
+    const find = UIKit.input({ placeholder: CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen', icon: 'search', clearable: true, size: 'l' });
+    find.classList.add('cl-find'); find.field.type = 'search';
+    view.querySelector('.cl-find-slot').replaceWith(find);
+    const rows = view.querySelector('.cl-list'), search = find.field;
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
     // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“ – Anheften | Löschen | Abbrechen, mit Trennstrichen.
     // Löschen: 1. Tipp schiebt „Wirklich“ davor und färbt rot, 2. Tipp löscht. Alle gewählten schon angeheftet → „Lösen“ in Akzentfarbe.
