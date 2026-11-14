@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'tasks.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -41,7 +41,6 @@ const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtze
 const RADAR = require('./lib/radar');
 const HOLD = require('./lib/holdings'); // „Meine Käufe“ des Börsen-Bären (im Chat genannt, je Konto) // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
 const WSP = require('./lib/workspaces'); // geteilte Workspaces: teilen, Einladungen annehmen/ablehnen
-const AGT = require('./lib/agenttasks'); // Aufgaben, die ein Agent im Hintergrund abarbeitet (Tab „Aufgaben“)
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
 /* ---------- .env lesen (bei jeder Anfrage neu – Keys wirken ohne Neustart) ----------
@@ -128,9 +127,6 @@ async function accountKeys(store, uid) {
     const obj = JSON.parse(ls?.['settings.keys.v1'] || '{}');
     return Object.fromEntries(DEVICE_KEYS.map((k) => [k, cleanKeys(obj[k])]).filter(([, v]) => v));
   } catch { return {}; }
-}
-async function runAutomations(store) {
-  return AGT.runDue(store, { max: 5, start: async (uid, task) => AGT.run({ store, uid, task, env: { ...serverEnv(), ...(await accountKeys(store, uid)) }, prepareBody: (x) => withAgentData(x, { id: uid }) }) });
 }
 
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
@@ -1087,7 +1083,6 @@ Besondere Blöcke (wie in Notion) – nutze sie, wenn der Nutzer sie verlangt, u
 - alle weiteren als <div data-blk="TYP" data-cfg='JSON'></div> (JSON in einfachen Anführungszeichen, gültiges JSON):
   · chart – Diagramm: {"type":"bar|hbar|line","title":"…","unit":"…","labels":["…"],"series":[{"name":"…","values":[Zahlen, je Beschriftung eine]}]} (bar = Säulen, hbar = Balken, line = Linie; mehrere Datenreihen erlaubt)
   · dashboard – Übersicht aus Kacheln: {"items":[{"kind":"chart","chart":Diagramm-JSON},{"kind":"list","title":"…","items":["…"]},{"kind":"table","title":"…","rows":[["Kopf 1","Kopf 2"],["…","…"]]},{"kind":"tasks","title":"…","items":[{"t":"…","done":false}]},{"kind":"map","title":"…","q":"Ort"}]} (beliebige Mischung, 1–6 Kacheln)
-  · board – Aufgaben-Board nur für dieses Dokument (Spalten Offen/In Arbeit/Erledigt): {"tasks":[{"title":"…","notes":"…","status":"backlog|doing|done","prio":"none|low|medium|high|urgent","date":"JJJJ-MM-TT"}]} (notes/prio/date optional)
   · image – Bild: {"query":"Suchbegriff"} (das Bild wird gesucht) oder {"src":"upload:1"} für das 1. hochgeladene Bild oder {"src":"https://…"}; optional "caption"
   · gallery – Galerie: {"query":"Suchbegriff","count":6} oder {"items":[{"src":"upload:1","title":"…"}]}
   · video – Video: {"query":"Suchbegriff"} (ein passendes YouTube-Video wird gesucht) oder {"src":"https://www.youtube.com/watch?v=…"}
@@ -1653,13 +1648,6 @@ async function handle(req, res) {
         const r = ok ? await RADAR.refresh(store) : await RADAR.latest(store, { maxAgeMs: 10 * 60000 });
         return sendJson(res, 200, { ok: true, asOf: r.asOf, picks: r.picks.map((p) => `${p.name} (${p.type})`) });
       }
-      // Automatisierungen per Zeitplan (cron-job.org o. Ä. alle 5–15 min, oder Vercel-Cron): fällige Aufgaben aller Konten abarbeiten.
-      // Mit CRON_SECRET nur mit „Authorization: Bearer …“ bzw. ?key=…; gestartet wird immer nur, was wirklich fällig ist.
-      if (urlPath === '/api/agent-tasks/cron') {
-        const secret = serverEnv().CRON_SECRET, q = new URL(req.url, 'http://x').searchParams;
-        if (secret && req.headers.authorization !== `Bearer ${secret}` && q.get('key') !== secret) return sendJson(res, 401, { error: 'Nicht erlaubt' });
-        return sendJson(res, 200, { ok: true, started: await runAutomations(store) });
-      }
       // Prüfseite Suche (ohne Anmeldung, nur Treffer-Titel, gedrosselt): welche Suchmaschine liefert vom Server aus brauchbare Treffer?
       if (urlPath === '/api/diag/suche') {
         if (Date.now() - (handle.diagAt || 0) < 3000) return sendJson(res, 429, { error: 'Bitte kurz warten' });
@@ -1779,21 +1767,6 @@ async function handle(req, res) {
     // Planspiel-Zugang gibt es nicht mehr (kein Login beim Spiel): früher gespeicherte, verschlüsselte Zugangsdaten einmal löschen
     if (user && store && !planspielCleaned.has(user.id)) { planspielCleaned.add(user.id); Promise.all(['planspiel', 'planspiel-token', 'planspiel-fail'].map((k) => store.del(`u:${user.id}:${k}`))).catch(() => {}); }
     if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
-    // Aufgaben für die Agenten: Zustand holen / Aufgabe abarbeiten (läuft weiter, auch wenn die App geschlossen wird) / Zustand entfernen
-    if (req.method === 'GET' && urlPath === '/api/agent-tasks') return sendJson(res, 200, await AGT.list(store, user.id));
-    if (req.method === 'POST' && urlPath === '/api/agent-tasks/run') {
-      const b = await readBody(req, 8 * 1024 * 1024);
-      return sendJson(res, 200, await AGT.run({ store, uid: user.id, task: b.task || {}, env: readEnv(), prepareBody: (x) => withAgentData(x, user) }));
-    }
-    // Automatisierungen: speichern/entfernen, auflisten, fällige anstoßen (bei offener App)
-    if (urlPath === '/api/agent-tasks/automation' && req.method === 'POST') { const b = await readBody(req, 8 * 1024 * 1024); return sendJson(res, 200, { automation: await AGT.saveAuto(store, user.id, b.task || {}) }); }
-    if (urlPath === '/api/agent-tasks/automation' && req.method === 'DELETE') { const b = await readBody(req, 4000); await AGT.removeAuto(store, user.id, String(b.id || '')); return sendJson(res, 200, { ok: true }); }
-    if (req.method === 'GET' && urlPath === '/api/agent-tasks/automations') return sendJson(res, 200, await AGT.listAuto(store, user.id));
-    if (req.method === 'POST' && urlPath === '/api/agent-tasks/due') {
-      const env = readEnv();
-      return sendJson(res, 200, { started: await AGT.runDue(store, { uid: user.id, start: (u, task) => AGT.run({ store, uid: u, task, env, prepareBody: (x) => withAgentData(x, user) }) }) });
-    }
-    if (req.method === 'DELETE' && urlPath === '/api/agent-tasks') { const b = await readBody(req, 8 * 1024 * 1024); await AGT.remove(store, user.id, (b.ids || []).map(String).slice(0, 200)); return sendJson(res, 200, { ok: true }); }
     // Geteilte Workspaces (lib/workspaces.js)
     if (req.method === 'GET' && urlPath === '/api/workspaces') return sendJson(res, 200, await WSP.overview(store, serverEnv(), user.id));
     if (req.method === 'POST' && urlPath.startsWith('/api/workspaces/')) {
@@ -1888,7 +1861,5 @@ if (require.main === module) {
     res.writeHead(404); res.end('Nicht gefunden');
   }).listen(PREVIEW_PORT, HOST, () => console.log(`Vorschau auf http://localhost:${PREVIEW_PORT}`)).on('error', (e) => console.log(`Vorschau-Port ${PREVIEW_PORT} nicht frei: ${e.message}`));
   http.createServer(handler).listen(PORT, '::1').on('error', () => {}); // ohne IPv6 einfach weglassen
-  // am PC läuft der Server dauerhaft: jede Minute nachsehen, ob eine Automatisierung fällig ist
-  setInterval(() => { const st = accountStore(); if (st) runAutomations(st).catch(() => {}); }, 60000).unref?.();
 }
 module.exports = { handler, PUBLIC_FILES };

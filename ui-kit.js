@@ -1,5 +1,5 @@
 /* ===================================================================
-   Gemeinsame Bausteine für Aufgaben und Kalender
+   Gemeinsame Bausteine (Kalender, Dokumente, Bereich „UI“)
    - colorPicker: Farbe zum Ziehen (Fläche + Farbton-Leiste), ohne Hexcode
    - miniCalendar: kleiner Monatskalender zum Anklicken
    - timeWheel: Uhrzeit-Rad wie bei Apple (Stunden/Minuten scrollen und einrasten)
@@ -286,8 +286,6 @@ const UIKit = (() => {
     chat: { label: 'Chat', d: '<path d="M15.57 8.41A6.5 6.5 0 1 0 4.12 13.18L3.5 15.8l2.55-1.06a6.5 6.5 0 0 0 2.46.73"/><path d="M17.16 14.73a3.9 3.9 0 1 0-2.33 2.33l2.67.34z"/>' },
     // Dokument wie im zweiten Vorbild: Blatt mit weichen Ecken, die Ecke oben rechts ist als eigenes Stück abgesetzt (dort gefüllt, hier als Linie)
     doc: { label: 'Dokument', d: '<path d="M9.1 2.5H8c-3.1 0-4.1 1-4.1 4.1v6.8c0 3.1 1 4.1 4.1 4.1h4c3.1 0 4.1-1 4.1-4.1v-3"/><path d="M11.7 2.8v2.5c0 1.3 1 2.3 2.3 2.3h2.4z"/>' },
-    // Aufgaben wie bisher in der Sidebar (kleines Board: drei Spalten unterschiedlich voll)
-    tasks: { label: 'Aufgaben', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M6.6 6.5v7M10 6.5v3.5M13.4 6.5v5.2"/>` },
     // Kalender wie bisher in der Sidebar (Kasten, Kopflinie, fünf Punkte) – nur dünn
     calendar: { label: 'Kalender', d: `${sq(2.75, 2.75, 14.5, 14.5)}<path d="M2.75 7.4h14.5"/><path stroke-width="2" d="M6.6 10.9h.01M10 10.9h.01M13.4 10.9h.01M6.6 14h.01M10 14h.01"/>` },
     search: { label: 'Suche', d: '<circle cx="9" cy="9" r="5.75"/><path d="m13.2 13.2 3.6 3.6"/>' },
@@ -300,7 +298,7 @@ const UIKit = (() => {
      Gefüllte Varianten (#df-…) und Dokument-Icons (#d-…) bleiben, wie sie sind. */
   const ICON_USE = {
     plus: ['o-plus', 'f-plus', 'i-plus'], search: ['o-search', 'f-search', 'i-search'], home: ['o-home', 'f-home'],
-    tasks: ['o-tasks', 'f-tasks', 'i-tasks'], calendar: ['o-calendar', 'f-calendar', 'i-calendar'], chat: ['o-chat', 'f-chat'],
+    calendar: ['o-calendar', 'f-calendar', 'i-calendar'], chat: ['o-chat', 'f-chat'],
     doc: ['o-doc', 'f-file', 'i-file'], folder: ['f-folder'], pencil: ['f-pencil', 'i-pencil'], link: ['f-link'],
   };
   if (typeof document !== 'undefined' && typeof document.getElementById === 'function') {
@@ -312,6 +310,27 @@ const UIKit = (() => {
       }
     }
   }
+
+  /* ---------- Priorität (Dokument-Eigenschaft): Stufen und Balken-Icon ---------- */
+  const PRIOS = [
+    { id: 'none', name: 'Keine' },
+    { id: 'low', name: 'Niedrig' },
+    { id: 'medium', name: 'Mittel' },
+    { id: 'high', name: 'Hoch' },
+    { id: 'urgent', name: 'Dringend' },
+  ];
+  const BAR_OFF = '#4a4a4a';
+  const prioIcon = (id, s = 14) => {
+    const bars = (fills) => [[1.5, 9, 3, 5], [6.5, 6, 3, 8], [11.5, 3, 3, 11]].map(([x, y, w, h], i) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1" fill="${fills[i]}"/>`).join('');
+    const inner = {
+      none: '<circle cx="3" cy="8" r="1.4" fill="#6a6a6a"/><circle cx="8" cy="8" r="1.4" fill="#6a6a6a"/><circle cx="13" cy="8" r="1.4" fill="#6a6a6a"/>',
+      low: bars(['#e8762c', BAR_OFF, BAR_OFF]),
+      medium: bars(['#f2a46b', '#ee7a22', BAR_OFF]),
+      high: bars(['#f2a46b', '#f08a3e', '#f2701a']),
+      urgent: '<rect x="1.5" y="9" width="3" height="5" rx="1" fill="#f19999"/><rect x="6.5" y="6" width="3" height="8" rx="1" fill="#ef6464"/><rect x="11.5" y="2" width="3" height="8" rx="1.2" fill="#ef4444"/><circle cx="13" cy="12.8" r="1.5" fill="#ef4444"/>',
+    }[id] || '';
+    return `<svg class="tk-pi" width="${s}" height="${s}" viewBox="0 0 16 16" aria-hidden="true">${inner}</svg>`;
+  };
 
   /* ---------- Knopf (.ui-btn, 14.11.): gleiche Sprache wie die Tableiste ----------
      button({ label, icon, kind, size, disabled, onClick }) → <button>
@@ -404,6 +423,6 @@ const UIKit = (() => {
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { tabBar, button, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { PRIOS, prioIcon, tabBar, button, dropdown, ICONS, icon: uiIcon, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;

@@ -79,10 +79,9 @@ function isDraft(tab) {
 function markDrafts() { tabsEl.querySelectorAll('.tab').forEach((t) => t.classList.toggle('draft', isDraft(t))); }
 window.markDrafts = markDrafts;
 
-/* Kalender und Aufgaben öffnen als eigene Tabs (ein Tab je Ansicht) */
+/* Kalender, Home und UI öffnen als eigene Tabs (ein Tab je Ansicht) */
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
-  tasks: { title: 'Aufgaben', icon: 'i-tasks', view: () => window.Tasks },
   ui: { title: 'UI', icon: 'o-ui', view: () => window.UILab },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
@@ -5604,10 +5603,6 @@ window.AppActions = {
     if (Object.keys(patch).length) ed.applyDocSettings(patch);
     if (open) ed.openSettings();
   },
-  // Aufgaben (Tasks): anlegen, ändern (z. B. erledigt), löschen – gefunden wird per Titel
-  add_task(a = {}) { window.Tasks?.add(a); },
-  update_task(a = {}) { window.Tasks?.update(a.match || a.title, { ...a, title: a.match ? a.title : undefined }); },
-  delete_task({ title } = {}) { window.Tasks?.remove(title); },
   delete_event(a = {}) { window.Calendar?.remove(a); },
   // Termin ändern = alten löschen, neuen mit den geänderten Feldern eintragen
   update_event(a = {}) {
@@ -5652,15 +5647,12 @@ function findDoc(title) {
   const q = String(title || '').toLowerCase().trim(), all = window.Docs?.docs || [];
   return q ? all.find((d) => (d.title || '').toLowerCase() === q) || all.find((d) => (d.title || '').toLowerCase().includes(q)) : null;
 }
-/* Stand der App für den Sprach-Agenten: was gerade offen ist, Aufgaben, nächste Termine, Dokumente, Timer, Musik.
+/* Stand der App für den Sprach-Agenten: was gerade offen ist, nächste Termine, Dokumente, Timer, Musik.
    So kann er Fragen dazu beantworten („was steht heute an?“) und Dinge gezielt ändern. */
 function appStateText() {
   const out = [], today = new Date().toISOString().slice(0, 10);
   const act = tabsEl.querySelector('.tab.active'), v = act?.dataset.view;
   out.push(`Gerade offen: ${v === 'doc' ? `Dokument „${window.Docs?.titleOf(act.dataset.doc)}“` : v ? VIEW_TABS[v]?.title || v : 'KI-Chat'}`);
-  const st = Object.fromEntries((window.Tasks?.COLS || []).map((c) => [c.id, c.name]));
-  const ts = window.Tasks?.tasks || [];
-  out.push(`Aufgaben (${ts.length}):${ts.length ? '' : ' keine'}`, ...ts.slice(0, 40).map((t) => `- ${t.title} [${st[t.status] || t.status}${t.date ? `, fällig ${t.date}` : ''}${t.prio && t.prio !== 'none' ? `, Priorität ${t.prio}` : ''}]`));
   const ev = (window.Calendar?.events || []).filter((e) => e.date >= today).sort((a, b) => `${a.date}${a.time}`.localeCompare(`${b.date}${b.time}`)).slice(0, 30);
   out.push(`Nächste Termine:${ev.length ? '' : ' keine'}`, ...ev.map((e) => `- ${e.date}${e.time ? ` ${e.time}` : ''}: ${e.title}`));
   const ds = window.Docs?.docs || [];
@@ -6086,7 +6078,6 @@ const chatsView = (() => {
   let open = false;
   function show() {
     window.Calendar?.hide();
-    window.Tasks?.hide();
     window.Docs?.list?.hide();
     open = true;
     panel?.classList.add('view-chats');

@@ -475,12 +475,12 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
   /* ---------- ```termin / ```aufgabe: die KI trägt einen Kalendertermin bzw. eine Aufgabe ein (Wunsch 10.11.) ----------
      Gleiches Kärtchen wie bei ```einstellung: Bestätigung mit „Rückgängig“ und einem Knopf zum Kalender bzw. zu den Aufgaben.
      Eingetragen wird nur einmal – beim Schreiben der Antwort (live); im Verlauf steht nur noch der Hinweis. */
-  const PRIO_DE = { keine: 'none', niedrig: 'low', mittel: 'medium', hoch: 'high', dringend: 'urgent' };
   function planChip(lang, raw, live) {
     let o = null;
     try { o = JSON.parse(String(raw).replace(/[„“]/g, '"')); } catch {}
     if (!o || typeof o !== 'object') return null;
-    const isEvent = lang === 'termin';
+    if (lang !== 'termin') return null; // ```aufgabe aus älteren Chats: Aufgaben gibt es nicht mehr → Block verschwindet
+    const isEvent = true;
     const title = String(o.titel || o.title || '').replace(/\s+/g, ' ').trim().slice(0, 80);
     if (!title) return null;
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(o.datum || o.date || '')) ? String(o.datum || o.date) : '';
@@ -495,18 +495,17 @@ document.addEventListener('DOMContentLoaded',function(){icons();pics();try{new M
     }
     let made = null;
     try {
-      made = isEvent ? window.Calendar?.add({ title, date, time, description: String(o.beschreibung || o.description || '') })
-        : window.Tasks?.add({ title, notes: String(o.notiz || o.notes || ''), prio: PRIO_DE[String(o.prio || '').toLowerCase()] || o.prio, ...(date ? { date } : {}) });
+      made = window.Calendar?.add({ title, date, time, description: String(o.beschreibung || o.description || '') });
     } catch {}
     if (!made) { chip.innerHTML = `<span class="cbx-set-ic">${fi('alert', 13)}</span><span class="cbx-set-t">${isEvent ? 'Termin' : 'Aufgabe'} konnte nicht eingetragen werden<span class="cbx-set-s">${esc(sub)}</span></span>`; return chip; }
     chip.innerHTML = `<span class="cbx-set-ic ok">${fi('check', 12)}</span><span class="cbx-set-t">${isEvent ? 'Termin eingetragen' : 'Aufgabe angelegt'}<span class="cbx-set-s">${esc(sub)}</span></span><span class="cbx-grow"></span>`
       + `<button type="button" class="cbx-set-b" data-undo>Rückgängig</button><button type="button" class="cbx-set-b" data-open>${isEvent ? 'Kalender' : 'Aufgaben'}</button>`;
     chip.addEventListener('click', (e) => {
       if (e.target.closest('[data-undo]')) {
-        if (isEvent) window.Calendar?.remove({ title, date: made.date }); else window.Tasks?.remove(made.title);
+        window.Calendar?.remove({ title, date: made.date });
         chip.querySelector('.cbx-set-t').firstChild.textContent = 'Rückgängig gemacht'; e.target.closest('[data-undo]').remove();
       }
-      if (e.target.closest('[data-open]')) window.openViewTab?.(isEvent ? 'calendar' : 'tasks');
+      if (e.target.closest('[data-open]')) window.openViewTab?.('calendar');
     });
     return chip;
   }

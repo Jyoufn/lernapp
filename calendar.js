@@ -581,7 +581,6 @@ const Calendar = (() => {
   }
   function show() {
     mount();
-    window.Tasks?.hide();
     dv.hidden = true;
     dvWrap.hidden = true;
     open = true;

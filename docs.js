@@ -1896,8 +1896,8 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
        doc.cover = { kind: 'preset', id } | { kind: 'color', c, style } | { kind: 'image', src } */
     /* ---------- Infos zum Dokument: Strich „Infos“ klappt per Klick auf ----------
        Priorität wie bei den Aufgaben (gleiche Stufen, gleiches Balken-Icon, gleiches Menü), Tags mit Plus. */
-    const PRIOS = window.Tasks?.PRIOS || [{ id: 'none', name: 'Keine' }];
-    const prioIcon = (id, s) => window.Tasks?.prioIcon?.(id, s) || '';
+    const PRIOS = window.UIKit?.PRIOS || [{ id: 'none', name: 'Keine' }];
+    const prioIcon = (id, s) => window.UIKit?.prioIcon?.(id, s) || '';
     const OLD_PRIO = { mid: 'medium' };
     const fmtDate = (t) => (t ? new Date(t).toLocaleString('de-DE', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–');
     function drawMeta() {

@@ -43,7 +43,6 @@ const DocBlocks = (() => {
     { id: 'gallery', group: 'Medien', name: 'Galerie', icon: 'gallery', keys: 'galerie bilder gallery' },
     { id: 'calendar', group: 'Ansichten', name: 'Kalender', icon: 'calendar', keys: 'kalender termine monat calendar' },
     { id: 'time', group: 'Ansichten', name: 'Zeit', icon: 'timer', keys: 'zeit countdown timer frist zeitraum' },
-    { id: 'board', group: 'Ansichten', name: 'Aufgaben-Board', icon: 'kanban', keys: 'aufgaben board kanban todo to-do tasks spalten' },
     { id: 'dashboard', group: 'Ansichten', name: 'Dashboard', icon: 'dashboard', keys: 'dashboard übersicht diagramme kacheln' },
     { id: 'map', group: 'Ansichten', name: 'Karte', icon: 'map-pin', keys: 'karte map ort standort maps' },
     { id: 'ls-karten', group: 'Lernen', name: 'Karteikarten', icon: 'stack', keys: 'karteikarten lernkarten flashcards lernen abfragen' },
@@ -60,7 +59,6 @@ const DocBlocks = (() => {
     const now = new Date();
     if (['bar', 'hbar', 'line'].includes(id)) return { blk: 'chart', cfg: sampleChart(id) };
     if (id === 'dashboard') return { blk: id, cfg: { items: [] } }; // startet leer, Kacheln kommen über das „+“
-    if (id === 'board') return { blk: id, cfg: { tasks: [] } };
     if (id === 'time') return { blk: id, cfg: { mode: 'countdown', title: '', start: localDT(now), end: localDT(new Date(now.getTime() + 7 * 864e5)) } };
     if (id === 'calendar') return { blk: id, cfg: { events: [] } };
     if (id === 'map') return { blk: id, cfg: { q: '', label: '', lat: 52.52, lon: 13.405, zoom: 12 } };
@@ -477,15 +475,9 @@ const DocBlocks = (() => {
     draw();
   }
 
-  /* ---------- Aufgaben-Board: wie „Tasks“ (Spalten, Karten ziehen, gleiches Fenster),
-     aber mit eigenen Aufgaben, die nur in diesem Dokument gespeichert sind ---------- */
+  /* ---------- Aufgaben-Board: gibt es nicht mehr (Aufgaben entfernt, 14.11.) – ältere Dokumente zeigen einen Hinweis, der Block lässt sich löschen ---------- */
   function boardBlk(b, cfg, api) {
-    cfg.tasks = (Array.isArray(cfg.tasks) ? cfg.tasks : []).filter((t) => t && typeof t === 'object').map((t, i) => ({ ...t, id: String(t.id || `t${Date.now().toString(36)}${i}`), title: String(t.title || 'Aufgabe'), notes: String(t.notes || ''),
-      status: ['backlog', 'doing', 'done'].includes(t.status) ? t.status : t.status === 'review' ? 'doing' : 'backlog', tags: Array.isArray(t.tags) ? t.tags : [], prio: t.prio || 'none', date: /^\d{4}-\d{2}-\d{2}$/.test(t.date || '') ? t.date : '', order: t.order ?? i }));
-    if (!window.Tasks?.createBoard) { b.append(el('div', 'dcb-none', 'Aufgaben-Board konnte nicht geladen werden.')); tools(b, api); return; }
-    const bd = Tasks.createBoard({ load: () => cfg.tasks, save: (list) => { cfg.tasks = list; api.save(cfg); } }, { title: '', cls: 'tk-embed', cols: ['backlog', 'doing', 'done'] }); // im Dokument ohne „Prüfen“
-    bd.view.addEventListener('keydown', (e) => e.stopPropagation()); // Suche & Co. nicht als Dokument-Eingabe werten
-    b.append(bd.view);
+    b.append(el('div', 'dcb-none', 'Das Aufgaben-Board gibt es nicht mehr.'));
     tools(b, api);
   }
 

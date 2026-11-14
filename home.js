@@ -51,27 +51,6 @@ const Home = (() => {
       act: 'Kalender', go: () => window.openViewTab?.('calendar'),
     };
   }
-  function taskCard(now) {
-    const tasks = (window.Tasks?.tasks || []).filter((t) => t && t.status !== 'done' && t.date && !t.repeat);
-    const today = isoOf(now);
-    const due = tasks.filter((t) => t.date <= today).sort((a, b) => a.date.localeCompare(b.date) || String(a.time || '').localeCompare(String(b.time || '')));
-    if (!due.length) {
-      const soon = tasks.filter((t) => t.date > today).sort((a, b) => a.date.localeCompare(b.date))[0];
-      if (!soon) return null;
-      const days = Math.round((new Date(`${soon.date}T12:00`) - new Date(`${today}T12:00`)) / 86400000);
-      if (days > 2) return null;
-      return { id: `tk:${soon.id}:${soon.date}`, kind: 'task', icon: 'f-tasks', title: soon.title || 'Aufgabe', when: days === 1 ? 'Morgen fällig' : 'Übermorgen fällig', desc: soon.time ? `bis ${soon.time}` : 'Noch Zeit zum Vorbereiten', act: 'Aufgaben', go: () => window.openViewTab?.('tasks') };
-    }
-    const late = due.filter((t) => t.date < today).length;
-    const one = due.length === 1;
-    return {
-      id: `tk:${today}:${due.length}`, kind: 'task', icon: 'f-tasks', late: late > 0,
-      title: one ? (due[0].title || 'Aufgabe') : `${due.length} Aufgaben für heute`,
-      when: late ? `${late} überfällig` : 'Heute fällig',
-      desc: one ? (due[0].time ? `bis ${due[0].time}` : 'Eine Sache steht noch an') : due.slice(0, 2).map((t) => t.title).filter(Boolean).join(' · '),
-      act: 'Aufgaben', go: () => window.openViewTab?.('tasks'),
-    };
-  }
   function docCard(now) {
     const D = window.Docs; if (!D) return null;
     const d = D.docs.filter((x) => D.inWs(x) && !D.isEmpty(x.id)).sort((a, b) => (b.updated || 0) - (a.updated || 0))[0];
@@ -117,7 +96,7 @@ const Home = (() => {
   const dismissed = () => new Set(read(DISMISS_KEY, []));
   function cards() {
     const now = new Date(), gone = dismissed();
-    return [eventCard(now), taskCard(now), ...boerseCards(), docCard(now)].filter((c) => c && !gone.has(c.id));
+    return [eventCard(now), ...boerseCards(), docCard(now)].filter((c) => c && !gone.has(c.id));
   }
   function cardHtml(c, i) {
     const tone = c.alarm || c.late ? ' hm-warn' : c.soon ? ' hm-soon' : '';

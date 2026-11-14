@@ -21,7 +21,6 @@
 | `i18n.js` | Sprache der Oberfläche (Einstellungen → Aussehen): bei English übersetzt ein Wörterbuch feste Beschriftungen, Inhalte bleiben |
 | `docs.js` | Home-Liste (`list`), Editor (`editor`: `draw`, Fokusmodus `setFocus`), Dokument-Chat rechts (`drawDocChat`), `Docs.create/open/discard/isEmpty` |
 | `docblocks.js` | Slash-Menü und Blöcke im Dokument (Tabelle, Medien, Kalender, Zeit, Dashboard, Karte, Diagramme, Board) |
-| `tasks.js` | Aufgaben: `createBoard(store, {agents, list})`; Liste (`row`, `toggleRow`, `renderList`), Fenster (`edit`: Pillen date/sched/prio/tags/agent/auto/limit), Automatisierung (`syncAuto`), Agenten-Lauf (`startRun`, `pull`) |
 | `calendar.js` | Wochenansicht (`render`, `layoutDay`, `band` für ganztägig), Tagesfenster (`drawDay`), Termin-Fenster (`edit`) |
 | `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow` (Farbfeld + Kreise + Helligkeit, überall gleich), `colorPicker`, `timeGroups` (Zuletzt/Gestern/…), `placeThumb`, `tabBar` (Tableiste `.ui-tabs`) |
 | `ui-lab.js` | Bereich „UI“ in der Sidebar (`window.UILab`, Tab `VIEW_TABS.ui`): Sammlung der Bausteine, bisher nur die Tableiste |
@@ -45,7 +44,6 @@
 | `lib/lernset.js` | Lernset-Prompt `PROMPT(spec)`, Wunsch-Erkennung `ASK`, Klausur-Korrektur `grade` (`/api/lernset/grade`) |
 | `lib/antwort.js` | **Antwortverhalten** (nativer Ablauf): Antwortformen `FORMS`, Gedächtnis `CHAT_MEMORY`/`MATERIAL_MEMORY`, Rückfragen `ASK_CORE`/`ASK_QUIZ` + `quizMode`, Wächter `createAskGate`/`createFinishGate`, Bausteine nach Bedarf `toolNeeds` |
 | `lib/thoughts.js` | Gedanken-Filter (nur Inhalt, Deutsch) und Antwort-Wächter (kein Vorgehen im Text) |
-| `lib/agenttasks.js` | Aufgaben im Hintergrund (`run` mit `noClarify`), Automatisierungen (`saveAuto`, `runDue`, `nextRun`, Limit) |
 | `lib/accounts.js`, `lib/store.js`, `lib/workspaces.js` | Konten/Sitzungen, Speicher (Redis/Dateien/Speicher), geteilte Workspaces |
 | `lib/codeloop.js`, `lib/codecheck.js`, `lib/apptest.js` | Coding-Agent (gesperrt) |
 | `tests/*.test.js` | `node --test`, Mocks in `tests/mock.js` |

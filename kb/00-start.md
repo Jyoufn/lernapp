@@ -7,7 +7,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 |---|---|
 | Aussehen ändern (Farben, Abstände, Menüs, Karten, Animation, Icons) | `design.md` |
 | Wo steht was im Code? | `dateien.md` |
-| Wie funktioniert Feature X heute (Chat, Aufgaben, Kalender, Börse …) | `funktionen.md` |
+| Wie funktioniert Feature X heute (Chat, Kalender, Dokumente, Börse …) | `funktionen.md` |
 | KI-Verhalten, Prompts, Blöcke, Quellen, Denk-Schritte | `ki.md` |
 | Vercel, Konten, Umgebungsvariablen, Zeitplan | `betrieb.md` |
 | Was wurde ausprobiert und abgelehnt? | `entscheidungen.md` |
@@ -15,7 +15,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 ## Das Projekt in 5 Sätzen
 - Lern-App „Agenten“ des Nutzers (Julian, Schüler, nutzt sie vor allem auf dem **iPad**), Repo `Jyoufn/lernapp`, läuft auf **Vercel**.
 - Reines HTML/CSS/JS ohne Framework, Node-Server `app-server.js` (auf Vercel über `api/index.js`), Speicher Upstash Redis.
-- KI-Chat mit 5 Agenten (Pixel-Hunde): Allgemein, Lernen, Research, Coden (Mini-Apps), Börse (Bär) + eigene Agenten. Mini-Apps (```widget), animierter Chat-Hintergrund. Dazu Dokumente (Notion-artig), Aufgaben, Kalender, Workspaces.
+- KI-Chat mit 5 Agenten (Pixel-Hunde): Allgemein, Lernen, Research, Coden (Mini-Apps), Börse (Bär) + eigene Agenten. Mini-Apps (```widget), animierter Chat-Hintergrund. Dazu Dokumente (Notion-artig), Kalender, Workspaces.
 - Modelle: automatisch – erst nur Gemini (beste Modelle zuerst, mehrere Schlüssel), dann MiniMax M3.1 Flash (NVIDIA); die Haupt-KI wählt man je Anbieter unter Einstellungen → Verbindung (gilt für alles, auch Coden), andere Anbieter lassen sich als Ersatz abschalten, dann DeepSeek V4.1 (gratis über NVIDIA). KEIN Nemotron. Schlüssel pro Konto in den Einstellungen (mehrere je Anbieter). Details `ki.md` → „Modelle“.
 - WICHTIGSTE REGELN (`ki.md`): Aufwand ist verbindlich (Max = Maximum) · Denken nur bei Bedarf, Gedanken deutsch und inhaltlich · Lernen nur mit deutschen Fachquellen · Kontingent schonen (ein Aufruf statt vieler).
 - **Oberfläche komplett auf Deutsch** (keine englischen Beschriftungen, auch nicht in der Denk-Zeitleiste).
@@ -32,8 +32,8 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 - Server: `LOGIN_EMAIL=test@test.de LOGIN_PASSWORD=testtest123 PORT=3000 node app-server.js`
 - Beenden: `for p in $(pgrep -f "^node app-server.js"); do kill $p; done` (nicht `pkill -f`, das trifft die eigene Shell).
 - Playwright: `NODE_PATH=$(npm root -g) node script.js`; Anmelden über das Formular (`input[type=email]`, `input[type=password]`, Enter).
-- Navigation: `document.querySelector('[data-nav="tasks|calendar|docs|history|new"]').click()`.
-- Testdaten: `localStorage` `tasks.v1`, `tasks.tags.v1`, `calendarEvents`; danach neu laden.
+- Navigation: `document.querySelector('[data-nav="calendar|docs|ui|new"]').click()`.
+- Testdaten: `localStorage` `tasks.tags.v1` (Tags), `calendarEvents`; danach neu laden.
 - Ohne Internet: cdnjs (marked, KaTeX) und Favicons laden nicht → Markdown roh, Buchstaben statt Logos. Echte KI/Kurse gibt es im Container nicht – mit Mocks testen (`tests/mock.js`).
 
 ## Wie der Nutzer kommuniziert

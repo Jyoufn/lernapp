@@ -58,7 +58,7 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Bild zur Erklärung** (`bild` in `ROUTE_SYSTEM`): auch für echte Dinge, die man gesehen haben sollte (Tier, Pflanze, Ort, Gerät, historische Person/Szene, Kunststil) – weiterhin nicht bei jeder Nachricht.
 - **Coding-Agent (MiniMax, `lib/codeloop.js`)**: Gedanken laufen durch denselben Filter (`code: true`), Pausen/Aussetzer nur als Live-Zeile; `update_plan` → Ereignis `todos` mit `done`/`fixed` (der Agent hakt selbst ab, Liste in der Zeitleiste statt ```plan im Text); vor der ersten Datei ein kurzer Satz („Ich lege jetzt … an“, vom Modell oder aus den Dateinamen); Werkzeug `web_search` mit EIGENEN Suchbegriffen (höchstens 4), Treffer als ```search-Zeile mit Quellen-Logos, Ergebnis mit Hinweis „keinen Code übernehmen“.
 - **Antwort wartet höchstens 2,5 s** auf die Übersetzung der Gedanken (`gateWait`, auch bei MiniMax/DeepSeek).
-- **Kalender/Aufgaben per Chat** (`PLAN_WORDS` → `planPrompt` in `extrasPrompt`): Blöcke ```termin {titel, datum, zeit, beschreibung} und ```aufgabe {titel, datum, prio, notiz}; die App trägt ein (`planChip` in `code-box.js`, nur live, einmal) und zeigt das Kärtchen mit „Rückgängig“ + „Kalender“/„Aufgaben“.
+- **Kalender per Chat** (`PLAN_WORDS` → `planPrompt` in `extrasPrompt`): Block ```termin {titel, datum, zeit, beschreibung} – die App trägt ihn ein und zeigt eine Bestätigung mit „Rückgängig“ (`planChip` in `code-box.js`). Aufgaben gibt es nicht mehr; ein alter ```aufgabe-Block wird ausgeblendet.
 
 ## Fähigkeiten statt Vorgaben (10.11. abends)
 - `BLOCKS_PROMPT` beginnt mit „WAS DU IN DIESER APP ZEIGEN KANNST“: Liste aller Werkzeuge (Text, LaTeX, Chemie `$\ce{…}$` – KaTeX mhchem in `index.html`, Tabelle, chart nur für Zahlenreihen, timeline, quellbild/webbild, illustration nur auf Wunsch, links nur auf Wunsch, kopie, heft, mindmap, ask, App-Funktionen) + Entscheidungsweg nach dem INHALT (Strukturformel → Bild/Formel, nie Infografik aus Zahlen). Quellen/Links nie im Text – die App zeigt sie unter der Antwort, außer der Nutzer fragt danach. Erklärbild (`bild`/`VISUAL_TOPIC`) auch für Struktur-/Lewis-Formeln.
@@ -131,7 +131,7 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Stand 04.11. (Nutzer: „Aufwand wird nicht beachtet“)**: Im Gemini-nativen Ablauf denkt die KI NUR bei Auto dynamisch. Gewählte Stufe = deren Denktiefe
   (`EFFORTS[level].thinking`: Low low/1024 · Medium medium/4096 · High high/8192 · Max high/24576), deutliche Längen-/Tiefen-Sätze (`NATIVE_EFFORT`),
   Low ohne Suche (außer Aktuelles/Wunsch), Max: einfache Websuche wird zur Tiefen-Recherche.
-Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl im Eingabefeld), Aufgaben und Automatisierungen.
+Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl im Eingabefeld).
 - **Auto**: Gemini entscheidet selbst (dynamisches Denken, Antwortlänge nach Bedarf); bei Börse/Coden die Analyse.
 - **Ausdrücklich gewählt** (Low/Medium/High/Max): GENAU diese Stufe – kein internes Herunterstufen bei „einfachen“ Fragen,
   Antwortstil = gewählte Stufe (`EFFORT_STYLE`), Erinnerung am Ende des System-Prompts (High/Max). Nur Begrüßungen bleiben direkt.
@@ -158,7 +158,6 @@ Gilt überall, wo ein Aufwand gewählt wird: KI-Chat, Dokument-Chat (eigene Wahl
 - Podcast: `PODCAST_ASK` → `PODCAST_PROMPT` (ein Satz + ```podcast-JSON, gesprochene Sprache, Formeln ausgeschrieben), Auto mindestens High, kein Erklärbild. Antwort auf Fragen des Zuhörers: `/api/podcast/answer` (`P.smallJsonTask`, nur bekannte Sprecher, 2–6 Beiträge, führt zur nächsten Zeile zurück); Ton: `/api/podcast/audio` (Gemini-TTS mit `multiSpeakerVoiceConfig`, höchstens 2 Sprecher je Aufruf, PCM gestreamt).
 - Lernsets: Chat-Wunsch (`LS.ASK`) oder Erstellen-Fenster (`last.lernset`) → `LS.PROMPT(spec)`; Inhalt nur aus gegebenem Material, Titel kurz/deutsch, Anzahl genau. Korrektur offener Klausuraufgaben: `LS.grade` (leere Antwort 0 ohne Modell, sonst Text-Leiter, Punkte auf 0,5 gerundet und begrenzt).
 
-- Aufgaben-Ergebnis als Dokument (`mdToHtml` in `lib/agenttasks.js`): ```illustration/chart/mindmap/timeline/stock-Blöcke werden `<div data-viz>`-Grafiken (die App zeichnet/erzeugt sie beim Öffnen), nicht Text.
 - Tabellen: bei Vergleichen (3+ Kriterien) und Bestandteilen mit Funktion eine knappe Tabelle statt langer Liste (Regel in `lib/workflow.js`).
 
 ## Bilder bearbeiten
