@@ -7231,32 +7231,22 @@ document.addEventListener('click', (e) => {
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter (bisher) · DM Sans · Manrope.
-     Überall im CSS steht fest „Inter“. Statt das umzuschreiben, wird die gewählte Schrift unter dem NAMEN „Inter“ nachgeladen:
-     Googles Schrift-CSS holen, den Familiennamen auf 'Inter' setzen und als <style id="app-font"> hinter den Inter-Link hängen
-     (spätere @font-face-Regeln gleichen Namens gewinnen). Der Text liegt in localStorage („appearance.fontcss“), index.html setzt ihn
-     beim Start sofort ein – kein Umspringen. Scheitert das Laden (offline), bleibt Inter. */
-  const FONTS = { geist: { label: 'Geist', q: 'Geist' }, inter: { label: 'Inter' }, dmsans: { label: 'DM Sans', q: 'DM+Sans' }, manrope: { label: 'Manrope', q: 'Manrope' } };
-  const FONT_CSS = 'appearance.fontcss';
+     Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
+     Gewählt wird also: Variable auf den Familiennamen setzen + die Schrift ganz normal von Google laden (<link id="app-font-link">).
+     index.html setzt beides beim Start sofort aus „appearance.vars“ – kein Umspringen. Lädt die Schrift nicht (offline), greift Inter. */
+  const FONTS = { geist: { label: 'Geist', name: 'Geist', q: 'Geist' }, inter: { label: 'Inter' }, dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' }, manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' } };
   const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
-  const putFont = (css, id) => {
-    let st = document.getElementById('app-font');
-    if (!css) { st?.remove(); return; }
-    if (!st) { st = document.createElement('style'); st.id = 'app-font'; document.head.append(st); }
-    st.dataset.font = id; st.textContent = css;
-  };
-  let fontJob = 0;
+  const fontHref = (f) => (f.q ? `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap` : '');
   function applyFont() {
-    const id = fontId(), f = FONTS[id], job = ++fontJob;
-    if (!f.q) { putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
-    let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
-    if (cached?.id === id && cached.css) { putFont(cached.css, id); if (Date.now() - (cached.at || 0) < 7 * 86400000) return; }
-    else if (document.getElementById('app-font')?.dataset.font !== id) putFont('', id); // andere Schrift gewählt: bis die neue da ist, Inter
-    fetch(`https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600&display=swap`).then((r) => (r.ok ? r.text() : Promise.reject())).then((txt) => {
-      if (job !== fontJob || !/@font-face/.test(txt)) return;
-      const css = txt.replace(/font-family:\s*(['"])[^'"]+\1/g, "font-family: 'Inter'");
-      putFont(css, id);
-      try { localStorage.setItem(FONT_CSS, JSON.stringify({ id, css, at: Date.now() })); } catch {}
-    }).catch(() => {});
+    const f = FONTS[fontId()], href = fontHref(f);
+    let link = document.getElementById('app-font-link');
+    if (!href) link?.remove();
+    else {
+      if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
+      if (link.getAttribute('href') !== href) link.setAttribute('href', href);
+    }
+    if (f.name) root.style.setProperty('--font-ui', `"${f.name}", Inter`); else root.style.removeProperty('--font-ui');
+    document.getElementById('app-font')?.remove(); try { localStorage.removeItem('appearance.fontcss'); } catch {} // Rest des ersten Versuchs (Schrift unter dem Namen „Inter“)
   }
   // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
   const DESKTOP = !!(window.lernappDesktop && window.lernappDesktop.glass);
@@ -7289,8 +7279,9 @@ document.addEventListener('click', (e) => {
     applyFont();
     // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
     try {
-      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
+      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-ui'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
       const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
+      const fh = fontHref(FONTS[fontId()]); if (fh) data.fontHref = fh; // index.html lädt die Schrift damit schon beim Start
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}
   }
