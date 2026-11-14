@@ -12580,3 +12580,15 @@ html body .cal-new.cal-new.cal-new.cal-new, html body .cm-switch.cm-switch.cm-sw
 .ui-slider input::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -6px; border: 0; border-radius: 50%; background: #e6e6e6; transition: transform 160ms cubic-bezier(0.16, 1, 0.3, 1); }
 .ui-slider input::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #e6e6e6; }
 .ui-slider input:active::-webkit-slider-thumb { transform: scale(1.15); }
+
+/* ===== Kalender-Kopf (14.11.): der Monat steht nur noch EINMAL – mittig, mit Pfeilen links und rechts; „Neuer Termin“ rechts ===== */
+html body .cal-head.cm-head { display: grid !important; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 10px; }
+html body .cm-head .cm-title { display: none !important; }
+html body .cm-head .cm-nav { display: contents !important; }
+html body .cm-head .cm-switch { grid-column: 2; justify-self: center; width: 210px; max-width: 100%; flex: none; }
+html body .cm-head .cal-new { grid-column: 3; justify-self: end; }
+@media (max-width: 640px) { html body .cm-head .cm-switch { width: 170px; } }
+/* genau mittig im Kopf (unabhängig vom Platz für den Sidebar-Knopf links); Monat etwas kräftiger */
+html body .cal-head.cm-head { position: relative; display: flex !important; justify-content: flex-end; }
+html body .cm-head .cm-switch { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+html body .cm-switch .cm-label { color: var(--text); font-weight: 600; }
