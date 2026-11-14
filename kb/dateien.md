@@ -23,7 +23,8 @@
 | `docblocks.js` | Slash-Menü und Blöcke im Dokument (Tabelle, Medien, Kalender, Zeit, Dashboard, Karte, Diagramme, Board) |
 | `tasks.js` | Aufgaben: `createBoard(store, {agents, list})`; Liste (`row`, `toggleRow`, `renderList`), Fenster (`edit`: Pillen date/sched/prio/tags/agent/auto/limit), Automatisierung (`syncAuto`), Agenten-Lauf (`startRun`, `pull`) |
 | `calendar.js` | Wochenansicht (`render`, `layoutDay`, `band` für ganztägig), Tagesfenster (`drawDay`), Termin-Fenster (`edit`) |
-| `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow` (Farbfeld + Kreise + Helligkeit, überall gleich), `colorPicker`, `timeGroups` (Zuletzt/Gestern/…), `placeThumb` |
+| `ui-kit.js` | `foldRows`, `autoGrow`, `timeWheel`, `miniCalendar`, `colorRow` (Farbfeld + Kreise + Helligkeit, überall gleich), `colorPicker`, `timeGroups` (Zuletzt/Gestern/…), `placeThumb`, `tabBar` (Tableiste `.ui-tabs`) |
+| `ui-lab.js` | Bereich „UI“ in der Sidebar (`window.UILab`, Tab `VIEW_TABS.ui`): Sammlung der Bausteine, bisher nur die Tableiste |
 | `search.js` | ⌘K-Palette, Workspace-Menü (`window.Workspaces`) |
 | `workspace-invite.js`, `music.js`, `timer.js`, `code-agent.js` | Einladung, Musik, Timer, Coding-Anzeige (alter Datei-Modus) |
 | `code-box.js` | Mini-Apps (```widget): `parse`, `figure` (Kasten, Dashboard-Kacheln, Code-Ansicht), `srcdoc` (Sandbox + Grundstile + Laufzeit), `start/stop` (iframes, Wächter, Pause), Gespeichert (`codebox.saved.v1`), Design (`codebox.design.v1`), ```einstellung (`applySetting`), `render` (Haken aus `renderMarkdown`) |

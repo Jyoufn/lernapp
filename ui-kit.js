@@ -214,12 +214,62 @@ const UIKit = (() => {
     requestAnimationFrame(placeAll);
   }
 
+  /* ---------- Tableiste (.ui-tabs, 14.11.): Leiste mit gleitender Fläche unter dem gewählten Tab ----------
+     tabBar({ items: [{ id, label }], value, onChange(id), label }) → Element mit .value und .select(id).
+     Antippen oder Pfeiltasten wählen; die Fläche gleitet per transform/width an ihren Platz. */
+  function tabBar({ items = [], value, onChange, label = 'Ansicht' } = {}) {
+    const el = document.createElement('div');
+    el.className = 'ui-tabs';
+    el.setAttribute('role', 'tablist');
+    el.setAttribute('aria-label', label);
+    const thumb = document.createElement('i');
+    thumb.className = 'ui-tabs-thumb';
+    el.append(thumb);
+    let cur = items.some((x) => x.id === value) ? value : items[0]?.id;
+    const btns = items.map((it) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'ui-tab'; b.dataset.tab = it.id; b.dataset.label = it.label;
+      b.setAttribute('role', 'tab');
+      const s = document.createElement('span'); s.textContent = it.label; b.append(s);
+      el.append(b);
+      return b;
+    });
+    const place = (animate = true) => {
+      const on = btns.find((b) => b.dataset.tab === cur);
+      btns.forEach((b) => { const sel = b === on; b.classList.toggle('on', sel); b.setAttribute('aria-selected', String(sel)); b.tabIndex = sel ? 0 : -1; });
+      if (!on || !on.offsetWidth) { thumb.style.opacity = '0'; return; }
+      const first = thumb.style.opacity !== '1';
+      if (!animate || first) thumb.style.transition = 'none';
+      thumb.style.width = `${on.offsetWidth}px`;
+      thumb.style.transform = `translateX(${on.offsetLeft}px)`;
+      thumb.style.opacity = '1';
+      if (!animate || first) { void thumb.offsetWidth; thumb.style.transition = ''; }
+    };
+    const select = (id, silent) => {
+      if (id === cur || !items.some((x) => x.id === id)) return;
+      cur = id; place(); if (!silent) onChange?.(id);
+    };
+    el.addEventListener('click', (e) => { const b = e.target.closest('.ui-tab'); if (b) select(b.dataset.tab); });
+    el.addEventListener('keydown', (e) => {
+      const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0; if (!step) return;
+      e.preventDefault();
+      const i = btns.findIndex((b) => b.dataset.tab === cur), n = btns[(i + step + btns.length) % btns.length];
+      select(n.dataset.tab); n.focus();
+    });
+    // sichtbar werden / Größe ändert sich (Schrift geladen, Fenster) → Fläche ohne Gleiten neu setzen
+    if (typeof ResizeObserver === 'function') new ResizeObserver(() => place(false)).observe(el);
+    place(false);
+    Object.defineProperty(el, 'value', { get: () => cur });
+    el.select = select;
+    return el;
+  }
+
   // „Eigene Farbe“ (Knopf rechts in der Farbreihe): Feld + Regler darunter auf-/zuklappen; onDone(hex) beim Knopf „Übernehmen“
   const customPick = (btn, start, onDone, onLive) => {
     const host = btn.closest('.tk-colors')?.nextElementSibling; if (!host) return;
     if (host.firstChild) { host.replaceChildren(); return; }
     host.append(colorPicker(start || '#6bb0d7', (hex, done) => { btn.style.setProperty('--c', hex); btn.classList.add('on'); onLive?.(hex); if (done) { host.replaceChildren(); onDone(hex); } }));
   };
-  return { customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
+  return { tabBar, customPick, pad2, isoOf, COLORS, timeGroups, colorPicker, colorRow, miniCalendar, timeWheel, hsvToHex, hexToHsv, MONTHS_LONG, foldRows, autoGrow };
 })();
 window.UIKit = UIKit;
