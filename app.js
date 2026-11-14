@@ -7230,23 +7230,55 @@ document.addEventListener('click', (e) => {
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
-  /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter (bisher) · DM Sans · Manrope.
+  /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
      Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
-     Gewählt wird also: Variable auf den Familiennamen setzen + die Schrift ganz normal von Google laden (<link id="app-font-link">).
-     index.html setzt beides beim Start sofort aus „appearance.vars“ – kein Umspringen. Lädt die Schrift nicht (offline), greift Inter. */
-  const FONTS = { geist: { label: 'Geist', name: 'Geist', q: 'Geist' }, inter: { label: 'Inter' }, dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' }, manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' } };
+     Stärken: Im CSS stehen überall fest 400/500/600. Damit dünne und mittlere Texte nicht wie zwei Schriften wirken (Wunsch 14.11.) und Inter
+     „ein Millistück“ kräftiger ist, lädt die App jede Schrift in leicht verschobenen Stärken und hängt sie unter den üblichen Nummern ein:
+     Googles Schrift-CSS für z. B. 470/530/630/720 holen, die Stärken auf 400/500/600/700 umschreiben, Familienname „<Name> UI“,
+     als <style id="app-font"> einsetzen (Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start sofort).
+     Klappt das Holen nicht, greift die normale Schrift (<link id="app-font-link">) bzw. Inter. */
+  const FONTS = {
+    geist: { label: 'Geist', name: 'Geist', q: 'Geist', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
+    inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 470, 500: 530, 600: 630, 700: 720 } },
+    dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
+    manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope', w: { 400: 450, 500: 510, 600: 600, 700: 700 } },
+  };
+  const FONT_CSS = 'appearance.fontcss', FONT_V = 2;
   const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
-  const fontHref = (f) => (f.q ? `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap` : '');
+  const fontHref = (f) => (f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
+  const putFont = (css, id) => {
+    let st = document.getElementById('app-font');
+    if (!css) { st?.remove(); return; }
+    if (!st) { st = document.createElement('style'); st.id = 'app-font'; document.head.append(st); }
+    if (st.textContent !== css) st.textContent = css;
+    st.dataset.font = id;
+  };
+  let fontJob = 0;
   function applyFont() {
-    const f = FONTS[fontId()], href = fontHref(f);
+    const id = fontId(), f = FONTS[id], href = fontHref(f), job = ++fontJob;
     let link = document.getElementById('app-font-link');
     if (!href) link?.remove();
     else {
       if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
       if (link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
-    if (f.name) root.style.setProperty('--font-ui', `"${f.name}", Inter`); else root.style.removeProperty('--font-ui');
-    document.getElementById('app-font')?.remove(); try { localStorage.removeItem('appearance.fontcss'); } catch {} // Rest des ersten Versuchs (Schrift unter dem Namen „Inter“)
+    root.style.setProperty('--font-ui', `"${f.name} UI", "${f.name}", Inter`);
+    let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
+    const fresh = cached?.id === id && cached.v === FONT_V && cached.css;
+    if (fresh) { putFont(cached.css, id); if (Date.now() - (cached.at || 0) < 7 * 86400000) return; } else putFont('', id);
+    fetch(`https://fonts.googleapis.com/css2?family=${f.q}:wght@${[...new Set(Object.values(f.w))].sort((a, b) => a - b).join(';')}&display=swap`)
+      .then((r) => (r.ok ? r.text() : Promise.reject())).then((txt) => {
+        if (job !== fontJob || !/@font-face/.test(txt)) return;
+        // je echte Stärke kann für mehrere übliche Nummern stehen (z. B. 600 → 600): Regel je Nummer ausgeben
+        const css = txt.replace(/@font-face\s*\{[^}]*\}/g, (rule) => {
+          const real = (/font-weight:\s*(\d+)/.exec(rule) || [])[1];
+          const stds = Object.entries(f.w).filter(([, r]) => String(r) === real).map(([sd]) => sd);
+          return stds.map((sd) => rule.replace(/font-family:\s*(['"])[^'"]+\1/, `font-family: '${f.name} UI'`).replace(/font-weight:\s*\d+/, `font-weight: ${sd}`)).join('\n');
+        });
+        if (!/@font-face/.test(css)) return;
+        putFont(css, id);
+        try { localStorage.setItem(FONT_CSS, JSON.stringify({ id, v: FONT_V, css, at: Date.now() })); } catch {}
+      }).catch(() => {});
   }
   // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
   const DESKTOP = !!(window.lernappDesktop && window.lernappDesktop.glass);
