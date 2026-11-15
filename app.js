@@ -82,7 +82,6 @@ window.markDrafts = markDrafts;
 /* Kalender, Home und UI öffnen als eigene Tabs (ein Tab je Ansicht) */
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
-  ui: { title: 'UI', icon: 'o-ui', view: () => window.UILab },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
@@ -7230,8 +7229,8 @@ document.addEventListener('click', (e) => {
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
   const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist', style: 'classic' };
-  // Stil (15.11.): „Aktuell“ = bisheriges Design · „Neu“ = Stil nach dem Vorbild. Vorerst stellt „Neu“ nur die Schrift um; die neuen Bausteine
-  // stehen im Bereich „UI“ (style.css → Block „NEUER STIL“, .uiv-view.nx) und kommen später Stück für Stück in die App (html[data-style="neo"] ist dafür gesetzt).
+  // Stil (15.11.): „Aktuell“ = bisheriges Design · „Neu“ = Stil nach dem Vorbild. Bisher stellt „Neu“ nur die Schrift um (Systemschrift);
+  // html[data-style="neo"] ist gesetzt, damit weitere Regeln später daran hängen können. Den Bereich „UI“ gibt es nicht mehr.
   const STYLES = { classic: 'Aktuell', neo: 'Neu' };
   const styleId = () => (STYLES[cfg.style] ? cfg.style : 'classic');
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
