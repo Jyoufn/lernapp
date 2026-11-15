@@ -7229,7 +7229,11 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist', style: 'classic' };
+  // Stil (15.11.): „Aktuell“ = bisheriges Design · „Neu“ = Stil nach dem Vorbild. Vorerst stellt „Neu“ nur die Schrift um; die neuen Bausteine
+  // stehen im Bereich „UI“ (style.css → Block „NEUER STIL“, .uiv-view.nx) und kommen später Stück für Stück in die App (html[data-style="neo"] ist dafür gesetzt).
+  const STYLES = { classic: 'Aktuell', neo: 'Neu' };
+  const styleId = () => (STYLES[cfg.style] ? cfg.style : 'classic');
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
      Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
      Stärke: normaler Text steht im ganzen CSS in 500 (nie 400) – eine Stärke für Menüs, Einstellungen, Listen, Chat (Wunsch 14.11.).
@@ -7241,10 +7245,13 @@ document.addEventListener('click', (e) => {
     inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 530, 500: 530, 600: 630, 700: 720 } },
     dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' },
     manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' },
+    // Systemschrift (15.11.): auf iPad/Mac ist das SF Pro – die Schrift aus dem Vorbild des neuen Stils; lädt nichts nach
+    system: { label: 'System', name: 'System', q: '', stack: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter' },
   };
   const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
-  const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
-  const fontHref = (f) => (f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
+  // Stil „Neu“ bringt seine Schrift mit (Systemschrift = SF Pro auf iPad/Mac, wie im Vorbild); die gewählte Schriftart bleibt gespeichert und gilt wieder bei „Aktuell“
+  const fontId = () => (cfg.style === 'neo' ? 'system' : FONTS[cfg.font] ? cfg.font : 'geist');
+  const fontHref = (f) => (!f.q || f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
   const putFont = (css, id) => {
     let st = document.getElementById('app-font');
     if (!css) { st?.remove(); return; }
@@ -7261,7 +7268,7 @@ document.addEventListener('click', (e) => {
       if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
       if (link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
-    root.style.setProperty('--font-ui', f.w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
+    root.style.setProperty('--font-ui', f.stack ? f.stack : f.w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
     if (!f.w) { putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
     const fresh = cached?.id === id && cached.v === FONT_V && cached.css;
@@ -7298,6 +7305,7 @@ document.addEventListener('click', (e) => {
     if (m.glass) root.dataset.glass = 'mac'; else delete root.dataset.glass;
     if (m.glass) root.dataset.glassTone = tone; else delete root.dataset.glassTone;
     root.dataset.mode = id; // für modusgenaue Feinheiten in style.css (Schwarz, Glas)
+    root.dataset.style = styleId(); // Stil „Aktuell“ / „Neu“
     // macOS-Glas hell oder dunkel tönen (sonst folgt es dem System)
     try { window.lernappDesktop?.setTheme?.(m.glass ? tone : (m.light ? 'light' : 'dark')); } catch {}
     root.style.setProperty('--glass', /^#[0-9a-f]{6}$/i.test(cfg.glass || '') ? cfg.glass : '#ffffff');
@@ -7312,7 +7320,7 @@ document.addEventListener('click', (e) => {
     // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
     try {
       const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-ui'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
-      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
+      const data = { theme: root.dataset.theme, mode: root.dataset.mode, style: root.dataset.style }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
       const fh = fontHref(FONTS[fontId()]); if (fh) data.fontHref = fh; // index.html lädt die Schrift damit schon beim Start
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}
@@ -7339,7 +7347,7 @@ document.addEventListener('click', (e) => {
   apply();
   fetch('/api/appearance').then((r) => r.json()).then((srv) => {
     if (!srv || !MODES[srv.mode]) { save(); return; } // noch nichts auf dem Server → aktuellen Stand dort ablegen
-    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles, ...(srv.glass ? { glass: srv.glass } : {}), ...(srv.glassTone ? { glassTone: srv.glassTone } : {}) });
+    Object.assign(cfg, { mode: srv.mode, accent: srv.accent, tiles: srv.tiles, ...(srv.glass ? { glass: srv.glass } : {}), ...(srv.glassTone ? { glassTone: srv.glassTone } : {}), ...(STYLES[srv.style] ? { style: srv.style } : {}) });
     try { localStorage.setItem(KEY, JSON.stringify(cfg)); } catch {}
     apply();
   }).catch(() => {});
@@ -7352,7 +7360,8 @@ document.addEventListener('click', (e) => {
     GLASS,
     DESKTOP,
     FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
-    get: () => ({ ...cfg, mode: modeId(), font: fontId() }),
+    STYLES,
+    get: () => ({ ...cfg, mode: modeId(), font: fontId(), style: styleId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();
