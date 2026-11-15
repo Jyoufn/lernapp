@@ -72,6 +72,12 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - Oberfläche Englisch: die App schickt `lang: 'en'` → Gedanken werden englisch wiedergegeben (`EN_HINT` in `lib/thoughts.js`).
 
 ## Denken (verbindlich)
+- **Tempo bei einfachen Fragen (15.11., Wunsch: „braucht für die einfachsten Sachen viel zu lange“)**: Gemini 3.x denkt OHNE Angabe nicht „dynamisch kurz“, sondern auf
+  der Standard-Stufe des Modells (3 Flash: high, ab 3.5 Flash: medium). Darum bei Auto: Begrüßung/kein Denken → `minimal`; Stufe Low bzw. `think: low` → `low` und KEINE
+  Gedanken-Anzeige (spart die Übersetzungs-Aufrufe und bis 2,5 s Warten); normale Frage (Stufe Medium, `thinkMid`) → `low` mit Gedanken; erst ab Stufe High, `think: high` oder
+  Dateien an der Frage gilt die Standard-Tiefe. Gewählte Stufen unverändert. Die Einschätzung hat insgesamt höchstens 4,5 s (`ROUTE_MS`, vorher 7 s je Versuch, mehrere
+  Versuche nacheinander), danach gilt `routeFallback`; sie liefert kein `goal` mehr. Hilfsaufrufe (`textTask`) laufen mit `minimal`. Einfache Frage ohne Dateien: kommt
+  15 s nichts, übernimmt das nächste Modell (sonst 40 s).
 - Gemini 2.5: `thinkingBudget`; 3.x: `thinkingLevel` (ohne = dynamisch). Keine Denk-Anweisungen in den System-Prompt (Gemini schreibt sie sonst in die Antwort).
 - **Gedanken-Anzeige live** (`lib/thoughts.js`): jeder fertige Gedanken-Abschnitt erscheint sofort; Wiedergabe auf Deutsch sinngetreu, aber AUFGERÄUMT (Stand 10.11.: 1–4 Sätze, kein Code, kein Selbstgespräch; Abschnitte nur über die eigenen Anweisungen/Regeln/den Prompt, Formatierung oder Werkzeug-Kleinkram fallen weg; englische Roh-Gedanken nie ungefiltert) in wenigen gebündelten Aufrufen (Warteschlange: was während einer Übersetzung ankommt, geht gesammelt in die nächste). Scheitert sie → ein zweiter Versuch mit dem nächsten Schwung, erst dann Original. Weg fallen reine Formatierungs-Abschnitte und Wiederholungen (gleiche Überschrift). Der Antworttext wartet, bis alle Gedanken gezeigt sind.
 - **Antworttext ohne Vorgehen**: „NUR DAS ERGEBNIS“ + `createAnswerGuard` (Vorgehens-Absätze und englische Gedanken-Überschriften wie „**Executing Task**“ am Anfang fallen weg).

@@ -913,7 +913,7 @@ test('Gemini entscheidet Suche und Denken (Einschätzung); feste Bedingungen nur
   let gen = fx.calls.filter(M.is.geminiStream).pop();
   assert.ok(!gen.body.tools, 'keine Suche – so eingeschätzt');
   const tc = gen.body.generationConfig.thinkingConfig;
-  assert.ok(tc.thinkingBudget === 2048 || tc.thinkingLevel === 'low', 'kurz denken – so eingeschätzt');
+  assert.ok(tc.thinkingBudget === 1024 || tc.thinkingLevel === 'low', 'kurz denken – so eingeschätzt');
   // Einschätzung fällt aus → feste Bedingung „aktuell“ greift: es wird im Web gesucht
   route = () => new Response('weg', { status: 503 });
   fx.calls.length = 0;
@@ -997,7 +997,7 @@ test('Dateien an der Frage: keine Einschätzung (spart Zeit), schnelle Nachschau
   await run({ messages: [{ role: 'user', text: 'Was steht kurz auf Seite 3?', images: [pdf] }], agent: 'learn', effort: 'auto' });
   assert.ok(!fx.calls.some(M.is.route), 'keine Einschätzung mit Dateien');
   const low = fx.calls.find(M.is.geminiStream).body.generationConfig.thinkingConfig;
-  assert.ok(low.thinkingBudget === 2048 || low.thinkingLevel === 'low', 'schnelle Nachschau: kurz denken');
+  assert.ok(low.thinkingBudget === 1024 || low.thinkingLevel === 'low', 'schnelle Nachschau: kurz denken');
   fx = M.installFetch([
     { match: M.is.geminiStream, respond: () => M.sseResponse(M.geminiChunks(['Lernzettel …'])) },
   ]);
@@ -1158,7 +1158,7 @@ test('Aufwand wirkt (04.11.): gewählte Stufe = eigene Denktiefe und eigener Sti
   assert.ok(rank(lvl('low')) < rank(lvl('high')) && rank(lvl('high')) <= rank(lvl('max')), `Denktiefe steigt: ${['low', 'high', 'max'].map(lvl)}`);
   assert.ok(seen.medium.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.medium.tc.thinkingBudget), 'Medium: denkt wie das Modell von sich aus');
   assert.doesNotMatch(seen.medium.sys, /AUFWAND: Medium/, 'Medium: keine Stil-Vorgabe');
-  assert.ok(seen.auto.tc.thinkingLevel === undefined && [undefined, -1].includes(seen.auto.tc.thinkingBudget), 'Auto: Gemini entscheidet selbst');
+  assert.ok(seen.auto.tc.thinkingLevel === 'low' || seen.auto.tc.thinkingBudget === 4096, 'Auto + normale Frage (Stufe Medium): knapp denken – einfache Sachen sollen schnell gehen (15.11.)');
   assert.match(seen.low.sys, /AUFWAND: Niedrig = FÜR DEN UNTERRICHT/); assert.match(seen.high.sys, /AUFWAND: High/); assert.match(seen.max.sys, /AUFWAND: Max/);
   assert.ok(!seen.low.tools.includes('google_search'), 'Low: keine Suche');
   assert.notEqual(seen.low.sys.length, seen.high.sys.length, 'Stufen unterscheiden sich im Prompt');
