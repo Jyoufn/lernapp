@@ -927,7 +927,7 @@ test('Gemini entscheidet Suche und Denken (Einschätzung); feste Bedingungen nur
   assert.notEqual(gen.body.generationConfig.thinkingConfig.thinkingBudget, 2048, 'High → dynamisch');
 });
 
-test('Lern-Agent + Recherche: gesucht wird auf simpleclub, serlo, Studyflix; ohne Recherche keine Suche; Allgemein sucht offen', async () => {
+test('Lernen + Recherche: gesucht wird auf simpleclub, serlo, Studyflix (Lern-Agent und Lernthema im Allgemein-Agenten); ohne Recherche keine Suche; sonst offen', async () => {
   const WEB = require('../lib/web');
   const saved = { ...WEB.hooks.engines }, savedG = WEB.hooks.geminiSearch, asked = [];
   WEB.hooks.engines.ddg = WEB.hooks.engines.ddglite = WEB.hooks.engines.bing = async (q) => { asked.push(q); return []; };
@@ -948,12 +948,15 @@ test('Lern-Agent + Recherche: gesucht wird auf simpleclub, serlo, Studyflix; ohn
     asked.length = 0; fx.calls.length = 0;
     await run({ ...msg('Erklär mir die Photosynthese'), agent: 'learn', effort: 'auto' });
     assert.equal(asked.length, 0, 'keine Websuche');
-    // Allgemein-Agent: keine Lernplattform-Vorgabe (sucht offen, wie Gemini entscheidet)
+    // Allgemein-Agent (Wunsch 15.11.): sobald es ums Lernen geht, ebenfalls nur Lernplattformen – alles andere sucht er offen
     route = { level: 'high', sources: 'web', lern: true, queries: ['Photosynthese Ablauf'], why: 'Lernthema' };
     asked.length = 0; fx.calls.length = 0;
     await run({ ...msg('Recherchiere, wie die Photosynthese funktioniert'), agent: 'general', effort: 'auto' });
-    assert.ok(!asked.some((q) => /simpleclub|serlo/i.test(q)), `Allgemein sucht offen: ${asked.join(' | ')}`);
-    assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LERNTHEMA/);
+    assert.ok(asked.some((q) => /simpleclub|serlo/i.test(q)), `Allgemein + Lernthema: Lernplattformen: ${asked.join(' | ')}`);
+    route = { level: 'high', sources: 'web', lern: false, queries: ['Notiz-Apps Vergleich'], why: 'Produkt' };
+    asked.length = 0; fx.calls.length = 0;
+    await run({ ...msg('Recherchiere, welche Notiz-Apps gut sind'), agent: 'general', effort: 'auto' });
+    assert.ok(!asked.some((q) => /simpleclub|serlo/i.test(q)), `Allgemein ohne Lernthema sucht offen: ${asked.join(' | ')}`);
     assert.doesNotMatch(M.systemOf(fx.calls.filter(M.is.geminiStream).pop()), /LERNTHEMA/);
   } finally { Object.assign(WEB.hooks.engines, saved); WEB.hooks.geminiSearch = savedG; }
 });
@@ -1214,9 +1217,9 @@ test('Allgemein erkennt Aktienfragen (Börsen-Ablauf) – auch kurze Folgefragen
 test('Prompt nennt die Fähigkeiten der App und Quellen nur unten', () => {
   const W = require('../lib/workflow');
   const s = W.systemNative('medium', { agent: 'general' });
-  assert.match(s, /WAS DU IN DIESER APP ZEIGEN KANNST/);
+  assert.match(s, /WAS DU IN DIESER APP KANNST/);
   assert.match(s, /Strukturformel/);
-  assert.match(s, /zeigt die App automatisch UNTER der Antwort/);
+  assert.match(s, /Quellen zeigt die App selbst unter der Antwort/);
 });
 
 test('Gefundenes Erklärbild: zusätzliches KI-Bild fällt weg, ohne Fund kommt es doch', async () => {

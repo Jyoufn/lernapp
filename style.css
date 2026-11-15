@@ -12662,3 +12662,18 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 .uiv-sec > .uiv-card { margin-top: 10px; }
 .stk-add .stk-btn, .st-key-add .stk-btn { background: rgba(255, 255, 255, 0.08) !important; border: 0 !important; border-radius: 8px; color: var(--text) !important; }
 .stk-add .stk-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
+
+/* ===== 15.11. Dokument-Icons: beim Darüberfahren passiert nichts (kein Aufhellen, keine Fläche, kein Übergang) ===== */
+.dc-ip2-ic, .dc-icon, .dc-icon::before, .dc-icon .dc-icon-g { transition: none !important; }
+.dc-ip2-ic:hover { opacity: 0.8; background: none; }
+.dc-ip2-ic.on, .dc-ip2-ic.on:hover { opacity: 1; background: #262626; }
+.dc-icon:hover .dc-icon-g, .dc-icon:focus-visible .dc-icon-g { opacity: 1; }
+.dc-icon:hover::before, .dc-icon:focus-visible::before { filter: none; }
+/* ===== 15.11. Einstellungen: Kästen im Ton der Umschalter-Spur (Agenten | Dokumente, nicht gewählt): 5 % Weiß, feiner Ring statt Rand ===== */
+.st-card, .dcs-body .st-card { border: 0; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+html[data-mode="black"] .st-card { border: 1px solid #191919; box-shadow: none; }
+/* Name: Knopf wie „Abmelden“, nur ohne Fläche und Rand – antippen macht ihn zum Feld */
+.st-name-btn, .st-name-edit { height: 28px; margin-right: -10px; padding: 0 10px; border: 0; border-radius: 10px; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
+.st-name-btn { max-width: 260px; overflow: hidden; background: none; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 140ms ease; }
+.st-name-btn:hover { background: rgba(255, 255, 255, 0.07); }
+.st-name-edit { width: 200px; background: rgba(255, 255, 255, 0.07); text-align: right; outline: none; }

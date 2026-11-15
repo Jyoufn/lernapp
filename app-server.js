@@ -1323,18 +1323,20 @@ Ist nichts Verständliches zu hören, antworte mit einer leeren Antwort. Antwort
       erkennt die Sprache selbst, Deutsch mit englischen Wörtern klappt gut, setzt Satzzeichen.
    2. sonst Gemini (wie bisher) aus dem freien Kontingent.
    partial = es wird noch gesprochen: ein Punkt am Ende fällt weg (der Satz ist ja noch nicht fertig). */
-async function groqTranscribe(env, { data, mime, hints, context }) {
+const WHISPER_STYLE = 'Deutsch gesprochen, mit englischen Wörtern dazwischen: Der Prompt für die KI, das Design vom Button, die Icons beim Hover, ein Update für das Feature im Chat.';
+async function groqTranscribe(env, { data, mime, hints, context, model = 'whisper-large-v3-turbo' }) {
   const key = P.keysOf(env, 'GROQ_API_KEY')[0];
   if (!key) return null;
   const ext = /mp4|m4a|aac/.test(mime) ? 'm4a' : /ogg/.test(mime) ? 'ogg' : /wav/.test(mime) ? 'wav' : /mpeg|mp3/.test(mime) ? 'mp3' : 'webm';
   const form = new FormData();
   form.append('file', new Blob([Buffer.from(data, 'base64')], { type: mime }), `diktat.${ext}`);
-  form.append('model', 'whisper-large-v3-turbo');
+  form.append('model', model);
   form.append('response_format', 'json');
   form.append('temperature', '0');
   // Whisper-„prompt“ (höchstens ~224 Tokens): Schreibweisen und Zusammenhang – hilft bei Namen und englischen Begriffen im deutschen Satz
-  const prompt = [context ? String(context).slice(-200) : '', hints.length ? `Begriffe: ${hints.slice(0, 30).join(', ')}.` : ''].filter(Boolean).join(' ');
-  if (prompt) form.append('prompt', prompt.slice(0, 700));
+  // Stil-Satz zuerst (15.11.): zeigt Whisper, dass im deutschen Satz englische Wörter vorkommen und englisch geschrieben werden („Prompt“, nicht „Promt“/„Brombeer“)
+  const prompt = [WHISPER_STYLE, context ? String(context).slice(-200) : '', hints.length ? `Begriffe: ${hints.slice(0, 40).join(', ')}.` : ''].filter(Boolean).join(' ');
+  if (prompt) form.append('prompt', prompt.slice(-800));
   const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: `Bearer ${key}` }, body: form, signal: AbortSignal.timeout(15000) });
   if (!r.ok) throw new Error(`Groq ${r.status}`);
   return String((await r.json()).text || '').trim();
@@ -1351,7 +1353,11 @@ async function handleTranscribe(req, res) {
     if (partial) t = t.replace(/[.…]+$/, ''); // noch mitten im Satz: kein Schlusspunkt
     return sendJson(res, 200, { text: t.slice(0, 8000), via });
   };
-  try { const g = await groqTranscribe(env, { data, mime, hints, context: body.context }); if (g != null) return done(g, 'groq'); } catch { /* weiter mit Gemini */ }
+  // Groq: laufend (partial) das schnelle Turbo-Modell; die Schluss-Mitschrift macht das genauere große Modell (versteht englische Wörter im deutschen Satz besser),
+  // klappt das nicht, noch einmal Turbo – erst dann Gemini
+  for (const model of partial ? ['whisper-large-v3-turbo'] : ['whisper-large-v3', 'whisper-large-v3-turbo']) {
+    try { const g = await groqTranscribe(env, { data, mime, hints, context: body.context, model }); if (g != null) return done(g, 'groq'); } catch { /* nächstes Modell bzw. Gemini */ }
+  }
   if (!env.GEMINI_API_KEY) return sendJson(res, 200, { text: '' });
   const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}${partial ? 'Der Sprecher redet noch weiter – der letzte Satz kann unfertig sein: dort keinen Schlusspunkt setzen.\n' : ''}Schreibe die Aufnahme wörtlich mit.`;
   for (const model of (await P.ladder(env, 'text')).slice(0, 2)) {

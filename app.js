@@ -672,7 +672,7 @@ let finalsEnd = 0, lastInterim = '', liveT = 0, livePolishing = false, liveDone 
 let rawBase = '', liveFix = null, liveN = 0, liveVia = '', liveLast = 0, liveTick = 0;
 // Groq-Kontingent schonen (20 Anfragen/Min., 2 Std. Ton/Std.): ist die laufende Aufnahme länger als ~15 s, wird sie beim nächsten Mitschreiben
 // abgeschlossen (liveDone/liveDoneN = fertig mitgeschriebener Teil) und eine neue begonnen – so geht nie die ganze lange Aufnahme erneut hin
-let liveDoneN = 0, segStart = 0;
+let liveDoneN = 0, segStart = 0, liveHeard = 0, dictStart = 0;
 const rawSaid = () => joinText(joinText(rawBase, finalText), lastInterim);
 const wordsOf = (t) => String(t || '').split(/\s+/).filter(Boolean);
 function renderDictation() {
@@ -685,8 +685,10 @@ function renderDictation() {
   autoGrow();
   input.scrollTop = input.scrollHeight;
 }
-const polishHints = () => [...new Set([...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 25).map((d) => d.title), ...(window.LibChats?.items() || []).slice(0, 15).map((c) => c.title),
-  'DeepSeek', 'Gemini', 'Kimi', 'MiniMax', 'Claude', 'ChatGPT', 'iPad', 'Prompt', 'Workspace', 'Dashboard', 'Tags', 'Icons'].filter(Boolean))].slice(0, 60);
+const DICT_WORDS = ['Prompt', 'Prompts', 'Chat', 'Agent', 'Thinking', 'Skill', 'Skills', 'Design', 'Button', 'Icon', 'Icons', 'Hover', 'Input', 'Feature', 'Update', 'Layout', 'Sidebar', 'Settings',
+  'Dashboard', 'Workspace', 'Tags', 'Font', 'Sign Out', 'API-Key', 'Vercel', 'GitHub', 'Gemini', 'Claude', 'ChatGPT', 'DeepSeek', 'MiniMax', 'iPad', 'MacBook', 'Quiz', 'Podcast', 'Screenshot'];
+const polishHints = () => [...new Set([...DICT_WORDS, ...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 15).map((d) => d.title),
+  ...(window.LibChats?.items() || []).slice(0, 9).map((c) => c.title)].filter(Boolean))].slice(0, 60);
 /* Ton-Mitschnitt fürs genaue Verstehen (Wunsch 10.11.: Browser-Erkennung versteht zu wenig): neben der Sofort-Erkennung läuft eine Aufnahme;
    nach jeder Pause und beim Stoppen hört Gemini sie an (/api/transcribe) und der Text im Feld wird durch die genaue Mitschrift ersetzt.
    Klappt die Aufnahme nicht (kein Recht, Gerät erlaubt nicht beides, kein Gemini-Schlüssel), bleibt es bei Erkennung + Glättung. */
@@ -737,7 +739,11 @@ async function dictTranscribe(context, partial = false, chunks = dictRec.chunks)
 async function livePolish() {
   if (!listening || livePolishing || dictFrom == null) return;
   const n = wordsOf(rawSaid()).length;
-  if (n < 2 || n === liveN) return;
+  // Mitschreiben, sobald Neues da ist: neue Wörter der Sofort-Erkennung – oder (15.11.) die Aufnahme ist gewachsen, obwohl die Sofort-Erkennung stumm bleibt.
+  // Auf dem iPad liefert sie neben der Aufnahme oft gar nichts; dann kam nie eine laufende Korrektur. Jetzt schreibt dort allein der Ton mit.
+  const deaf = n === 0 && !!dictRec.rec && Date.now() - dictStart > 4000;
+  const heardN = dictRec.chunks.length;
+  if (!((n >= 2 && n !== liveN) || (deaf && heardN >= 3 && heardN !== liveHeard))) return;
   const snapFrom = dictFrom;
   livePolishing = true; liveLast = Date.now();
   // lange Aufnahme: jetzt abschließen und sofort eine neue beginnen (was ab jetzt gesagt wird, landet in der neuen)
@@ -754,6 +760,8 @@ async function livePolish() {
     }
   } catch {} finally { livePolishing = false; }
   if (!listening || dictFrom !== snapFrom) return; // inzwischen selbst etwas geändert → diese Mitschrift gilt nicht mehr
+  liveHeard = close ? 0 : heardN;
+  if (deaf && !close && out && out === liveFix?.text) liveLast = Date.now() + 6000; // nichts Neues gehört (Pause) → seltener nachfragen, schont das Kontingent
   if (close) { // abgeschlossener Teil: steht fest (ohne Mitschrift bleibt der Rohtext)
     liveDone = joinText(liveDone, out || wordsOf(rawSaid()).slice(liveDoneN, n).join(' ')); liveDoneN = n; liveFix = null; liveN = n;
   } else if (out) { liveN = n; liveFix = { text: out, n }; } else return;
@@ -767,7 +775,7 @@ function startListening() {
   listening = true;
   baseText = written = input.value;
   dictFrom = input.value;
-  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now(); liveDoneN = 0;
+  finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now(); liveDoneN = 0; liveHeard = 0; dictStart = Date.now();
   // alle ~3,5 s (Groq: höchstens 20 Anfragen/Min.) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
   clearInterval(liveTick);
   liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 3500)) livePolish(); }, 500);
@@ -2622,6 +2630,31 @@ function markerIcon(step, name, cls = '') {
   marker.innerHTML = FadeIcons.svg(name, 12);
 }
 
+/* Gedanken in der Zeitleiste: fertige Gedanken bekommen statt des Punkts ein kleines Icon, das zu ihrem Oberpunkt passt (Wunsch 15.11.) –
+   wie die Lupe bei der Quellensuche. Passt nichts eindeutig, bleibt der Punkt. Reihenfolge = Vorrang (Genaues vor Allgemeinem). */
+const THOUGHT_ICONS = [
+  [/(quelle|recherch|such|nachschlag|nachseh|internet|studyflix|simpleclub|knowunity|serlo)/i, 'search'],
+  [/(bild|foto|abbildung|schema|skizze|illustration|zeichn)/i, 'image'],
+  [/(diagramm|statistik|verlauf|entwicklung|anteil|prozent|daten\b|zahlen)/i, 'chart'],
+  [/(tabelle|vergleich|gegenüber|unterschied|gemeinsam)/i, 'table'],
+  [/(rechn|gleichung|formel|ableit|integral|umform|ergebnis|lösungsweg)/i, 'hash'],
+  [/(zeitstrahl|chronolog|jahreszahl|epoche|zeitlich|historisch)/i, 'clock'],
+  [/(datei|dokument|pdf|arbeitsblatt|material|buchseite|seite \d|aufgabenstellung|aufgabe \d|operator)/i, 'file'],
+  [/(code|programm|skript|funktion|html|javascript|python)/i, 'terminal'],
+  [/(übersetz|vokabel|grammatik|latein|englisch|französisch|sprache)/i, 'globe'],
+  [/(prüf|kontroll|korrigier|fehler|stimmt|plausib)/i, 'check-circle'],
+  [/(aufbau|glieder|struktur|reihenfolge|schritte|vorgehen|plan)/i, 'list'],
+  [/(begriff|definition|bedeutung|fachwort|grundlage)/i, 'book-open'],
+  [/(idee|ansatz|strategie|lösung|überleg)/i, 'bulb'],
+  [/(schreib|formulier|antwort|zusammenfass|erklär|aufsatz|text)/i, 'pencil'],
+];
+function thoughtIcon(title) {
+  const t = String(title || '');
+  for (const [re, name] of THOUGHT_ICONS) if (re.test(t)) return name;
+  return '';
+}
+window.thoughtIcon = thoughtIcon;
+
 function setRunning(running) {
   sendBtn.classList.toggle('running', running);
   const label = running ? 'Antwort stoppen' : 'Senden';
@@ -3752,6 +3785,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     st.done = true;
     st.typer?.end();
     finishStep(st.step);
+    const tIcon = thoughtIcon(st.title); if (tIcon) markerIcon(st.step, tIcon);
     st.head.textContent = st.title;
     st.step.classList.remove('live', 'open'); // live aufgeklappter Gedanke klappt zum Oberpunkt zusammen (antippen öffnet ihn wieder)
   };
@@ -6436,6 +6470,7 @@ function savedThoughts(h) {
     step.querySelector('.step-line').append(head);
     step.append(fold);
     head.addEventListener('click', () => { if (inner.firstChild.textContent) step.classList.toggle('open'); });
+    const tIcon = thoughtIcon(title); if (tIcon) markerIcon(step, tIcon);
     w.steps.append(step);
   });
   w.work.classList.add('collapsed');
@@ -7229,7 +7264,7 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'apple' };
   /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
      Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
      Stärke: normaler Text steht im ganzen CSS in 500 (nie 400) – eine Stärke für Menüs, Einstellungen, Listen, Chat (Wunsch 14.11.).
@@ -7237,14 +7272,16 @@ document.addEventListener('click', (e) => {
      und hängt sie als Familie „Inter UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start).
      Klappt das Holen nicht, bleibt normales Inter. Die anderen Schriften laden ganz normal per <link id="app-font-link">. */
   const FONTS = {
+    // Apple (15.11., Wunsch „MacBook-Stil“): die Systemschrift des Geräts – auf Mac/iPad/iPhone San Francisco; lädt nichts aus dem Netz
+    apple: { label: 'Apple', sys: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Helvetica Neue"' },
     geist: { label: 'Geist', name: 'Geist', q: 'Geist' },
     inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 530, 500: 530, 600: 630, 700: 720 } },
     dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' },
     manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' },
   };
   const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
-  const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
-  const fontHref = (f) => (f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
+  const fontId = () => (FONTS[cfg.font] ? cfg.font : 'apple');
+  const fontHref = (f) => (f.sys || f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
   const putFont = (css, id) => {
     let st = document.getElementById('app-font');
     if (!css) { st?.remove(); return; }
@@ -7261,6 +7298,7 @@ document.addEventListener('click', (e) => {
       if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
       if (link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
+    if (f.sys) { root.style.setProperty('--font-ui', `${f.sys}, Inter`); putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     root.style.setProperty('--font-ui', f.w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
     if (!f.w) { putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
@@ -7289,6 +7327,8 @@ document.addEventListener('click', (e) => {
   const cfg = { ...DEFAULTS };
   try { Object.assign(cfg, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch {}
   if (!MODES[cfg.mode]) cfg.mode = 'dark'; // frühere Einstellung „Graphit“ gibt es nicht mehr
+  // einmalig (15.11.): auf die Apple-Schrift umstellen – danach gilt wieder, was in Aussehen gewählt wird
+  try { if (localStorage.getItem('appearance.font.v2') !== '1') { cfg.font = 'apple'; localStorage.setItem('appearance.font.v2', '1'); localStorage.setItem(KEY, JSON.stringify(cfg)); } } catch {}
 
   function apply() {
     const id = modeId();

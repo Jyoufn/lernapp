@@ -23,6 +23,14 @@
 - **Einstellungen → Agenten**: je Schlüssel Auge (ganz anzeigen), Stift (bearbeiten, Speichern ersetzt genau diesen) und ×.
 - **Aussehen**: Vorschau als kleine App, gewählt = heller Ring (kein Blau); Kacheln und Sprache (Deutsch/English, `i18n.js`) im selben Kasten. Kein Abschnitt „Chat-Hintergrund“ mehr.
 
+## STAND 15.11.
+- **Einstellungs-Kästen** (`.st-card`, auch im Dokument-Seitenfenster): Ton der Umschalter-Spur „Agenten | Dokumente“ (nicht gewählt) – 5 % Weiß, feiner Ring 5 % statt Rand; nur ein leichter Unterschied zum Hauptteil. Schwarz-Modus behält seinen Rand.
+- **Name** (Einstellungen → Allgemein): Knopf wie „Abmelden“, aber ohne Fläche und Rand (`.st-name-btn`); antippen macht daraus das Feld (`.st-name-edit`), Enter/Wegtippen übernimmt.
+- **Dokument-Icons**: beim Darüberfahren passiert nichts – weder in der Icon-Auswahl (`.dc-ip2-ic`) noch am Icon über dem Titel (`.dc-icon`): kein Aufhellen, keine Fläche, kein Übergang.
+- **Gefüllte Icons** (`df`): von Hand überarbeitet, wo die erzeugte Form überladen war – Hauptfläche gefüllt, Details als Linie: cap, atom (nur Kern gefüllt), coins (vordere Münze), landmark (Dach + Sockel), flag (Tuch), briefcase, sprout, plant, gift (Schleife als Linie), cloud. Diese zehn NICHT neu erzeugen.
+- **Schrift „Apple“** (Standard, Wunsch „MacBook-Stil“): Systemschrift des Geräts (San Francisco auf Mac/iPad/iPhone, `FONTS.apple.sys` in `app.js`), lädt nichts aus dem Netz; einmalige Umstellung je Gerät (`appearance.font.v2`), danach gilt die Wahl in Aussehen.
+- **Gedanken in der Zeitleiste**: fertige Gedanken bekommen statt des Punkts ein passendes Icon nach ihrem Oberpunkt (`THOUGHT_ICONS`/`thoughtIcon` in `app.js`: Lupe, Bild, Diagramm, Tabelle, Raute fürs Rechnen, Uhr, Datei, Liste, Haken, Buch, Glühbirne, Stift …); passt nichts, bleibt der Punkt.
+
 ## KASTEN IM KASTEN (verbindlich, Wunsch 14.11.)
 - Steht in einem Kasten (Karte, Fenster, Menü) noch ein Kasten (Feld, Spur eines Umschalters, Schalter, Innenkarte), ist der innere IMMER eine Spur HELLER als der äußere – durchscheinendes Weiß (5–13 %), nie Schwarz, nie `--main-bg`, nie dunkler. In `.st-card`, `.ce-card`, `.tk-sheet`, `.tk-box`, `.dcs-body`, Menüs zeigt `--main-bg` deshalb auf einen helleren Ton. Vor jeder UI-Änderung prüfen.
 - **Einstellungen im UI-Stil** (14.11.): Umschalter `.st-seg` = Tableiste mit gleitender Fläche (`.cs-thumb`, `placeThumb` in `ui-kit.js`; gleitet auch über das Neuzeichnen der Einstellungen hinweg), Knöpfe `.st-btn` = Standard-Knopf, Felder = Eingabefeld-Stil, Schalter aus = helle Spur.

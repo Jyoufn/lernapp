@@ -273,7 +273,7 @@
       const onDevice = Object.values(deviceKeys).some(Boolean);
       const account = window.Auth?.user();
       body = `<h2>Profil</h2><div class="st-card">
-          <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><input class="st-field st-name-in" data-name maxlength="32" value="${esc(nameOf())}" aria-label="Name" /></div></div>
+          <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><button type="button" class="st-name-btn" data-name-edit aria-label="Name ändern">${esc(nameOf())}</button></div></div>
         ${account ? `<h2>Konto</h2><div class="st-card">
           <div class="st-row"><span class="st-name">${esc(account.email)}</span><span class="grow"></span><button type="button" class="st-btn dark" data-logout>Abmelden</button></div></div>` : ''}
         ${wsSection()}
@@ -379,6 +379,17 @@
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
+    // Name: steht als Knopf ohne Rand da; antippen macht daraus das Feld, Enter oder Wegtippen übernimmt (15.11.)
+    const nb = e.target.closest('[data-name-edit]');
+    if (nb) {
+      const inp = document.createElement('input');
+      inp.className = 'st-name-edit'; inp.maxLength = 32; inp.value = nameOf(); inp.setAttribute('data-name', ''); inp.setAttribute('aria-label', 'Name'); inp.spellcheck = false;
+      const back = () => { if (!inp.isConnected) return; write(NAME_KEY, inp.value.trim()); applyName(); nb.textContent = nameOf(); inp.replaceWith(nb); };
+      inp.addEventListener('blur', back);
+      inp.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === 'Escape') { ev.preventDefault(); inp.blur(); } });
+      nb.replaceWith(inp); inp.focus(); inp.select();
+      return;
+    }
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     if (wsClick(e)) return;

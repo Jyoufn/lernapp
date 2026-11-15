@@ -19,8 +19,9 @@ test.afterEach(() => { fx?.restore(); fx = null; W.cooldowns.clear(); require('.
 test('Bausteine nach Bedarf: normale Frage bekommt den schlanken Prompt, Wünsche laden die ausführlichen Abschnitte', () => {
   const sys = (text, extra = {}) => W.systemNative('medium', { agent: 'learn', need: A.toolNeeds({ text, ...extra }) });
   const plain = sys('Erklär mir die Mitose');
-  assert.match(plain, /ANTWORTFORMEN/);
-  assert.match(plain, /WAS DU IN DIESER APP ZEIGEN KANNST/);
+  assert.match(plain, /SO HELFEN ANTWORTEN BEIM LERNEN – Anregungen, keine Vorschriften/);
+  assert.match(plain, /WAS DU IN DIESER APP KANNST – das alles steht dir offen/);
+  assert.doesNotMatch(plain, /Ohne echte Zahlen nie ein Diagramm|nie „zur Abwechslung“|DIAGRAMME VON SELBST nur/, 'Fähigkeiten statt Bedingungen');
   assert.match(plain, /KOPIER-KASTEN/);
   assert.doesNotMatch(plain, /BILD ANPASSEN|HEFTEINTRAG \(Zusatz|"slides"|ABFRAGEN \(der Nutzer|LINKS \(```links\)/);
   assert.ok(plain.length < 19000, `schlank: ${plain.length} Zeichen`);
@@ -37,7 +38,7 @@ test('Bausteine nach Bedarf: normale Frage bekommt den schlanken Prompt, Wünsch
   assert.match(pz, /```praesentation[\s\S]*"slides"/);
   assert.doesNotMatch(W.systemNative('medium', { agent: 'general' }), /"slides"/);
   // Stufe Niedrig (Unterricht) hat ihre eigene Form
-  assert.doesNotMatch(W.systemNative('low', { agent: 'learn' }), /ANTWORTFORMEN/);
+  assert.doesNotMatch(W.systemNative('low', { agent: 'learn' }), /SO HELFEN ANTWORTEN BEIM LERNEN/);
   assert.match(W.systemNative('low', { agent: 'learn' }), /FÜR DEN UNTERRICHT/);
 });
 
@@ -144,8 +145,9 @@ test('Quellen-Gedächtnis: Dateien bleiben für den ganzen Chat Material – auc
   assert.match(sys2, /SCHULBUCH-AUFBAU/);
 });
 
-test('Antwortformen: Aufbau je Art der Frage, Niveau und Portionen stehen im Prompt', () => {
-  for (const key of ['KURZE WISSENSFRAGE', 'THEMA ODER BEGRIFF ERKLÄREN', 'AUFGABE LÖSEN', 'RECHNEN', 'VERGLEICHEN', 'EIGENE LÖSUNG ODER EIGENER TEXT', 'TEXT SCHREIBEN', 'ÜBERSETZEN UND SPRACHEN', 'FOLGEFRAGE', 'NIVEAU:', 'PORTIONEN:']) assert.ok(A.FORMS.includes(key), key);
-  assert.match(A.FORMS, /der AUFWAND/, 'gewählter Aufwand bestimmt weiter Tiefe und Länge');
+test('Anregungen statt Vorschriften: kurze Lern-Hinweise, Fähigkeiten der App, Gedächtnis im Kern', () => {
+  assert.match(A.FORMS, /Anregungen, keine Vorschriften/);
+  assert.ok(A.FORMS.length < 1400, 'kurz');
+  for (const key of ['Tabellen', 'Diagramme', 'Zeitstrahl', 'Echte Bilder', 'Kopier-Kasten']) assert.ok(A.TOOLS_HEAD.includes(key), key);
   assert.match(W.NATIVE_CORE, /GESPRÄCH UND GEDÄCHTNIS/);
 });
