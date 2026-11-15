@@ -12664,155 +12664,174 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 .stk-add .stk-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
 
 /* ===== NEUER STIL (15.11.) – nach dem Vorbild des Nutzers (Aufgabenliste + Fenster „Neue Aufgabe“) =====
-   Gilt vorerst NUR im Bereich „UI“ (.uiv-view.nx); der Rest der App bleibt unverändert. Aufbau und Icons bleiben, es geht um Form und Fläche:
-   ganz runde Knöpfe (Pillen), große Radien (Karte 18, Fenster 24), weiche Schatten (NUR hier erlaubt), Hauptknopf in Akzentfarbe,
-   Karten eine Stufe heller als der Grund. Schrift = Systemschrift (SF Pro auf iPad/Mac), Stärken wie überall 500/600.
-   Hell: die App kehrt die Oberfläche um – deshalb stehen dort die Werte VOR der Umkehrung (Karte #000 = weiß, Schatten weiß = dunkel). */
+   Gilt vorerst NUR im Bereich „UI“ (.uiv-view.nx); der Rest der App bleibt unverändert. Aufbau und Icons bleiben, es geht um Form und Fläche.
+   Alle Maße sind am Vorbild ausgemessen (Bild 1 ÷ 1,6 · Bild 2 ÷ 3,4 = Punkte): Zeile 44, Kästchen 16/Radius 5, Pillen 24, Hauptknopf 29,
+   Karte Radius 12, Fenster 600 breit/Radius 22, Fußleiste 54, Schalter 26×16, Schrift 13 (Titel im Fenster 15).
+   KEINE SCHATTEN (Wunsch 15.11.) – Flächen heben sich nur über Ton und feinen Rand ab.
+   Farben stehen als eigene Werte (--nx-…), nicht als durchscheinendes Weiß: Dunkel direkt, Hell als Wert VOR der Umkehrung
+   (die App kehrt die Oberfläche um; daneben steht jeweils die Farbe, die am Ende zu sehen ist – am Vorbild gemessen). */
 .uiv-view.nx { --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter;
-  --nx-card: color-mix(in srgb, var(--main-bg) 92.5%, #fff); --nx-line: rgba(255, 255, 255, 0.075); --nx-fill: rgba(255, 255, 255, 0.08); --nx-on-accent: #fff;
-  --nx-shadow-s: 0 1px 2px rgba(0, 0, 0, 0.22); --nx-shadow-m: 0 12px 32px -8px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.2); --nx-shadow-l: 0 28px 64px -16px rgba(0, 0, 0, 0.6), 0 3px 10px rgba(0, 0, 0, 0.24);
+  --nx-card: #1e1e20; --nx-line: #2c2c2f; --nx-fill: #29292c; --nx-hover: #252527; --nx-active: #2e2e31; --nx-foot: #222224;
+  --nx-text: #f2f2f4; --nx-mid: #c9c9ce; --nx-text2: #96969c; --nx-text3: #5e5e63; --nx-icon: #7c7c82; --nx-check: #56565b; --nx-off: #3a3a3d; --nx-knob: #fff;
+  --nx-due: #f0a04b; --nx-due-bg: #3a2c1e; --nx-on-accent: #fff;
   font-family: var(--font-ui), sans-serif; }
-html[data-theme="light"] .uiv-view.nx { background: #0a0a0a; --nx-card: #000; --nx-line: rgba(255, 255, 255, 0.09); --nx-fill: rgba(255, 255, 255, 0.07); --nx-on-accent: #000;
-  --nx-shadow-s: 0 1px 2px rgba(255, 255, 255, 0.07); --nx-shadow-m: 0 12px 32px -8px rgba(255, 255, 255, 0.2), 0 2px 6px rgba(255, 255, 255, 0.06); --nx-shadow-l: 0 28px 64px -16px rgba(255, 255, 255, 0.26), 0 3px 10px rgba(255, 255, 255, 0.07); }
+html[data-theme="light"] .uiv-view.nx { background: #0b0b0c; /* #f4f4f5 */
+  --nx-card: #000; /* weiß */ --nx-line: #171719; /* #e8e8ea */ --nx-fill: #0f0f11; /* #f0f0f2 */ --nx-hover: #0a0a0b; /* #f5f5f6 */ --nx-active: #1b1b1e; /* #e4e4e7 */ --nx-foot: #050505; /* #fafafa */
+  --nx-text: #e2e2e4; /* #1d1d1f */ --nx-mid: #a9a9ae; /* #55555a */ --nx-text2: #707075; /* #8e8e93 */ --nx-text3: #3a3a3e; /* #c4c4c8 */ --nx-icon: #55555a; /* #a9a9ae */ --nx-check: #36363b; /* #c8c8cd */ --nx-off: #1d1d20; /* #e2e2e5 */ --nx-knob: #000; /* weiß */
+  --nx-due: #994900; /* #f0a04b */ --nx-due-bg: #1c0d00; /* #fdeedd */ --nx-on-accent: #000; /* weiß */ }
 html[data-glass="mac"] .uiv-view.nx { background: transparent; }
-.uiv-view.nx .uiv-sec h3 { font-size: 16px; }
+.uiv-view.nx .uiv-head h2, .uiv-view.nx .uiv-sec h3 { color: var(--nx-text); }
+.uiv-view.nx .uiv-sec h3 { font-size: 15px; }
+.uiv-view.nx .uiv-name, .uiv-view.nx .uiv-note, .uiv-view.nx .uiv-ic > span { color: var(--nx-text2); }
+.uiv-view.nx .uiv-row { border-top-color: var(--nx-line); }
 .uiv-view.nx .uiv-sec-wide > :is(.nx-win, .nx-list) { margin-top: 14px; }
-.uiv-view.nx .uiv-sec-wide > .uiv-row { margin-top: 22px; border-top: 0; }
+.uiv-view.nx .uiv-sec-wide > .uiv-row { margin-top: 18px; border-top: 0; }
 .uiv-view.nx .grow { flex: 1; }
 
-/* Knöpfe: Pillen. Hauptknopf (light) = Akzentfarbe; Umrandet (line) = Karte mit feinem Rand und Hauch Schatten (die Pillen im Fenster) */
-.uiv-view.nx .ui-btn { height: 32px; padding: 0 14px; gap: 6px; border-radius: 999px; background: var(--nx-fill); box-shadow: none; color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; transition: background-color 140ms ease, color 140ms ease; }
-.uiv-view.nx .ui-btn:hover { background: rgba(255, 255, 255, 0.12); }
-.uiv-view.nx .ui-btn:active { background: rgba(255, 255, 255, 0.16); }
-.uiv-view.nx .ui-btn-light { background: var(--accent); color: var(--nx-on-accent); }
-.uiv-view.nx .ui-btn-light:hover { background: color-mix(in srgb, var(--accent) 90%, #fff); color: var(--nx-on-accent); }
-.uiv-view.nx .ui-btn-light:active { background: color-mix(in srgb, var(--accent) 82%, #fff); }
-.uiv-view.nx .ui-btn-light .ui-dd-chev { color: inherit; opacity: 0.8; }
-.uiv-view.nx .ui-btn-line { background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-s); color: var(--text-3); font-weight: 500; }
-.uiv-view.nx .ui-btn-line:hover { background: color-mix(in srgb, var(--nx-card) 95%, #fff); color: var(--text); }
-.uiv-view.nx .ui-btn-line:active { background: color-mix(in srgb, var(--nx-card) 90%, #fff); }
-.uiv-view.nx .ui-btn-line svg { color: var(--text-4); }
-.uiv-view.nx .ui-btn-ghost { background: none; color: var(--text-2); font-weight: 500; }
+/* Knöpfe: Pillen, 24 hoch (klein 20 · groß 29 = „Erstellen“). Hauptknopf (light) = Akzentfarbe; Umrandet (line) = die Pillen im Fenster */
+.uiv-view.nx .ui-btn { height: 24px; padding: 0 10px; gap: 5px; border-radius: 999px; background: var(--nx-fill); box-shadow: none; color: var(--nx-text); font: 500 13px var(--font-ui, Inter), sans-serif; transition: background-color 140ms ease, color 140ms ease; }
+.uiv-view.nx .ui-btn svg { width: 13px; height: 13px; margin-left: -1px; color: var(--nx-icon); }
+.uiv-view.nx .ui-btn:hover { background: var(--nx-active); color: var(--nx-text); }
+.uiv-view.nx .ui-btn:active { background: var(--nx-off); }
+.uiv-view.nx .ui-btn-light, .uiv-view.nx .ui-btn-light:hover { background: var(--accent); color: var(--nx-on-accent); font-weight: 600; }
+.uiv-view.nx .ui-btn-light:hover { opacity: 0.92; }
+.uiv-view.nx .ui-btn-light:active { background: var(--accent); opacity: 0.84; }
+.uiv-view.nx .ui-btn-light svg { color: inherit; }
+.uiv-view.nx .ui-btn-line, .uiv-view.nx .ui-btn-line:hover { background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); color: var(--nx-text2); }
+.uiv-view.nx .ui-btn-line:hover { background: var(--nx-hover); color: var(--nx-mid); }
+.uiv-view.nx .ui-btn-line:active { background: var(--nx-fill); }
+.uiv-view.nx .ui-btn-ghost { background: none; color: var(--nx-mid); }
 .uiv-view.nx .ui-btn-ghost:hover { background: var(--nx-fill); }
-.uiv-view.nx .ui-btn-danger { background: rgba(239, 107, 95, 0.14); color: #f07a6e; }
-.uiv-view.nx .ui-btn-danger:hover { background: rgba(239, 107, 95, 0.21); }
-.uiv-view.nx .ui-btn-s { height: 26px; padding: 0 11px; font-size: 12.5px; }
-.uiv-view.nx .ui-btn-l { height: 40px; padding: 0 20px; font-size: 15px; }
-.uiv-view.nx .ui-btn-icon { width: 32px; padding: 0; } .uiv-view.nx .ui-btn-icon.ui-btn-s { width: 26px; } .uiv-view.nx .ui-btn-icon.ui-btn-l { width: 40px; }
-.uiv-view.nx .ui-dd.open > .ui-btn-line { background: color-mix(in srgb, var(--nx-card) 92%, #fff); color: var(--text); }
-.uiv-view.nx .st-btn { height: 30px; padding: 0 14px; border-radius: 999px; background: var(--nx-fill) !important; font: 600 13px var(--font-ui, Inter), sans-serif; }
+.uiv-view.nx .ui-btn-danger, .uiv-view.nx .ui-btn-danger:hover { background: rgba(239, 107, 95, 0.14); color: #f07a6e; }
+.uiv-view.nx .ui-btn-danger:hover { background: rgba(239, 107, 95, 0.2); }
+.uiv-view.nx .ui-btn-danger svg { color: inherit; }
+.uiv-view.nx .ui-btn-s { height: 20px; padding: 0 8px; font-size: 12px; }
+.uiv-view.nx .ui-btn-l { height: 29px; padding: 0 12px; font-size: 14px; }
+.uiv-view.nx .ui-btn-icon { width: 26px; padding: 0; } .uiv-view.nx .ui-btn-icon.ui-btn-s { width: 22px; } .uiv-view.nx .ui-btn-icon.ui-btn-l { width: 32px; }
+.uiv-view.nx .ui-btn-icon svg { margin: 0; }
+.uiv-view.nx .ui-btn .ui-dd-chev { width: 11px; height: 11px; margin: 0 -2px 0 0 !important; color: var(--nx-icon); }
+.uiv-view.nx .ui-btn-light .ui-dd-chev { color: inherit; opacity: 0.8; }
+.uiv-view.nx .ui-dd.open > .ui-btn:not(.ui-btn-light):not(.ui-btn-danger) { background: var(--nx-fill); color: var(--nx-text); }
+.uiv-view.nx .st-btn { height: 24px; padding: 0 10px; border-radius: 999px; background: var(--nx-fill) !important; color: var(--nx-text) !important; font: 500 13px var(--font-ui, Inter), sans-serif; }
 
-/* Eingabefeld: weich gerundet, Fläche wie die Karte */
-.uiv-view.nx .ui-input, .uiv-view.nx .ui-input:hover, .uiv-view.nx .ui-input:focus-within { border-radius: 14px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-s); }
-.uiv-view.nx .ui-input-row { min-height: 36px; padding: 0 13px; }
-.uiv-view.nx .ui-input-field { font-size: 14px; }
-.uiv-view.nx .ui-input-s { border-radius: 11px; } .uiv-view.nx .ui-input-s .ui-input-row { min-height: 30px; padding: 0 11px; } .uiv-view.nx .ui-input-s .ui-input-field { font-size: 13px; }
-.uiv-view.nx .ui-input-l { border-radius: 16px; } .uiv-view.nx .ui-input-l .ui-input-row { min-height: 42px; padding: 0 15px; } .uiv-view.nx .ui-input-l .ui-input-field { font-size: 15px; }
-.uiv-view.nx .ui-input-multi { border-radius: 16px; } .uiv-view.nx .ui-input-multi .ui-input-row { padding: 10px 13px; }
-.uiv-view.nx .ui-input-box { border-radius: 22px; } .uiv-view.nx .ui-input-box .ui-input-row { padding: 15px 17px 4px; }
-.uiv-view.nx .ui-input-foot { padding: 4px 9px 9px; }
-.uiv-view.nx .ui-input-x { border-radius: 50%; }
-.uiv-view.nx .st-card .ui-input, .uiv-view.nx .st-card .ui-input:hover, .uiv-view.nx .st-card .ui-input:focus-within { background: var(--nx-fill); box-shadow: none; }
+/* Eingabefeld: Fläche der Karte mit feinem Rand; 28 hoch (klein 24 · groß 34), Kasten mit Fußzeile Radius 14 */
+.uiv-view.nx .ui-input, .uiv-view.nx .ui-input:hover, .uiv-view.nx .ui-input:focus-within { border-radius: 8px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); color: var(--nx-icon); }
+.uiv-view.nx .ui-input-row { min-height: 28px; padding: 0 9px; gap: 7px; }
+.uiv-view.nx .ui-input-row > :is(.ui-ic, svg) { color: var(--nx-icon) !important; }
+.uiv-view.nx .ui-input-field { color: var(--nx-text); font-size: 13px; }
+.uiv-view.nx .ui-input-field::placeholder { color: var(--nx-text3); }
+.uiv-view.nx .ui-input-s { border-radius: 7px; } .uiv-view.nx .ui-input-s .ui-input-row { min-height: 24px; padding: 0 8px; } .uiv-view.nx .ui-input-s .ui-input-field { font-size: 12px; }
+.uiv-view.nx .ui-input-l { border-radius: 10px; } .uiv-view.nx .ui-input-l .ui-input-row { min-height: 34px; padding: 0 11px; } .uiv-view.nx .ui-input-l .ui-input-field { font-size: 14px; }
+.uiv-view.nx .ui-input-multi { border-radius: 10px; } .uiv-view.nx .ui-input-multi .ui-input-row { padding: 7px 10px; }
+.uiv-view.nx .ui-input-box { border-radius: 14px; } .uiv-view.nx .ui-input-box .ui-input-row { padding: 12px 14px 4px; }
+.uiv-view.nx .ui-input-box .ui-input-field { font-size: 13.5px; }
+.uiv-view.nx .ui-input-foot { gap: 2px; padding: 4px 8px 8px; }
+.uiv-view.nx .ui-input-x { border-radius: 50%; background: var(--nx-fill); color: var(--nx-text2); }
 
-/* Tableiste und Umschalter: runde Spur, gewählter Teil = Karte mit Hauch Schatten */
-.uiv-view.nx :is(.ui-tabs, .st-seg) { height: 34px; padding: 0 3px; border-radius: 999px; background: var(--nx-fill); box-shadow: none; }
-.uiv-view.nx .ui-tab, .uiv-view.nx .st-seg > button { height: 28px; padding: 0 14px; border-radius: 999px; font-size: 13.5px; }
-.uiv-view.nx .ui-tabs-thumb, .uiv-view.nx .st-seg > .cs-thumb { top: 3px; height: 28px; border-radius: 999px; background: color-mix(in srgb, var(--nx-card) 86%, #fff); box-shadow: var(--nx-shadow-s); }
-html[data-theme="light"] .uiv-view.nx .ui-tabs-thumb, html[data-theme="light"] .uiv-view.nx .st-seg > .cs-thumb { background: #000; }
+/* Tableiste und Umschalter: Spur in Füll-Ton, gewählter Teil = Karte (hell: weiß) mit feinem Rand, Ecken 9/7 wie die Tabs im Vorbild */
+.uiv-view.nx :is(.ui-tabs, .st-seg) { height: 28px; padding: 0 2px; border-radius: 9px; background: var(--nx-fill); box-shadow: none; }
+.uiv-view.nx .ui-tab, .uiv-view.nx .st-seg > button { height: 24px; padding: 0 11px; border-radius: 7px; color: var(--nx-text2); font-size: 13px; }
+.uiv-view.nx .ui-tab.on, .uiv-view.nx .st-seg > button:is(.on, [aria-checked="true"]) { color: var(--nx-text); font-weight: 500; }
+.uiv-view.nx .ui-tab::after { font-weight: 500; }
+.uiv-view.nx .ui-tabs-thumb, .uiv-view.nx .st-seg > .cs-thumb, html[data-theme="light"] .uiv-view.nx .ui-tabs-thumb, html[data-theme="light"] .uiv-view.nx .st-seg > .cs-thumb { top: 2px; height: 24px; border-radius: 7px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); }
+html:not([data-theme="light"]) .uiv-view.nx :is(.ui-tabs-thumb, .st-seg > .cs-thumb) { background: var(--nx-off); box-shadow: none; }
 
-/* Schalter: größer und runder, Knopf mit Hauch Schatten */
-.uiv-view.nx .ce-switch { width: 40px; height: 24px; }
-.uiv-view.nx .ce-switch:not(.on) { background: rgba(255, 255, 255, 0.14); }
-.uiv-view.nx .ce-switch i, .uiv-view.nx .ce-switch:not(.on) i { top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); }
-.uiv-view.nx .ce-switch.on i { transform: translateX(16px); }
-html[data-theme="light"] .uiv-view.nx .ce-switch i, html[data-theme="light"] .uiv-view.nx .ce-switch:not(.on) i { background: #000; box-shadow: 0 1px 3px rgba(255, 255, 255, 0.25); }
+/* Schalter: klein wie im Vorbild (26×16), aus = heller Grauton, an = Akzentfarbe */
+.uiv-view.nx .ce-switch { width: 26px; height: 16px; }
+.uiv-view.nx .ce-switch:not(.on) { background: var(--nx-off); }
+.uiv-view.nx .ce-switch i, .uiv-view.nx .ce-switch:not(.on) i { top: 2px; left: 2px; width: 12px; height: 12px; background: var(--nx-knob); box-shadow: none; }
+.uiv-view.nx .ce-switch.on i { transform: translateX(10px); }
 
-/* Dropdown-Menü: schwebende Karte, runde Zeilen */
-.uiv-view.nx .ui-menu { min-width: 208px; padding: 6px; gap: 1px; border-radius: 16px; background: color-mix(in srgb, var(--nx-card) 96%, #fff); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-m); }
-html[data-theme="light"] .uiv-view.nx .ui-menu { background: #000; }
-.uiv-view.nx .ui-menu-item { height: 34px; padding: 0 11px; gap: 10px; border-radius: 10px; font-size: 13.5px; }
-.uiv-view.nx .ui-menu-item:hover, .uiv-view.nx .ui-menu-item:focus-visible { background: var(--nx-fill); }
+/* Dropdown-Menü: Karte mit feinem Rand, Zeilen 28 */
+.uiv-view.nx .ui-menu, html[data-theme="light"] .uiv-view.nx .ui-menu { min-width: 190px; padding: 5px; gap: 1px; border-radius: 12px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); }
+.uiv-view.nx .ui-menu-item { height: 28px; padding: 0 9px; gap: 8px; border-radius: 7px; color: var(--nx-text); font-size: 13px; }
+.uiv-view.nx .ui-menu-item > svg:first-child { width: 14px; height: 14px; color: var(--nx-icon); }
+.uiv-view.nx .ui-menu-item:hover, .uiv-view.nx .ui-menu-item:focus-visible { background: var(--nx-fill); color: var(--nx-text); }
+.uiv-view.nx .ui-menu-item.danger, .uiv-view.nx .ui-menu-item.danger > svg:first-child { color: #f07a6e; }
 .uiv-view.nx .ui-menu-item.danger:hover { background: rgba(239, 107, 95, 0.14); }
-.uiv-view.nx .ui-menu-sep { margin: 5px 9px; background: var(--nx-line); }
-.uiv-view.nx .ui-menu-title { padding: 8px 11px 4px; font-size: 12px; }
+.uiv-view.nx .ui-menu-sep { margin: 4px 8px; background: var(--nx-line); }
+.uiv-view.nx .ui-menu-title { padding: 6px 9px 3px; color: var(--nx-text2); font-size: 11px; }
 .uiv-view.nx .ui-menu-tick { color: var(--accent); }
 .uiv-view.nx .nx-menu-still { position: static; opacity: 1; visibility: visible; pointer-events: auto; transform: none; }
 .uiv-view.nx .nx-menu-still .ui-menu-item { cursor: default; }
 
-/* Karte mit Zeilen, Kalender, Uhrzeit, Icon-Kacheln */
-.uiv-view.nx .st-card { border: 1px solid var(--nx-line); border-radius: 18px; background: var(--nx-card); box-shadow: var(--nx-shadow-s); }
-.uiv-view.nx .st-row { padding: 0 14px 0 18px; }
-.uiv-view.nx :is(.uiv-cal, .uiv-wheel) { border-radius: 18px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-s); }
-.uiv-view.nx .uiv-ic > i { border-radius: 14px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-s); }
-.uiv-view.nx .lb2-tag { border-radius: 999px; padding-left: 9px; padding-right: 9px; }
+/* Karte mit Zeilen, Kalender, Uhrzeit, Icon-Kacheln, Tags */
+.uiv-view.nx .st-card { border: 1px solid var(--nx-line); border-radius: 12px; background: var(--nx-card); box-shadow: none; }
+.uiv-view.nx .st-row { height: 44px; padding: 0 12px 0 14px; }
+.uiv-view.nx .st-row + .st-row { border-top-color: var(--nx-line); }
+.uiv-view.nx .st-name { color: var(--nx-text); font-size: 13px; }
+.uiv-view.nx .st-muted { color: var(--nx-text2); font-size: 13px; }
+.uiv-view.nx .st-card .ui-input, .uiv-view.nx .st-card .ui-input:hover, .uiv-view.nx .st-card .ui-input:focus-within { background: var(--nx-fill); box-shadow: none; }
+.uiv-view.nx :is(.uiv-cal, .uiv-wheel) { border-radius: 12px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); }
+.uiv-view.nx .uiv-ic > i { border-radius: 10px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); color: var(--nx-mid); }
+.uiv-view.nx .lb2-tag { height: 18px; padding: 0 7px; border-radius: 6px; font-size: 11px; }
 
-/* Kästchen (Aufgabenfelder, Fenster): runde Ecke, kräftiger Rand; erledigt = Akzentfarbe mit Haken */
-.nx-check { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1.5px solid rgba(255, 255, 255, 0.26); border-radius: 7px; background: none; color: var(--nx-on-accent); cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; transition: background-color 160ms ease, border-color 160ms ease; }
-.nx-check:hover { border-color: rgba(255, 255, 255, 0.42); }
-.nx-check .nx-tick { opacity: 0; transform: scale(0.5); transition: opacity 140ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+/* Kästchen (Aufgabenfelder, Fenster): 16 px, Radius 5, Rand 1,5; erledigt = Akzentfarbe mit Haken; fällig = orange getönt */
+.nx-check { flex: none; display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 1.5px solid var(--nx-check); border-radius: 5px; background: none; color: var(--nx-on-accent); cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; transition: background-color 160ms ease, border-color 160ms ease; }
+.nx-check .nx-tick { width: 10px; height: 10px; opacity: 0; transform: scale(0.5); transition: opacity 140ms ease, transform 260ms cubic-bezier(0.16, 1, 0.3, 1); }
 .nx-check[aria-checked="true"] { border-color: var(--accent); background: var(--accent); }
 .nx-check[aria-checked="true"] .nx-tick { opacity: 1; transform: none; }
-.nx-task.due .nx-check:not([aria-checked="true"]) { border-color: #f0a35e; background: rgba(240, 163, 94, 0.14); }
+.nx-task.due .nx-check:not([aria-checked="true"]) { border-color: var(--nx-due); background: var(--nx-due-bg); }
 
-/* Aufgabenfelder: eine Karte, Zeilen mit feiner Linie (beginnt beim Text), Angaben rechts als leise Pillen */
-.nx-list { display: flex; flex-direction: column; padding: 4px; border-radius: 18px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-s); }
-.nx-list .nx-task { position: relative; display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 0 12px; border-radius: 14px; transition: background-color 120ms ease; }
-.nx-list .nx-task + .nx-task::before { content: ""; position: absolute; left: 44px; right: 12px; top: 0; height: 1px; background: var(--nx-line); }
-.nx-list .nx-task:hover { background: rgba(255, 255, 255, 0.035); }
+/* Aufgabenfelder: eine Karte (Radius 12), Zeilen 44, Linie beginnt beim Text und läuft bis zum Kartenrand; Darüberfahren = runde Fläche mit 4 px Luft */
+.nx-list { display: flex; flex-direction: column; padding: 4px; border-radius: 12px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); overflow: hidden; }
+.nx-list .nx-task { position: relative; display: flex; align-items: center; gap: 9px; height: 44px; padding: 0 10px; border-radius: 8px; transition: background-color 120ms ease; }
+.nx-list .nx-task + .nx-task::before { content: ""; position: absolute; left: 35px; right: -4px; top: -0.5px; height: 1px; background: var(--nx-line); }
+.nx-list .nx-task:hover { background: var(--nx-hover); }
 .nx-list .nx-task:hover::before, .nx-list .nx-task:hover + .nx-task::before { opacity: 0; }
-.nx-task-t { min-width: 0; overflow: hidden; color: var(--text); font: 500 14.5px var(--font-ui, Inter), sans-serif; text-overflow: ellipsis; white-space: nowrap; transition: color 160ms ease; }
-.nx-task.done .nx-task-t { color: var(--text-4); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
-.nx-badge { flex: none; display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 999px; background: var(--nx-fill); color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }
-.nx-badge-ic { width: 22px; padding: 0; justify-content: center; }
+.nx-task-t { min-width: 0; overflow: hidden; color: var(--nx-text); font: 500 13px var(--font-ui, Inter), sans-serif; text-overflow: ellipsis; white-space: nowrap; transition: color 160ms ease; }
+.nx-task.done .nx-task-t { color: var(--nx-text2); text-decoration: line-through; text-decoration-color: var(--nx-text3); }
+.nx-badge { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 18px; margin-left: -3px; padding: 0 7px; border-radius: 6px; background: var(--nx-fill); color: var(--nx-text2); font: 500 11px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }
+.nx-badge svg { width: 10px; height: 10px; color: var(--nx-icon); }
+.nx-badge-ic { width: 18px; padding: 0; justify-content: center; }
 
-/* Fenster „Neue Aufgabe“: große Rundung, weicher Schatten, Fußleiste eine Spur abgesetzt */
-.nx-win { display: flex; flex-direction: column; width: min(600px, 100%); margin: 0 auto 18px; border-radius: 24px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-l); overflow: hidden; }
-.nx-win-top { display: flex; align-items: center; padding: 14px 14px 0 16px; }
-.nx-proj { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px 0 10px; border-radius: 999px; background: var(--nx-fill); color: var(--text-3); font: 500 13.5px var(--font-ui, Inter), sans-serif; }
-.nx-proj svg { color: var(--accent); }
-.nx-round { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: var(--nx-fill); color: var(--text-3); cursor: pointer; outline: 0; transition: background-color 140ms ease, color 140ms ease; }
-.nx-round:hover { background: rgba(255, 255, 255, 0.13); color: var(--text); }
-.nx-win-title { display: flex; align-items: center; gap: 12px; padding: 20px 20px 0; }
-.nx-win-title .nx-check { width: 22px; height: 22px; border-radius: 8px; }
-.nx-win input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0 !important; background: none; box-shadow: none !important; color: var(--text); font: 500 15px var(--font-ui, Inter), sans-serif; letter-spacing: inherit; }
-.nx-win input::placeholder { color: var(--text-4); opacity: 0.75; }
-.nx-win .nx-title { font-size: 19px; }
-.nx-win-notes { display: flex; align-items: flex-start; gap: 13px; min-height: 96px; padding: 16px 20px 0 23px; color: var(--text-4); }
-.nx-win-notes svg { flex: none; margin-top: 2px; opacity: 0.7; }
-.nx-win-chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 6px 16px 18px; }
-.nx-win-foot { display: flex; align-items: center; gap: 10px; padding: 12px 14px 12px 18px; border-top: 1px solid var(--nx-line); background: rgba(255, 255, 255, 0.025); }
-.nx-foot-label { color: var(--text-4); font: 500 13.5px var(--font-ui, Inter), sans-serif; }
+/* Fenster „Neue Aufgabe“: 600 breit, Radius 22, feiner Rand; Fußleiste 54 hoch, eine Spur abgesetzt */
+.nx-win { display: flex; flex-direction: column; width: min(600px, 100%); margin: 0 auto 18px; border: 1px solid var(--nx-line); border-radius: 22px; background: var(--nx-card); overflow: hidden; }
+.nx-win-top { display: flex; align-items: center; padding: 14px 12px 0 11px; }
+.nx-proj { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px 0 8px; border-radius: 999px; background: var(--nx-hover); box-shadow: inset 0 0 0 1px var(--nx-line); color: var(--nx-mid); font: 500 13px var(--font-ui, Inter), sans-serif; }
+.nx-proj svg { width: 13px; height: 13px; color: var(--accent); }
+.nx-round { display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: var(--nx-fill); color: var(--nx-text2); cursor: pointer; outline: 0; transition: background-color 140ms ease, color 140ms ease; }
+.nx-round svg { width: 9px; height: 9px; }
+.nx-round:hover { background: var(--nx-active); color: var(--nx-text); }
+.nx-win-title { display: flex; align-items: center; gap: 8px; padding: 22px 19px 0; }
+.nx-win input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0 !important; background: none; box-shadow: none !important; color: var(--nx-text); font: 500 14px var(--font-ui, Inter), sans-serif; letter-spacing: inherit; }
+.nx-win input::placeholder { color: var(--nx-text3); opacity: 1; }
+.nx-win .nx-title { font-size: 15px; }
+.nx-win-notes { display: flex; align-items: flex-start; gap: 10px; min-height: 118px; padding: 17px 19px 0 20px; color: var(--nx-text3); }
+.nx-win-notes svg { flex: none; width: 13px; height: 13px; margin-top: 2px; }
+.nx-win-chips { display: flex; flex-wrap: wrap; gap: 7px; padding: 6px 11px 18px; }
+.nx-win-foot { display: flex; align-items: center; gap: 7px; height: 54px; padding: 0 13px 0 21px; border-top: 1px solid var(--nx-line); background: var(--nx-foot); }
+.nx-foot-label { color: var(--nx-text2); font: 500 13px var(--font-ui, Inter), sans-serif; }
 
-/* Hinweis (oben eingeblendet): Icon in Akzentfarbe, Titel + leise Zeile */
-.nx-toast { display: inline-flex; align-items: center; gap: 12px; padding: 11px 20px 11px 14px; border-radius: 20px; background: color-mix(in srgb, var(--nx-card) 96%, #fff); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-m); }
-html[data-theme="light"] .nx-toast { background: #000; }
-.nx-toast > i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
-.nx-toast-t { display: flex; flex-direction: column; gap: 1px; }
-.nx-toast-t b { color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
-.nx-toast-t span { color: var(--text-4); font: 500 13px var(--font-ui, Inter), sans-serif; }
+/* Hinweis (oben eingeblendet): 59 hoch, Radius 19, Icon in Akzentfarbe ohne Kreis, Titel + leise Zeile */
+.nx-toast, html[data-theme="light"] .nx-toast { display: inline-flex; align-items: center; gap: 13px; min-width: 300px; height: 59px; padding: 0 22px 0 27px; border-radius: 19px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); }
+.nx-toast > i { display: grid; place-items: center; color: var(--accent); }
+.nx-toast-t { display: flex; flex-direction: column; gap: 2px; }
+.nx-toast-t b { color: var(--nx-text); font: 500 13px var(--font-ui, Inter), sans-serif; }
+.nx-toast-t span { color: var(--nx-text2); font: 500 13px var(--font-ui, Inter), sans-serif; }
 
-/* Frage-Feld: schwebende Pille mit rundem Knopf in Akzentfarbe */
-.nx-ask { display: inline-flex; align-items: center; gap: 10px; width: 280px; height: 44px; padding: 0 6px 0 14px; border-radius: 999px; background: color-mix(in srgb, var(--nx-card) 96%, #fff); box-shadow: inset 0 0 0 1px var(--nx-line), var(--nx-shadow-m); color: var(--accent); cursor: text; }
-html[data-theme="light"] .nx-ask { background: #000; }
-.nx-ask input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0 !important; background: none; box-shadow: none !important; color: var(--text); font: 500 14px var(--font-ui, Inter), sans-serif; letter-spacing: inherit; }
-.nx-ask input::placeholder { color: var(--text-4); opacity: 1; }
-.nx-ask-go { flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: var(--accent); color: var(--nx-on-accent); cursor: pointer; outline: 0; }
+/* Frage-Feld: Pille 39 hoch, runder Knopf 23 in Akzentfarbe */
+.nx-ask, html[data-theme="light"] .nx-ask { display: inline-flex; align-items: center; gap: 9px; width: 308px; height: 39px; padding: 0 8px 0 14px; border-radius: 999px; background: var(--nx-card); box-shadow: inset 0 0 0 1px var(--nx-line); color: var(--accent); cursor: text; }
+.nx-ask > svg { width: 14px; height: 14px; }
+.nx-ask input { flex: 1; min-width: 0; padding: 0; border: 0; outline: 0 !important; background: none; box-shadow: none !important; color: var(--nx-text); font: 500 13.5px var(--font-ui, Inter), sans-serif; letter-spacing: inherit; }
+.nx-ask input::placeholder { color: var(--nx-text2); opacity: 1; }
+.nx-ask-go { flex: none; display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 50%; background: var(--accent); color: var(--nx-on-accent); cursor: pointer; outline: 0; }
+.nx-ask-go svg { width: 12px; height: 12px; }
 
-/* Seitenleiste: runde Zeilen, gewählt = gefüllte Fläche */
-.nx-side { display: flex; flex-direction: column; width: 220px; padding: 8px; border-radius: 18px; background: rgba(255, 255, 255, 0.035); }
-.nx-nav-list { display: flex; flex-direction: column; gap: 2px; }
-.nx-nav { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 0; border-radius: 10px; background: none; color: var(--text-2); font: 500 14px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease; }
-.nx-nav svg { flex: none; color: var(--text-4); }
-.nx-nav:hover { background: rgba(255, 255, 255, 0.05); }
-.nx-nav.on { background: rgba(255, 255, 255, 0.1); color: var(--text); }
-.nx-side-h { padding: 16px 10px 6px; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
-.nx-dot { flex: none; width: 10px; height: 10px; margin: 0 3px; border-radius: 4px; background: var(--c); }
+/* Seitenleiste: Zeilen 29 (Abstand 3), Radius 7, gewählt = gefüllte Fläche; Icons leise */
+.nx-side { display: flex; flex-direction: column; width: 204px; }
+.nx-nav-list { display: flex; flex-direction: column; gap: 3px; }
+.nx-nav { display: flex; align-items: center; gap: 9px; height: 29px; padding: 0 7px; border: 0; border-radius: 7px; background: none; color: var(--nx-text); font: 500 13px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; transition: background-color 120ms ease; }
+.nx-nav svg { flex: none; width: 14px; height: 14px; color: var(--nx-icon); }
+.nx-nav:hover { background: var(--nx-fill); }
+.nx-nav.on { background: var(--nx-active); }
+.nx-side-h { padding: 22px 7px 8px; color: var(--nx-text2); font: 500 11px var(--font-ui, Inter), sans-serif; }
+.nx-dot { flex: none; width: 10px; height: 10px; margin: 0 2px; border-radius: 3.5px; background: var(--c); }
 
-/* Schrift: die vier Stufen des neuen Stils */
+/* Schrift: die Stufen des neuen Stils (Titel der Seite · Titel im Fenster · Zeile · Angabe) */
 .nx-type { display: flex; flex-direction: column; gap: 6px; }
-.nx-type-xl { color: var(--text); font: 600 24px/1.2 var(--font-ui, Inter), sans-serif; letter-spacing: -0.02em; }
-.nx-type-l { color: var(--text); font: 500 19px/1.3 var(--font-ui, Inter), sans-serif; }
-.nx-type-m { color: var(--text-2); font: 500 14.5px/1.4 var(--font-ui, Inter), sans-serif; }
-.nx-type-s { color: var(--text-4); font: 500 12.5px/1.4 var(--font-ui, Inter), sans-serif; }
+.nx-type-xl { color: var(--nx-text); font: 600 20px/1.2 var(--font-ui, Inter), sans-serif; letter-spacing: -0.01em; }
+.nx-type-l { color: var(--nx-text); font: 500 15px/1.3 var(--font-ui, Inter), sans-serif; }
+.nx-type-m { color: var(--nx-text); font: 500 13px/1.4 var(--font-ui, Inter), sans-serif; }
+.nx-type-s { color: var(--nx-text2); font: 500 11px/1.4 var(--font-ui, Inter), sans-serif; }
 @media (prefers-reduced-motion: reduce) { .nx-check, .nx-check .nx-tick, .nx-nav, .nx-round { transition: none; } }
-html[data-theme="light"] .nx-task.due .nx-check:not([aria-checked="true"]) { border-color: #a85a12; background: rgba(168, 90, 18, 0.2); }
