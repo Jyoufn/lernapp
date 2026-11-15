@@ -57,7 +57,7 @@ const Home = (() => {
     if (!d || now.getTime() - (d.updated || 0) > 7 * 86400000) return null;
     const ago = now.getTime() - d.updated, h = Math.round(ago / 3600000);
     const when = ago < 3600000 ? 'Gerade eben' : h < 24 ? `Vor ${h} Std.` : `Vor ${Math.round(h / 24)} Tag${Math.round(h / 24) === 1 ? '' : 'en'}`;
-    return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-file', title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
+    return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-file', svg: d.icon && window.DocIcons?.has(d.icon.name) ? DocIcons.of(d.icon, 16) : `<svg class="lb2-page hm-page" width="14" height="18" viewBox="0 0 16 20" aria-hidden="true">${D.PAGE_SHAPE}</svg>`, title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
   }
   // Börse: aus dem Zwischenspeicher (höchstens alle 3 Std. neu geholt)
   function boerseCards() {
@@ -101,7 +101,7 @@ const Home = (() => {
   function cardHtml(c, i) {
     const tone = c.alarm || c.late ? ' hm-warn' : c.soon ? ' hm-soon' : '';
     return `<article class="hm-card hm-${c.kind}${tone}" data-i="${i}" data-id="${esc(c.id)}">
-      <span class="hm-ic"${c.color ? ` style="--ic:${esc(c.color)}"` : ''}>${use(c.icon, 16)}</span>
+      <span class="hm-ic"${c.color ? ` style="--ic:${esc(c.color)}"` : ''}>${c.svg || use(c.icon, 16)}</span>
       <span class="hm-txt"><span class="hm-title">${esc(c.title)}</span><span class="hm-desc"><b>${esc(c.when)}</b>${c.desc ? `<span class="hm-dot">·</span>${esc(c.desc)}` : ''}</span></span>
       <button type="button" class="hm-go" data-go="${i}">${esc(c.act)}</button>
       <button type="button" class="hm-x" data-x="${i}" aria-label="Ausblenden">${use('f-x', 10)}</button></article>`;

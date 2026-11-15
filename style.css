@@ -12755,3 +12755,47 @@ html body .ce-card .ce-colors.ce-own { padding-top: 2px !important; }
 .cs-pill, .st-seg { background: rgba(255, 255, 255, 0.04); }
 .cs-thumb, .st-seg > .cs-thumb { background: rgba(255, 255, 255, 0.085); }
 .st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.085) !important; }
+
+/* ===== 15.11. nachts – Rest der Liste: Home-Kopf, Icons, Suchfeld-Lupe, dunklere Auswahl, ruhigere Animationen ===== */
+/* Home/Chats: „Alle Einträge“ + Filter stehen rechts in der Kopfzeile neben dem Titel (docs.js hängt .lb2-bar in .cl-head) */
+.dc-list .cl-head .lb2-bar { flex: none; margin: 0 0 0 auto; padding: 0; gap: 4px; height: 30px; }
+.dc-list .cl-head .lb2-all, .dc-list .cl-head .lb2-sel { flex: none; color: var(--text-3); font-size: 13px; font-weight: 500; }
+.dc-list .cl-head h2 { line-height: 30px; }
+/* „Als Nächstes“: Dokument-Karte zeigt dasselbe Blatt wie die Liste */
+.hm-ic .hm-page { width: 14px; height: 18px; stroke: var(--text-2); }
+.hm-ic .hm-page .pg-ln { stroke: color-mix(in srgb, var(--text-2) 70%, transparent); }
+/* Suchfelder: die Lupe bleibt beim Hineintippen gleich (wurde hell) */
+.ui-input:focus-within .ui-input-row > :is(.ui-ic, svg):first-child { color: var(--text-4); }
+/* Flächen eine Spur dunkler: Leiste „Agenten · Dokumente“ samt gewähltem Teil, Einstellungs-Kästen und Felder darin (innen bleibt heller) */
+.cs-pill, .st-seg { background: rgba(255, 255, 255, 0.03); }
+.cs-thumb, .st-seg > .cs-thumb { background: rgba(255, 255, 255, 0.062); }
+.st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.062) !important; }
+.st-card, .dcs-body .st-card { background: rgba(255, 255, 255, 0.03); }
+.st-name-edit { background: rgba(255, 255, 255, 0.035); }
+
+/* Animationen ruhiger: weiche Kurve ohne schnellen Anfangs-Ruck (die Feder wirkte trotz 400 ms „zu schnell“), etwas länger */
+:root { --calm: cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes view-rise { from { opacity: 0; transform: translateY(8px); } }
+/* Ansichten (Home, Kalender, Dokument, Aufgaben): blenden langsam und gleichmäßig ein */
+html body :is(.dc-view, .cal-view, .tk-view:not(.tk-embed), .uiv-view) { animation: view-rise 480ms var(--calm) both; }
+/* Darunterliegender Chat wird sofort ausgeblendet, damit beim Einblenden nichts durchscheint */
+.panel:has(> :is(.dc-view, .cal-view, .tk-view, .uiv-view):not([hidden])) > :is(.content, .composer-area, .home-plaza, .chat-bg, .prompt-nav, .create-switch, .pn-card) { visibility: hidden; }
+.app.settings-open .panel > :not(.st-view, .panel-toggle, .chat-bar) { visibility: hidden; }
+/* Wechsel über die Sidebar (View Transition, nur Hauptteil) */
+::view-transition-old(main-panel) { animation: 200ms ease both vt-out; }
+::view-transition-new(main-panel) { animation: 460ms var(--calm) both vt-in; }
+/* Einstellungen öffnen/zurück */
+.app.settings-open .st-side, .app.settings-open .st-view { animation: st-in 360ms var(--calm) both; }
+.st-view.st-enter .st-page > * { animation: st-rise 520ms var(--calm) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.app.settings-open .st-side .nav-item, .app.settings-open .st-side a { animation: cmdk-in 420ms var(--calm) both; }
+/* Sidebar ein-/ausklappen: Breite gleitet länger; Inhalt blendet beim Zuklappen zuerst aus, beim Aufklappen erst danach ein */
+.sidebar { transition: width 420ms var(--ease); }
+.panel { transition: margin 420ms var(--ease); }
+.sidebar-inner { transition: opacity 300ms ease 120ms, transform 420ms var(--ease); }
+.app.collapsed .sidebar-inner { opacity: 0; transform: translateX(-10px); transition: opacity 160ms ease, transform 420ms var(--ease); }
+/* Neue Blöcke im Chat tauchen etwas langsamer auf */
+.md-in { animation-duration: 700ms; animation-timing-function: var(--calm); }
+@media (prefers-reduced-motion: reduce) {
+  html body :is(.dc-view, .cal-view, .tk-view, .uiv-view), .app.settings-open :is(.st-side, .st-view), .st-view.st-enter .st-page > * { animation: none !important; }
+  .sidebar, .panel, .sidebar-inner { transition: none !important; }
+}

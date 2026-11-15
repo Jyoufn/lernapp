@@ -575,9 +575,10 @@ const Docs = (() => {
   (document.getElementById('sbScroll') || document.querySelector('.sidebar-inner'))?.append(side);
   // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
   // Chat in Home/Chats (10.11.): eckig-runde Sprechblase mit zwei Zeilen – gleicher Strich und Stil wie das Blatt der Dokumente
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M4.1 3.2h9.8a2.6 2.6 0 0 1 2.6 2.6v6.6a2.6 2.6 0 0 1-2.6 2.6H8.6l-3.3 2.6c-.45.35-.95.1-.95-.45V15A2.6 2.6 0 0 1 1.5 12.4V5.8a2.6 2.6 0 0 1 2.6-2.6z"/><path class="pg-ln" d="M5 7.9h8M5 10.8h5"/></svg>';
+  // Chat-Icon (15.11. überarbeitet): gleich hoch wie das Blatt, weich gerundete Blase, kurzer Zipfel links unten, zwei Zeilen
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M4.9 2.6h8.2a3.4 3.4 0 0 1 3.4 3.4v5.4a3.4 3.4 0 0 1-3.4 3.4H8.9l-3.05 2.75c-.42.38-1 .1-1-.46V14.8A3.4 3.4 0 0 1 1.5 11.4V6a3.4 3.4 0 0 1 3.4-3.4z"/><path class="pg-ln" d="M5.3 7.4h7.4M5.3 10.4h4.4"/></svg>';
   // Dokument ohne eigenes Icon (10.11.): abgerundetes Blatt mit Titelzeile und Textzeilen – gleicher Strich wie die Chat-Sprechblase
-  const PAGE_SHAPE = '<rect class="pg-out" x="1.6" y="1.6" width="12.8" height="16.8" rx="3"/><path class="pg-ln" d="M4.6 6h4M4.6 9.5h6.8M4.6 12.5h6.8M4.6 15.5h4"/>';
+  const PAGE_SHAPE = '<rect class="pg-out" x="1.6" y="1.6" width="12.8" height="16.8" rx="3.2"/><path class="pg-ln" d="M4.8 6.4h4.2M4.8 10h6.4M4.8 13.6h6.4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
   function renderSide() {
     const mine = docs.filter((d) => inWs(d) && !isEmpty(d)).sort((a, b) => b.updated - a.updated);
@@ -646,6 +647,7 @@ const Docs = (() => {
     view.querySelector('.cl-find-slot').replaceWith(find);
     const rows = view.querySelector('.cl-list'), search = find.field;
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
+    view.querySelector('.cl-head').append(bar); // „Alle Einträge“ + Filter oben rechts neben dem Titel (Wunsch 15.11., in beiden Sprachen)
     // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“ – Anheften | Löschen | Abbrechen, mit Trennstrichen.
     // Löschen: 1. Tipp schiebt „Wirklich“ davor und färbt rot, 2. Tipp löscht. Alle gewählten schon angeheftet → „Lösen“ in Akzentfarbe.
     // Hängt am Panel, weil die Ansicht selbst scrollt.

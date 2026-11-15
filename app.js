@@ -46,7 +46,7 @@ function activateTab(tab) {
   const drop = prev && prev !== tab && isDraft(prev) ? prev : null; // leerer Chat / leeres Dokument wird beim Verlassen verworfen
   if (prev && prev !== tab && typeof chat !== 'undefined' && !tab.dataset.view && chat.animate) {
     // Chat wechseln: Inhalt blendet weich ein und gleitet ein Stück hoch (statt hart umzuspringen)
-    requestAnimationFrame(() => chat.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
+    requestAnimationFrame(() => chat.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' }));
   }
   if (prev && prev !== tab && typeof chat !== 'undefined') {
     const nodes = document.createDocumentFragment();
@@ -1930,8 +1930,9 @@ const REVEAL_TICK = 24;      // ms zwischen zwei Schritten
 /* Tempo nach Zeit statt nach Schritten (10.11. abends, Nutzer: „soll leicht und angenehm erscheinen, nicht ganz schnell“):
    der Rückstand wird über ~2,4 s verteilt, aber nie schneller als ~380 Zeichen/s (≈ ruhiges Lesetempo) und nie langsamer als ~60/s.
    Ist die Antwort komplett da, darf es zügiger werden (bis ~950/s), damit lange Antworten nicht ewig nachlaufen. */
-const REVEAL_WINDOW_S = 2.4, REVEAL_CPS_MIN = 60, REVEAL_CPS_MAX = 380, REVEAL_CPS_END = 950;
-const BLOCK_FADE_MS = 420;   // Dauer des Einblendens neuer Blöcke
+// 15.11.: ruhiger – höchstens ~280/s beim Schreiben, nach Antwortende ~600/s (vorher 380/950 → wirkte wie ein Schwall)
+const REVEAL_WINDOW_S = 2.8, REVEAL_CPS_MIN = 50, REVEAL_CPS_MAX = 280, REVEAL_CPS_END = 600;
+const BLOCK_FADE_MS = 520;   // Dauer des Einblendens neuer Blöcke
 const INK_FADE_MS = 900;     // (gleiche Dauer wie .ink in style.css) neue Zeichen „tauchen auf“: weich von durchsichtig zu voll (wie bei großen KI-Chats)
 const REDUCE_MOTION = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 /* Weicher Schreib-Saum: Die zuletzt hinzugekommenen Zeichen (je Schritt ein Stück) werden nach jedem Neuzeichnen in Spans mit negativer
