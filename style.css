@@ -12643,3 +12643,24 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 /* Umschalter „Agenten | Dokumente“ (Dunkel): Spur nur einen Hauch heller als der Hauptteil, gewählter Teil so hell wie die Spur bisher (5 %) */
 .cs-pill { background: rgba(255, 255, 255, 0.022); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035); }
 .cs-pill > .cs-thumb { background: rgba(255, 255, 255, 0.055); }
+
+/* ===== 15.11.: Home ohne Zeile „Alle Einträge“ – der Filter sitzt als Icon rechts neben dem Titel; die Zeile erscheint nur noch bei einer Auswahl ===== */
+.lb2-bar[hidden] { display: none; }
+.dc-list .cl-head.hm-top > .lb2-filter { flex: none; margin-right: -4px; }
+.dc-list .ui-input.cl-find { margin-bottom: 14px; }
+
+/* ===== 15.11.: Alle Umschalter wie „Agenten | Dokumente“ – Spur ein Hauch heller als der Grund, gewählter Teil nur leicht heller (Dunkel) =====
+   Gilt für die Umschalter in den Einstellungen und überall sonst (.st-seg), die Tableiste (.ui-tabs) und den Icon-Umschalter im Dokument. */
+.st-seg, .dc-ip2-kind.st-seg, .ui-tabs { background: rgba(255, 255, 255, 0.022); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035); }
+.st-seg > .cs-thumb, .ui-tabs-thumb { background: rgba(255, 255, 255, 0.055); }
+.st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.055) !important; }
+/* in Karten/Fenstern liegt der Umschalter schon auf einer helleren Fläche – dort eine Spur mehr, damit er sichtbar bleibt */
+:is(.st-card, .ce-card, .tk-sheet, .dcs-body) .st-seg { background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
+:is(.st-card, .ce-card, .tk-sheet, .dcs-body) .st-seg > .cs-thumb { background: rgba(255, 255, 255, 0.07); }
+
+/* ===== 15.11.: Kalender (Monat) im Modus Dunkel ruhiger – Kästchen kaum heller als der Grund, EIN gleicher feiner Rand für alle =====
+   Vorher: Tage #181818 mit Rand #242424 (zu hell, Rand zu stark), andere Monate Rand #1d1d1d (zu blass), Wochentage als helle Pillen. */
+html[data-mode="dark"] .cm-cell { border-color: #1f1f1f; background: #161616; }
+html[data-mode="dark"] .cm-cell.other { border-color: #1f1f1f; background: none; }
+html[data-mode="dark"] .cm-wd span { background: none; }
+@media (hover: hover) { html[data-mode="dark"] .cm-cell:hover { background: #1a1a1a; } html[data-mode="dark"] .cm-cell.other:hover { background: #161616; } }

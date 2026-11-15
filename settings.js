@@ -178,13 +178,11 @@
     return `<h2>Aussehen</h2><div class="st-card">
         <div class="st-row st-modes-row"><span class="st-name">Modus</span><div class="ap-modes st-ap-modes">${Object.entries(ap.MODES).map(([id, label]) => { const pv = ap.PREVIEW?.[id] || {};
           return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev apv"><span class="apv-side"><i></i><i></i><i></i></span><span class="apv-main"><span class="apv-msg"></span><span class="apv-ans"><i></i><i></i><i class="s"></i></span><span class="apv-in"><em></em></span></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
-        <div class="st-row"><span class="st-name">Stil</span><span class="grow"></span>${seg('data-ap-style', Object.entries(ap.STYLES || {}).map(([id, label]) => [label, id]), cfg.style)}</div>
         <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
         + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div>
         ${cfg.mode === 'glass' && ap.DESKTOP ? `<div class="st-row"><span class="st-name">Glas</span><span class="grow"></span>${seg('data-ap-glasstone', [['Hell', 'light'], ['Dunkel', 'dark']], cfg.glassTone === 'light' ? 'light' : 'dark')}</div>` : ''}
         ${!ap.DESKTOP && /Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) && navigator.maxTouchPoints < 2 ? `<div class="st-row"><span class="st-name">Mac-App (mit Glas)</span><span class="grow"></span><a class="st-btn light" href="https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg" target="_blank" rel="noopener">Herunterladen</a></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
-        <div class="st-row"><span class="st-name">Schriftart</span><span class="grow"></span>${cfg.style === 'neo' ? '<span class="st-muted">Schrift des neuen Stils</span>' : seg('data-ap-font', Object.entries(ap.FONTS || {}).map(([id, label]) => [label, id]), cfg.font)}</div>
         <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
   }
@@ -375,10 +373,6 @@
     if (gt) { window.Appearance?.set({ glassTone: gt.dataset.apGlasstone }); drawView(); return; }
     const lg = e.target.closest('[data-lang]');
     if (lg) { window.I18n?.set(lg.dataset.lang); drawView(); return; }
-    const sy = e.target.closest('[data-ap-style]');
-    if (sy) { window.Appearance?.set({ style: sy.dataset.apStyle }); drawView(); return; }
-    const ft = e.target.closest('[data-ap-font]');
-    if (ft) { window.Appearance?.set({ font: ft.dataset.apFont }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }

@@ -75,7 +75,7 @@ const CodeBox = (() => {
   }
   // Grundstile = Design-System der App (kb/design.md): so sieht eine Mini-App ohne eigene Gestaltung schon aus wie die App
   const BASE_CSS = `*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent;height:100%}
-body{margin:0;min-height:100%;padding:16px;background:var(--bg);color:var(--text);font:400 13.5px/1.5 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body{margin:0;min-height:100%;padding:16px;background:var(--bg);color:var(--text);font:500 13.5px/1.5 var(--font);font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 h1,h2,h3,h4{margin:0 0 .5em;font-weight:600;letter-spacing:-.01em;line-height:1.25;color:var(--text)}h1{font-size:18px}h2{font-size:15px}h3{font-size:14px}h4{font-size:13px}
 p{margin:0 0 .7em;color:var(--text-2)}a{color:var(--accent-text);text-decoration:none}small,.muted{color:var(--muted)}.dim{color:var(--dim)}hr{border:0;border-top:1px solid var(--line);margin:12px 0}
 b,strong{font-weight:600}
@@ -85,7 +85,7 @@ button:hover{background:var(--hover);color:var(--text)}button:disabled{opacity:.
 button.primary{background:var(--accent);border-color:transparent;color:#fff}button.primary:hover{filter:brightness(1.07);background:var(--accent)}
 button.ghost{border-color:transparent}button.icon{width:30px;padding:0}button.danger{color:var(--bad);background:var(--bad-soft);border-color:transparent}
 button.big{height:38px;padding:0 18px;font-size:13.5px;border-radius:10px}
-input,select,textarea{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:400 13px var(--font);outline:none}
+input,select,textarea{height:30px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:500 13px var(--font);outline:none}
 textarea{height:auto;padding:8px 10px;resize:vertical}input:focus,select:focus,textarea:focus{border-color:var(--line-2)}input::placeholder,textarea::placeholder{color:var(--dim)}
 input[type=range],input[type=checkbox],input[type=radio]{height:auto;padding:0;accent-color:var(--accent)}input[type=color]{width:34px;padding:2px}
 select option{background:#202020;color:var(--text)}label{color:var(--muted);font-size:12px}
