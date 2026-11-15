@@ -374,6 +374,15 @@ composer.addEventListener('submit', () => { fadeNextSuggestions(); setTimeout(()
 composer.addEventListener('submit', (e) => {
   e.preventDefault();
   const run = runOf(); if (run) { run.abort(); return; } // während der Antwort dieses Chats: Stopp-Button
+  // Senden während des Diktats (16.11.): Aufnahme beenden, die letzte genaue Mitschrift abwarten, dann sofort abschicken – kein extra Stopp nötig
+  if (listening || dictPending) {
+    if (listening) stopListening();
+    if (composer.classList.contains('dict-sending')) return;
+    composer.classList.add('dict-sending');
+    const go = () => { composer.classList.remove('dict-sending'); if (input.value.trim() || attachments.length) composer.requestSubmit(); };
+    Promise.race([dictPending || Promise.resolve(), new Promise((ok) => setTimeout(ok, 6000))]).then(go);
+    return;
+  }
   const text = input.value.trim();
   if (!text && attachments.length === 0) return;
   if (filesLoading()) { showHint('Einen Moment – die Datei wird noch gelesen'); return; } // erst abschicken, wenn alles gelesen ist
@@ -625,6 +634,7 @@ let hintTimer = null;
 input.addEventListener('input', () => {
   if (!listening || input.value === written) return;
   // selbst getippt/gelöscht: ab hier neu mitschreiben (auch die Ton-Aufnahme beginnt neu, damit die Mitschrift nur Neues enthält)
+  input.classList.remove('dict-on'); dictView.remove(); dvToks = [];
   baseText = written = dictFrom = input.value; rawBase = ''; finalText = ''; lastInterim = ''; consumed = seen; liveFix = null; liveN = 0; liveDone = ''; liveDoneN = 0;
   dictRecStop(); dictRec.chunks = []; setTimeout(dictRecStart, 50);
 });
@@ -632,6 +642,9 @@ input.addEventListener('input', () => {
 /* Sprache der Sofort-Erkennung: unabhängig von der Oberflächen-Sprache (Wunsch 10.11. abends: „im englischen Modus Deutsch sprechen“).
    Die Browser-Erkennung kann nur eine Sprache je Aufnahme – sie liefert nur den schnellen ersten Text; die genaue Mitschrift (Groq Whisper bzw.
    Gemini) erkennt die Sprache selbst und schreibt Deutsch mit englischen Wörtern richtig. Basis: Gerätesprache, sonst Deutsch. */
+/* iPad/iPhone (16.11.): die Browser-Erkennung blieb dort neben der Aufnahme meist stumm und fragte zusätzlich nach Erlaubnis →
+   dort läuft NUR die Aufnahme mit laufender Mitschrift (Groq Whisper, sonst Gemini). Eine Erlaubnis, ein Mikrofon. */
+const IOS_DICT = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const SPEECH_LANG = (() => { const l = String(navigator.languages?.[0] || navigator.language || 'de').toLowerCase(); return l.startsWith('en') ? 'en-US' : 'de-DE'; })();
 
 function joinText(a, b) {
@@ -659,6 +672,7 @@ function setMicUI(active) {
   const label = active ? 'Sprachaufnahme stoppen' : 'Sprachaufnahme starten';
   micBtn.setAttribute('aria-label', label);
   micBtn.title = label;
+  input.dispatchEvent(new Event('dictation')); // Senden-Knopf schon beim Diktieren zeigen (auch bevor Text da ist)
 }
 
 let dictFrom = null; // Feldinhalt vor dem Diktat → danach wird nur das Diktierte geglättet
@@ -681,10 +695,43 @@ function renderDictation() {
   const said = liveFix ? joinText(joinText(liveDone, liveFix.text), w.slice(liveFix.n).join(' ')) : joinText(liveDone, w.slice(liveDoneN).join(' '));
   baseText = dictFrom ?? baseText;
   written = input.value = joinText(baseText, said);
+  dictOverlay(liveFix ? w.slice(liveFix.n).join(' ') : w.slice(liveDoneN).join(' '));
   input.dispatchEvent(new Event('dictation')); // Senden-Knopf erscheint, sobald Text da ist (eigenes Ereignis – „input“ würde den Diktier-Stand zurücksetzen)
   autoGrow();
   input.scrollTop = input.scrollHeight;
 }
+/* Diktat sichtbar weich (16.11., „so clean wie bei Claude“): während des Diktats liegt eine Kopie des Textfelds darüber (gleiche Schrift,
+   Ränder, Umbrüche; Feldschrift durchsichtig, Cursor bleibt). Neue oder neu gehörte Wörter blenden weich ein, der noch nicht genau
+   mitgeschriebene Rest steht etwas leiser da. Tippt man selbst, verschwindet die Kopie sofort. */
+const dictView = el('div', 'dict-view'); dictView.setAttribute('aria-hidden', 'true');
+let dvToks = [];
+const escHtml = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+function dictOverlay(rawTail = '') {
+  const host = input.parentElement; if (!host) return;
+  if (!dictView.isConnected) { if (getComputedStyle(host).position === 'static') host.style.position = 'relative'; host.append(dictView); dvToks = wordsOf(dictFrom || '').length ? String(dictFrom).split(/(\s+)/) : []; }
+  const cs = getComputedStyle(input), hr = host.getBoundingClientRect(), ir = input.getBoundingClientRect();
+  Object.assign(dictView.style, { left: `${ir.left - hr.left}px`, top: `${ir.top - hr.top}px`, width: `${input.offsetWidth}px`, height: `${input.offsetHeight}px`,
+    padding: `${cs.paddingTop} ${cs.paddingRight} ${cs.paddingBottom} ${cs.paddingLeft}`, font: cs.font, lineHeight: cs.lineHeight, letterSpacing: cs.letterSpacing, borderWidth: cs.borderWidth });
+  const val = input.value, cut = rawTail && val.endsWith(rawTail) ? val.length - rawTail.length : val.length;
+  const toks = val.split(/(\s+)/);
+  let pos = 0, html = '';
+  toks.forEach((t, i) => {
+    const raw = pos >= cut && /\S/.test(t); pos += t.length;
+    if (!/\S/.test(t)) { html += escHtml(t); return; }
+    const isNew = dvToks[i] !== t;
+    html += isNew || raw ? `<span class="${isNew ? 'dw-in' : ''}${raw ? ' dw-raw' : ''}">${escHtml(t)}</span>` : escHtml(t);
+  });
+  dvToks = toks;
+  dictView.innerHTML = `${html}\u200b`;
+  input.classList.add('dict-on');
+  dictView.scrollTop = input.scrollTop;
+}
+function dictOverlayEnd() {
+  if (!dictView.isConnected) return;
+  dictOverlay('');
+  setTimeout(() => { if (listening) return; input.classList.remove('dict-on'); dictView.remove(); dvToks = []; }, 420);
+}
+input.addEventListener('scroll', () => { if (dictView.isConnected) dictView.scrollTop = input.scrollTop; });
 const DICT_WORDS = ['Prompt', 'Prompts', 'Chat', 'Agent', 'Thinking', 'Skill', 'Skills', 'Design', 'Button', 'Icon', 'Icons', 'Hover', 'Input', 'Feature', 'Update', 'Layout', 'Sidebar', 'Settings',
   'Dashboard', 'Workspace', 'Tags', 'Font', 'Sign Out', 'API-Key', 'Vercel', 'GitHub', 'Gemini', 'Claude', 'ChatGPT', 'DeepSeek', 'MiniMax', 'iPad', 'MacBook', 'Quiz', 'Podcast', 'Screenshot'];
 const polishHints = () => [...new Set([...DICT_WORDS, ...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 15).map((d) => d.title),
@@ -693,11 +740,19 @@ const polishHints = () => [...new Set([...DICT_WORDS, ...(window.TagMenu?.all() 
    nach jeder Pause und beim Stoppen hört Gemini sie an (/api/transcribe) und der Text im Feld wird durch die genaue Mitschrift ersetzt.
    Klappt die Aufnahme nicht (kein Recht, Gerät erlaubt nicht beides, kein Gemini-Schlüssel), bleibt es bei Erkennung + Glättung. */
 const dictRec = { rec: null, stream: null, chunks: [], mime: '', off: false };
+/* Mikrofon nur EINMAL freigeben (16.11., Nutzer: „fragt jedes Mal nach Erlaubnis“): der Strom bleibt nach dem Stoppen stumm geschaltet
+   bereit und wird beim nächsten Diktat wiederverwendet; erst nach 3 Minuten ohne Diktat wird er ganz geschlossen. */
+let micIdleT = 0;
+const liveStream = () => (dictRec.stream && dictRec.stream.getAudioTracks().some((t) => t.readyState === 'live') ? dictRec.stream : null);
 async function dictRecStart() {
   if (dictRec.off || dictRec.rec || !navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') return;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
-    if (!listening) { stream.getTracks().forEach((t) => t.stop()); return; }
+    clearTimeout(micIdleT);
+    let stream = liveStream();
+    if (stream) stream.getAudioTracks().forEach((t) => { t.enabled = true; });
+    else stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+    dictRec.stream = stream;
+    if (!listening) { dictRecStop(); return; }
     const mime = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus'].find((m) => MediaRecorder.isTypeSupported?.(m)) || '';
     const rec = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 32000 } : undefined);
     dictRec.rec = rec; dictRec.stream = stream; dictRec.chunks = []; dictRec.mime = rec.mimeType || mime || 'audio/webm';
@@ -721,8 +776,11 @@ function dictRecRoll() {
 }
 function dictRecStop() {
   try { dictRec.rec?.stop(); } catch {}
-  dictRec.stream?.getTracks().forEach((t) => t.stop());
-  dictRec.rec = null; dictRec.stream = null;
+  dictRec.rec = null;
+  const st = dictRec.stream; if (!st) return;
+  st.getAudioTracks().forEach((t) => { t.enabled = false; }); // stumm, aber freigegeben – kein neues Nachfragen
+  clearTimeout(micIdleT);
+  micIdleT = setTimeout(() => { if (dictRec.rec || dictRec.stream !== st) return; st.getTracks().forEach((t) => t.stop()); dictRec.stream = null; }, 180000);
 }
 async function dictTranscribe(context, partial = false, chunks = dictRec.chunks) {
   if (!chunks.length) return '';
@@ -731,7 +789,7 @@ async function dictTranscribe(context, partial = false, chunks = dictRec.chunks)
   const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ok(''); fr.readAsDataURL(blob); });
   if (!data) return '';
   try {
-    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context, partial }) });
+    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context, partial, lang: SPEECH_LANG.slice(0, 2) }) });
     const j = await r.json(); if (j.via) liveVia = j.via;
     return String(j.text || '').trim();
   } catch { return ''; }
@@ -741,9 +799,9 @@ async function livePolish() {
   const n = wordsOf(rawSaid()).length;
   // Mitschreiben, sobald Neues da ist: neue Wörter der Sofort-Erkennung – oder (15.11.) die Aufnahme ist gewachsen, obwohl die Sofort-Erkennung stumm bleibt.
   // Auf dem iPad liefert sie neben der Aufnahme oft gar nichts; dann kam nie eine laufende Korrektur. Jetzt schreibt dort allein der Ton mit.
-  const deaf = n === 0 && !!dictRec.rec && Date.now() - dictStart > 4000;
+  const deaf = n === 0 && !!dictRec.rec && Date.now() - dictStart > (IOS_DICT ? 1500 : 4000);
   const heardN = dictRec.chunks.length;
-  if (!((n >= 2 && n !== liveN) || (deaf && heardN >= 3 && heardN !== liveHeard))) return;
+  if (!((n >= 2 && n !== liveN) || (deaf && heardN >= (IOS_DICT ? 2 : 3) && heardN !== liveHeard))) return;
   const snapFrom = dictFrom;
   livePolishing = true; liveLast = Date.now();
   // lange Aufnahme: jetzt abschließen und sofort eine neue beginnen (was ab jetzt gesagt wird, landet in der neuen)
@@ -768,17 +826,21 @@ async function livePolish() {
   renderDictation();
 }
 function startListening() {
-  if (!SpeechRecognition) {
+  const recOnly = IOS_DICT || !SpeechRecognition; // nur Aufnahme + Mitschrift
+  if (recOnly && (typeof MediaRecorder === 'undefined' || !navigator.mediaDevices?.getUserMedia)) {
     showHint('Spracheingabe: Chrome, Edge oder Safari nutzen');
     return;
   }
+  dictRec.off = false;
   listening = true;
   baseText = written = input.value;
   dictFrom = input.value;
   finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now(); liveDoneN = 0; liveHeard = 0; dictStart = Date.now();
   // alle ~3,5 s (Groq: höchstens 20 Anfragen/Min.) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
   clearInterval(liveTick);
-  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 3500)) livePolish(); }, 500);
+  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 3100)) livePolish(); }, 400);
+  setMicUI(true);
+  if (recOnly) { recognition = null; dictRec.chunks = []; dictRecStart(); return; }
 
   recognition = new SpeechRecognition();
   recognition.lang = SPEECH_LANG;
@@ -829,9 +891,12 @@ function stopListening(hard = false) {
   }
   setMicUI(false);
   hideListening();
-  const from = dictFrom; dictFrom = null; clearTimeout(liveT); clearInterval(liveTick); dictRecStop(); if (hard) dictRec.chunks = [];
-  if (!hard && from != null) setTimeout(() => polishDictation(from), 450); // letzte Ergebnisse abwarten (nur der noch nicht geglättete Rest ändert sich spürbar)
+  const from = dictFrom; dictFrom = null; clearTimeout(liveT); clearInterval(liveTick); dictRecStop(); if (hard) { dictRec.chunks = []; dictOverlayEnd(); }
+  // letzte Ergebnisse abwarten (nur der noch nicht geglättete Rest ändert sich spürbar); dictPending = fertig mit der Schluss-Mitschrift
+  if (!hard && from != null) dictPending = new Promise((ok) => setTimeout(() => polishDictation(from).finally(() => { dictPending = null; dictOverlayEnd(); ok(); }), 450));
+  else if (!hard) dictOverlayEnd();
 }
+let dictPending = null;
 /* Nach dem Diktat: Satzzeichen und Rechtschreibung NUR im diktierten Teil (beim normalen Tippen gibt es keine Korrektur).
    Hat man inzwischen weitergetippt, bleibt alles, wie es ist. */
 async function polishDictation(from) {
@@ -845,7 +910,7 @@ async function polishDictation(from) {
     const hints = polishHints();
     const done = liveDone; // schon fest mitgeschriebene Teile (lange Diktate) – die letzte Aufnahme kommt dahinter
     const heard = await dictTranscribe((joinText(from || '', done)).slice(-300) || chatOf(activeTab())?.title || ''); dictRec.chunks = [];
-    if (heard) { if (input.value !== now) return; input.value = from + said.match(/^\s*/)[0] + joinText(done, heard); input.dispatchEvent(new Event('dictation')); autoGrow(); return; }
+    if (heard) { if (input.value !== now) return; input.value = from + said.match(/^\s*/)[0] + joinText(done, heard); input.dispatchEvent(new Event('dictation')); autoGrow(); if (dictView.isConnected) dictOverlay(''); return; }
     if (done) return; // ohne letzte Mitschrift: so lassen, wie es dasteht (der feste Teil ist schon sauber)
     const r = await fetch('/api/polish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: said.trim(), hints, context: (from || '').slice(-300) || chatOf(activeTab())?.title || '' }) });
     const { text } = await r.json();
@@ -7215,7 +7280,7 @@ document.addEventListener('click', (e) => {
   if (!panel) return;
 
   // Senden-Knopf nur mit Inhalt (oder während eine Antwort läuft – dann ist er der Stopp-Knopf)
-  const syncSend = () => composer.classList.toggle('has-text', !!input.value.trim() || attachments.length > 0);
+  const syncSend = () => composer.classList.toggle('has-text', !!input.value.trim() || attachments.length > 0 || listening);
   input.addEventListener('input', syncSend);
   input.addEventListener('dictation', syncSend);
   composer.addEventListener('submit', () => setTimeout(syncSend, 0));
