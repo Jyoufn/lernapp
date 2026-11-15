@@ -31,7 +31,7 @@ Kurzfassung des Projekts für Claude, damit nicht jedes Mal der ganze Code geles
 ## Testen im Container
 - Server: `LOGIN_EMAIL=test@test.de LOGIN_PASSWORD=testtest123 PORT=3000 node app-server.js`
 - Beenden: `for p in $(pgrep -f "^node app-server.js"); do kill $p; done` (nicht `pkill -f`, das trifft die eigene Shell).
-- Playwright: `NODE_PATH=$(npm root -g) node script.js`; Anmelden über das Formular (`input[type=email]`, `input[type=password]`, Enter).
+- Playwright: `NODE_PATH=$(npm root -g) node script.js`; Anmelden über das Formular (`#authEmail`, `#authPw`, Enter); cdnjs/Google-Fonts im Skript abbrechen (`page.route`), sonst wartet `goto` ewig.
 - Navigation: `document.querySelector('[data-nav="calendar|docs|ui|new"]').click()`.
 - Testdaten: `localStorage` `tasks.tags.v1` (Tags), `calendarEvents`; danach neu laden.
 - Ohne Internet: cdnjs (marked, KaTeX) und Favicons laden nicht → Markdown roh, Buchstaben statt Logos. Echte KI/Kurse gibt es im Container nicht – mit Mocks testen (`tests/mock.js`).

@@ -19,8 +19,9 @@ test.afterEach(() => { fx?.restore(); fx = null; W.cooldowns.clear(); require('.
 test('Bausteine nach Bedarf: normale Frage bekommt den schlanken Prompt, Wünsche laden die ausführlichen Abschnitte', () => {
   const sys = (text, extra = {}) => W.systemNative('medium', { agent: 'learn', need: A.toolNeeds({ text, ...extra }) });
   const plain = sys('Erklär mir die Mitose');
-  assert.match(plain, /SO HELFEN ANTWORTEN BEIM LERNEN – Anregungen, keine Vorschriften/);
-  assert.match(plain, /WAS DU IN DIESER APP KANNST – das alles steht dir offen/);
+  assert.match(plain, /GENAU DAS, WAS GEFRAGT IST/);
+  assert.doesNotMatch(plain, /SO HELFEN ANTWORTEN BEIM LERNEN|auch ohne dass jemand danach fragt/, 'keine Anregungen zu ungefragten Zugaben');
+  assert.match(plain, /WAS DU IN DIESER APP KANNST – diese Möglichkeiten gibt es/);
   assert.doesNotMatch(plain, /Ohne echte Zahlen nie ein Diagramm|nie „zur Abwechslung“|DIAGRAMME VON SELBST nur/, 'Fähigkeiten statt Bedingungen');
   assert.match(plain, /KOPIER-KASTEN/);
   assert.doesNotMatch(plain, /BILD ANPASSEN|HEFTEINTRAG \(Zusatz|"slides"|ABFRAGEN \(der Nutzer|LINKS \(```links\)/);
@@ -38,7 +39,6 @@ test('Bausteine nach Bedarf: normale Frage bekommt den schlanken Prompt, Wünsch
   assert.match(pz, /```praesentation[\s\S]*"slides"/);
   assert.doesNotMatch(W.systemNative('medium', { agent: 'general' }), /"slides"/);
   // Stufe Niedrig (Unterricht) hat ihre eigene Form
-  assert.doesNotMatch(W.systemNative('low', { agent: 'learn' }), /SO HELFEN ANTWORTEN BEIM LERNEN/);
   assert.match(W.systemNative('low', { agent: 'learn' }), /FÜR DEN UNTERRICHT/);
 });
 
@@ -145,9 +145,10 @@ test('Quellen-Gedächtnis: Dateien bleiben für den ganzen Chat Material – auc
   assert.match(sys2, /SCHULBUCH-AUFBAU/);
 });
 
-test('Anregungen statt Vorschriften: kurze Lern-Hinweise, Fähigkeiten der App, Gedächtnis im Kern', () => {
-  assert.match(A.FORMS, /Anregungen, keine Vorschriften/);
-  assert.ok(A.FORMS.length < 1400, 'kurz');
+test('Kern: genau das Gefragte, Fähigkeiten der App als Liste, Gedächtnis im Kern', () => {
+  assert.equal(A.FORMS, undefined, 'keine Antwortformen mehr');
+  assert.match(W.NATIVE_CORE, /Nicht weniger – und nicht mehr/);
+  assert.ok(W.NATIVE_CORE.length < 4200, 'kurzer Kern');
   for (const key of ['Tabellen', 'Diagramme', 'Zeitstrahl', 'Echte Bilder', 'Kopier-Kasten']) assert.ok(A.TOOLS_HEAD.includes(key), key);
   assert.match(W.NATIVE_CORE, /GESPRÄCH UND GEDÄCHTNIS/);
 });

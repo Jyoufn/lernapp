@@ -20,9 +20,14 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
   ein Skill, der eigene Agent oder der Verlauf (Baustein kam in den letzten Nachrichten vor) sie braucht. Prompt dadurch ~16 000 statt ~30 000 Zeichen (Lern-Agent).
   Der Text der Abschnitte bleibt `BLOCKS_PROMPT` (eine Quelle, per `toolPart` herausgeschnitten); neue Bausteine: Abschnitt dort + Auslöser in `ANT.NEED`/`toolNeeds`.
   Präsentations-Format jetzt für JEDEN nativen Agenten, sobald eine Präsentation gewünscht ist (Allgemein kannte es vorher nicht).
-- **Fähigkeiten statt Bedingungen** (Wunsch 15.11.: „die KI ist zu eingeschränkt – sie soll nur wissen, was sie kann“): Kopf `ANT.TOOLS_HEAD` „WAS DU IN DIESER APP KANNST“ zählt nur
-  auf, was möglich ist (Tabellen, Formeln, Diagramme, Zeitstrahl, echte Bilder, Funde, Kopier-Kasten …) und sagt: von dir aus nutzen, wenn es hilft. Keine Abschnitte „Tabellen nur wenn …“,
-  „Diagramme von selbst nur …“ mehr. `ANT.FORMS` sind nur noch kurze Anregungen (nicht bei Niedrig). Nicht wieder Verbote/Raster einbauen.
+- **Neuaufbau 15.11. abends – „genau das, was gefragt ist“** (Wunsch: Antworten trafen die Frage nicht, es kam Ungefragtes dazu, zu viel lief im Hintergrund):
+  `NATIVE_CORE` ist kurz (~3 400 Zeichen) und beginnt mit der Regel „GENAU DAS, WAS GEFRAGT IST – nicht weniger und nicht mehr“ (Umfang kommt aus der Frage, nichts ungefragt dazu,
+  Wünsche wörtlich). `ANT.FORMS` (Anregungen) gibt es nicht mehr. `ANT.TOOLS_HEAD` „WAS DU IN DIESER APP KANNST“ bleibt eine reine Liste der Möglichkeiten – genutzt wird, was der
+  Nutzer verlangt oder was der Inhalt genau braucht (Vergleich → Tabelle), nichts als Zugabe. Kein „ZIEL DIESER ANTWORT“ der Einschätzung mehr im Prompt (`goal` wird nicht
+  weitergegeben). High/Max = genauer und geprüft, nicht breiter. `RESEARCH_DEPTH`: mit den Quellen genau die Frage beantworten. Bild zur Erklärung nur noch, wenn die
+  Einschätzung `bild` liefert (Nutzer will etwas sehen oder die Frage dreht sich um Aussehen/Aufbau) – kein Wort-Auslöser `VISUAL_TOPIC` mehr.
+  Material (`MATERIAL_PROMPT` solo, `MATERIAL_LOOK`, kurz): die Nachricht bestimmt, was mit den Dateien geschieht – nicht ungefragt zusammenfassen, alle Aufgaben lösen oder Lernzettel bauen.
+  Nicht wieder „ausführlich/lieber zu vollständig“ oder Anregungen zu Zugaben einbauen. Allgemein-Prompt jetzt ~9 400 Zeichen.
 - **Die EINE feste Bedingung**: Sobald es ums Lernen geht – Lern-Agent ODER Lernthema im Allgemein-Agenten (`lernFlag`: Einschätzung `lern`, ersatzweise `schoolish`) –, nur schulische
   Fachquellen (Studyflix, simpleclub, Knowunity, serlo …, ohne Wikipedia). Bei allem anderen sucht die KI frei.
 - **Rückfragen** (`ANT.ASK_CORE`): selten und NUR ganz am Anfang („entweder fragen oder antworten“); mittendrin oder am Ende nie eine Frage, kein „Soll ich …?“.
@@ -54,7 +59,7 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - Börse, Coden, Sprache und Aufrufe ohne Agent: bisheriger Ablauf (Planung `analyze`, Börse fester Plan `BOERSE_PLAN`, Recherche-Pipeline, Tests).
 - Schulstärke im `BASE_PROMPT`: „SCHULAUFGABEN“ (Aufgabe Wort für Wort lesen, Operatoren-Liste, Material-Belege, Musterlösung je „## Aufgabe N“); nie nach Fach/Klasse/Thema fragen. High/Max bei konkreter Aufgabe: beste Lösung GENAU dieser Aufgabe, kein Referat.
 
-- **To-dos** (10.11.): die Einschätzung liefert `todos` (3–5 konkrete Arbeitsschritte, nur bei anspruchsvollen Aufgaben, sonst []). Ab High bzw. Ziel `deep` schickt der Server sie als Ereignis `todos` → Liste „To-dos n/4“ in der Zeitleiste (`onTodos`/`attachPlan(…, 'todos')` in `app.js`): erster offener Punkt läuft, abgehakt wird nach dem sichtbar Geschriebenen, bei fertiger Antwort alle. NUR Anzeige – kein Plan im Prompt. Nicht bei Tiefen-Recherche (zeigt ihre Teilfragen selbst).
+- **To-dos** (10.11.): die Einschätzung liefert `todos` (3–5 konkrete Arbeitsschritte, nur bei anspruchsvollen Aufgaben, sonst []). Ab High bzw. Ziel `deep` schickt der Server sie als Ereignis `todos` → Liste in der Zeitleiste, ganz oben und OHNE Überschrift „To-dos“ (nur der Kasten, alles Weitere darunter; `.todo-step` in `style.css`, `onTodos`/`attachPlan(…, 'todos')` in `app.js`; wird mit dem Chat gespeichert): erster offener Punkt läuft, abgehakt wird nach dem sichtbar Geschriebenen, bei fertiger Antwort alle. NUR Anzeige – kein Plan im Prompt. Nicht bei Tiefen-Recherche (zeigt ihre Teilfragen selbst).
 - **Einschätzung bei DeepSeek/Kimi/MiniMax**: 14 s Zeit statt 7 s (sonst fiel sie dort meist aus → kein Bild, kein kurzes Denken). Auto + eingeschätzte Stufe Low → kurzes Denken (`thinkLow`).
 - **Bild zur Erklärung** (`bild` in `ROUTE_SYSTEM`): auch für echte Dinge, die man gesehen haben sollte (Tier, Pflanze, Ort, Gerät, historische Person/Szene, Kunststil) – weiterhin nicht bei jeder Nachricht.
 - **Coding-Agent (MiniMax, `lib/codeloop.js`)**: Gedanken laufen durch denselben Filter (`code: true`), Pausen/Aussetzer nur als Live-Zeile; `update_plan` → Ereignis `todos` mit `done`/`fixed` (der Agent hakt selbst ab, Liste in der Zeitleiste statt ```plan im Text); vor der ersten Datei ein kurzer Satz („Ich lege jetzt … an“, vom Modell oder aus den Dateinamen); Werkzeug `web_search` mit EIGENEN Suchbegriffen (höchstens 4), Treffer als ```search-Zeile mit Quellen-Logos, Ergebnis mit Hinweis „keinen Code übernehmen“.

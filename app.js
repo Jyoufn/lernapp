@@ -3411,8 +3411,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (plan.items.length || (!fixed && items.length < 2)) return;
     ensureWork();
     const step = stepLine('dot', '<strong>To-dos</strong> <span class="t todo-n"></span>');
-    step.classList.add('todo-step');
-    work.steps.insertBefore(step, stages.answering?.step || null);
+    step.classList.add('todo-step'); // die Zeile „To-dos“ selbst ist ausgeblendet (style.css): nur die Liste, ganz oben – alles Weitere steht darunter
+    work.steps.prepend(step);
     attachPlan(step, items.map(String), 'todos');
     scrollToBottom();
   };
@@ -3927,7 +3927,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
         const a = data.added?.length || 0, so = data.sold?.length || 0, sk = (data.skipped || 0) + (data.unchanged || 0), un = data.unknown?.length || 0;
         const rm = data.removed?.length || 0;
-        const parts = [data.cleared ? 'depot cleared' : '', rm ? `${rm} removed` : '', a ? `${a} ${a === 1 ? 'buy' : 'buys'}` : '', so ? `${so} ${so === 1 ? 'sale' : 'sales'}` : '', sk ? `${sk} already there` : '', un ? `${un} not recognized` : ''].filter(Boolean);
+        const parts = [data.cleared ? 'Depot geleert' : '', rm ? `${rm} entfernt` : '', a ? `${a} ${a === 1 ? 'Kauf' : 'Käufe'}` : '', so ? `${so} ${so === 1 ? 'Verkauf' : 'Verkäufe'}` : '', sk ? `${sk} schon vorhanden` : '', un ? `${un} nicht erkannt` : ''].filter(Boolean);
         if (parts.length) { noteStep('saveDepot', parts.join(' · ')); phase('saveDepot'); }
       }
       else if (event === 'citations') citations = data;
@@ -6367,7 +6367,7 @@ function chatItems(withImages) {
     const c = chatOf(tab);
     return {
       id: chatId(tab), title: c.title, auto: c.auto, pinned: c.pinned, projectId: c.projectId || undefined, tags: c.tags?.length ? c.tags : undefined, updated: c.updated, closed: tab.hidden || undefined, docId: c.docId || undefined, agent: c.agent || undefined, setup: c.setup || undefined, setupBase: c.setupBase || undefined, setupWish: c.setupWish || undefined, setupAvatar: c.setupAvatar || undefined, setupName: c.setupName || undefined, setupRenamed: c.setupRenamed || undefined, ws: c.ws && c.ws !== 'main' ? c.ws : undefined,
-      history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts, workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })),
+      history: historyOf(tab).map((h) => ({ role: h.role, text: h.text, ...(withImages && h.images?.length ? { images: h.images } : {}), ...(h.sources?.length ? { sources: h.sources } : {}), ...(h.thoughts?.length ? { thoughts: h.thoughts } : {}), ...(h.plan?.length ? { plan: h.plan, ...(h.planKind ? { planKind: h.planKind } : {}) } : {}), ...(h.thoughts?.length || h.plan?.length ? { workTime: h.workTime } : {}), ...(h.doc ? { doc: h.doc } : {}) })), // To-dos (plan) mitspeichern – gingen sonst beim Neuladen verloren
     };
   });
 }
@@ -6453,7 +6453,7 @@ function savedThoughts(h) {
     step.classList.add('foldable', 'has-box');
     step.querySelector('.step-line').insertAdjacentHTML('beforeend', '<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>');
     step.querySelector('.step-line').addEventListener('click', () => step.classList.toggle('open'));
-    if (todo) step.classList.add('open'); // To-dos stehen offen da, sobald man die Gedanken aufklappt
+    if (todo) step.classList.add('open', 'todo-step'); // To-dos: nur die Liste, offen, ohne Überschrift
     w.steps.append(step);
   }
   (h.thoughts || []).forEach(({ title, body }) => {

@@ -12677,3 +12677,9 @@ html[data-mode="black"] .st-card { border: 1px solid #191919; box-shadow: none; 
 .st-name-btn { max-width: 260px; overflow: hidden; background: none; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; transition: background-color 140ms ease; }
 .st-name-btn:hover { background: rgba(255, 255, 255, 0.07); }
 .st-name-edit { width: 200px; background: rgba(255, 255, 255, 0.07); text-align: right; outline: none; }
+
+/* ---------- 15.11. To-dos ohne Überschrift: nur die Liste (kein „To-dos n/4“ darüber), immer offen, ganz oben in der Zeitleiste ---------- */
+.step.todo-step > .step-line { display: none; }
+.step.todo-step > .fold { grid-template-rows: 1fr; opacity: 1; }
+.step.todo-step::before { display: none; }
+.step.todo-step > .marker { display: none; }

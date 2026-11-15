@@ -689,7 +689,7 @@ test('Bild an der Frage: Gemini liest selbst – kein Plan/Check, Stufe „Dokum
   const sys = gen.body.systemInstruction.parts[0].text;
   assert.match(sys, /GRUNDLAGE DER ANTWORT[\s\S]*GENAU diese/);
   assert.match(sys, /SCHULBUCH-AUFBAU[\s\S]*zum Material\s+DARÜBER/, 'Aufgaben gehören zum Material darüber');
-  assert.match(sys, /Du entscheidest selbst, wie du eine Anfrage angehst/, 'schlanker Prompt: die KI entscheidet selbst');
+  assert.match(sys, /GENAU DAS, WAS GEFRAGT IST/, 'schlanker Prompt: die KI entscheidet selbst');
   assert.doesNotMatch(sys, /GEWÄHLTER AUFWAND/, 'Auto: keine Vorgabe zum Aufwand');
   const parts = gen.body.contents.at(-1).parts;
   assert.equal(parts[0].text, '[Datei 1: s34.jpg]');
@@ -862,7 +862,7 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst, wie lange es denkt');
   const sys = M.systemOf(gen);
   assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
-  assert.match(sys, /Du entscheidest selbst, wie du eine Anfrage angehst/, 'schlanker Prompt');
+  assert.match(sys, /GENAU DAS, WAS GEFRAGT IST/, 'schlanker Prompt');
   assert.doesNotMatch(sys, /GEWÄHLTER AUFWAND|SCHULAUFGABEN – WIE|FACHREGELN/, 'Auto: keine Vorgaben zu Aufwand, Gliederung oder Fachregeln');
   assert.match(sys, /```chart mit \{"title"/, 'Bausteine der App (Diagramme …) kennt die KI weiter – als Kurzformat');
   assert.doesNotMatch(sys, /Nutze pro Zahlenreihe genau einen Block|BILD ANPASSEN|"slides"/, 'ausführliche Abschnitte nur bei Bedarf');
