@@ -14,7 +14,8 @@
 ## STAND 15.11. nachts (Home, Umschalter, Kalender)
 - **Home/Chats-Liste**: keine Zeile „Alle Einträge“ mehr. Der Filter sitzt als Icon rechts neben dem Titel (`.cl-head.hm-top > .lb2-filter`, gefiltert = Icon hell); `.lb2-bar` erscheint nur noch während einer Auswahl („3 ausgewählt“).
 - **Alle Umschalter wie „Agenten | Dokumente“** (Dunkel): `.cs-pill`, `.st-seg` (Einstellungen usw.), `.ui-tabs` – Spur 2,2 % Weiß mit Ring 3,5 %, gewählter Teil 5,5 %; in Karten/Fenstern eine Spur mehr (3 % / 7 %), damit er sichtbar bleibt.
-- **Kalender-Kopf**: „Neuer Termin“ ist nur ein Plus oben rechts (`.cal-new`, 28er-Fläche ohne Rand/Fläche/Text, eigenes Plus mit Strich 2,1 – kräftiger, nicht größer). Ältere Angaben (umrandeter Knopf mit Text) sind überholt.
+- **Kalender-Kopf**: „Neuer Termin“ ist nur ein Plus oben rechts (`.cal-new`): 28er-Fläche ohne Rand/Fläche/Text, Farbe `--text-3` wie das Einklapp-Icon links, Plus klein (Arme 8 px) mit Strich 1,8 – nicht größer, nicht weißer machen.
+- **Kalender Monat**: Tage anderer Monate werden nicht gezeigt (`.cm-cell.other` unsichtbar, leere Stelle) – nur die Tage des Monats haben Kästchen. Termine im Kästchen Radius 7.
 - **Kalender Monat (Dunkel)**: Tage #161616, EIN Rand für alle Kästchen #1f1f1f (auch andere Monate, die bleiben ohne Fläche), Wochentage ohne Fläche, Darüberfahren #1a1a1a. Ältere Werte weiter unten (#181818 / #242424 / #1d1d1d, Wochentag-Pillen) sind überholt.
 
 ## BAUSTEINE (Stand 09.11. nachts)
