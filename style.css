@@ -12664,3 +12664,8 @@ html[data-mode="dark"] .cm-cell { border-color: #1f1f1f; background: #161616; }
 html[data-mode="dark"] .cm-cell.other { border-color: #1f1f1f; background: none; }
 html[data-mode="dark"] .cm-wd span { background: none; }
 @media (hover: hover) { html[data-mode="dark"] .cm-cell:hover { background: #1a1a1a; } html[data-mode="dark"] .cm-cell.other:hover { background: #161616; } }
+
+/* ===== 15.11.: Kalender – „Neuer Termin“ ist nur noch ein Plus oben rechts: kein Rand, keine Fläche, kein Text; Strich kräftiger (2,1 statt 1,5), Größe gleich ===== */
+html body .cal-new.cal-new.cal-new.cal-new.cal-new { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; background: none !important; box-shadow: none !important; border: 0 !important; color: var(--text-2) !important; }
+html body .cal-new.cal-new.cal-new.cal-new.cal-new:hover, html body .cal-new.cal-new.cal-new.cal-new.cal-new:active { background: none !important; color: var(--text) !important; }
+html body .cal-new.cal-new.cal-new.cal-new.cal-new svg { width: 16px; height: 16px; margin: 0; }

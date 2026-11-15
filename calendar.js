@@ -54,7 +54,7 @@ const Calendar = (() => {
           <span class="cm-label"></span>
           <button type="button" class="cm-arr" data-cal="next" aria-label="Nächster Monat">${icon('f-forward')}</button>
         </div>
-        <button class="cal-new" type="button" data-cal="new" aria-label="Neuer Termin">${icon('f-plus')}<span>Neuer Termin</span></button>
+        <button class="cal-new" type="button" data-cal="new" aria-label="Neuer Termin"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></svg></button>
       </div>
     </header>
     <div class="cm">
