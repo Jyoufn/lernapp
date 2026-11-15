@@ -35,7 +35,11 @@ const Calendar = (() => {
 
   // angezeigter Monat: 1. des Monats, 12 Uhr (12 Uhr, damit Zeitumstellungen das Datum nicht verschieben)
   const monthOf = (d) => { const m = new Date(d); m.setHours(12, 0, 0, 0); m.setDate(1); return m; };
-  let cursor = monthOf(new Date());
+  /* Monatsansicht in ganzen Wochen (Wunsch 15.11.): jede Woche gehört zu genau EINEM Monat – zu dem, in dem ihr Donnerstag liegt
+     (also die Mehrheit ihrer Tage). Beispiel: 26. Okt.–1. Nov. steht bei Oktober, der November beginnt mit dem 2. So sind alle Reihen voll,
+     keine Woche erscheint doppelt. viewOf(Tag) = der Monat, in dessen Ansicht dieser Tag steht. */
+  const viewOf = (d) => { const t = new Date(d); t.setHours(12, 0, 0, 0); t.setDate(t.getDate() - ((t.getDay() + 6) % 7) + 3); return monthOf(t); };
+  let cursor = viewOf(new Date());
   let open = false;
   const minsOf = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
   const MONTHS_SHORT = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
@@ -81,10 +85,11 @@ const Calendar = (() => {
     view.querySelector('.cm-m').textContent = MONTHS[cursor.getMonth()];
     view.querySelector('.cm-y').textContent = cursor.getFullYear();
     pickLabel.textContent = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
-    // erster angezeigter Tag = Montag der Woche mit dem 1.; so viele Wochen wie nötig (5 oder 6, Februar evtl. 4)
-    const first = new Date(cursor); first.setDate(1 - ((cursor.getDay() + 6) % 7));
-    const last = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 12);
-    const weeks = Math.ceil((((last - first) / 86400000) + 1) / 7);
+    // erster angezeigter Tag = Montag der Woche mit dem ersten Donnerstag des Monats; so viele Wochen, wie der Monat Donnerstage hat (4 oder 5)
+    const thu = new Date(cursor); thu.setDate(1 + ((4 - cursor.getDay() + 7) % 7));
+    const first = new Date(thu); first.setDate(thu.getDate() - 3);
+    const dim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+    const weeks = Math.floor((dim - thu.getDate()) / 7) + 1;
     grid.style.setProperty('--weeks', weeks);
     const today = todayIso(), month = cursor.getMonth();
     const cells = [];
@@ -256,7 +261,7 @@ const Calendar = (() => {
   function closeDay() {
     if (dv.hidden) return;
     const d = new Date(`${dayDate}T12:00:00`);
-    if (monthOf(d).getTime() !== cursor.getTime()) { cursor = monthOf(d); render(); }
+    if (viewOf(d).getTime() !== cursor.getTime()) { cursor = viewOf(d); render(); }
     const done = () => { dv.hidden = true; dvWrap.hidden = true; };
     const cell = view.querySelector(`.cm-cell[data-date="${dayDate}"]`);
     if (reduced()) { done(); return; }
@@ -566,7 +571,7 @@ const Calendar = (() => {
     save();
     if (open) {
       const d = new Date(`${item.date}T12:00:00`);
-      cursor = monthOf(d);
+      cursor = viewOf(d);
       render();
       view.querySelector(`.cm-ev[data-id="${item.id}"]`)?.classList.add('fresh');
       if (!dv.hidden) { dayDate = item.date; drawDay(); dv.querySelector(`[data-id="${item.id}"]`)?.classList.add('fresh'); }

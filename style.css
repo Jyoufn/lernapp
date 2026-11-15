@@ -12661,9 +12661,9 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 /* ===== 15.11.: Kalender (Monat) im Modus Dunkel ruhiger – Kästchen kaum heller als der Grund, EIN gleicher feiner Rand für alle =====
    Vorher: Tage #181818 mit Rand #242424 (zu hell, Rand zu stark), andere Monate Rand #1d1d1d (zu blass), Wochentage als helle Pillen. */
 html[data-mode="dark"] .cm-cell { border-color: #1f1f1f; background: #161616; }
-html[data-mode="dark"] .cm-cell.other { border-color: #1f1f1f; background: none; }
+html[data-mode="dark"] .cm-cell.other { border-color: #1f1f1f; background: #161616; }
 html[data-mode="dark"] .cm-wd span { background: none; }
-@media (hover: hover) { html[data-mode="dark"] .cm-cell:hover { background: #1a1a1a; } html[data-mode="dark"] .cm-cell.other:hover { background: #161616; } }
+@media (hover: hover) { html[data-mode="dark"] .cm-cell:hover { background: #1a1a1a; } html[data-mode="dark"] .cm-cell.other:hover { background: #1a1a1a; } }
 
 /* ===== 15.11.: Kalender – „Neuer Termin“ ist nur noch ein Plus oben rechts: kein Rand, keine Fläche, kein Text.
    Passt zum Einklapp-Icon links: gleiche Farbe (--text-3), gleiche 28er-Fläche, Plus klein (8 px Arme) mit etwas kräftigerem Strich (1,8). ===== */
@@ -12671,8 +12671,12 @@ html body .cal-new.cal-new.cal-new.cal-new.cal-new { width: 28px; height: 28px; 
 html body .cal-new.cal-new.cal-new.cal-new.cal-new:hover, html body .cal-new.cal-new.cal-new.cal-new.cal-new:active { background: none !important; color: var(--text) !important; }
 html body .cal-new.cal-new.cal-new.cal-new.cal-new svg { width: 16px; height: 16px; margin: 0; }
 
-/* ===== 15.11.: Kalender (Monat) aufgeräumt – Tage anderer Monate werden gar nicht mehr gezeigt (leere Stelle statt Kästchen), so sehen alle
-   sichtbaren Kästchen in jedem Monat gleich aus. Termine in den Kästchen etwas runder (7 statt 5). ===== */
-.cm-cell.other { visibility: hidden; pointer-events: none; }
+/* ===== 15.11.: Kalender (Monat) in ganzen Wochen – jede Woche steht nur bei einem Monat (calendar.js → viewOf), alle Reihen sind voll.
+   Die paar Tage des Nachbarmonats in der ersten/letzten Reihe sind ganz normale Kästchen (gleiche Fläche, gleicher Rand, Termine voll sichtbar);
+   man erkennt sie am Monatsnamen beim 1. („1. Nov.“). Termine in den Kästchen etwas runder (7 statt 5). ===== */
+.cm-cell.other { border-color: var(--line, #242424); background: var(--win-bg); }
+.cm-cell.other .cm-dn { color: inherit; }
+.cm-cell.other .cm-ev { opacity: 1; }
+@media (hover: hover) { .cm-cell.other:hover { background: var(--pop-bg); } }
 .cm-ev.cal-pill { border-radius: 7px; }
 .cm.compact .cm-ev.cal-pill { border-radius: 50%; }
