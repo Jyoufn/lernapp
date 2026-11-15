@@ -634,11 +634,10 @@ const Docs = (() => {
     const view = el('section', `dc-view dc-list${CH ? ' dc-chatlist' : ''}`);
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
-      <div class="cl-head hm-top"><h2>${CH ? 'Chats' : 'Home'}</h2></div>
+      <div class="cl-head hm-top"><h2>${CH ? 'Chats' : 'Home'}</h2><button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
       ${CH ? '' : '<section class="hm-next" aria-label="Als Nächstes" hidden></section>'}
       <span class="cl-find-slot"></span>
-      <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
-        <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
+      <div class="lb2-bar" hidden><span class="lb2-sel" hidden><b></b></span></div>
       <div class="cl-list"></div></div>`;
     // Suchfeld = Baustein „Eingabefeld“ (UIKit.input: Lupe links, × zum Leeren)
     const find = UIKit.input({ placeholder: CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen', icon: 'search', clearable: true, size: 'l' });
@@ -703,7 +702,7 @@ const Docs = (() => {
         <span class="lb2-acts"><button type="button" class="lb-act lb2-tagbtn" data-row="tags" aria-label="Tags">${fi('tag', 14)}</button><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
     };
     const syncBar = () => {
-      selBox.hidden = !sel.size; bar.querySelector('.lb2-all').hidden = !!sel.size;
+      selBox.hidden = !sel.size; bar.hidden = !sel.size; // die Zeile gibt es nur noch während einer Auswahl („3 ausgewählt“)
       selBox.querySelector('b').textContent = `${sel.size} ausgewählt`;
       view.classList.toggle('lb2-picking', sel.size > 0);
       dock.classList.toggle('on', api.open && sel.size > 0);
@@ -711,8 +710,7 @@ const Docs = (() => {
       const allPinned = sel.size > 0 && [...sel].every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned);
       const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.querySelector('.lb2-dk-l').textContent = allPinned ? 'Lösen' : 'Anheften';
       dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
-      bar.querySelector('.lb2-filter').classList.toggle('set', filtered()); // gefiltert → Icon hell
-      bar.querySelector('.lb2-all').textContent = filtered() ? 'Gefiltert' : CH ? 'Alle Chats' : 'Alle Einträge';
+      view.querySelector('.lb2-filter').classList.toggle('set', filtered()); // gefiltert → Icon hell
     };
     const api = {
       open: false,

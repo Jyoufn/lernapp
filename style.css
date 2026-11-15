@@ -12319,16 +12319,10 @@ html.is-desktop .auth { background: var(--main-bg, #0a0a0a); -webkit-app-region:
 html.is-desktop .auth :is(input, button, a, label) { -webkit-app-region: no-drag; }
 html.is-desktop:not([data-glass="mac"]) body { background: #0a0a0a; }
 
-/* ===== Bereich „UI“ (ui-lab.js, 14.11.): leere Seite für die Bausteine; erster Baustein = Tableiste =====
+/* ===== Bausteine aus ui-kit.js (Tableiste, Knöpfe, Eingabefeld, Dropdown-Menü, Regler). Den Bereich „UI“ dazu gibt es nicht mehr (15.11.). =====
    Ansicht liegt wie Aufgaben über dem Chat. Kopf: Titel links, Tableiste genau mittig. */
 .panel.view-ui :is(.content, .composer-area, .chat-bar, .prompt-nav, .pn-card) { visibility: hidden; }
 .panel.view-ui > :is(.dog-modes, .create-switch) { opacity: 0 !important; pointer-events: none !important; }
-.uiv-view { position: absolute; inset: 0; z-index: 20; display: flex; flex-direction: column; padding: 6px 24px 24px; background: var(--main-bg); animation: cal-in 420ms var(--spring) both; }
-.uiv-view[hidden] { display: none; }
-html.vt-on .uiv-view { animation: none !important; }
-.uiv-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; min-height: 36px; -webkit-user-select: none; user-select: none; }
-.uiv-head h2 { margin: 0; padding-left: 38px; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: -0.1px; }
-.uiv-body { flex: 1; min-height: 0; }
 
 /* Tableiste (.ui-tabs, UIKit.tabBar): Spur = Ausklappbar-Ton, gewählter Tab = Fenster-Ton (eine Stufe tiefer, im hellen Modus weiß auf Grau).
    Die Fläche gleitet mit Feder zum gewählten Tab; die Schrift blendet um. Fett gesetzte Wörter halten ihren Platz frei (::after), nichts springt. */
@@ -12345,7 +12339,6 @@ html.vt-on .uiv-view { animation: none !important; }
 html[data-mode="black"] .ui-tabs { background: #0a0a0a; box-shadow: inset 0 0 0 1px #191919; }
 html[data-mode="black"] .ui-tabs-thumb { background: #1a1a1a; box-shadow: none; }
 /* Glas (Mac-App): Spur und Fläche durchscheinend; hell = weiße Fläche (Wert vor der Umkehrung) */
-html[data-glass="mac"] .uiv-view { background: transparent; }
 html[data-glass="mac"] .ui-tabs { background: rgba(255, 255, 255, 0.06); box-shadow: none; }
 html[data-glass="mac"] .ui-tabs-thumb { background: rgba(255, 255, 255, 0.12); box-shadow: none; }
 html[data-glass="mac"][data-glass-tone="light"] .ui-tabs-thumb { background: rgba(0, 0, 0, 0.72); }
@@ -12364,13 +12357,6 @@ html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0
 
 /* ===== Bereich „UI“: Abschnitte + Knöpfe (.ui-btn, UIKit.button, 14.11.) – gleiche Sprache wie die Tableiste =====
    Flächen als durchscheinendes Weiß (wirkt in Dunkel, Schwarz und Glas gleich; Hell kehrt es um). Drücken ändert nur die Fläche. */
-.uiv-body { overflow-y: auto; padding-top: 34px; }
-.uiv-sec { width: 100%; max-width: 720px; margin: 0 auto 36px; }
-.uiv-sec h3 { margin: 0 0 6px; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: -0.1px; }
-.uiv-row { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 12px; min-height: 58px; border-top: 1px solid rgba(255, 255, 255, 0.05); }
-.uiv-row:first-of-type { border-top: 0; }
-.uiv-name { color: var(--text-4); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
-.uiv-items { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 0; }
 
 .ui-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; white-space: nowrap; cursor: pointer; outline: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease, opacity 140ms ease; }
 .ui-btn svg { flex: none; margin-left: -2px; }
@@ -12395,7 +12381,6 @@ html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0
 .ui-btn-icon svg { margin: 0; }
 .ui-btn:disabled { opacity: 0.4; cursor: default; pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .ui-btn { transition: none; } }
-@media (max-width: 640px) { .uiv-row { grid-template-columns: 1fr; gap: 0; padding-top: 10px; } .uiv-items { padding-top: 6px; } }
 
 /* ===== Tableiste und Knöpfe runder (14.11., wie im Vorbild) ===== */
 .ui-tabs { border-radius: 11px; }
@@ -12406,7 +12391,6 @@ html[data-glass="mac"][data-glass-tone="light"] .ui-tabs { background: rgba(0, 0
 
 /* ===== Dropdown-Menü (.ui-dd / .ui-menu, UIKit.dropdown, 14.11.) – gleiche Sprache wie Tableiste und Knöpfe =====
    Menü wächst weich aus der Ecke des Knopfs (nur transform + opacity), Zeilen blenden beim Darüberfahren um. Keine Schatten. */
-.uiv-body { padding-bottom: 120px; }
 .ui-dd { position: relative; display: inline-flex; }
 .ui-dd-chev { margin: 0 -3px 0 1px !important; color: var(--text-4); transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1); }
 .ui-btn-light .ui-dd-chev { color: #5a5a5a; }
@@ -12438,15 +12422,7 @@ html[data-mode="black"] .ui-menu { background: #0d0d0d; }
 @media (prefers-reduced-motion: reduce) { .ui-menu, .ui-dd.open > .ui-menu, .ui-dd-chev, .ui-menu-tick { transition: none; } }
 
 /* ===== Bereich „UI“: Icon-Liste (UIKit.ICONS, 14.11.) – Kacheln mit Icon und Name ===== */
-.uiv-note { margin: -2px 0 8px; color: var(--text-4); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
-.uiv-ic { display: flex; flex-direction: column; align-items: center; gap: 7px; width: 78px; }
-.uiv-ic > i { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-2); }
-.uiv-ic > span { color: var(--text-4); font: 500 11.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }
 .ui-ic { flex: none; display: block; }
-.uiv-items:has(> .uiv-ic) { gap: 14px 0; }
-.uiv-ic { width: 76px; }
-.uiv-ic { width: 68px; }
-.uiv-ic { width: 76px; }
 
 /* ===== Bausteine aus dem Bereich „UI“ in der App (14.11.): Umschalter, graue Knöpfe und Menüs im neuen Stil =====
    Nur Aussehen – Aufbau und Verhalten der vorhandenen Klassen bleiben. Blaue Hauptknöpfe und das Workspace-Menü unverändert. */
@@ -12654,11 +12630,37 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 .sidebar .sbp.open { margin-bottom: 2px; }
 
 /* ===== Bereich „UI“: vorhandene Bausteine der App (Umschalter, Schalter, Farben, Tags, Karte, Kalender, Uhrzeit) ===== */
-.uiv-card { width: 100%; }
-.uiv-card .st-row { gap: 10px; }
-.uiv-colors { min-width: 280px; }
-.uiv-cal { width: 250px; padding: 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
-.uiv-wheel { padding: 6px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
-.uiv-sec > .uiv-card { margin-top: 10px; }
 .stk-add .stk-btn, .st-key-add .stk-btn { background: rgba(255, 255, 255, 0.08) !important; border: 0 !important; border-radius: 8px; color: var(--text) !important; }
 .stk-add .stk-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
+
+/* ===== 15.11.: Sidebar-Abschnitte immer offen · Info-Tabelle ohne Fläche · Fokusmodus ohne mitlaufendes Icon · leiserer Umschalter „Agenten | Dokumente“ ===== */
+/* Sidebar: „Angepinnt“, „Chats“, „Dokumente“ lassen sich nicht mehr einklappen – Überschrift ist nur Text (kein Pfeil, kein Darüberfahren) */
+.sb-sec-head, .sb-sec-head:hover, .sb-sec-row > .sb-sec-head:hover { background: none; cursor: default; }
+/* Info-Tabelle im Dokument: keine eigene Fläche, der Hauptteil scheint durch – nur Rand und Linien bleiben */
+.dc-ptable, html[data-mode="black"] .dc-ptable { background: none; }
+/* Fokusmodus: das Icon neben dem Titel bleibt beim Scrollen nicht oben stehen, es scrollt mit dem Titel weg */
+.dc-editor.focus .dc-page.with-icon:not(.with-cover) .dc-icon { position: relative; top: auto; }
+/* Umschalter „Agenten | Dokumente“ (Dunkel): Spur nur einen Hauch heller als der Hauptteil, gewählter Teil so hell wie die Spur bisher (5 %) */
+.cs-pill { background: rgba(255, 255, 255, 0.022); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035); }
+.cs-pill > .cs-thumb { background: rgba(255, 255, 255, 0.055); }
+
+/* ===== 15.11.: Home ohne Zeile „Alle Einträge“ – der Filter sitzt als Icon rechts neben dem Titel; die Zeile erscheint nur noch bei einer Auswahl ===== */
+.lb2-bar[hidden] { display: none; }
+.dc-list .cl-head.hm-top > .lb2-filter { flex: none; margin-right: -4px; }
+.dc-list .ui-input.cl-find { margin-bottom: 14px; }
+
+/* ===== 15.11.: Alle Umschalter wie „Agenten | Dokumente“ – Spur ein Hauch heller als der Grund, gewählter Teil nur leicht heller (Dunkel) =====
+   Gilt für die Umschalter in den Einstellungen und überall sonst (.st-seg), die Tableiste (.ui-tabs) und den Icon-Umschalter im Dokument. */
+.st-seg, .dc-ip2-kind.st-seg, .ui-tabs { background: rgba(255, 255, 255, 0.022); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035); }
+.st-seg > .cs-thumb, .ui-tabs-thumb { background: rgba(255, 255, 255, 0.055); }
+.st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.055) !important; }
+/* in Karten/Fenstern liegt der Umschalter schon auf einer helleren Fläche – dort eine Spur mehr, damit er sichtbar bleibt */
+:is(.st-card, .ce-card, .tk-sheet, .dcs-body) .st-seg { background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04); }
+:is(.st-card, .ce-card, .tk-sheet, .dcs-body) .st-seg > .cs-thumb { background: rgba(255, 255, 255, 0.07); }
+
+/* ===== 15.11.: Kalender (Monat) im Modus Dunkel ruhiger – Kästchen kaum heller als der Grund, EIN gleicher feiner Rand für alle =====
+   Vorher: Tage #181818 mit Rand #242424 (zu hell, Rand zu stark), andere Monate Rand #1d1d1d (zu blass), Wochentage als helle Pillen. */
+html[data-mode="dark"] .cm-cell { border-color: #1f1f1f; background: #161616; }
+html[data-mode="dark"] .cm-cell.other { border-color: #1f1f1f; background: none; }
+html[data-mode="dark"] .cm-wd span { background: none; }
+@media (hover: hover) { html[data-mode="dark"] .cm-cell:hover { background: #1a1a1a; } html[data-mode="dark"] .cm-cell.other:hover { background: #161616; } }

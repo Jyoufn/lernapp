@@ -17,12 +17,12 @@
   <link rel="manifest" href="manifest.webmanifest?v=2" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" />
   <!-- Formeln (KaTeX) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.11/katex.min.css" />
   <link rel="stylesheet" href="style.css?v=11" />
   <!-- Vor dem ersten Bild: gewählte Darstellung setzen und (angemeldet) das Ladebild zeigen statt der halb aufgebauten App -->
-  <script>try{var d=document.documentElement;if(window.lernappDesktop)d.classList.add('is-desktop');var a=JSON.parse(localStorage.getItem('appearance.vars')||'null');if(a){for(var k in a.vars)if(a.vars[k])d.style.setProperty(k,a.vars[k]);for(var j in a.data)d.dataset[j]=a.data[j];}if(a&&a.data&&a.data.fontHref&&/^https:\/\/fonts\.googleapis\.com\//.test(a.data.fontHref)){var fl=document.createElement('link');fl.id='app-font-link';fl.rel='stylesheet';fl.href=a.data.fontHref;document.head.appendChild(fl);}try{var fc=JSON.parse(localStorage.getItem('appearance.fontcss')||'null');if(fc&&fc.css&&fc.v===3){var fs=document.createElement('style');fs.id='app-font';fs.dataset.font=fc.id;fs.textContent=fc.css;document.head.appendChild(fs);}}catch(e){}if(localStorage.getItem('auth.user')&&localStorage.getItem('auth.user')!=='null')d.classList.add('booting');if(localStorage.getItem('sidebarCollapsed')==='1')d.classList.add('boot-noside');}catch(e){}</script>
+  <script>try{var d=document.documentElement;if(window.lernappDesktop)d.classList.add('is-desktop');var a=JSON.parse(localStorage.getItem('appearance.vars')||'null');if(a){for(var k in a.vars)if(a.vars[k])d.style.setProperty(k,a.vars[k]);for(var j in a.data)d.dataset[j]=a.data[j];}if(a&&a.data&&a.data.fontHref&&/^https:\/\/fonts\.googleapis\.com\//.test(a.data.fontHref)){var fl=document.createElement('link');fl.id='app-font-link';fl.rel='stylesheet';fl.href=a.data.fontHref;document.head.appendChild(fl);}try{var fc=JSON.parse(localStorage.getItem('appearance.fontcss')||'null');if(fc&&fc.css&&fc.v===4){var fs=document.createElement('style');fs.id='app-font';fs.dataset.font=fc.id;fs.textContent=fc.css;document.head.appendChild(fs);}}catch(e){}if(localStorage.getItem('auth.user')&&localStorage.getItem('auth.user')!=='null')d.classList.add('booting');if(localStorage.getItem('sidebarCollapsed')==='1')d.classList.add('boot-noside');}catch(e){}</script>
 </head>
 <body>
   <div class="boot" aria-hidden="true"><div class="boot-side"><i class="w1"></i><i class="w2"></i><i class="w3"></i><i class="w4"></i><i class="w5"></i></div><div class="boot-main"><div class="boot-head"><i></i><i class="pill"></i></div><div class="boot-mid"><i class="dog"></i><i class="t"></i><div class="boot-in"><i></i><i class="s"></i></div></div></div></div>
@@ -91,8 +91,7 @@
     <symbol id="o-home" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 8.2c0-.8.36-1.56.98-2.06l3.06-2.5a2.7 2.7 0 0 1 3.42 0l3.06 2.5c.62.5.98 1.26.98 2.06v3.3a2.75 2.75 0 0 1-2.75 2.75h-6a2.75 2.75 0 0 1-2.75-2.75z"/><path d="M6.5 14.25v-1.9a1.5 1.5 0 0 1 3 0v1.9"/></g></symbol><!-- Home: weich abgerundetes Haus (Ecken wie Kalender/Aufgaben), runde Tür -->
     <symbol id="o-library" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.75 2.75v10.5M6 4.75v8.5M9.25 4.75v8.5M11.5 4.75l2.25 8.5"/></g></symbol>
     <symbol id="o-palette" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M8 1.75a6.25 6.25 0 0 0 0 12.5c.9 0 1.4-.6 1.4-1.3 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.3 1.4-1.3h1.3a2.9 2.9 0 0 0 2.95-2.9C14.25 4.3 11.45 1.75 8 1.75z"/><g fill="currentColor"><circle cx="4.9" cy="7.6" r=".95"/><circle cx="6.9" cy="4.75" r=".95"/><circle cx="10.2" cy="5.1" r=".95"/></g></symbol><!-- UI Design: Farbpalette -->
-    <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></symbol><!-- Aufgaben: kleines Board – drei Spalten unterschiedlich voll -->
-    <symbol id="o-ui" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="2" width="12.5" height="4.5" rx="2.25"/><rect x="1.75" y="9" width="5.25" height="5.25" rx="1.75"/><rect x="9" y="9" width="5.25" height="5.25" rx="1.75"/></g></symbol><!-- UI: Bausteine – eine Leiste, zwei Kacheln -->
+    <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></symbol><!-- Aufgaben: kleines Board – drei Spalten unterschiedlich voll --><!-- UI: Bausteine – eine Leiste, zwei Kacheln -->
     <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M1.75 5.9h12.5"/></g><g fill="currentColor"><circle cx="5.3" cy="8.9" r=".85"/><circle cx="8" cy="8.9" r=".85"/><circle cx="10.7" cy="8.9" r=".85"/><circle cx="5.3" cy="11.4" r=".85"/><circle cx="8" cy="11.4" r=".85"/></g></symbol>
     <symbol id="o-inbox" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 9.25 3.9 3.9a1.6 1.6 0 0 1 1.53-1.15h5.14A1.6 1.6 0 0 1 12.1 3.9l1.65 5.35v2.5a2 2 0 0 1-2 2h-7.5a2 2 0 0 1-2-2z"/><path d="M2.25 9.25h3l.75 1.5h4l.75-1.5h3"/></g></symbol>
     <symbol id="o-trend" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 11.75 6 8l2.75 2.75 5-5"/><path d="M10.75 5.75h3v3"/></g></symbol>
@@ -130,7 +129,6 @@
           <a class="nav-item" href="#" data-nav="new"><svg width="16" height="16"><use href="#o-plus"/></svg>Erstellen</a>
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-home"/></svg>Home</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
-          <a class="nav-item" href="#" data-nav="ui"><svg width="16" height="16"><use href="#o-ui"/></svg>UI</a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -289,7 +287,6 @@
     <script src="music.js"></script>
     <script src="timer.js"></script>
     <script src="ui-kit.js"></script>
-    <script src="ui-lab.js"></script><!-- Bereich „UI“: Sammlung der Bausteine fürs spätere Design -->
     <script src="calendar.js"></script>
     <script src="docblocks.js"></script><!-- Slash-Menü und Blöcke im Dokument -->
     <script src="docs.js"></script>

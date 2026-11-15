@@ -82,7 +82,6 @@ window.markDrafts = markDrafts;
 /* Kalender, Home und UI öffnen als eigene Tabs (ein Tab je Ansicht) */
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
-  ui: { title: 'UI', icon: 'o-ui', view: () => window.UILab },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },
 };
@@ -6129,23 +6128,12 @@ window.LibChats = {
   pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
   del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
 };
-/* ---------- Sidebar: Bereiche „Chats“ und „Dokumente“ lassen sich ein- und ausklappen (Klick auf die Überschrift,
-   bleibt gemerkt). „Chats“ = die 8 neuesten (auch geschlossene); antwortet einer gerade, steht rechts ein Halbkreis. ---------- */
-const SB_SEC_KEY = 'sidebar.closed.v1';
-const sbClosed = new Set((() => { try { return JSON.parse(localStorage.getItem(SB_SEC_KEY)) || []; } catch { return []; } })());
-window.sbSectionClosed = (k) => sbClosed.has(k);
-window.sbSectionHead = (label, k) => `<button type="button" class="sb-sec-head" aria-expanded="${!sbClosed.has(k)}"><span>${label}</span><svg width="12" height="12"><use href="#o-chev"/></svg></button>`;
-document.querySelector('.sidebar').addEventListener('click', (e) => {
-  const head = e.target.closest('.sb-sec-head'); if (!head) return;
-  e.preventDefault();
-  const sec = head.closest('.sb-sec'), k = sec.dataset.sec;
-  const closed = sec.classList.toggle('closed');
-  head.setAttribute('aria-expanded', String(!closed));
-  closed ? sbClosed.add(k) : sbClosed.delete(k);
-  try { localStorage.setItem(SB_SEC_KEY, JSON.stringify([...sbClosed])); } catch {}
-});
+/* ---------- Sidebar: Bereiche „Angepinnt“, „Chats“ und „Dokumente“ sind IMMER offen (Wunsch 15.11.: kein Ein-/Ausklappen mehr) –
+   die Überschrift ist nur noch Text ohne Pfeil. „Chats“ = die 8 neuesten (auch geschlossene); antwortet einer gerade, steht rechts ein Halbkreis. ---------- */
+try { localStorage.removeItem('sidebar.closed.v1'); } catch {}
+window.sbSectionClosed = () => false;
+window.sbSectionHead = (label) => `<div class="sb-sec-head"><span>${label}</span></div>`;
 const sbChats = $('sbChats');
-sbChats.classList.toggle('closed', sbClosed.has('chats'));
 let sideChatsFrame = 0;
 /* Chat in der Sidebar: beim Darüberfahren rechts Anheften und „⋯“ (Umbenennen · Anheften · Löschen); zu lange Namen enden mit … */
 const sbChatMenu = el('div', 'chat-pop chat-menu sb-chat-menu', `<button type="button" role="menuitem" data-sbm="rename">${icon('f-pencil', 14)}<span>Umbenennen</span></button>`
@@ -6254,7 +6242,6 @@ window.renderSideChats = () => {
     const sbPinned = $('sbPinned');
     if (sbPinned) {
       sbPinned.hidden = !pinnedItems.length;
-      sbPinned.classList.toggle('closed', sbClosed.has('pinned'));
       if (pinnedItems.length) {
         const pb = el('div', 'sb-sec-body'), pi = el('div', 'sb-sec-in');
         pb.append(pi); pi.append(...pinnedItems.map(mk));
@@ -7229,22 +7216,17 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'geist' };
-  /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
-     Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
-     Stärke: normaler Text steht im ganzen CSS in 500 (nie 400) – eine Stärke für Menüs, Einstellungen, Listen, Chat (Wunsch 14.11.).
-     Nur Inter soll „ein Millistück“ kräftiger sein: dafür holt die App Googles Schrift-CSS in 530/630/720, schreibt die Stärken auf 500/600/700 um
-     und hängt sie als Familie „Inter UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start).
-     Klappt das Holen nicht, bleibt normales Inter. Die anderen Schriften laden ganz normal per <link id="app-font-link">. */
-  const FONTS = {
-    geist: { label: 'Geist', name: 'Geist', q: 'Geist' },
-    inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 530, 500: 530, 600: 630, 700: 720 } },
-    dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' },
-    manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' },
-  };
-  const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
-  const fontId = () => (FONTS[cfg.font] ? cfg.font : 'geist');
-  const fontHref = (f) => (f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark' };
+  /* Schrift: das ganze CSS nennt sie über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
+     Stärke: normaler Text steht im ganzen CSS in 500 (nie 400), Titel 600. Damit das überall gleich kräftig wirkt, holt die App Googles
+     Schrift-CSS in 530/630/720, schreibt die Stärken auf 400/500/600/700 um und hängt sie als Familie „Geist UI“ ein
+     (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start). Klappt das Holen nicht, bleibt normales Geist. */
+  // Eine Schrift für die ganze App (Wunsch 15.11.: keine Auswahl mehr, überall gleich kräftig): Geist, eine Spur kräftiger geladen
+  // (530 statt 500, 630 statt 600, 720 statt 700 – auch wer 400 verlangt, bekommt 530; so ist nichts dünner als der Rest).
+  const FONTS = { geist: { label: 'Geist', name: 'Geist', q: 'Geist', w: { 400: 530, 500: 530, 600: 630, 700: 720 } } };
+  const FONT_CSS = 'appearance.fontcss', FONT_V = 4;
+  const fontId = () => 'geist';
+  const fontHref = (f) => `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`; // normales Geist als Rückfall, bis die kräftigere Fassung da ist
   const putFont = (css, id) => {
     let st = document.getElementById('app-font');
     if (!css) { st?.remove(); return; }
@@ -7351,8 +7333,7 @@ document.addEventListener('click', (e) => {
     ACCENTS,
     GLASS,
     DESKTOP,
-    FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
-    get: () => ({ ...cfg, mode: modeId(), font: fontId() }),
+    get: () => ({ ...cfg, mode: modeId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();
