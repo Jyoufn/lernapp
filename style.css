@@ -12703,3 +12703,55 @@ html[data-fw="bold"] body { -webkit-text-stroke: 0.2px currentColor; }
 html[data-fw="extra"] body { -webkit-text-stroke: 0.4px currentColor; }
 /* viele Schriftarten: die Auswahl darf umbrechen statt aus der Zeile zu laufen */
 .st-seg:has([data-ap-font]) { flex-wrap: wrap; justify-content: flex-end; }
+
+/* ===== 15.11. spät – Mini-Kalender (überall, z. B. Datum im Termin-Fenster): Kopf Pfeil · Monat · Pfeil, Tage als Kacheln, gewählter Tag = blauer Rand ===== */
+html body .tk-cal .tk-cal-head { display: grid !important; grid-template-columns: 28px minmax(0, 1fr) 28px !important; align-items: center !important; height: 30px !important; padding: 0 !important; gap: 0 !important; }
+html body .tk-cal .tk-cal-head span { flex: none !important; text-align: center !important; font-size: 13px !important; font-weight: 600 !important; }
+html body .tk-cal .tk-cal-head button { justify-self: center !important; width: 26px !important; height: 26px !important; border-radius: 8px !important; }
+html body .tk-cal .tk-cal-grid { gap: 3px !important; margin-top: 6px !important; }
+html body .tk-cal .tk-cal-grid span { height: 20px !important; }
+html body .tk-cal .tk-cal-grid button { justify-self: stretch !important; width: auto !important; height: 32px !important; border-radius: 8px !important; background: rgba(255, 255, 255, 0.04) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045) !important; color: var(--text-2) !important; font-size: 12.5px !important; font-weight: 500 !important; transition: background-color 160ms ease, box-shadow 160ms ease, color 160ms ease !important; }
+html body .tk-cal .tk-cal-grid button.other { background: rgba(255, 255, 255, 0.015) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.025) !important; color: var(--text-4) !important; }
+html body .tk-cal .tk-cal-grid button.today { color: var(--accent) !important; font-weight: 600 !important; }
+html body .tk-cal .tk-cal-grid button.on { background: rgba(255, 255, 255, 0.04) !important; box-shadow: inset 0 0 0 1.5px var(--accent) !important; color: var(--text) !important; font-weight: 600 !important; }
+@media (hover: hover) { html body .tk-cal .tk-cal-grid button:not(.on):hover { background: rgba(255, 255, 255, 0.075) !important; color: var(--text) !important; } }
+
+/* ===== Kalender-Kopf: Pfeile kleiner und genau auf der Mitte der Monatszeile ===== */
+html body .cm-switch.cm-switch.cm-switch.cm-switch { align-items: center; }
+html body .cm-switch .cm-arr { align-self: center; width: 24px; height: 24px; }
+html body .cm-switch .cm-arr svg { display: block; width: 12px; height: 12px; }
+html body .cm-switch .cm-label { display: flex; align-items: center; justify-content: center; height: 30px; line-height: 1; }
+
+/* ===== Termin-Fenster: Uhrzeit mit Regler in der Zeile, Farben in einer Reihe + eigene darunter, Ansicht mit Kommentaren ===== */
+.ce-card .tk-pill .ce-switch { flex: none; display: block; margin-left: 8px; }
+.ce-card .tk-pill .tk-rv.ce-off { color: var(--text-3); }
+.ce-card .ce-wheels { margin-top: 0; padding-top: 0; border-top: 0; }
+html body .ce-card .ce-colors { display: grid !important; grid-template-columns: repeat(12, minmax(0, 1fr)); justify-items: center; gap: 6px 0 !important; padding: 8px 6px !important; }
+html body .ce-card .ce-colors button { width: 19px; height: 19px; }
+html body .ce-card .ce-colors.ce-own { padding-top: 2px !important; }
+.ce-card .ce-colors.ce-own[hidden] { display: none !important; }
+.ce-card .ce-colors .tk-custom, .ce-card .ce-colors .tk-custom.on { grid-column: 12; background: conic-gradient(#ff4d4d, #ffd24d, #4dff88, #4dd2ff, #6b4dff, #ff4dd2, #ff4d4d) !important; box-shadow: none; }
+.ce-card .ce-cover:first-child { margin: 0 0 6px; }
+.ce-card.ce-view .ce-cover:first-child { margin: 0; }
+.ce-vnote { margin-top: 3px; color: var(--text-3); font-size: 13px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.ce-cbox { border-radius: 11px; background: var(--ce-box); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045); }
+.ce-clist { padding: 6px 6px 0 12px; }
+.ce-clist[hidden] { display: none; }
+.ce-cm { display: flex; align-items: flex-start; gap: 6px; padding: 4px 0; color: var(--text-2); font-size: 13px; font-weight: 500; line-height: 1.45; }
+.ce-cm-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ce-cm-x { display: grid; place-items: center; flex: none; width: 22px; height: 20px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--text-4); cursor: pointer; opacity: 0.7; }
+.ce-cm-x svg { width: 10px; height: 10px; }
+@media (hover: hover) { .ce-cm-x:hover { background: var(--ce-hi); color: var(--text); opacity: 1; } }
+.ce-cnew { display: flex; align-items: center; gap: 9px; min-height: 38px; padding: 0 8px 0 12px; cursor: text; }
+.ce-cnew .tk-si { display: grid; place-items: center; flex: none; width: 15px; color: var(--text-3); }
+.ce-cnew .tk-si svg { width: 15px; height: 15px; }
+.ce-cin { flex: 1 1 auto; min-width: 0; height: 36px; padding: 0; border: 0; background: none; color: var(--text); font: 500 13px var(--font-ui, Inter), sans-serif; outline: none; }
+.ce-cin::placeholder { color: var(--text-4); }
+
+/* ===== Einstellungen: Name immer als Feld (Text links); Flächen eine Spur dunkler (Kästen, Felder im Kasten, gewählter Umschalter) ===== */
+.st-name-edit { width: 220px; margin-right: 0; background: rgba(255, 255, 255, 0.045); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); text-align: left; transition: box-shadow 160ms ease; }
+.st-name-edit:focus { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.st-card, .dcs-body .st-card { background: rgba(255, 255, 255, 0.038); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.045); }
+.cs-pill, .st-seg { background: rgba(255, 255, 255, 0.04); }
+.cs-thumb, .st-seg > .cs-thumb { background: rgba(255, 255, 255, 0.085); }
+.st-seg:not(:has(> .cs-thumb)) > button:is(.on, [aria-checked="true"]) { background: rgba(255, 255, 255, 0.085) !important; }

@@ -72,8 +72,9 @@ const UIKit = (() => {
         const k = isoOf(d);
         cells += `<button type="button" class="${d.getMonth() !== month.getMonth() ? 'other' : ''}${k === today ? ' today' : ''}${k === cur ? ' on' : ''}" data-day="${k}">${d.getDate()}</button>`;
       }
-      box.innerHTML = `<div class="tk-cal-head"><span>${MONTHS_LONG[month.getMonth()]} ${month.getFullYear()}</span>
-          <button type="button" data-calnav="-1" aria-label="Vorheriger Monat">${fi('back', 12)}</button><button type="button" data-calnav="1" aria-label="Nächster Monat">${fi('forward', 12)}</button></div>
+      // Kopf wie im großen Kalender: Pfeil · Monat (mittig) · Pfeil; Tage als Kacheln, der gewählte Tag mit blauem Rand (style.css „Mini-Kalender“)
+      box.innerHTML = `<div class="tk-cal-head"><button type="button" data-calnav="-1" aria-label="Vorheriger Monat">${fi('back', 12)}</button>
+          <span>${MONTHS_LONG[month.getMonth()]} ${month.getFullYear()}</span><button type="button" data-calnav="1" aria-label="Nächster Monat">${fi('forward', 12)}</button></div>
         <div class="tk-cal-grid">${WD.map((w) => `<span>${w}</span>`).join('')}${cells}</div>`;
     };
     box.addEventListener('click', (e) => {

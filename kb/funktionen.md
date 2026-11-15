@@ -112,3 +112,9 @@
 
 - **Nur ein Agent** (Wunsch 10.11.): `ONE_AGENT = true` in `pixel-dogs.js` → nur „Allgemein“, kein Agenten-Feld (Hund nicht klickbar), kein „Neuer Agent“, `switch_agent` → Allgemein, Aufgaben nur „Ohne Agent“/„Allgemein“. Code der anderen Agenten und von `agent-builder.js` bleibt – zum Zurückholen `ONE_AGENT = false` (und im Prompt den Satz „Eigene Agenten gibt es … gerade nicht“ wieder entfernen).
 - **Sprache der Oberfläche** (`i18n.js`, Einstellungen → Aussehen): Englisch übersetzt alle festen Texte über das Wörterbuch `D` + `D2` (Meldungen, Zeitleiste, Fenster, Lernsets, Dokumente …), Regeln für Texte mit Zahlen (`RULES`) und bekannte Wendungen in zusammengesetzten Texten (`PHRASES`). Antworten, eigene Nachrichten und Gedanken-Texte (`.md`, `.out-bubble`, `.thought-text`) bleiben unberührt; Standard-Titel („Neuer Chat“, „Unbenannt“) werden übersetzt. Neue sichtbare Texte → dort eintragen.
+- **Kalender, Termin-Fenster (Stand 15.11. spät)**: Mini-Kalender (`UIKit.miniCalendar`, gilt überall): Pfeil · Monat mittig · Pfeil, Tage als Kacheln, gewählter Tag blauer Rand.
+  Uhrzeit: Regler direkt in der Zeile (an = Uhrzeit, Räder fahren darunter aus; aus = ganztägig). Farben: Vorschläge in einer Reihe, ganz rechts „eigene Farbe“ (bleibt der bunte
+  Kreis); eigene Farben stehen darunter, gespeichert in `calendar.ownColors`, die neue ist gleich gewählt. Cover steht oben. Termin-Ansicht in der Reihenfolge des Fensters
+  (Cover, Titel + Beschreibung, Tag, Uhrzeit) und unten ein Kommentar-Kasten (`comments: [{ t, at }]` am Termin, Enter fügt hinzu).
+- Der Bereich „UI“ steht nicht mehr in der Seitenleiste (Code `ui-lab.js` bleibt). Profil-Name: immer ein Feld, Text links (`[data-name-live]` in `settings.js`).
+

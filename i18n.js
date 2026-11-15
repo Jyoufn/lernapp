@@ -29,7 +29,7 @@
     'Dringend': 'Urgent', 'Fällig': 'Due', 'Heute fällig oder überfällig': 'Due today or overdue', 'In den nächsten 7 Tagen': 'In the next 7 days', 'Ohne Datum': 'No date',
     'Keine offenen Aufgaben': 'No open tasks', 'Erledigt': 'Done', 'Offen': 'Open',
     // Kalender
-    'Ganztägig': 'All day', 'Beginn': 'Start', 'Ende': 'End', 'Farbe ändern': 'Change color', 'Icon ändern': 'Change icon', 'Termin': 'Event', 'Neuer Termin': 'New event',
+    'Ganztägig': 'All day', 'Uhrzeit': 'Time', 'Uhrzeit festlegen': 'Set time', 'Kommentar hinzufügen': 'Add a comment', 'Kommentar löschen': 'Delete comment', 'Schriftstärke': 'Font weight', 'Kräftig': 'Bold', 'Extra': 'Extra', 'Eigene Farbe': 'Custom color', 'Beginn': 'Start', 'Ende': 'End', 'Farbe ändern': 'Change color', 'Icon ändern': 'Change icon', 'Termin': 'Event', 'Neuer Termin': 'New event',
     'Montag': 'Monday', 'Dienstag': 'Tuesday', 'Mittwoch': 'Wednesday', 'Donnerstag': 'Thursday', 'Freitag': 'Friday', 'Samstag': 'Saturday', 'Sonntag': 'Sunday',
     'Mo': 'Mon', 'Di': 'Tue', 'Mi': 'Wed', 'Do': 'Thu', 'Fr': 'Fri', 'Sa': 'Sat', 'So': 'Sun',
     'Januar': 'January', 'Februar': 'February', 'März': 'March', 'April': 'April', 'Mai': 'May', 'Juni': 'June', 'Juli': 'July', 'August': 'August',

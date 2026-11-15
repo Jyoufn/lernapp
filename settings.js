@@ -274,7 +274,7 @@
       const onDevice = Object.values(deviceKeys).some(Boolean);
       const account = window.Auth?.user();
       body = `<h2>Profil</h2><div class="st-card">
-          <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><button type="button" class="st-name-btn" data-name-edit aria-label="Name ändern">${esc(nameOf())}</button></div></div>
+          <div class="st-row"><span class="st-name">Name</span><span class="grow"></span><input class="st-name-edit" data-name-live maxlength="32" value="${esc(nameOf())}" aria-label="Name" spellcheck="false" autocomplete="off" /></div></div>
         ${account ? `<h2>Konto</h2><div class="st-card">
           <div class="st-row"><span class="st-name">${esc(account.email)}</span><span class="grow"></span><button type="button" class="st-btn dark" data-logout>Abmelden</button></div></div>` : ''}
         ${wsSection()}
@@ -382,7 +382,7 @@
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
-    // Name: steht als Knopf ohne Rand da; antippen macht daraus das Feld, Enter oder Wegtippen übernimmt (15.11.)
+    // Name: steht immer als Feld da (Text links); Enter oder Wegtippen übernimmt – siehe „focusout“ unten
     const nb = e.target.closest('[data-name-edit]');
     if (nb) {
       const inp = document.createElement('input');
@@ -399,6 +399,8 @@
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
   });
+  view.addEventListener('focusout', (e) => { if (!e.target.matches?.('[data-name-live]')) return; write(NAME_KEY, e.target.value.trim()); applyName(); e.target.value = nameOf(); });
+  view.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-name-live]') && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.target.blur(); } });
   view.addEventListener('submit', async (e) => {
     e.preventDefault();
     const ef = e.target.closest('form[data-key-edit]');

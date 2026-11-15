@@ -12,12 +12,16 @@ const Calendar = (() => {
   const COLORS = ['#6d9fff', '#a78bfa', '#f472b6', '#f87171', '#fb923c', '#facc15', '#4ade80', '#2dd4bf'];
   // Vorschlagsfarben im Termin-Fenster: die App-Farben (UIKit.COLORS) + drei weitere, damit die Reihe bis ganz rechts reicht
   const EV_COLORS = [...((window.UIKit && UIKit.COLORS) || []), '#e0737a', '#d6bf5e', '#5db8b3'];
-  // gemeinsame Farbauswahl der App (Farbfeld · Farbkreise · Helligkeit) + die zusätzlichen Vorschlagsfarben in der Kreis-Reihe
-  const evColorRow = (cur) => {
-    const html = UIKit.colorRow(cur, 'data-color');
-    const extra = EV_COLORS.filter((c) => !UIKit.COLORS.includes(c)).map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('');
-    return html.replace(/(<div class="tk-colors">[\s\S]*?)(<\/div>)/, `$1${extra}$2`);
-  };
+  // Farbauswahl im Termin-Fenster: oben die Vorschläge in einer Reihe, ganz rechts der Knopf für eine eigene Farbe (bleibt immer der bunte Kreis);
+  // darunter die selbst gewählten Farben – gespeichert (localStorage „calendar.ownColors“), die neueste zuerst und gleich ausgewählt
+  const OWN_KEY = 'calendar.ownColors';
+  const isHex = (c) => /^#[0-9a-f]{6}$/i.test(String(c || ''));
+  const ownColors = () => { try { return (JSON.parse(localStorage.getItem(OWN_KEY)) || []).filter(isHex).slice(0, 12); } catch { return []; } };
+  const addOwn = (hex) => { try { localStorage.setItem(OWN_KEY, JSON.stringify([hex, ...ownColors().filter((c) => c.toLowerCase() !== hex.toLowerCase())].slice(0, 12))); } catch {} };
+  const colorDot = (c, cur) => `<button type="button" class="${c === cur ? 'on' : ''}" data-color="${c}" style="--c:${c}" aria-label="Farbe"></button>`;
+  const ownRow = (cur) => { const own = ownColors(); if (isHex(cur) && !EV_COLORS.includes(cur) && !own.includes(cur)) own.unshift(cur); return own.map((c) => colorDot(c, cur)).join(''); };
+  const evColorRow = (cur) => `<div class="tk-colors ce-colors ce-presets">${EV_COLORS.map((c) => colorDot(c, cur)).join('')}<button type="button" class="tk-custom" data-custom="data-color" aria-label="Eigene Farbe" title="Eigene Farbe"></button></div>`
+    + `<div class="tk-picker-host"></div><div class="tk-colors ce-colors ce-own">${ownRow(cur)}</div>`;
 
   const ICONS = ['i-calendar', 'i-book', 'i-pencil', 'i-star', 'i-people', 'i-timer', 'i-music', 'i-heart', 'i-globe', 'i-bolt', 'i-file', 'i-check'];
   const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
@@ -356,15 +360,37 @@ const Calendar = (() => {
     const timeHtml = ev.time ? `${esc(ev.time)}${ev.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${esc(ev.end)}` : ''}` : 'Ganztägig';
     const dur = DUR(ev.time, ev.end);
     emodal.innerHTML = `<div class="tk-form ce-card ce-view" style="--c:${esc(ev.color || COLORS[0])}">
+      ${ev.cover ? `<div class="ce-cover"><img alt="" src="${esc(ev.cover)}" /></div>` : ''}
       <div class="ce-headbox ce-vhead">
         <div class="ce-vtitle">${esc(ev.title)}</div>
-        <div class="ce-vsub"><i class="ce-vdot"></i>${dateText(ev.date)}${ev.date === todayIso() ? ' · Heute' : ''}</div>
+        ${ev.description ? `<div class="ce-vnote">${esc(ev.description).replace(/\n/g, '<br>')}</div>` : ''}
         <button type="button" class="ce-vbtn ce-vedit" data-act="edit" aria-label="Bearbeiten">${icon('f-pencil')}</button>
       </div>
-      ${ev.cover ? `<div class="ce-cover"><img alt="" src="${esc(ev.cover)}" /></div>` : ''}
+      <div class="ce-vrow"><span class="tk-si">${icon('f-calendar')}</span><span class="ce-vval">${dateText(ev.date)}${ev.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}</span></div>
       <div class="ce-vrow"><span class="tk-si">${icon('f-clock')}</span><span class="ce-vval">${timeHtml}</span>${dur ? `<span class="ce-dur">${dur}</span>` : ''}</div>
-      ${ev.description ? `<div class="ce-vrow ce-vdesc"><span class="tk-si">${icon('f-align-left')}</span><span class="ce-vval">${esc(ev.description).replace(/\n/g, '<br>')}</span></div>` : ''}
+      <div class="ce-cbox"><div class="ce-clist"></div>
+        <label class="ce-cnew"><span class="tk-si">${icon('f-chat')}</span><input class="ce-cin" maxlength="300" placeholder="Kommentar hinzufügen" aria-label="Kommentar hinzufügen" autocomplete="off" /></label></div>
     </div>`;
+    // Kommentare: unten im eigenen Kasten, Enter fügt hinzu; gespeichert am Termin (comments: [{ t, at }])
+    const cbox = emodal.querySelector('.ce-clist');
+    const persist = () => { if (store) store.onSave({ ...ev }); else save(); };
+    const drawComments = () => {
+      const list = Array.isArray(ev.comments) ? ev.comments : [];
+      cbox.hidden = !list.length;
+      cbox.innerHTML = list.map((c, i) => `<div class="ce-cm"><span class="ce-cm-t">${esc(c.t)}</span><button type="button" class="ce-cm-x" data-cdel="${i}" aria-label="Kommentar löschen">${icon('f-x')}</button></div>`).join('');
+    };
+    drawComments();
+    emodal.querySelector('.ce-cin').addEventListener('keydown', (x) => {
+      x.stopPropagation();
+      if (x.key === 'Escape') { x.target.blur(); eclose(); return; }
+      if (x.key !== 'Enter') return;
+      x.preventDefault();
+      const t = x.target.value.trim(); if (!t) return;
+      ev.comments = [...(Array.isArray(ev.comments) ? ev.comments : []), { t: t.slice(0, 300), at: Date.now() }].slice(-30);
+      x.target.value = ''; persist(); drawComments();
+    });
+    emodal.querySelector('.ce-cin').addEventListener('keypress', (x) => x.stopPropagation());
+    cbox.addEventListener('click', (x) => { const d = x.target.closest('[data-cdel]'); if (!d) return; x.stopPropagation(); ev.comments.splice(+d.dataset.cdel, 1); persist(); drawComments(); });
     const card = emodal.firstElementChild;
     card.addEventListener('click', (x) => {
       if (!x.target.closest('[data-act="edit"]')) return;
@@ -423,16 +449,15 @@ const Calendar = (() => {
     // der seinen Inhalt in sich aufklappt (rechts ein kleiner Pfeil-Knopf)
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
     emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet ce-card" autocomplete="off">
+      <div class="ce-cover"${e.cover ? '' : ' hidden'}><img alt="" src="${e.cover ? esc(e.cover) : ''}" /><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
       <div class="tk-sheet-main ce-headbox">
         <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
-      <div class="ce-cover"${e.cover ? '' : ' hidden'}><img alt="" src="${e.cover ? esc(e.cover) : ''}" /><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
       <input type="file" accept="image/*" class="ce-cover-in" hidden />
       <div class="tk-sheet-rows ce-rows">
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
-        ${pill('time', `<label class="ce-allday"><span>Ganztägig</span><button type="button" class="ce-switch" data-allday role="switch" aria-label="Ganztägig"><i></i></button></label>
-          <div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
+        ${pill('time', `<div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${pill('color', evColorRow(e.color), 'color')}
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
       </div>
@@ -453,13 +478,14 @@ const Calendar = (() => {
       // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
       const s = toMin(e.time), en = toMin(e.end), dur = s != null && en != null && en > s ? en - s : null;
       const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
-      set('time', icon('f-clock'), e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Ganztägig', durTxt ? `<span class="ce-dur">${durTxt}</span>` : '');
+      // Uhrzeit: Regler direkt in der Zeile (kein Aufklappen von Hand) – an = Uhrzeit festgelegt, die Räder fahren darunter aus; aus = ganztägig
+      form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
       set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
       form.querySelector('[data-act="cover"]').innerHTML = `<span class="tk-si">${icon('f-image')}</span><span class="tk-rv">${e.cover ? 'Cover ändern' : 'Cover hinzufügen'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
       const cv = form.querySelector('.ce-cover'); cv.hidden = !e.cover; if (e.cover && cv.firstElementChild.getAttribute('src') !== e.cover) cv.firstElementChild.src = e.cover;
-      form.querySelector('[data-allday]').classList.toggle('on', !e.time);
       form.querySelector('.ce-wheels').hidden = !e.time; // ganztägig: keine Uhrzeiten
       form.querySelectorAll('[data-color]').forEach((b) => b.classList.toggle('on', b.dataset.color === e.color));
+      form.querySelector('.ce-own').hidden = !form.querySelector('.ce-own').firstElementChild;
     };
     // Datum: kleiner Kalender
     const cal = UIKit.miniCalendar(form.querySelector('.tk-cal'), () => e.date, (iso) => { e.date = iso; draw(); setTimeout(() => form.querySelector('.tk-pop[data-k="date"]').classList.remove('open'), 140); });
@@ -481,24 +507,34 @@ const Calendar = (() => {
     };
     form.addEventListener('click', (x) => {
       const op = x.target.closest('[data-open]');
-      if (op) { openPop(op.dataset.open); return; }
-      if (x.target.closest('[data-allday]')) {
-        if (e.time) { e.time = ''; e.end = ''; } else { e.time = '09:00'; e.end = '10:00'; wStart.setValue(e.time); wEnd.setValue(e.end); }
-        draw(); return;
+      // Uhrzeit-Zeile: Regler (oder Zeile ohne Uhrzeit) schaltet die Uhrzeit an/aus – an: die Räder fahren aus, aus: sie fahren ein
+      if (op && op.dataset.open === 'time' && (x.target.closest('[data-allday]') || !e.time)) {
+        const pop = op.closest('.tk-pop');
+        if (e.time) { e.time = ''; e.end = ''; pop.classList.remove('open'); draw(); return; }
+        e.time = '09:00'; e.end = '10:00'; draw();
+        form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open'));
+        pop.classList.add('open');
+        requestAnimationFrame(() => { wStart.setValue(e.time); wEnd.setValue(e.end); });
+        return;
       }
+      if (op) { openPop(op.dataset.open); return; }
       const cu = x.target.closest('[data-custom]');
       if (cu) {
-        const host = cu.closest('.tk-colors').nextElementSibling;
-        if (host.firstChild) { host.replaceChildren(); return; }
+        // Eigene Farbe: der bunte Knopf bleibt, wie er ist; die Farbe erscheint oben in der Zeile (Vorschau) und kommt mit „Übernehmen“
+        // in die Reihe darunter – gespeichert und gleich ausgewählt. Ohne „Übernehmen“ gilt wieder die vorige Farbe.
+        const host = form.querySelector('.tk-picker-host');
+        if (host.firstChild) { e.color = host._before || e.color; host.replaceChildren(); draw(); return; }
+        host._before = e.color;
         host.append(UIKit.colorPicker(EV_COLORS.includes(e.color) || COLORS.includes(e.color) ? '#5b8cff' : e.color, (hex, done) => {
-          e.color = hex; cu.style.setProperty('--c', hex); cu.classList.add('on'); draw();
-          if (done) { host.replaceChildren(); cu.closest('.tk-pop').classList.remove('open'); }
+          e.color = hex;
+          if (done) { addOwn(hex); host._before = hex; host.replaceChildren(); form.querySelector('.ce-own').innerHTML = ownRow(hex); }
+          draw();
         }));
         return;
       }
       if (x.target.closest('.tk-picker')) return;
       const co = x.target.closest('[data-color]');
-      if (co) { if (!co.dataset.color) return; e.color = co.dataset.color; form.querySelector('.tk-custom')?.classList.remove('on'); form.querySelectorAll('.tk-colors [data-color]').forEach((b) => b.classList.toggle('on', b === co)); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
+      if (co) { if (!co.dataset.color) return; e.color = co.dataset.color; const host = form.querySelector('.tk-picker-host'); host._before = e.color; host.replaceChildren(); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
       if (!x.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = x.target.closest('[data-act]')?.dataset.act;
       if (act === 'cover') { form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open')); form.querySelector('.ce-cover-in').click(); return; }
