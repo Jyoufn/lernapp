@@ -2635,19 +2635,43 @@ function markerIcon(step, name, cls = '') {
 const THOUGHT_ICONS = [
   [/(quelle|recherch|such|nachschlag|nachseh|internet|studyflix|simpleclub|knowunity|serlo)/i, 'search'],
   [/(bild|foto|abbildung|schema|skizze|illustration|zeichn)/i, 'image'],
+  [/(präsentation|folie|vortrag|referat)/i, 'slides'],
+  [/(karteikarte|lernset|quiz|probeklausur|klausur|prüfungsvorbereit|lernzettel|abfrag)/i, 'cap'],
   [/(diagramm|statistik|verlauf|entwicklung|anteil|prozent|daten\b|zahlen)/i, 'chart'],
   [/(tabelle|vergleich|gegenüber|unterschied|gemeinsam)/i, 'table'],
   [/(rechn|gleichung|formel|ableit|integral|umform|ergebnis|lösungsweg)/i, 'hash'],
+  [/(termin|kalender|datum|stundenplan|frist|abgabe)/i, 'calendar'],
   [/(zeitstrahl|chronolog|jahreszahl|epoche|zeitlich|historisch)/i, 'clock'],
   [/(datei|dokument|pdf|arbeitsblatt|material|buchseite|seite \d|aufgabenstellung|aufgabe \d|operator)/i, 'file'],
   [/(code|programm|skript|funktion|html|javascript|python)/i, 'terminal'],
-  [/(übersetz|vokabel|grammatik|latein|englisch|französisch|sprache)/i, 'globe'],
+  [/(übersetz|vokabel|grammatik|latein|englisch|französisch|spanisch|sprache)/i, 'globe'],
+  [/(aktie|börse|depot|kurs\b|kurse|rendite|markt|preis|kosten|wirtschaft|inflation|konjunktur)/i, 'trend'],
+  [/(karte|land\b|länder|stadt|region|kontinent|geograf|klima|standort|lage\b)/i, 'map-pin'],
+  [/(pflanze|tier|zelle|ökosystem|umwelt|natur|biolog|photosynthese|fotosynthese|evolution)/i, 'leaf'],
+  [/(körper|organ|krankheit|gesundheit|medizin|herz|blut|nerven|hormon)/i, 'medical'],
+  [/(person|autor|biograf|figur|charakter|politiker|gesellschaft|gruppe|bevölkerung)/i, 'people'],
+  [/(kunst|gemälde|farbe|design|gestalt|stil\b|epoche der kunst)/i, 'palette'],
+  [/(musik|lied|song|melodie|rhythmus|komponist)/i, 'music'],
   [/(prüf|kontroll|korrigier|fehler|stimmt|plausib)/i, 'check-circle'],
+  [/(analys|auswert|untersuch|interpret|deut\w*|beurteil|bewert|erörter|einschätz)/i, 'analytics'],
+  [/(zusammenhang|verbind|verknüpf|beziehung|ursache|folge\b|folgen|wirkung|wechselwirkung)/i, 'link'],
+  [/(einordn|sortier|auswähl|eingrenz|filter|priorisier|wichtigst|schwerpunkt|fokus|kern\b)/i, 'filter'],
+  [/(ziel|absicht|anforderung|gefragt|wunsch|anliegen|verstehen|klären)/i, 'target'],
+  [/(vorbereit|sammel|zusammenstell|zusammentrag|bereitstell|material sichten)/i, 'stack'],
   [/(aufbau|glieder|struktur|reihenfolge|schritte|vorgehen|plan)/i, 'list'],
   [/(begriff|definition|bedeutung|fachwort|grundlage)/i, 'book-open'],
+  [/(beispiel|anwendung|alltag|veranschaulich|anschaulich)/i, 'sparkle'],
+  [/(achtung|risiko|gefahr|warn|vorsicht|ausnahme|grenze|einschränk)/i, 'alert'],
   [/(idee|ansatz|strategie|lösung|überleg)/i, 'bulb'],
   [/(schreib|formulier|antwort|zusammenfass|erklär|aufsatz|text)/i, 'pencil'],
 ];
+/* Feste Schritte der Zeitleiste (Dokumente analysieren, Informationen auswerten, Antwort vorbereiten …): fertig bekommen sie statt des Punkts
+   ein passendes Icon – nach dem Schlüssel des Schritts (thinking.js), nicht nach dem Text. Suche behält die Lupe. */
+const STEP_ICONS = { material: 'file', extract: 'file', depot: 'briefcase', portfolio: 'briefcase', saveDepot: 'download', plan: 'target', strategy: 'list',
+  analyze: 'analytics', depotAnalysis: 'analytics', allocation: 'analytics', fundamentals: 'analytics', risk: 'alert', compare: 'table', credibility: 'check-circle',
+  crosscheck: 'check-circle', review: 'check-circle', gather: 'book-open', discover: 'book-open', synthesize: 'link', charts: 'trend', chartsLoad: 'trend',
+  work: 'pencil', picture: 'image', thoughts: 'bulb' };
+const stepIcon = (step, key) => { const n = STEP_ICONS[key]; if (n && step && !step.querySelector(':scope > .marker.ico')) markerIcon(step, n); };
 function thoughtIcon(title) {
   const t = String(title || '');
   for (const [re, name] of THOUGHT_ICONS) if (re.test(t)) return name;
@@ -3355,7 +3379,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     think.closed = true;
     const dur = think.serverFrom && think.serverTo ? secs(think.serverFrom, think.serverTo) : secs(think.from);
     const label = think.failed ? `${P('plan').sub} <span class="ph-x">· nicht verfügbar</span> <span class="t">${dur}</span>` : doneLine('plan', cont ? 'fortgesetzt' : '', dur);
-    if (think.el) { finishStep(think.el, label); attachPlan(think.el, think.points); return; }
+    if (think.el) { finishStep(think.el, label); stepIcon(think.el, 'plan'); attachPlan(think.el, think.points); return; }
     const step = stepLine('dot', label);
     work.steps.append(step);
     attachPlan(step, think.points);
@@ -3436,7 +3460,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (state === it.state) return;
       it.state = state;
       it.row.dataset.state = state;
-      it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 10 : 13) : todo && state === 'active' ? FadeIcons.svg('arrow-right', 10) : '';
+      it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 8 : 13) : ''; // To-dos: der laufende Punkt ist ein Ladekreis (style.css), kein Pfeil
     });
     const n = plan.items[0]?.row.closest('.step')?.querySelector('.todo-n');
     if (n) n.textContent = `${plan.items.filter((it) => it.state === 'done').length}/${plan.items.length}`;
@@ -3470,7 +3494,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if ((key === 'search' || key === 'gaps') && fold) setTimeout(() => st.step.classList.remove('open'), 500);
   };
   // fertiger Schritt ohne eigene Dauer (Ergebnis einer Phase, z. B. „Collecting key findings · 14 sources“)
-  const noteStep = (k, extra) => { const st = stepLine('dot', doneLine(k, extra)); ensureWork().steps.append(st); scrollToBottom(); return st; };
+  const noteStep = (k, extra) => { const st = stepLine('dot', doneLine(k, extra)); stepIcon(st, k); ensureWork().steps.append(st); scrollToBottom(); return st; };
   // Abzweig unter einem Schritt (aufklappbar über die Zeile)
   const branchOf = (st) => {
     if (st.list) return st.list;
@@ -3614,6 +3638,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
     if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources' || s.stage === 'images') markerIcon(st.step, 'search');
+    else stepIcon(st.step, st.gathering ? 'gather' : st.key || stageKey(s.stage, st.news));
     st.step.hidden = false;
     const sub = P(st.key || stageKey(s.stage, st.news)).sub;
     if (s.status === 'cancelled') { line.innerHTML = `${sub} – gestoppt`; return; }
@@ -3728,6 +3753,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const st = stages.answering;
       st.ended = true;
       finishStep(st.step, `${wroteLabel()} <span class="t">${st.serverFrom && s.ts ? secs(st.serverFrom, Date.parse(s.ts)) : secs(st.from)}</span>`);
+      stepIcon(st.step, 'work');
     }
   };
 
@@ -3898,6 +3924,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (!prepStep || prepStep.adopted || prepStep.closed) return;
     prepStep.closed = true;
     finishStep(prepStep.step, `${P('material').sub} <span class="ph-x">· ${note || `${prepStep.total} ${prepStep.total === 1 ? 'Seite' : 'Seiten'}`}</span> <span class="t">${secs(prepStep.from)}</span>`);
+    stepIcon(prepStep.step, 'material');
   };
   let errorText = ''; // Fehlerkarte gezeigt → darunter die normale Leiste
   let idleTimer = null, idleHit = false;
@@ -4013,7 +4040,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     // offene Stufen sauber abschließen (z. B. beim Stoppen)
     if (stages.answering && !stages.answering.ended) {
       stages.answering.ended = true;
-      finishStep(stages.answering.step, signal.aborted ? `${P('work').sub} – stopped` : `${wroteLabel()} <span class="t">${secs(stages.answering.from)}</span>`);
+      finishStep(stages.answering.step, signal.aborted ? `${P('work').sub} – gestoppt` : `${wroteLabel()} <span class="t">${secs(stages.answering.from)}</span>`);
+      if (!signal.aborted) stepIcon(stages.answering.step, 'work');
     }
     Object.entries(stages).forEach(([stage, st]) => {
       if (!st.ended && stage !== 'answering') endStage({ stage, status: signal.aborted ? 'cancelled' : 'failed' });
@@ -6443,7 +6471,7 @@ function savedThoughts(h) {
     const todo = h.planKind === 'todos';
     const step = stepLine('dot', todo ? `<strong>To-dos</strong> <span class="t todo-n">${h.plan.length}/${h.plan.length}</span>` : '<strong>Plan</strong>');
     const list = el('div', `plan-list${todo ? ' todo' : ''}`);
-    h.plan.forEach((p) => list.append(el('div', 'plan-item', `<span class="pi-mark">${FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 10 : 13)}</span><span class="pi-text">${escapeHtml(p)}</span>`)));
+    h.plan.forEach((p) => list.append(el('div', 'plan-item', `<span class="pi-mark">${FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 8 : 13)}</span><span class="pi-text">${escapeHtml(p)}</span>`)));
     list.querySelectorAll('.plan-item').forEach((r) => { r.dataset.state = 'done'; });
     const fold = el('div', 'fold');
     const inner = el('div', 'fold-in');
@@ -7264,23 +7292,34 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'apple' };
-  /* Schriftart (Einstellungen → Aussehen, 14.11.): Geist (wie im Vorbild, Standard) · Inter · DM Sans · Manrope.
-     Das ganze CSS nennt die Schrift über die Variable --font-ui (style.css: „var(--font-ui, Inter)“ an jeder Stelle).
-     Stärke: normaler Text steht im ganzen CSS in 500 (nie 400) – eine Stärke für Menüs, Einstellungen, Listen, Chat (Wunsch 14.11.).
-     Nur Inter soll „ein Millistück“ kräftiger sein: dafür holt die App Googles Schrift-CSS in 530/630/720, schreibt die Stärken auf 500/600/700 um
-     und hängt sie als Familie „Inter UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start).
-     Klappt das Holen nicht, bleibt normales Inter. Die anderen Schriften laden ganz normal per <link id="app-font-link">. */
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'apple', weight: 'normal' };
+  /* Schriftart und Schriftstärke (Einstellungen → Aussehen, Stand 15.11. abends): Apple (Systemschrift, Standard) · Inter · Figtree · Jakarta · Onest · Outfit · Nunito
+     (Geist, DM Sans und Manrope sind auf Wunsch entfernt). Das ganze CSS nennt die Schrift über --font-ui (style.css: „var(--font-ui, Inter)“).
+     Stärke: normaler Text steht im ganzen CSS in 500, Titel 600/700. Die Einstellung „Schriftstärke“ (Normal · Kräftig · Extra) verschiebt das für ALLES:
+     - Web-Schriften: die App holt Googles Schrift-CSS in den echten Stärken (z. B. 550/650/740), schreibt sie auf 500/600/700 um und hängt sie als Familie
+       „<Name> UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start). Inter ist von Haus aus +30.
+     - Apple-Schrift (lädt nichts) und als Rückfall, wenn das Holen nicht klappt: feine Kontur um die Buchstaben (html[data-fw], style.css). */
   const FONTS = {
     // Apple (15.11., Wunsch „MacBook-Stil“): die Systemschrift des Geräts – auf Mac/iPad/iPhone San Francisco; lädt nichts aus dem Netz
     apple: { label: 'Apple', sys: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Helvetica Neue"' },
-    geist: { label: 'Geist', name: 'Geist', q: 'Geist' },
-    inter: { label: 'Inter', name: 'Inter', q: 'Inter', w: { 400: 530, 500: 530, 600: 630, 700: 720 } },
-    dmsans: { label: 'DM Sans', name: 'DM Sans', q: 'DM+Sans' },
-    manrope: { label: 'Manrope', name: 'Manrope', q: 'Manrope' },
+    inter: { label: 'Inter', name: 'Inter', q: 'Inter', base: 530 },
+    figtree: { label: 'Figtree', name: 'Figtree', q: 'Figtree' },
+    jakarta: { label: 'Jakarta', name: 'Plus Jakarta Sans', q: 'Plus+Jakarta+Sans', max: 800 },
+    onest: { label: 'Onest', name: 'Onest', q: 'Onest' },
+    outfit: { label: 'Outfit', name: 'Outfit', q: 'Outfit' },
+    nunito: { label: 'Nunito', name: 'Nunito Sans', q: 'Nunito+Sans' },
   };
+  const WEIGHTS = { normal: { label: 'Normal', add: 0 }, bold: { label: 'Kräftig', add: 50 }, extra: { label: 'Extra', add: 100 } };
   const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
   const fontId = () => (FONTS[cfg.font] ? cfg.font : 'apple');
+  const weightId = () => (WEIGHTS[cfg.weight] ? cfg.weight : 'normal');
+  // echte Stärken hinter 500/600/700 – null = die Schrift bleibt, wie sie ist (kein Umschreiben nötig)
+  const realWeights = (f) => {
+    const b = (f.base || 500) + WEIGHTS[weightId()].add;
+    if (b === 500) return null;
+    const cap = (v) => Math.min(f.max || 900, v);
+    return { 400: cap(b), 500: cap(b), 600: cap(b + 100), 700: cap(b + 190) };
+  };
   const fontHref = (f) => (f.sys || f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
   const putFont = (css, id) => {
     let st = document.getElementById('app-font');
@@ -7289,33 +7328,35 @@ document.addEventListener('click', (e) => {
     if (st.textContent !== css) st.textContent = css;
     st.dataset.font = id;
   };
+  const stroke = (on) => { if (on && weightId() !== 'normal') root.dataset.fw = weightId(); else delete root.dataset.fw; }; // Kontur statt echter Stärke
   let fontJob = 0;
   function applyFont() {
-    const id = fontId(), f = FONTS[id], href = fontHref(f), job = ++fontJob;
+    const id = fontId(), f = FONTS[id], href = fontHref(f), job = ++fontJob, w = f.sys ? null : realWeights(f), tag = `${id}:${weightId()}`;
     let link = document.getElementById('app-font-link');
     if (!href) link?.remove();
     else {
       if (!link) { link = document.createElement('link'); link.id = 'app-font-link'; link.rel = 'stylesheet'; document.head.append(link); }
       if (link.getAttribute('href') !== href) link.setAttribute('href', href);
     }
-    if (f.sys) { root.style.setProperty('--font-ui', `${f.sys}, Inter`); putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
-    root.style.setProperty('--font-ui', f.w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
-    if (!f.w) { putFont('', id); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
+    if (f.sys) { root.style.setProperty('--font-ui', `${f.sys}, Inter`); putFont('', id); stroke(true); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
+    root.style.setProperty('--font-ui', w ? `"${f.name} UI", "${f.name}", Inter` : `"${f.name}", Inter`);
+    if (!w) { putFont('', id); stroke(false); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
-    const fresh = cached?.id === id && cached.v === FONT_V && cached.css;
+    const fresh = cached?.id === tag && cached.v === FONT_V && cached.css;
+    stroke(!fresh); // bis die echte Stärke geladen ist (oder falls sie nicht lädt): Kontur
     if (fresh) { putFont(cached.css, id); if (Date.now() - (cached.at || 0) < 7 * 86400000) return; } else putFont('', id);
-    fetch(`https://fonts.googleapis.com/css2?family=${f.q}:wght@${[...new Set(Object.values(f.w))].sort((a, b) => a - b).join(';')}&display=swap`)
+    fetch(`https://fonts.googleapis.com/css2?family=${f.q}:wght@${[...new Set(Object.values(w))].sort((a, b) => a - b).join(';')}&display=swap`)
       .then((r) => (r.ok ? r.text() : Promise.reject())).then((txt) => {
         if (job !== fontJob || !/@font-face/.test(txt)) return;
-        // je echte Stärke kann für mehrere übliche Nummern stehen (z. B. 600 → 600): Regel je Nummer ausgeben
+        // je echte Stärke kann für mehrere übliche Nummern stehen (z. B. 550 → 400 und 500): Regel je Nummer ausgeben
         const css = txt.replace(/@font-face\s*\{[^}]*\}/g, (rule) => {
           const real = (/font-weight:\s*(\d+)/.exec(rule) || [])[1];
-          const stds = Object.entries(f.w).filter(([, r]) => String(r) === real).map(([sd]) => sd);
+          const stds = Object.entries(w).filter(([, r]) => String(r) === real).map(([sd]) => sd);
           return stds.map((sd) => rule.replace(/font-family:\s*(['"])[^'"]+\1/, `font-family: '${f.name} UI'`).replace(/font-weight:\s*\d+/, `font-weight: ${sd}`)).join('\n');
         });
         if (!/@font-face/.test(css)) return;
-        putFont(css, id);
-        try { localStorage.setItem(FONT_CSS, JSON.stringify({ id, v: FONT_V, css, at: Date.now() })); } catch {}
+        putFont(css, id); stroke(false); storeVars();
+        try { localStorage.setItem(FONT_CSS, JSON.stringify({ id: tag, v: FONT_V, css, at: Date.now() })); } catch {}
       }).catch(() => {});
   }
   // Mac-App (desktop/preload.js) → nur dort gibt es „Glas“; im Browser fällt ein gespeichertes Glas auf Dunkel zurück
@@ -7349,10 +7390,13 @@ document.addEventListener('click', (e) => {
     root.style.setProperty('--accent', m.light ? invertHex(cfg.accent) : cfg.accent);
     root.style.setProperty('--plaza-strength', String(Math.max(0, Math.min(100, cfg.tiles)) / 100));
     applyFont();
-    // für den nächsten Start: auth.js setzt diese Werte sofort, bevor die App lädt (kein Umspringen der Farben)
+    storeVars();
+  }
+  // für den nächsten Start: auth.js/index.html setzen diese Werte sofort, bevor die App lädt (kein Umspringen der Farben und der Schrift)
+  function storeVars() {
     try {
       const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-ui'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
-      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; }
+      const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; } if (root.dataset.fw) data.fw = root.dataset.fw;
       const fh = fontHref(FONTS[fontId()]); if (fh) data.fontHref = fh; // index.html lädt die Schrift damit schon beim Start
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
     } catch {}
@@ -7392,7 +7436,8 @@ document.addEventListener('click', (e) => {
     GLASS,
     DESKTOP,
     FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
-    get: () => ({ ...cfg, mode: modeId(), font: fontId() }),
+    WEIGHTS: Object.fromEntries(Object.entries(WEIGHTS).map(([id, w]) => [id, w.label])),
+    get: () => ({ ...cfg, mode: modeId(), font: fontId(), weight: weightId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
 })();

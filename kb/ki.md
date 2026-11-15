@@ -83,6 +83,10 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Antworttext ohne Vorgehen**: „NUR DAS ERGEBNIS“ + `createAnswerGuard` (Vorgehens-Absätze und englische Gedanken-Überschriften wie „**Executing Task**“ am Anfang fallen weg).
 
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
+- **Symbole an den Schritten (15.11.)**: fertige Gedanken bekommen ein Icon nach ihrem Oberpunkt (`THOUGHT_ICONS` in `app.js`, ~30 Gruppen: Analyse, Zusammenhang, Ziel,
+  Vorbereiten, Beispiel, Karte, Biologie, Börse, Präsentation …); feste Schritte bekommen fertig ein Icon nach ihrem Schlüssel (`STEP_ICONS`/`stepIcon`: Dokumente → Datei,
+  Auswerten → Balken, Antwort → Stift, Prüfen → Haken …). Nur Icons `#f-…`, keine Emojis; die KI muss dafür nichts tun (kein Prompt).
+- **To-dos**: kleine Kreise (13 px), erledigt = kleiner Haken, laufender Punkt = Ladekreis (kein Pfeil).
 - Hauptstatus (Kopf): `swapText` blendet nur die eigene Text-Animation – NIE `getAnimations().cancel()` auf das Element (sonst bleibt der Schimmer mitten stehen).
 - Antwort mit Denken: der Server meldet `answering` mit `meta.think` → Kopf zeigt gleich „Nachdenken“, der Schreib-Schritt erscheint erst mit dem ersten Text (kein Springen Schreiben → Nachdenken → Schreiben).
 - **Nur echte Schritte**: Keine Zeile für „Verstehen“ (steht nur im Kopf), kein erfundenes „Analysieren“ nach der Suche, keine „Risiko bewerten“-Zeile ohne Rechnung.
@@ -118,6 +122,9 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Schutz** (verbindlich): `searchWeb` (lib/web.js) verwirft Erwachsenen-/Glücksspielseiten (`UNSAFE`); die Tiefen-Recherche nimmt eine gelesene Seite nur, wenn sie zum Thema passt (`R.relevance` ≥ 0,34) – vorher landeten Duden-Einträge, Hilfeseiten und eine Pornoseite unter den Treffer-Chips.
 
 ## Quellen
+- **Wikipedia bei Lernthemen (Stand 15.11. abends, ersetzt „KEINE Wikipedia“ weiter unten)**: Lernplattformen (Studyflix, simpleclub, Knowunity, serlo …) bleiben zuerst und
+  vorn im Rang; Wikipedia darf ergänzen, wenn sie zum Thema passt (`R.research` läuft für Lernen jetzt mit `noWiki: false`, die Bewertung `judge` sortiert Unpassendes aus).
+  Alltagsfragen: alle Quellen. Sonst wird am Denken/Ablauf der KI nichts gesteuert.
 - Nummerierte Belege [1], [2] im Text werden entfernt; unten an der Antwort stehen nur **zitierte** Quellen (`mainSources`, bei vielen nur die tragenden).
 - Google-Grounding: Server meldet nur Chunks, auf die `groundingSupports` zeigen (= wirklich benutzt). Hat die Antwort keine nummerierten Belege, stehen diese unten.
 - Ohne Suche: gar nichts (keine Leiste, kein Hinweis).
