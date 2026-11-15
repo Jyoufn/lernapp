@@ -505,13 +505,23 @@ const Calendar = (() => {
       if (k === 'date' && p) cal.open();
       if (k === 'time' && p) requestAnimationFrame(() => { wStart.setValue(e.time || '09:00'); wEnd.setValue(e.end || '10:00'); });
     };
+    // Regler „Uhrzeit“ (16.11.): draw() zeichnet die Zeile neu → ohne Hilfe springt der Knopf nur um. Daher läuft er hier
+    // sichtbar von der alten zur neuen Seite und die Spur blendet ihre Farbe weich über.
+    const slideSwitch = (on) => {
+      const sw = form.querySelector('[data-allday]'), k = sw?.querySelector('i');
+      if (!k || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const bgNow = getComputedStyle(sw).backgroundColor; sw.classList.toggle('on'); const bgWas = getComputedStyle(sw).backgroundColor; sw.classList.toggle('on');
+      const ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+      k.animate([{ transform: on ? 'none' : 'translateX(14px)' }, { transform: on ? 'translateX(14px)' : 'none' }], { duration: 320, easing: ease });
+      sw.animate([{ backgroundColor: bgWas }, { backgroundColor: bgNow }], { duration: 260, easing: 'ease' });
+    };
     form.addEventListener('click', (x) => {
       const op = x.target.closest('[data-open]');
       // Uhrzeit-Zeile: Regler (oder Zeile ohne Uhrzeit) schaltet die Uhrzeit an/aus – an: die Räder fahren aus, aus: sie fahren ein
       if (op && op.dataset.open === 'time' && (x.target.closest('[data-allday]') || !e.time)) {
         const pop = op.closest('.tk-pop');
-        if (e.time) { e.time = ''; e.end = ''; pop.classList.remove('open'); draw(); return; }
-        e.time = '09:00'; e.end = '10:00'; draw();
+        if (e.time) { e.time = ''; e.end = ''; pop.classList.remove('open'); draw(); slideSwitch(false); return; }
+        e.time = '09:00'; e.end = '10:00'; draw(); slideSwitch(true);
         form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open'));
         pop.classList.add('open');
         requestAnimationFrame(() => { wStart.setValue(e.time); wEnd.setValue(e.end); });

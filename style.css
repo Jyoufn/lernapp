@@ -12779,7 +12779,7 @@ html body .ce-card .ce-colors.ce-own { padding-top: 2px !important; }
 /* Ansichten (Home, Kalender, Dokument, Aufgaben): blenden langsam und gleichmäßig ein */
 html body :is(.dc-view, .cal-view, .tk-view:not(.tk-embed), .uiv-view) { animation: view-rise 480ms var(--calm) both; }
 /* Darunterliegender Chat wird sofort ausgeblendet, damit beim Einblenden nichts durchscheint */
-.panel:has(> :is(.dc-view, .cal-view, .tk-view, .uiv-view):not([hidden])) > :is(.content, .composer-area, .home-plaza, .chat-bg, .prompt-nav, .create-switch, .pn-card) { visibility: hidden; }
+.panel:has(> :is(.dc-view, .cal-view, .tk-view, .uiv-view):not([hidden])) > :is(.content, .composer-area, .home-plaza, .chat-bg, .prompt-nav, .pn-card) { visibility: hidden; } /* .create-switch bleibt (sonst kommt man von „Dokumente“ nicht mehr zu „Agenten“) */
 .app.settings-open .panel > :not(.st-view, .panel-toggle, .chat-bar) { visibility: hidden; }
 /* Wechsel über die Sidebar (View Transition, nur Hauptteil) */
 ::view-transition-old(main-panel) { animation: 200ms ease both vt-out; }
@@ -12799,3 +12799,41 @@ html body :is(.dc-view, .cal-view, .tk-view:not(.tk-embed), .uiv-view) { animati
   html body :is(.dc-view, .cal-view, .tk-view, .uiv-view), .app.settings-open :is(.st-side, .st-view), .st-view.st-enter .st-page > * { animation: none !important; }
   .sidebar, .panel, .sidebar-inner { transition: none !important; }
 }
+
+/* ===== 16.11. – Schriftstärke als Regler in Prozent (Einstellungen → Aussehen); Kontur der Apple-Schrift stufenlos über --fw-stroke ===== */
+html[data-fw] body { -webkit-text-stroke: var(--fw-stroke, 0px) currentColor; }
+.st-fw { width: 180px; }
+.st-fw-val { min-width: 44px; margin-right: 12px; color: var(--text-3); font: 500 13px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; text-align: right; }
+/* Akzentfarbe in Aussehen wie im Termin-Fenster: Kreise in einer Reihe, rechts der bunte Knopf; eigene Farben darunter; Farbwähler unter der Zeile */
+.st-acc { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.st-acc .st-acc-dots { display: flex; flex-wrap: nowrap; justify-content: flex-end; gap: 10px; padding: 4px 2px; }
+.st-acc .st-acc-dots button { width: 19px; height: 19px; animation: none; }
+.st-acc .st-acc-dots button.on { box-shadow: 0 0 0 2px var(--main-bg), 0 0 0 3.5px var(--c); }
+.st-acc-row { align-items: flex-start; padding-top: 12px; padding-bottom: 10px; }
+.st-acc-picker:empty { display: none; }
+.st-acc-picker { display: flex; justify-content: flex-end; padding: 0 14px 12px; }
+.st-acc-picker .tk-picker { width: 260px; animation: view-rise 320ms var(--calm) both; }
+/* Termin-Fenster: Farbkreise ohne eigenes Aufploppen (der Kasten blendet schon weich ein) */
+.ce-card .tk-colors button { animation: none; }
+/* Schriftstärke: Ausgewähltes/Titel bekommen bei der Apple-Kontur nur einen Bruchteil davon (sonst wird Gewähltes klobig) */
+html[data-fw] :is(b, strong, h1, h2, h3, h4, th, .on, .active, [aria-selected="true"], [aria-checked="true"]) { -webkit-text-stroke-width: calc(var(--fw-stroke, 0px) * 0.35); }
+/* Dokument: Zurück/Vor oben links kleiner und leiser */
+.dc-hist .icon-btn svg { width: 13px; height: 13px; }
+.dc-hist .icon-btn { width: 26px; height: 26px; }
+/* Leiste „Agenten · Dokumente“: gewählter Teil ruhiger – neutral, feiner heller Rand, weiße Schrift; Rest leise */
+.cs-pill { background: rgba(255, 255, 255, 0.028); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+.cs-pill .cs-thumb { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.cs-pill > button.on { color: var(--text); }
+.cs-pill > button:not(.on) { color: var(--text-4); }
+@media (hover: hover) { .cs-pill > button:not(.on):hover { color: var(--text-2); } }
+/* Kalender (Monat): Einträge runder, Text genau mittig in der Höhe */
+.cm-ev.cal-pill { border-radius: 7px; height: 21px; line-height: 21px; padding: 0 7px; }
+.cm-ev.cal-pill > span { line-height: 21px; }
+/* ===== 16.11. – Mini-Kalender (Datum im Termin-/Aufgaben-Fenster) wie die große Monatsansicht, nur ohne Termine:
+   Wochentag-Pillen, Tag-Kacheln mit Zahl oben links, andere Monate ohne Fläche, heute = Zahl in Akzentfarbe, gewählt = blauer Rand ===== */
+html body .tk-cal .tk-cal-grid span { height: 20px !important; border-radius: 6px; background: rgba(255, 255, 255, 0.035); color: var(--text-4); font-size: 10.5px; font-weight: 500; line-height: 20px; text-align: center; }
+html body .tk-cal .tk-cal-grid button { display: flex !important; align-items: flex-start !important; justify-content: flex-start !important; height: 36px !important; padding: 4px 0 0 6px !important; border-radius: 7px !important;
+  background: rgba(255, 255, 255, 0.035) !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06) !important; font-size: 11.5px !important; line-height: 1.2 !important; }
+html body .tk-cal .tk-cal-grid button.other { background: none !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03) !important; }
+html body .tk-cal .tk-cal-grid button.on { background: rgba(255, 255, 255, 0.05) !important; box-shadow: inset 0 0 0 1.5px var(--accent) !important; }
+@media (hover: hover) { html body .tk-cal .tk-cal-grid button:not(.on):hover { background: rgba(255, 255, 255, 0.07) !important; } }

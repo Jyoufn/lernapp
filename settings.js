@@ -165,12 +165,18 @@
 
   // Aussehen: Modus und Hintergrund als Umschalter (wie „Allow · Ask me · Block“ in der Vorlage), Akzent als runde Farben
   const seg = (attr, items, on) => `<span class="st-seg" role="radiogroup">${items.map(([label, val]) => `<button type="button" role="radio" aria-checked="${val === on}" class="${val === on ? 'on' : ''}" ${attr}="${val}">${esc(label)}</button>`).join('')}</span>`;
+  const ACC_OWN = 'appearance.ownAccents';
+  const ownAccents = () => { try { return (JSON.parse(localStorage.getItem(ACC_OWN)) || []).filter((c) => /^#[0-9a-f]{6}$/.test(c)).slice(0, 12); } catch { return []; } };
+  const addAccent = (hex) => { try { localStorage.setItem(ACC_OWN, JSON.stringify([hex, ...ownAccents().filter((c) => c !== hex)].slice(0, 12))); } catch {} };
+  const accDot = (c, cur) => `<button type="button" class="${c === cur ? 'on' : ''}" data-ap-accent="${c}" style="--c:${c}" aria-label="Akzent ${c}"></button>`;
   function lookPage() {
     const ap = window.Appearance;
     if (!ap) return '';
     const cfg = ap.get();
     const accent = String(cfg.accent || '').toLowerCase();
-    const custom = !ap.ACCENTS.includes(accent);
+    // Akzentfarbe wie im Kalender (16.11.): Vorschläge in einer Reihe, ganz rechts der bunte Knopf für eine eigene Farbe,
+    // darunter die selbst gewählten (gespeichert, neueste zuerst, gleich ausgewählt)
+    const own = ownAccents(); if (/^#[0-9a-f]{6}$/.test(accent) && !ap.ACCENTS.includes(accent) && !own.includes(accent)) own.unshift(accent);
     const near = TILES.reduce((a, b) => (Math.abs(b[1] - cfg.tiles) < Math.abs(a[1] - cfg.tiles) ? b : a))[1];
     // Wunsch 10.11.: Vorschau als kleine App (Sidebar mit Zeilen, Nachricht, Antwort, Eingabefeld), gewählt = heller Ring statt blauem Rahmen;
     // „Kacheln“ steht im selben Kasten unter der Akzentfarbe (mit Trennlinie), darunter die Sprache. Kein eigener Abschnitt „Chat-Hintergrund“ mehr.
@@ -178,13 +184,16 @@
     return `<h2>Aussehen</h2><div class="st-card">
         <div class="st-row st-modes-row"><span class="st-name">Modus</span><div class="ap-modes st-ap-modes">${Object.entries(ap.MODES).map(([id, label]) => { const pv = ap.PREVIEW?.[id] || {};
           return `<button type="button" class="ap-mode${id === cfg.mode ? ' on' : ''}" data-ap-mode="${id}" style="--pv-main:${pv.main};--pv-side:${pv.side};--pv-line:${pv.line};--pv-field:${pv.field}"><span class="ap-prev apv"><span class="apv-side"><i></i><i></i><i></i></span><span class="apv-main"><span class="apv-msg"></span><span class="apv-ans"><i></i><i></i><i class="s"></i></span><span class="apv-in"><em></em></span></span></span><span class="ap-mode-name">${esc(label)}</span></button>`; }).join('')}</div></div>
-        <div class="st-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><span class="st-swatches">${ap.ACCENTS.map((c) => `<button type="button" class="st-sw${c === accent ? ' on' : ''}" style="--sw:${c}" data-ap-accent="${c}" aria-label="Akzent ${c}"></button>`).join('')}`
-        + `<label class="st-sw st-sw-own${custom ? ' on' : ''}" style="--sw:${custom ? accent : 'transparent'}" title="Eigene Farbe"><input type="color" value="${esc(accent || '#2f86ff')}" aria-label="Eigene Akzentfarbe" /></label></span></div>
+        <div class="st-row st-acc-row"><span class="st-name">Akzentfarbe</span><span class="grow"></span><div class="st-acc">
+          <div class="tk-colors st-acc-dots">${ap.ACCENTS.map((c) => accDot(c, accent)).join('')}<button type="button" class="tk-custom" data-ap-custom aria-label="Eigene Farbe"></button></div>
+          ${own.length ? `<div class="tk-colors st-acc-dots st-acc-own">${own.map((c) => accDot(c, accent)).join('')}</div>` : ''}</div></div>
+        <div class="st-acc-picker" data-acc-host></div>`
+        + `
         ${cfg.mode === 'glass' && ap.DESKTOP ? `<div class="st-row"><span class="st-name">Glas</span><span class="grow"></span>${seg('data-ap-glasstone', [['Hell', 'light'], ['Dunkel', 'dark']], cfg.glassTone === 'light' ? 'light' : 'dark')}</div>` : ''}
         ${!ap.DESKTOP && /Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) && navigator.maxTouchPoints < 2 ? `<div class="st-row"><span class="st-name">Mac-App (mit Glas)</span><span class="grow"></span><a class="st-btn light" href="https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg" target="_blank" rel="noopener">Herunterladen</a></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
         <div class="st-row"><span class="st-name">Schriftart</span><span class="grow"></span>${seg('data-ap-font', Object.entries(ap.FONTS || {}).map(([id, label]) => [label, id]), cfg.font)}</div>
-        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span>${seg('data-ap-weight', Object.entries(ap.WEIGHTS || {}).map(([id, label]) => [label, id]), cfg.weight)}</div>
+        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span><span class="st-fw-val" data-fw-val>${cfg.weight} %</span><label class="ui-slider st-fw" style="--p:${((cfg.weight - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"><input type="range" min="${ap.W_MIN}" max="${ap.W_MAX}" step="5" value="${cfg.weight}" data-ap-wrange aria-label="Schriftstärke in Prozent" /></label></div>
         <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
   }
@@ -369,6 +378,19 @@
     }
     const md = e.target.closest('[data-ap-mode]');
     if (md) { window.Appearance?.set({ mode: md.dataset.apMode }); drawView(); return; }
+    const cu = e.target.closest('[data-ap-custom]');
+    if (cu) {
+      // eigener Farbwähler (derselbe wie im Kalender): Vorschau live, „Übernehmen“ legt die Farbe in die Reihe darunter
+      const host = view.querySelector('[data-acc-host]'), ap = window.Appearance;
+      if (host.firstChild) { ap.set({ accent: host._before }); host.replaceChildren(); return; }
+      host._before = ap.get().accent;
+      host.append(UIKit.colorPicker(ap.ACCENTS.includes(host._before) ? '#5b8cff' : host._before, (hex, done) => {
+        hex = hex.toLowerCase(); ap.set({ accent: hex });
+        if (done) { addAccent(hex); drawView(); }
+      }));
+      return;
+    }
+    if (e.target.closest('.tk-picker')) return;
     const ac = e.target.closest('[data-ap-accent]');
     if (ac) { window.Appearance?.set({ accent: ac.dataset.apAccent }); drawView(); return; }
     const gt = e.target.closest('[data-ap-glasstone]');
@@ -377,8 +399,6 @@
     if (lg) { window.I18n?.set(lg.dataset.lang); drawView(); return; }
     const ft = e.target.closest('[data-ap-font]');
     if (ft) { window.Appearance?.set({ font: ft.dataset.apFont }); drawView(); return; }
-    const fw = e.target.closest('[data-ap-weight]');
-    if (fw) { window.Appearance?.set({ weight: fw.dataset.apWeight }); drawView(); return; }
     const tl = e.target.closest('[data-ap-tiles]');
     if (tl) { window.Appearance?.set({ tiles: Number(tl.dataset.apTiles) }); drawView(); return; }
     for (const h of hooks(page)) { try { if (h.click?.(e, drawView)) return; } catch {} }
@@ -398,6 +418,15 @@
     if (wsClick(e)) return;
     const ag = e.target.closest('[data-agent]');
     if (ag) { window.PixelDogs?.select(ag.dataset.agent); setTimeout(drawView, 50); }
+  });
+  // Schriftstärke (16.11.): Regler in Prozent – Zahl und Spur sofort, die Schrift selbst kurz nach dem Ziehen (lädt evtl. neu)
+  let fwT = 0;
+  view.addEventListener('input', (e) => {
+    const r = e.target.closest?.('[data-ap-wrange]'); if (!r) return;
+    const ap = window.Appearance, v = Number(r.value);
+    r.parentElement.style.setProperty('--p', `${((v - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%`);
+    const lab = view.querySelector('[data-fw-val]'); if (lab) lab.textContent = `${v} %`;
+    clearTimeout(fwT); fwT = setTimeout(() => ap.set({ weight: v }), 180);
   });
   view.addEventListener('focusout', (e) => { if (!e.target.matches?.('[data-name-live]')) return; write(NAME_KEY, e.target.value.trim()); applyName(); e.target.value = nameOf(); });
   view.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-name-live]') && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.target.blur(); } });

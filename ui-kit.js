@@ -150,11 +150,14 @@ const UIKit = (() => {
       if (is) {
         const h = menu.offsetHeight;
         // nur die Höhe läuft auf – der Inhalt steht still (kein Hineingleiten, kein Wachsen)
-        menu.animate([{ height: `${wasFolding ? from : 0}px` }, { height: `${h}px` }], { duration: 340, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+        menu.animate([{ height: `${wasFolding ? from : 0}px` }, { height: `${h}px` }], { duration: 400, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+        // 16.11. („cleaner“): der Inhalt blendet kurz nach dem Aufgehen weich ein, statt hart angeschnitten mitzuwachsen
+        box?.animate([{ opacity: 0, transform: 'translateY(-3px)' }, { opacity: 1, transform: 'none' }], { duration: 300, delay: wasFolding ? 0 : 70, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)', fill: 'backwards' });
       } else {
         pop.classList.add('folding');
         // gleiche Kurve und Dauer wie beim Aufklappen → beim Wechsel zwischen zwei Zeilen bleibt die Fensterhöhe ruhig
-        const a = menu.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 340, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' });
+        const a = menu.animate([{ height: `${from}px` }, { height: '0px' }], { duration: 400, easing: 'cubic-bezier(0.32, 0.72, 0, 1)', fill: 'forwards' });
+        box?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease', fill: 'forwards' }); // Inhalt geht zuerst, dann schließt der Kasten
         a.onfinish = () => { if (!pop.classList.contains('open')) { pop.classList.remove('folding'); menu.getAnimations().forEach((x) => x.cancel()); box?.getAnimations().forEach((x) => x.cancel()); } };
       }
     }));

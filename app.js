@@ -7293,33 +7293,36 @@ document.addEventListener('click', (e) => {
       pv: { main: '#ffffff', side: '#f4f4f4', line: 'rgba(0,0,0,.14)', field: 'rgba(0,0,0,.14)' } },
   };
   const ACCENTS = ['#2f86ff', '#a78bfa', '#f472b6', '#ff6363', '#fb923c', '#4ade80'];
-  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'apple', weight: 'normal' };
+  const DEFAULTS = { mode: 'dark', accent: '#2f86ff', tiles: 33, glass: '#ffffff', glassTone: 'dark', font: 'apple', weight: 100 };
   /* Schriftart und Schriftstärke (Einstellungen → Aussehen, Stand 15.11. abends): Apple (Systemschrift, Standard) · Inter · Figtree · Jakarta · Onest · Outfit · Nunito
      (Geist, DM Sans und Manrope sind auf Wunsch entfernt). Das ganze CSS nennt die Schrift über --font-ui (style.css: „var(--font-ui, Inter)“).
      Stärke: normaler Text steht im ganzen CSS in 500, Titel 600/700. Die Einstellung „Schriftstärke“ (Normal · Kräftig · Extra) verschiebt das für ALLES:
      - Web-Schriften: die App holt Googles Schrift-CSS in den echten Stärken (z. B. 550/650/740), schreibt sie auf 500/600/700 um und hängt sie als Familie
        „<Name> UI“ ein (<style id="app-font">, Text in localStorage „appearance.fontcss“, index.html setzt ihn beim Start). Inter ist von Haus aus +30.
      - Apple-Schrift (lädt nichts) und als Rückfall, wenn das Holen nicht klappt: feine Kontur um die Buchstaben (html[data-fw], style.css). */
+  /* Stand 16.11.: nur noch Apple · Inter · Rubik (wie Inter, Ecken weicher – Wunsch „nicht so spitz“) · Outfit · Nunito;
+     Stärke stufenlos in Prozent (80–150 %, Regler), 100 % = heutiger Stand. Web-Schriften bekommen die echte Stärke
+     (base + (Prozent − 100) × 2), die Apple-Schrift über 100 % eine feine Kontur (darunter kann sie nicht dünner werden). */
   const FONTS = {
     // Apple (15.11., Wunsch „MacBook-Stil“): die Systemschrift des Geräts – auf Mac/iPad/iPhone San Francisco; lädt nichts aus dem Netz
     apple: { label: 'Apple', sys: '-apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Helvetica Neue"' },
     inter: { label: 'Inter', name: 'Inter', q: 'Inter', base: 530 },
-    figtree: { label: 'Figtree', name: 'Figtree', q: 'Figtree' },
-    jakarta: { label: 'Jakarta', name: 'Plus Jakarta Sans', q: 'Plus+Jakarta+Sans', max: 800 },
-    onest: { label: 'Onest', name: 'Onest', q: 'Onest' },
+    rubik: { label: 'Rubik', name: 'Rubik', q: 'Rubik', min: 300, base: 480 }, // wirkt bei gleicher Zahl etwas kräftiger als Inter
     outfit: { label: 'Outfit', name: 'Outfit', q: 'Outfit' },
     nunito: { label: 'Nunito', name: 'Nunito Sans', q: 'Nunito+Sans' },
   };
-  const WEIGHTS = { normal: { label: 'Normal', add: 0 }, bold: { label: 'Kräftig', add: 50 }, extra: { label: 'Extra', add: 100 } };
+  const W_MIN = 80, W_MAX = 150, OLD_W = { normal: 100, bold: 125, extra: 150 }; // frühere Stufen → Prozent
   const FONT_CSS = 'appearance.fontcss', FONT_V = 3;
   const fontId = () => (FONTS[cfg.font] ? cfg.font : 'apple');
-  const weightId = () => (WEIGHTS[cfg.weight] ? cfg.weight : 'normal');
+  const weightId = () => { const v = OLD_W[cfg.weight] ?? Number(cfg.weight); return Number.isFinite(v) ? Math.round(Math.max(W_MIN, Math.min(W_MAX, v))) : 100; };
   // echte Stärken hinter 500/600/700 – null = die Schrift bleibt, wie sie ist (kein Umschreiben nötig)
   const realWeights = (f) => {
-    const b = (f.base || 500) + WEIGHTS[weightId()].add;
+    const b = (f.base || 500) + (weightId() - 100) * 2;
     if (b === 500) return null;
-    const cap = (v) => Math.min(f.max || 900, v);
-    return { 400: cap(b), 500: cap(b), 600: cap(b + 100), 700: cap(b + 190) };
+    const cap = (v) => Math.max(f.min || 200, Math.min(f.max || 900, v));
+    // 16.11.: Titel/Ausgewähltes nur noch etwas kräftiger als der Text (vorher +100/+190 → ab einer gewissen Stärke klobig), oben gedeckelt
+    const top = Math.min(f.max || 900, 760);
+    return { 400: cap(b), 500: cap(b), 600: Math.min(top, cap(b + 70)), 700: Math.min(top, cap(b + 130)) };
   };
   const fontHref = (f) => (f.sys || f.q === 'Inter' ? '' : `https://fonts.googleapis.com/css2?family=${f.q}:wght@400;500;600;700&display=swap`); // Inter lädt index.html schon
   const putFont = (css, id) => {
@@ -7329,7 +7332,8 @@ document.addEventListener('click', (e) => {
     if (st.textContent !== css) st.textContent = css;
     st.dataset.font = id;
   };
-  const stroke = (on) => { if (on && weightId() !== 'normal') root.dataset.fw = weightId(); else delete root.dataset.fw; }; // Kontur statt echter Stärke
+  // Kontur statt echter Stärke (Apple-Schrift, oder bis die Web-Schrift geladen ist): je 10 % über 100 eine Spur dicker
+  const stroke = (on) => { const px = (weightId() - 100) * 0.008; if (on && px > 0) { root.dataset.fw = 'on'; root.style.setProperty('--fw-stroke', `${px.toFixed(2)}px`); } else { delete root.dataset.fw; root.style.removeProperty('--fw-stroke'); } };
   let fontJob = 0;
   function applyFont() {
     const id = fontId(), f = FONTS[id], href = fontHref(f), job = ++fontJob, w = f.sys ? null : realWeights(f), tag = `${id}:${weightId()}`;
@@ -7344,7 +7348,7 @@ document.addEventListener('click', (e) => {
     if (!w) { putFont('', id); stroke(false); try { localStorage.removeItem(FONT_CSS); } catch {} return; }
     let cached = null; try { cached = JSON.parse(localStorage.getItem(FONT_CSS) || 'null'); } catch {}
     const fresh = cached?.id === tag && cached.v === FONT_V && cached.css;
-    stroke(!fresh); // bis die echte Stärke geladen ist (oder falls sie nicht lädt): Kontur
+    stroke(false); // 16.11.: Kontur nur bei der Apple-Schrift – Web-Schriften bekommen ausschließlich ihre echte Stärke
     if (fresh) { putFont(cached.css, id); if (Date.now() - (cached.at || 0) < 7 * 86400000) return; } else putFont('', id);
     fetch(`https://fonts.googleapis.com/css2?family=${f.q}:wght@${[...new Set(Object.values(w))].sort((a, b) => a - b).join(';')}&display=swap`)
       .then((r) => (r.ok ? r.text() : Promise.reject())).then((txt) => {
@@ -7356,7 +7360,7 @@ document.addEventListener('click', (e) => {
           return stds.map((sd) => rule.replace(/font-family:\s*(['"])[^'"]+\1/, `font-family: '${f.name} UI'`).replace(/font-weight:\s*\d+/, `font-weight: ${sd}`)).join('\n');
         });
         if (!/@font-face/.test(css)) return;
-        putFont(css, id); stroke(false); storeVars();
+        putFont(css, id); storeVars();
         try { localStorage.setItem(FONT_CSS, JSON.stringify({ id: tag, v: FONT_V, css, at: Date.now() })); } catch {}
       }).catch(() => {});
   }
@@ -7396,7 +7400,7 @@ document.addEventListener('click', (e) => {
   // für den nächsten Start: auth.js/index.html setzen diese Werte sofort, bevor die App lädt (kein Umspringen der Farben und der Schrift)
   function storeVars() {
     try {
-      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-ui'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
+      const vars = {}; ['--main-bg', '--sidebar-bg', '--field-bg', '--field-border', '--accent', '--glass', '--plaza-strength', '--font-ui', '--fw-stroke'].forEach((k) => { vars[k] = root.style.getPropertyValue(k); });
       const data = { theme: root.dataset.theme, mode: root.dataset.mode }; if (root.dataset.glass) { data.glass = root.dataset.glass; data.glassTone = root.dataset.glassTone; } if (root.dataset.fw) data.fw = root.dataset.fw;
       const fh = fontHref(FONTS[fontId()]); if (fh) data.fontHref = fh; // index.html lädt die Schrift damit schon beim Start
       localStorage.setItem('appearance.vars', JSON.stringify({ vars, data }));
@@ -7437,7 +7441,7 @@ document.addEventListener('click', (e) => {
     GLASS,
     DESKTOP,
     FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
-    WEIGHTS: Object.fromEntries(Object.entries(WEIGHTS).map(([id, w]) => [id, w.label])),
+    W_MIN, W_MAX,
     get: () => ({ ...cfg, mode: modeId(), font: fontId(), weight: weightId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };

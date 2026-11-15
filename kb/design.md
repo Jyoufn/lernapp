@@ -130,3 +130,8 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
   wieder aufnehmen). Neue Zeile „Schriftstärke“ Normal · Kräftig · Extra (`cfg.weight`, `WEIGHTS`/`realWeights` in `app.js`): Web-Schriften laden in echten Stärken (+50/+100,
   als Familie „<Name> UI“), Apple-Schrift und Rückfall über feine Kontur `html[data-fw]`. Im CSS weiter nur 500/600/700 schreiben.
 - **Bild-Großansicht** (`.lightbox`/`.lb-stage`): feste Bühne (`minmax(0, 1fr)`), Bild immer ganz sichtbar (`object-fit: contain`) – hohe Fotos wurden vorher abgeschnitten.
+
+## Schrift, Farbe, Mini-Kalender (Stand 16.11.)
+- Schriftarten: Apple (Standard) · Inter · Rubik (wie Inter, weichere Ecken) · Outfit · Nunito. Schriftstärke = Regler 80–150 % (`.ui-slider`), Web-Schriften bekommen echte Stärken (base + (Prozent−100)×2; 600/700 nur +70/+130, höchstens 760); Kontur (`--fw-stroke`) NUR bei der Apple-Schrift, Gewähltes/Titel bekommen davon nur 35 %.
+- Akzentfarbe in Aussehen wie die Farbwahl im Termin: Kreise in einer Reihe, rechts bunter Knopf → `UIKit.colorPicker` darunter, „Übernehmen“ legt die Farbe in die Reihe darunter (`appearance.ownAccents`).
+- Mini-Kalender (`UIKit.miniCalendar`, `.tk-cal`): wie die große Monatsansicht ohne Termine – Wochentag-Pillen, Kacheln mit Zahl oben links, andere Monate ohne Fläche, gewählt = blauer Rand. Aufklapp-Zeilen (`foldRows`): Höhe 400 ms, Inhalt blendet verzögert ein bzw. zuerst aus. Regler „Uhrzeit“ gleitet per WAAPI (Zeile wird neu gezeichnet).
