@@ -6128,23 +6128,12 @@ window.LibChats = {
   pin: (id) => { const t = libTab(id); if (t) togglePin(t); },
   del: (id) => { const t = libTab(id); if (t) deleteChat(t); },
 };
-/* ---------- Sidebar: Bereiche „Chats“ und „Dokumente“ lassen sich ein- und ausklappen (Klick auf die Überschrift,
-   bleibt gemerkt). „Chats“ = die 8 neuesten (auch geschlossene); antwortet einer gerade, steht rechts ein Halbkreis. ---------- */
-const SB_SEC_KEY = 'sidebar.closed.v1';
-const sbClosed = new Set((() => { try { return JSON.parse(localStorage.getItem(SB_SEC_KEY)) || []; } catch { return []; } })());
-window.sbSectionClosed = (k) => sbClosed.has(k);
-window.sbSectionHead = (label, k) => `<button type="button" class="sb-sec-head" aria-expanded="${!sbClosed.has(k)}"><span>${label}</span><svg width="12" height="12"><use href="#o-chev"/></svg></button>`;
-document.querySelector('.sidebar').addEventListener('click', (e) => {
-  const head = e.target.closest('.sb-sec-head'); if (!head) return;
-  e.preventDefault();
-  const sec = head.closest('.sb-sec'), k = sec.dataset.sec;
-  const closed = sec.classList.toggle('closed');
-  head.setAttribute('aria-expanded', String(!closed));
-  closed ? sbClosed.add(k) : sbClosed.delete(k);
-  try { localStorage.setItem(SB_SEC_KEY, JSON.stringify([...sbClosed])); } catch {}
-});
+/* ---------- Sidebar: Bereiche „Angepinnt“, „Chats“ und „Dokumente“ sind IMMER offen (Wunsch 15.11.: kein Ein-/Ausklappen mehr) –
+   die Überschrift ist nur noch Text ohne Pfeil. „Chats“ = die 8 neuesten (auch geschlossene); antwortet einer gerade, steht rechts ein Halbkreis. ---------- */
+try { localStorage.removeItem('sidebar.closed.v1'); } catch {}
+window.sbSectionClosed = () => false;
+window.sbSectionHead = (label) => `<div class="sb-sec-head"><span>${label}</span></div>`;
 const sbChats = $('sbChats');
-sbChats.classList.toggle('closed', sbClosed.has('chats'));
 let sideChatsFrame = 0;
 /* Chat in der Sidebar: beim Darüberfahren rechts Anheften und „⋯“ (Umbenennen · Anheften · Löschen); zu lange Namen enden mit … */
 const sbChatMenu = el('div', 'chat-pop chat-menu sb-chat-menu', `<button type="button" role="menuitem" data-sbm="rename">${icon('f-pencil', 14)}<span>Umbenennen</span></button>`
@@ -6253,7 +6242,6 @@ window.renderSideChats = () => {
     const sbPinned = $('sbPinned');
     if (sbPinned) {
       sbPinned.hidden = !pinnedItems.length;
-      sbPinned.classList.toggle('closed', sbClosed.has('pinned'));
       if (pinnedItems.length) {
         const pb = el('div', 'sb-sec-body'), pi = el('div', 'sb-sec-in');
         pb.append(pi); pi.append(...pinnedItems.map(mk));

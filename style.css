@@ -12632,3 +12632,14 @@ html[data-glass="on"] .st-seg > button:is(.on, [aria-checked="true"]) { backgrou
 /* ===== Bereich „UI“: vorhandene Bausteine der App (Umschalter, Schalter, Farben, Tags, Karte, Kalender, Uhrzeit) ===== */
 .stk-add .stk-btn, .st-key-add .stk-btn { background: rgba(255, 255, 255, 0.08) !important; border: 0 !important; border-radius: 8px; color: var(--text) !important; }
 .stk-add .stk-btn:hover { background: rgba(255, 255, 255, 0.12) !important; }
+
+/* ===== 15.11.: Sidebar-Abschnitte immer offen · Info-Tabelle ohne Fläche · Fokusmodus ohne mitlaufendes Icon · leiserer Umschalter „Agenten | Dokumente“ ===== */
+/* Sidebar: „Angepinnt“, „Chats“, „Dokumente“ lassen sich nicht mehr einklappen – Überschrift ist nur Text (kein Pfeil, kein Darüberfahren) */
+.sb-sec-head, .sb-sec-head:hover, .sb-sec-row > .sb-sec-head:hover { background: none; cursor: default; }
+/* Info-Tabelle im Dokument: keine eigene Fläche, der Hauptteil scheint durch – nur Rand und Linien bleiben */
+.dc-ptable, html[data-mode="black"] .dc-ptable { background: none; }
+/* Fokusmodus: das Icon neben dem Titel bleibt beim Scrollen nicht oben stehen, es scrollt mit dem Titel weg */
+.dc-editor.focus .dc-page.with-icon:not(.with-cover) .dc-icon { position: relative; top: auto; }
+/* Umschalter „Agenten | Dokumente“ (Dunkel): Spur nur einen Hauch heller als der Hauptteil, gewählter Teil so hell wie die Spur bisher (5 %) */
+.cs-pill { background: rgba(255, 255, 255, 0.022); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035); }
+.cs-pill > .cs-thumb { background: rgba(255, 255, 255, 0.055); }
