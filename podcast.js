@@ -11,6 +11,10 @@ const Podcast = (() => {
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const fi = (n, s = 14) => (window.FadeIcons ? FadeIcons.svg(n, s) : '');
   const VOICES = { w: ['Kore', 'Aoede', 'Leda'], m: ['Puck', 'Charon', 'Orus'] };
+  // Wählbare Stimmen (16.11., Einstellung je Sprecher im Player): Gemini-Stimmen mit kurzer Beschreibung, gemerkt je Sprechername
+  const VOICE_LIST = { w: [['Kore', 'klar'], ['Aoede', 'locker'], ['Leda', 'jung'], ['Zephyr', 'hell'], ['Despina', 'sanft'], ['Sulafat', 'warm']],
+    m: [['Puck', 'munter'], ['Charon', 'ruhig'], ['Orus', 'fest'], ['Fenrir', 'lebhaft'], ['Iapetus', 'deutlich'], ['Achird', 'freundlich']] };
+  const ALL_VOICES = new Set([...VOICE_LIST.w, ...VOICE_LIST.m].map(([v]) => v));
   const COLORS = ['#8db6ff', '#eba3c9', '#8fd8ae'];
   const CPS = 14.5; // gesprochene Zeichen je Sekunde (Schätzung, bis der Ton da ist)
   const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
@@ -62,6 +66,8 @@ const Podcast = (() => {
     const voices = {};
     const used = { w: 0, m: 0 };
     data.sprecher.forEach((s) => { voices[s.name] = VOICES[s.stimme][used[s.stimme]++ % 3]; });
+    const saved = read('podcast.voices', {});
+    data.sprecher.forEach((s) => { if (ALL_VOICES.has(saved[s.name])) voices[s.name] = saved[s.name]; });
     const color = Object.fromEntries(data.sprecher.map((s, i) => [s.name, COLORS[i % COLORS.length]]));
     let segs = segmentize(data.zeilen, data.zeilen.map((_, i) => i));
     let engine = 'gemini', playing = false, want = false, src = null, startedAt = 0, startOff = 0, seg = 0, segT = 0, raf = 0, lineNow = -1, asking = false;
@@ -70,7 +76,8 @@ const Podcast = (() => {
     fig.className = 'pod';
     const who = data.sprecher.map((s) => s.name).join(' & ');
     fig.innerHTML = `<div class="pod-top"><div class="pod-cover" aria-hidden="true"><span class="pod-wave"><i></i><i></i><i></i><i></i><i></i></span></div>
-        <div class="pod-meta"><span class="pod-kick">Podcast</span><b class="pod-title">${esc(data.titel)}</b><span class="pod-sub">${esc(who)}<span class="pod-len"></span></span><span class="pod-state"></span></div></div>
+        <div class="pod-meta"><span class="pod-kick">Podcast</span><b class="pod-title">${esc(data.titel)}</b><span class="pod-sub">${esc(who)}<span class="pod-len"></span></span><span class="pod-state"></span></div>
+        <div class="pod-who" aria-hidden="true">${data.sprecher.map((s) => `<span class="pod-av" data-who="${esc(s.name)}" style="--pc:${color[s.name]}">${esc(s.name.slice(0, 1).toUpperCase())}</span>`).join('')}</div></div>
       <div class="pod-bar"><span class="pod-t">0:00</span><div class="pod-track" role="slider" aria-label="Fortschritt" tabindex="0"><div class="pod-fill"></div><div class="pod-knob"></div></div><span class="pod-d"></span></div>
       <div class="pod-ctrl">
         <button type="button" class="pod-btn" data-pod="prev" aria-label="Vorheriger Beitrag">${fi('prev', 16)}</button>
@@ -78,8 +85,12 @@ const Podcast = (() => {
         <button type="button" class="pod-btn" data-pod="next" aria-label="Nächster Beitrag">${fi('next', 16)}</button>
         <span class="pod-grow"></span>
         <label class="pod-vol" aria-label="Lautstärke">${fi('volume', 14)}<input type="range" min="0" max="1" step="0.05" value="${volume}" /></label>
+        <button type="button" class="pod-ask pod-vbtn" data-pod="voices" aria-expanded="false">${fi('sliders', 13)}Stimmen</button>
         <button type="button" class="pod-ask" data-pod="ask">${fi('mic', 13)}Mitreden</button>
       </div>
+      <div class="pod-voices" hidden>${data.sprecher.map((s) => `<div class="pod-vrow" data-spk="${esc(s.name)}"><span class="pod-vname"><i style="background:${color[s.name]}"></i>${esc(s.name)}${s.rolle ? `<em>${esc(s.rolle)}</em>` : ''}</span>
+        <span class="pod-vchips">${VOICE_LIST[s.stimme].map(([v, d]) => `<button type="button" class="pod-vc${voices[s.name] === v ? ' on' : ''}" data-voice="${v}">${v}<em>${d}</em></button>`).join('')}</span></div>`).join('')}
+        <p class="pod-vhint">Antippen wählt die Stimme und spielt eine kurze Hörprobe.</p></div>
       <form class="pod-askbox" hidden><input maxlength="400" placeholder="Frag ${esc(who)} etwas – die beiden gehen darauf ein …" aria-label="Frage an den Podcast" /><button type="submit" class="pod-send">Fragen</button></form>
       ${data.kapitel.length ? `<div class="pod-chaps">${data.kapitel.map((k, i) => `<button type="button" class="pod-chap" data-chap="${i}">${esc(k.titel)}</button>`).join('')}</div>` : ''}
       <div class="pod-tr"></div>`;
@@ -123,6 +134,8 @@ const Podcast = (() => {
         const el = tr.querySelector(`.pod-l[data-i="${i}"]`);
         if (el) { el.classList.add('on'); if (playing) tr.scrollTo({ top: el.offsetTop - tr.clientHeight / 3, behavior: 'smooth' }); }
         lineNow = i;
+        const spk = data.zeilen[i]?.s;
+        fig.querySelectorAll('.pod-av').forEach((a) => a.classList.toggle('talk', a.dataset.who === spk));
         // aktuelles Kapitel markieren (eingefügte Antworten gehören zum Kapitel, in dem gefragt wurde)
         let c = -1;
         data.kapitel.forEach((k, n) => { if (k.ab <= i) c = n; });
@@ -275,6 +288,34 @@ const Podcast = (() => {
       play();
     }
 
+    /* Stimme wechseln (16.11.): merken, Hörprobe spielen, schon geladenen Ton verwerfen und – läuft es gerade – an derselben Stelle neu vertonen */
+    let probe = null;
+    async function setVoice(name, v) {
+      if (!ALL_VOICES.has(v)) return;
+      voices[name] = v;
+      const all = read('podcast.voices', {}); all[name] = v;
+      try { localStorage.setItem('podcast.voices', JSON.stringify(all)); } catch {}
+      fig.querySelectorAll(`.pod-vrow[data-spk="${CSS.escape(name)}"] .pod-vc`).forEach((c) => c.classList.toggle('on', c.dataset.voice === v));
+      const wasOn = want;
+      if (wasOn) pause();
+      segs.forEach((x) => { x.buf = null; x.status = 'idle'; x.loading = null; delete x.from; delete x.to; });
+      engine = 'gemini';
+      // Hörprobe: ein kurzer Satz in der neuen Stimme
+      try { probe?.stop(); } catch {}
+      const row = fig.querySelector(`.pod-vrow[data-spk="${CSS.escape(name)}"]`); row?.classList.add('probing');
+      try {
+        const r = await fetch('/api/podcast/audio', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lines: [{ s: name, t: `Hallo, ich bin ${name}. So klinge ich in diesem Podcast.` }], voices: { [name]: v } }) });
+        const type = r.headers.get('content-type') || '';
+        if (r.ok && /l16/.test(type) && voices[name] === v) {
+          const rate = Number((type.match(/rate=(\d+)/) || [])[1]) || 24000, bytes = new Uint8Array(await r.arrayBuffer()), n = Math.floor(bytes.length / 2);
+          const ctx = audio(), buf = ctx.createBuffer(1, n, rate), ch = buf.getChannelData(0), dv = new DataView(bytes.buffer, bytes.byteOffset, n * 2);
+          for (let k = 0; k < n; k++) ch[k] = dv.getInt16(k * 2, true) / 32768;
+          probe = ctx.createBufferSource(); probe.buffer = buf; probe.connect(gain); probe.start();
+        }
+      } catch {} finally { row?.classList.remove('probing'); }
+      if (wasOn) setTimeout(play, 300);
+    }
+
     /* Bedienung */
     fig.addEventListener('click', (e) => {
       const b = e.target.closest('[data-pod]');
@@ -286,9 +327,12 @@ const Podcast = (() => {
           const voiced = data.zeilen.map((z, j) => (z.du ? -1 : j)).filter((j) => j >= 0);
           const p = voiced.indexOf(i);
           seekLine(voiced[Math.max(0, Math.min(voiced.length - 1, p + (a === 'next' ? 1 : -1)))]);
-        } else if (a === 'ask') { const f = $('.pod-askbox'); f.hidden = !f.hidden; if (!f.hidden) f.querySelector('input').focus(); }
+        } else if (a === 'voices') { const v = $('.pod-voices'); v.hidden = !v.hidden; b.setAttribute('aria-expanded', String(!v.hidden)); b.classList.toggle('on', !v.hidden); }
+        else if (a === 'ask') { const f = $('.pod-askbox'); f.hidden = !f.hidden; if (!f.hidden) f.querySelector('input').focus(); }
         return;
       }
+      const vc = e.target.closest('[data-voice]');
+      if (vc) { setVoice(vc.closest('[data-spk]').dataset.spk, vc.dataset.voice); return; }
       const ch = e.target.closest('[data-chap]');
       if (ch) { const z = data.kapitel[+ch.dataset.chap]?.ab ?? 0; const voiced = data.zeilen.findIndex((x, j) => j >= z && !x.du); seekLine(voiced < 0 ? 0 : voiced); return; }
       const l = e.target.closest('.pod-l');
