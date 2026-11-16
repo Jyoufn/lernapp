@@ -50,7 +50,8 @@ test('Rückfragen-Regel: selten, nur ganz am Anfang, nie mitten in der Antwort; 
   assert.doesNotMatch(s, /bis zu 5 Fragen, je 3–4 Antwortmöglichkeiten/, 'Abfrage-Anleitung steht nicht mehr immer im Prompt');
   for (const t of ['Frag mich bitte ab', 'Kannst du mich zu Kapitel 3 abfragen?', 'Stell mir fünf Fragen zur Mitose', 'Teste mein Wissen', 'Übe mit mir Vokabeln', 'Hör mich ab']) assert.ok(A.QUIZ_WISH.test(t), t);
   for (const t of ['Erklär mir die Mitose', 'Ich habe eine Frage zur Aufgabe', 'Löse Aufgabe 3', 'Was ist ein t-Test?', 'Stell mir das Thema vor']) assert.ok(!A.QUIZ_WISH.test(t), t);
-  assert.equal(A.quizMode([{ role: 'user', text: 'Frag mich ab' }, { role: 'assistant', text: '…' }, { role: 'user', text: 'B' }]), true);
+  assert.equal(A.quizMode([{ role: 'user', text: 'Frag mich ab' }, { role: 'assistant', text: '```ask\n{}\n```' }, { role: 'user', text: 'B' }]), true, 'laufendes Abfragen');
+  assert.equal(A.quizMode([{ role: 'user', text: 'Frag mich ab' }, { role: 'assistant', text: 'Normale Antwort' }, { role: 'user', text: 'Erklär mir Mitose' }]), false, 'Wunsch gilt nicht für spätere Fragen');
   assert.equal(A.quizMode([{ role: 'user', text: 'Erklär mir das' }]), false);
 });
 

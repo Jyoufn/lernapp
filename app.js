@@ -1171,9 +1171,16 @@ function nextSuggestions(text) {
 function fadeNextSuggestions() {
   document.querySelectorAll('.next-sugs:not(.out)').forEach((b) => { b.classList.add('out'); setTimeout(() => b.remove(), 900); });
 }
-function parseAskBlock(text) {
+/* 16.11. (Wunsch: Rückfragen NUR zum Prompt, nie Quiz-/Verständnisfragen nach einer Antwort): ein ask-Block zählt nur, wenn er die
+   Antwort IST (höchstens ein kurzer Satz drumherum). Steht davor eine richtige Antwort, gilt er nicht – außer ein Abfragen läuft schon
+   (die vorige Antwort war selbst eine Frage-Runde, z. B. Auswertung + nächste Quizrunde auf ausdrücklichen Wunsch). */
+function askOnly(text, prevText = '') {
+  const outside = String(text || '').replace(/```ask\s*[\s\S]*?```/g, '').replace(/```weiter[\s\S]*?```/g, '').trim();
+  return outside.length <= 280 || /```ask/.test(String(prevText || ''));
+}
+function parseAskBlock(text, prevText = '') {
   const m = text.match(/```ask\s*([\s\S]*?)```/);
-  if (!m) return null;
+  if (!m || !askOnly(text, prevText)) return null;
   try {
     const qs = JSON.parse(m[1]).questions;
     const valid = (Array.isArray(qs) ? qs : []).filter((q) => q && q.question).slice(0, 6).map((q) => ({
@@ -4237,7 +4244,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     msgEl.querySelectorAll('.t.live').forEach((t) => t.classList.remove('live'));
   }
   // Hat die KI Rückfragen gestellt? → Eingabefeld wird zum Fragefeld
-  const questions = answerR && !signal.aborted ? parseAskBlock(answerR.text) : null;
+  const prevA = (() => { const h = historyOf(tab); for (let k = h.length - 1; k >= 0; k--) if (h[k].role === 'assistant') return h[k].text || ''; return ''; })();
+  const questions = answerR && !signal.aborted ? parseAskBlock(answerR.text, prevA) : null;
+  if (answerR && !questions && /```ask/.test(answerR.text)) answerR.text = answerR.text.replace(/\n*```ask\s*[\s\S]*?```\s*/g, '\n').trim(); // ungefragte Fragen nach der Antwort fallen weg
   if (answerR && !questions && answerR.text.trim()) {
     // Tiefen-Recherche: Quellen immer unten zeigen – ohne Belegzählung alle gelesenen Quellen
     const allSrc = renderOpts.sources.filter(Boolean);
