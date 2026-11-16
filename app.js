@@ -46,11 +46,10 @@ function activateTab(tab) {
   const drop = prev && prev !== tab && isDraft(prev) ? prev : null; // leerer Chat / leeres Dokument wird beim Verlassen verworfen
   // 16.11.: genau EINE Animation beim Wechsel – beim Wiederanzeigen würden sonst die Einblend-Animationen aller Nachrichten/Zeilen darin
   // noch einmal starten (wirkte „doppelt“). Kurz alle inneren Animationen aus; Chat bzw. Ansicht blenden als Ganzes weich ein.
-  if (prev && prev !== tab) { const pn = document.querySelector('.panel'); pn?.classList.add('vt-fresh'); clearTimeout(activateTab.t); activateTab.t = setTimeout(() => pn?.classList.remove('vt-fresh'), 650); }
-  if (prev && prev !== tab && typeof chat !== 'undefined' && !tab.dataset.view && chat.animate) {
-    // Chat wechseln: Inhalt blendet weich ein und gleitet ein Stück hoch (statt hart umzuspringen)
-    requestAnimationFrame(() => chat.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' }));
-  }
+  // 16.11. spät (Nutzer: „buggt, geht mal hoch, mal runter“): früher schaltete .vt-fresh die inneren Animationen 650 ms ab – danach
+  // starteten sie neu (zweite Bewegung). Jetzt: die Ansicht blendet nur weich ein (ohne Verschieben), alle inneren Einblend-Animationen
+  // werden sofort fertig gesetzt; nur die Kalender-Kacheln erscheinen gewollt einzeln (calTiles).
+  if (prev && prev !== tab) requestAnimationFrame(() => settleSwitch(!tab.dataset.view));
   if (prev && prev !== tab && typeof chat !== 'undefined') {
     const nodes = document.createDocumentFragment();
     nodes.append(...chat.childNodes);
@@ -71,6 +70,16 @@ function activateTab(tab) {
   if (drop) { if (drop.dataset.view === 'doc') window.Docs?.discard(drop.dataset.doc); tabChats.delete(drop); drop.remove(); }
   markDrafts();
   window.dispatchEvent(new CustomEvent('chat-tab-switched', { detail: tab }));
+}
+function settleSwitch(isChat) {
+  const pn = document.querySelector('.panel'); if (!pn || !pn.getAnimations) return;
+  const views = '.dc-view, .cal-view, .tk-view, .uiv-view, .chats-view';
+  pn.getAnimations({ subtree: true }).forEach((a) => {
+    const el = a.effect?.target;
+    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'step-up-in') return;
+    if (el.closest?.(`#chat, ${views}`)) a.finish();
+  });
+  if (isChat && typeof chat !== 'undefined' && chat.animate && !REDUCE_MOTION) chat.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
 }
 /* Leere Chats und leere Dokumente erscheinen erst oben als Tab, wenn etwas drin steht */
 function isDraft(tab) {
@@ -1484,7 +1493,11 @@ function copyFigure(code) {
   fig.dataset.viz = 'kopie';
   const head = el('div', 'cbx2-head');
   head.append(el('span', 'cbx2-label'));
-  head.firstChild.textContent = label || (/^(betreff|subject)\s*:/i.test(lines[0] || '') ? 'E-Mail' : 'Text');
+  // 16.11. spät: immer ein richtiger Titel (nie „Text“) – fehlt „# Titel“, aus dem Inhalt erraten
+  const first = (lines.find((l) => l.trim()) || '').trim();
+  head.firstChild.textContent = label || (/^(betreff|subject)\s*:/i.test(first) ? 'E-Mail'
+    : /^(du bist|you are|act as|stell dir vor|erstelle|schreibe|generiere|write|create)\b/i.test(first) ? 'Prompt'
+      : /^(hallo|hi|hey|liebe|lieber|sehr geehrte|guten (morgen|tag|abend)|moin|servus)\b/i.test(first) ? 'Nachricht' : 'Entwurf');
   const btn = el('button', 'copybox-btn', `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`);
   btn.type = 'button';
   btn.addEventListener('click', async () => {
@@ -7400,7 +7413,7 @@ document.addEventListener('click', (e) => {
   plaza.setAttribute('aria-hidden', 'true');
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
-  let tiles = '';
+  const groups = [];
   for (let r = 70; r < 1150; r += 34) {
     const count = Math.floor((2 * Math.PI * r) / 34);
     const off = rnd() * Math.PI * 2;
@@ -7409,12 +7422,14 @@ document.addEventListener('click', (e) => {
       const a = off + (k / count) * Math.PI * 2, x = 800 + Math.cos(a) * r, y = 560 + Math.sin(a) * r * 0.82;
       const s = 21 + rnd() * 5, deg = (a * 180) / Math.PI;
       const op = (0.021 + rnd() * 0.033).toFixed(3); // Stärke regelt --plaza-strength (Darstellung → Kacheln)
-      tiles += rnd() < 0.07
+      const grp = Math.floor(rnd() * 8); // 16.11. spät: 8 Gruppen erscheinen nacheinander (zufällig verteilt) – wirkt wie einzelne Kacheln, kostet kaum
+      groups[grp] = (groups[grp] || '') + (rnd() < 0.07
         ? `<path d="M0 ${-s / 2}L${s / 2} ${s / 2}H${-s / 2}Z" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${(deg + 90).toFixed(1)})" fill-opacity="${op}"/>`
-        : `<rect x="${(-s / 2).toFixed(1)}" y="${(-s / 2).toFixed(1)}" width="${s.toFixed(1)}" height="${s.toFixed(1)}" rx="5" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})" fill-opacity="${op}"/>`;
+        : `<rect x="${(-s / 2).toFixed(1)}" y="${(-s / 2).toFixed(1)}" width="${s.toFixed(1)}" height="${s.toFixed(1)}" rx="5" transform="translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${deg.toFixed(1)})" fill-opacity="${op}"/>`);
     }
   }
-  plaza.innerHTML = `<svg viewBox="0 0 1600 1120" preserveAspectRatio="xMidYMid slice"><g fill="currentColor">${tiles}</g></svg>`;
+  const ORDER = [3, 6, 0, 5, 1, 7, 2, 4]; // zufällige Reihenfolge der Gruppen
+  plaza.innerHTML = `<svg viewBox="0 0 1600 1120" preserveAspectRatio="xMidYMid slice"><g fill="currentColor">${groups.map((g, k) => `<g class="pz-g" style="--td:${ORDER.indexOf(k) * 55}ms">${g || ''}</g>`).join('')}</g></svg>`;
   panel.prepend(plaza);
 
   /* An/aus: leerer Chat-Tab → Startseite */
@@ -7425,7 +7440,9 @@ document.addEventListener('click', (e) => {
   function updateHome() {
     const tab = activeTab();
     const on = !!tab && !tab.dataset.view && !historyOf(tab).length;
+    const was = panel.classList.contains('home');
     panel.classList.toggle('home', on);
+    if (on && !was && !REDUCE_MOTION) { plaza.classList.remove('pz-in'); void plaza.offsetWidth; plaza.classList.add('pz-in'); } // Kacheln erscheinen gruppenweise
     if (on) setTimeout(lift, 0);
   }
   window.addEventListener('chat-tab-switched', () => setTimeout(updateHome, 0)); // nicht rAF: läuft in Hintergrund-Tabs nicht

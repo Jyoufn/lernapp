@@ -632,6 +632,12 @@ const Calendar = (() => {
     open = true;
     view.hidden = false;
     render();
+    // 16.11. spät: beim Öffnen erscheinen die Kacheln einzeln in zufälliger Reihenfolge (keine Welle) – nur beim Öffnen, nicht beim Monatswechsel
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      view.querySelectorAll('.cm-cell').forEach((c) => { c.style.setProperty('--td', `${Math.round(Math.random() * 420)}ms`); });
+      view.classList.remove('cal-enter'); void view.offsetWidth; view.classList.add('cal-enter');
+      clearTimeout(show.t); show.t = setTimeout(() => view.classList.remove('cal-enter'), 1100);
+    }
     document.querySelector('.panel')?.classList.add('view-calendar');
   }
   function hide() {
