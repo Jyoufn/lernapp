@@ -13111,3 +13111,21 @@ html body .cv-ring .cv-rr i { width: 8px; height: 8px; border-radius: 3px; }
 html body .tk-menu.tags.dc-mmenu { width: 236px; margin-top: 4px; }
 html body .tk-menu.tags .dc-pj-mi { display: grid; place-items: center; width: 16px; }
 html body .tk-menu.tags .tk-mi.tag > svg:last-of-type { margin-left: auto; }
+
+/* ===== 16.11. spät: Rückfragen im Stil „A · B · C …“ (Nutzer-Vorbild) – Frage groß, jede Antwort mit Buchstaben-Kachel,
+   der letzte Buchstabe ist das Feld zum Selbst-Eintragen; keine Zusatz-Texte. Einfachauswahl: antippen = Antwort. ===== */
+html body .ask-panel .ask-q { color: var(--text); font: 600 16px/1.35 var(--font-ui, Inter), sans-serif; letter-spacing: -0.01em; }
+html body .ask-panel .ask-head { padding-bottom: 6px; }
+html body .ask-panel .ask-top:not(:has(.ask-kicker, .ask-progress)) { position: absolute; top: 10px; right: 10px; }
+html body .ask-panel { position: relative; }
+html body .ask-panel .ask-options { display: flex; flex-direction: column; gap: 2px; }
+html body .ask-panel .ask-opt { display: flex; align-items: center; gap: 14px; min-height: 44px; padding: 6px 8px; border: 0; border-radius: 12px; background: none; box-shadow: none; color: var(--text-2); font: 500 15px var(--font-ui, Inter), sans-serif; text-align: left; }
+@media (hover: hover) { html body .ask-panel .ask-opt:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); } }
+html body .ask-panel .ask-let { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.06); color: var(--text-3); font: 600 13px var(--font-ui, Inter), sans-serif; transition: background-color 160ms ease, color 160ms ease; }
+html body .ask-panel .ask-opt.selected { background: rgba(255, 255, 255, 0.05); color: var(--text); }
+html body .ask-panel .ask-opt.selected .ask-let { background: #e6e6e6; color: #141414; }
+html body .ask-panel .ask-opt .ask-mark { display: none; }
+html body .ask-panel .ask-own-row .ask-own-in { flex: 1; min-width: 0; height: 30px; padding: 0; border: 0; background: none; box-shadow: none; outline: none; color: var(--text); font: 500 15px var(--font-ui, Inter), sans-serif; }
+html body .ask-panel .ask-own-row .ask-own-in::placeholder { color: var(--text-4); }
+html body .ask-panel .ask-sub { display: none; }
+html body .ask-panel .ask-opt.ask-own-row { padding: 6px 8px !important; margin: 0 !important; }

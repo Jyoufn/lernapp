@@ -4381,7 +4381,8 @@ function renderAsk(dir = 0) {
   // Kopfzeile: „Rückfrage“ bzw. „Frage x von y“ mit Fortschritts-Strichen, rechts × (= Überspringen); darunter die Frage
   const head = el('div', 'ask-head');
   const top = el('div', 'ask-top');
-  top.append(el('span', 'ask-kicker', ask.kicker ? escapeHtml(ask.kicker) : `Rückfrage <b class="ask-of">${ask.index + 1} von ${ask.questions.length}</b>`));
+  // 16.11. (Wunsch: „keine unnötigen Infos“): oben nur noch die Frage – kein „Rückfrage x von y“; mehrere Fragen = feine Striche
+  if (ask.kicker) top.append(el('span', 'ask-kicker', escapeHtml(ask.kicker)));
   if (many) {
     const bars = el('span', 'ask-progress');
     ask.questions.forEach((_, k) => bars.append(el('i', k < ask.index ? 'done' : k === ask.index ? 'on' : '')));
@@ -4397,7 +4398,7 @@ function renderAsk(dir = 0) {
   const qEl = el('div', 'ask-q md');
   renderInline(qEl, q.question);
   head.append(top, qEl);
-  if (q.multi && q.options.length) head.append(el('div', 'ask-sub', 'Mehrere Antworten möglich'));
+  const LET = 'ABCDEFGH';
 
   const list = el('div', 'ask-options');
   list.setAttribute('role', q.multi ? 'group' : 'radiogroup');
@@ -4406,19 +4407,23 @@ function renderAsk(dir = 0) {
     b.type = 'button';
     b.setAttribute('role', q.multi ? 'checkbox' : 'radio');
     b.setAttribute('aria-checked', String(a.picked.has(i)));
-    b.innerHTML = `<span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
+    b.innerHTML = `<span class="ask-let">${LET[i]}</span><span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
     renderInline(b.querySelector('.ask-label'), opt);
-    b.addEventListener('click', () => pickOption(i));
+    b.addEventListener('click', () => {
+      pickOption(i);
+      // Einfachauswahl (wie im Vorbild): antippen = Antwort – kurz zeigen, dann weiter bzw. senden
+      if (!q.multi && a.picked.has(i)) { const at = ask.index; setTimeout(() => { if (ask && ask.index === at) askNext(); }, 220); }
+    });
     list.append(b);
   });
 
   // „Eigene Antwort“: Zeile mit Stift – man tippt direkt hinein oder spricht über das Mikro rechts
   const ownRow = el('label', `ask-opt ask-own-row${a.own.trim() ? ' selected' : ''}`);
-  ownRow.innerHTML = ''; // kein Stift-Icon links (Wunsch 03.11.)
+  ownRow.innerHTML = `<span class="ask-let">${LET[q.options.length] || '·'}</span>`; // letzter Buchstabe = selbst eintragen
   const own = document.createElement('input');
   own.className = 'ask-own-in';
   own.type = 'text';
-  own.placeholder = q.placeholder || (q.options.length ? 'Oder eigene Antwort schreiben' : 'Deine Antwort…');
+  own.placeholder = q.placeholder || (q.options.length ? 'Etwas anderes …' : 'Deine Antwort …');
   own.value = a.own;
   const ownMic = el('button', 'ask-mic', icon('i-mic', 14));
   ownMic.type = 'button';
@@ -4460,7 +4465,7 @@ function renderAsk(dir = 0) {
   skip.type = 'button';
   skip.title = 'Die KI entscheidet diesen Punkt selbst';
   skip.addEventListener('click', skipOne);
-  if (!ask.noSkip) foot.append(skip);
+  // „Überspringen“ unten entfällt (16.11.) – das × oben reicht
   if (ask.index > 0) {
     const back = el('button', 'ask-btn ghost ask-back', `${icon('i-back', 14)}Zurück`);
     back.type = 'button';

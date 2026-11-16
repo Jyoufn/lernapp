@@ -221,6 +221,7 @@
     'Programmieren': 'Coding', 'Vorschau': 'Preview',
     // Aufwand / Modelle
     'Schnell': 'Fast', 'Sehr hoch': 'Very high', 'Hinzufügen …': 'Add …', 'Anhängen': 'Attach', 'Diktieren': 'Dictate', 'Sprachmodus': 'Voice mode', 'Senden': 'Send', 'Stopp': 'Stop',
+    'Etwas anderes …': 'Something else …', 'Deine Antwort …': 'Your answer …',
     'Einsatz': 'Usage', 'Alles': 'All', 'Text': 'Text', 'E-Mail': 'Email', 'Nachricht': 'Message',
     'Für Chat und Coden.': 'For chat and coding.', 'Nur beim Coden (Coden-Agent, Mini-Apps).': 'Only for coding (coding agent, mini apps).', 'Nur für Chats – beim Coden übernimmt ein anderer.': 'Only for chats – another one handles coding.',
     'Gearbeitet für': 'Worked for', 'Tab schließen': 'Close tab', 'Eigene Farbe': 'Custom color', 'Eigene Akzentfarbe': 'Custom accent color', 'den markierten Text zu …': 'turn the selected text into …',
