@@ -12953,3 +12953,158 @@ html body .tk-cal .tk-cal-grid button.on { background: rgba(255, 255, 255, 0.04)
 @media (hover: hover) { html body .tk-cal .tk-cal-grid button:not(.on):hover { background: rgba(255, 255, 255, 0.05) !important; } }
 /* Großer Kalender (Monat): Tage im Monat ohne Rand, andere Monate bleiben wie sie sind */
 html body .cm-cell:not(.other) { border-color: transparent; }
+
+/* ===== 16.11.: Gedanken nach der Antwort als Tabelle (wie bei Claude) =====
+   „Gearbeitet für …“ bleibt zu; aufgeklappt stehen die Schritte als Zeilen in einer Karte mit Trennlinien.
+   Klick auf einen Gedanken klappt seinen Text IN der Zeile auf. Während der Arbeit bleibt die Zeitleiste wie sie ist. */
+.work:not(.active) .steps { gap: 0; margin-top: 8px; padding: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.025); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.work:not(.active) .step { padding: 9px 14px 9px 38px; animation: none; }
+.work:not(.active) .step + .step { box-shadow: inset 0 1px 0 var(--line); }
+.work:not(.active) .step::before { display: none; }
+.work:not(.active) .step > .marker { left: 14px; top: 14px; background: none; }
+.work:not(.active) .step > .marker.ico { left: 13px; top: 14px; }
+.work:not(.active) .step-line { min-height: 22px; }
+.work:not(.active) .step.thought .thought-head { display: flex; width: 100%; gap: 8px; color: var(--text-2); cursor: default; }
+.work:not(.active) .step.thought:has(.thought-text:not(:empty)) .thought-head { cursor: pointer; }
+.work:not(.active) .step.thought:has(.thought-text:not(:empty)) .thought-head::after { content: ""; flex: none; width: 5px; height: 5px; margin: 0 2px 0 auto; border: solid var(--text-4); border-width: 0 1.5px 1.5px 0; transform: translateY(-2px) rotate(45deg); transition: transform 300ms var(--spring); }
+.work:not(.active) .step.thought.open:has(.thought-text:not(:empty)) .thought-head::after { transform: translateY(1px) rotate(-135deg); }
+@media (hover: hover) { .work:not(.active) .step.thought:has(.thought-text:not(:empty)):hover { background: rgba(255, 255, 255, 0.025); } }
+.work:not(.active) .fold .thought-text { margin: 6px 0 2px; max-height: 18em; color: var(--text-4); font-size: 13px; line-height: 1.55; }
+.work:not(.active) .step.finished .step-line { color: var(--text-3); }
+.work:not(.active) .plan-list { margin-top: 6px; }
+
+/* ===== 16.11.: Titel oben links genau so breit wie sein Menü (Umbenennen … Löschen), danach „…“ ===== */
+.chat-pop.chat-menu { width: 200px; min-width: 200px; }
+.chat-title-btn { max-width: 200px; min-width: 0; }
+.chat-title-btn .chat-title { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ===== 16.11.: Kopier-Kasten (```kopie) aufgeräumt – Kopf mit Beschriftung links und Kopieren rechts, Text darunter ===== */
+.md .copybox.cbx2 { position: relative; margin: 14px 0; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.md .cbx2 .cbx2-head { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 6px 0 14px; box-shadow: inset 0 -1px 0 var(--line); }
+.md .cbx2 .cbx2-label { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
+.md .cbx2 .copybox-btn { position: static; height: 26px; padding: 0 9px; border-radius: 8px; color: var(--text-3); }
+@media (hover: hover) { .md .cbx2 .copybox-btn:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); } }
+.md .cbx2 .copybox-body { padding: 13px 16px 15px; color: var(--text-2); font-size: 14px; line-height: 1.65; }
+.md .cbx2 .copybox-body > .copybox-text:first-child::before { display: none; }
+.md .cbx2 .copybox-subj { margin: 0 0 10px; padding-bottom: 10px; box-shadow: inset 0 -1px 0 var(--line); }
+
+/* ===== 16.11.: Tag-Auswahl im Stil des Chat-Menüs (Umbenennen … Löschen) =====
+   Suchfeld mit Lupe oben, Zeilen 30 px mit Radius 8 und leiser Hover-Fläche; „Tag bearbeiten“ als eigene Ansicht mit Zurück-Pfeil,
+   Name-Feld, Abschnitt „Farbe“ und Fußzeile. Eine eigene Farbe steht als gewählter Punkt neben dem Regenbogen-Knopf. */
+html body .tk-menu.tags { padding: 4px; border-radius: 12px; }
+html body .tk-menu.tags .tk-tag-row { display: flex; align-items: center; margin: 0 0 4px; padding: 0 10px 0 30px; height: 32px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%23909090' stroke-width='1.8' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 10px 50%; box-shadow: none; }
+html body .tk-menu.tags .tk-tag-in { height: 32px; padding: 0; border: 0; background: none; color: var(--text); font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .tk-menu.tags .tk-tag-in::placeholder { color: var(--text-4); }
+html body .tk-menu.tags:has(.tk-tag-editbox, .tk-tag-new-l) .tk-tag-row { display: none; }
+html body .tk-menu.tags .tk-mi { min-height: 30px; padding: 0 8px 0 10px; gap: 10px; border-radius: 8px; font-size: 13px; font-weight: 500; color: var(--text-2); }
+@media (hover: hover) { html body .tk-menu.tags .tk-mi:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); } }
+html body .tk-menu.tags .tk-mi.tag > i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+html body .tk-menu.tags .tk-ml { display: block; padding: 8px 10px; color: var(--text-4); font-size: 12.5px; }
+html body .tk-menu.tags .tk-tag-editbox { gap: 8px; padding: 2px 4px 4px; }
+html body .tk-menu.tags .tge-head { display: flex; align-items: center; gap: 6px; height: 28px; margin: 0 -2px 2px; }
+html body .tk-menu.tags .tge-back { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-3); cursor: pointer; }
+html body .tk-menu.tags .tge-back svg { transform: rotate(180deg); }
+@media (hover: hover) { html body .tk-menu.tags .tge-back:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); } }
+html body .tk-menu.tags .tge-title { color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
+html body .tk-menu.tags .tk-tag-name { height: 32px; padding: 0 10px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.05); box-shadow: none; outline: none; color: var(--text); font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .tk-menu.tags .tge-l, html body .tk-menu.tags .tk-tag-new-l { display: block; padding: 4px 2px 0; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
+html body .tk-menu.tags .tk-colors { display: flex; flex-wrap: nowrap; gap: 5px; padding: 2px 2px 4px; }
+html body .tk-menu.tags .tk-colors button { flex: none; width: 17px; height: 17px; }
+html body .tk-menu.tags .tk-tag-edit-foot { display: flex; align-items: center; margin: 2px -2px -2px; padding-top: 6px; box-shadow: inset 0 1px 0 var(--line); }
+/* eigene Farbe als Punkt überall (Tags, Projekte, Termine): gewählter Ring wie bei den festen Farben */
+.tk-colors .tk-own { background: var(--c) !important; }
+
+/* ===== 16.11.: Filter-Menü (Home/Chats) mit Icons im Stil des Chat-Menüs oben links ===== */
+html body .lb2-menu .lb2-mi { gap: 8px; padding: 0 8px; }
+html body .lb2-menu .lb2-mic { flex: none; display: grid; place-items: center; width: 16px; height: 16px; color: var(--text-3); }
+html body .lb2-menu .lb2-mic svg { width: 14px; height: 14px; }
+html body .lb2-menu .lb2-mic .lb2-mdot { margin: 0; }
+@media (hover: hover) { html body .lb2-menu .lb2-mi:hover .lb2-mic { color: var(--text); } }
+html body .lb2-menu .lb2-ml { padding: 7px 8px 4px; color: var(--text-4); font-size: 11.5px; font-weight: 500; }
+html body .lb2-menu .lb2-tick { margin-left: auto; }
+/* 16.11.: Chat-Icon (Home/Chats) – drei Punkte in der Blase */
+.lb2-page .pg-dot { fill: color-mix(in srgb, var(--text-4) 80%, transparent); stroke: none; }
+.lb2-row:hover .lb2-page .pg-dot { fill: var(--text-3); }
+
+/* ===== 16.11.: „In bestehendes Dokument übernehmen“ – Suchfeld ohne doppelte Trennlinien, Dokumente durch feine Linien getrennt ===== */
+html body .dc-make .tk-pop[data-k="into"] .tk-box { padding: 6px; }
+html body .dc-make .tk-pop[data-k="into"] .tk-tag-row { display: flex; align-items: center; height: 32px; margin: 0 0 6px; padding: 0 10px 0 30px; border: 0 !important; border-radius: 8px; box-shadow: none; background: rgba(255, 255, 255, 0.05) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='none' stroke='%23909090' stroke-width='1.8' stroke-linecap='round' viewBox='0 0 24 24'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.5-3.5'/%3E%3C/svg%3E") no-repeat 10px 50%; }
+html body .dc-make .tk-pop[data-k="into"] .tk-tag-in { height: 32px; padding: 0; border: 0; background: none; box-shadow: none; font: 500 13px var(--font-ui, Inter), sans-serif; color: var(--text); }
+html body .dc-make .dc-into-list { display: flex; flex-direction: column; border-radius: 8px; overflow: hidden; }
+html body .dc-make .dc-into-i { min-height: 34px; padding: 0 8px; gap: 10px; border-radius: 0; }
+html body .dc-make .dc-into-i + .dc-into-i { box-shadow: inset 0 1px 0 var(--line); }
+@media (hover: hover) { html body .dc-make .dc-into-i:hover { background: rgba(255, 255, 255, 0.05); } }
+html body .dc-make .dc-into-i > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .dc-make .dc-into-none { padding: 8px 10px; color: var(--text-4); font-size: 12.5px; }
+
+/* ===== 16.11.: Workspace-Menü im Stil des Chat-Menüs (leise Überschrift, Zeilen mit Radius 8, Icons in 16er-Spalte) ===== */
+html body .ws-menu { width: 236px; padding: 4px; border-radius: 12px; }
+html body .ws-menu .ws-label { padding: 6px 8px 4px; color: var(--text-4); font: 500 11.5px var(--font-ui, Inter), sans-serif; }
+html body .ws-menu .ws-row { min-height: 40px; padding: 0 8px; gap: 10px; border-radius: 8px; }
+html body .ws-menu .ws-row .ws-av { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, 0.06); }
+html body .ws-menu .ws-row .ws-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+html body .ws-menu .ws-row .ws-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-weight: 500; font-size: 13px; }
+html body .ws-menu .ws-row .ws-t small { color: var(--text-4); font-size: 11.5px; }
+html body .ws-menu .ws-row .ws-check { margin-left: auto; color: var(--text-2); }
+html body .ws-menu .ws-sep { height: 1px; margin: 4px 6px; background: var(--line); }
+html body .ws-menu .ws-mi { height: 30px; padding: 0 8px; gap: 10px; border-radius: 8px; color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .ws-menu .ws-mic { flex: none; display: grid; place-items: center; width: 26px; color: var(--text-3); }
+@media (hover: hover) { html body .ws-menu .ws-row:not(.edit):hover, html body .ws-menu .ws-mi:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); } html body .ws-menu .ws-mi:hover .ws-mic { color: var(--text); } }
+
+/* ===== 16.11.: Name (Einstellungen → Allgemein) – nur graue Fläche, nie ein Rand, auch beim Anklicken nicht heller ===== */
+html body .st-name-edit, html body .st-name-edit:focus, html body .st-name-edit:hover { border: 0 !important; outline: none !important; box-shadow: none !important; background: rgba(255, 255, 255, 0.05) !important; }
+
+/* ===== 16.11.: Einstellungen – Auf-/Zuklappen per JS (foldTo in settings.js), alte Einblend-Animationen aus;
+   Schlüssel als ruhige Zeilen (Fläche ohne Ring), Knöpfe erst beim Darüberfahren, antippen = bearbeiten ===== */
+html body .st-keys, html body .st-ws-panel.in { animation: none; }
+html body .st-ws .st-ws-chev { transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1); }
+html body .stk-key { min-height: 38px; padding: 0 6px 0 10px; gap: 8px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.04); box-shadow: none; }
+html body .stk-key + .stk-key { margin-top: 4px; }
+html body .stk-key .stk-ki { color: var(--text-4); }
+html body .stk-key .st-key-dots { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.02em; cursor: text; }
+html body .stk-key .st-key-x { width: 26px; height: 26px; border-radius: 8px; color: var(--text-4); }
+@media (hover: hover) {
+  html body .stk-key .st-key-x { opacity: 0; transition: opacity 140ms ease, background-color 120ms ease, color 120ms ease; }
+  html body .stk-key:hover .st-key-x, html body .stk-key:focus-within .st-key-x { opacity: 1; }
+  html body .stk-key .st-key-x:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+  html body .stk-key:hover { background: rgba(255, 255, 255, 0.055); }
+}
+html body .stk-add { min-height: 38px; margin-top: 6px; padding: 0 4px 0 12px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.04); box-shadow: none; }
+html body .stk-add .st-key-in { height: 36px; border: 0; background: none; box-shadow: none; outline: none; color: var(--text); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .stk-add.stk-edit .st-key-in { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+html body .stk-add .stk-btn { height: 28px; padding: 0 11px; border: 0; border-radius: 8px; background: rgba(255, 255, 255, 0.08); color: var(--text); font: 600 12.5px var(--font-ui, Inter), sans-serif; }
+
+/* ===== 16.11.: Löschen in Menüs (Sidebar „…“, Chat-Menü) bleibt beim Darüberfahren rot – auch „Wirklich löschen?“ ===== */
+html body :is([data-sbm="delete"], [data-cm="delete"], .chat-pop .danger) { color: #f07a6e !important; }
+html body :is([data-sbm="delete"], [data-cm="delete"], .chat-pop .danger) svg { color: #f07a6e !important; }
+html body :is([data-sbm="delete"], [data-cm="delete"], .chat-pop .danger):hover { background: rgba(239, 107, 95, 0.1) !important; color: #ff7d6c !important; }
+html body :is([data-sbm="delete"], [data-cm="delete"], .chat-pop .danger).confirm, html body :is([data-sbm="delete"], [data-cm="delete"], .chat-pop .danger).confirm:hover { background: rgba(239, 107, 95, 0.14) !important; color: #ff7d6c !important; }
+
+/* ===== 16.11.: Wechsel der Gedanken während der Arbeit – der fertige Gedanke zieht nach oben zusammen (Text gleitet nach oben weg),
+   der neue Oberpunkt kommt von unten herein ===== */
+@keyframes step-up-in { from { opacity: 0; transform: translateY(10px); filter: blur(2px); } to { opacity: 1; transform: none; filter: none; } }
+.work.active .step.thought { animation: step-up-in 420ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+.work.active .step.thought > .fold .fold-in { transition: transform 360ms cubic-bezier(0.32, 0.72, 0, 1), opacity 260ms ease; }
+.work.active .step.thought:not(.open) > .fold .fold-in { transform: translateY(-8px); opacity: 0; }
+@media (prefers-reduced-motion: reduce) { .work.active .step.thought, .work.active .step.thought > .fold .fold-in { animation: none; transition: none; } }
+
+/* ===== 16.11.: „Suchen oder Aktion …“ – ruhiger und klarer: größeres Suchfeld, Icons in kleinen Kacheln, Zeilen 38 px, Fußzeile mit Tasten ===== */
+html body .cmdk-box { width: min(620px, calc(100vw - 32px)); border-radius: 16px; overflow: hidden; }
+html body .cmdk-in { height: 54px; padding: 0 18px; gap: 12px; border-bottom: 1px solid var(--line); }
+html body .cmdk-in svg { width: 17px; height: 17px; color: var(--text-4); }
+html body .cmdk-in input { font: 500 15.5px var(--font-ui, Inter), sans-serif; color: var(--text); }
+html body .cmdk-list { max-height: min(56vh, 440px); padding: 6px; }
+html body .cmdk-g { padding: 10px 10px 5px; color: var(--text-4); font: 500 11.5px var(--font-ui, Inter), sans-serif; }
+html body .cmdk-row { min-height: 38px; padding: 0 10px 0 6px; gap: 10px; border-radius: 10px; }
+html body .cmdk-row .cmdk-ic { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: rgba(255, 255, 255, 0.05); color: var(--text-3); }
+html body .cmdk-row .cmdk-ic svg { width: 14px; height: 14px; }
+html body .cmdk-row .cmdk-dog svg { width: 18px; height: 18px; }
+html body .cmdk-row .cmdk-m { color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+html body .cmdk-row.on, html body .cmdk-row[aria-selected="true"] { background: rgba(255, 255, 255, 0.07); }
+html body .cmdk-row.on .cmdk-ic, html body .cmdk-row[aria-selected="true"] .cmdk-ic { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+html body .cmdk-foot { display: flex; align-items: center; gap: 14px; height: 38px; padding: 0 16px; border-top: 1px solid var(--line); color: var(--text-4); font: 500 11.5px var(--font-ui, Inter), sans-serif; }
+html body .cmdk-foot .grow { flex: 1; }
+html body .cmdk-foot span { display: inline-flex; align-items: center; gap: 4px; }
+html body .cmdk-foot kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; background: rgba(255, 255, 255, 0.07); color: var(--text-3); font: 500 10.5px var(--font-ui, Inter), sans-serif; }
+@media (hover: none) { html body .cmdk-foot { display: none; } }
+html body .cmdk-row .cmdk-dog { display: grid; place-items: center; }

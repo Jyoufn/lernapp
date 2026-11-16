@@ -52,7 +52,9 @@ const UIKit = (() => {
   const colorRow = (cur, attr) => {
     const custom = cur && !COLORS.includes(cur);
     return `<div class="tk-colors">${COLORS.map((c) => `<button type="button" class="${c === cur ? 'on' : ''}" ${attr}="${c}" style="--c:${c}" aria-label="Farbe"></button>`).join('')}`
-      + `<button type="button" class="tk-custom${custom ? ' on' : ''}" data-custom="${attr}" ${custom ? `style="--c:${cur}"` : ''} aria-label="Eigene Farbe" title="Eigene Farbe"></button></div><div class="tk-picker-host"></div>`;
+      // 16.11.: eine eigene Farbe steht als eigener (gewählter) Punkt da – der Knopf „Eigene Farbe“ bleibt daneben immer sichtbar
+      + (custom ? `<button type="button" class="on tk-own" ${attr}="${cur}" style="--c:${cur}" aria-label="Eigene Farbe (gewählt)"></button>` : '')
+      + `<button type="button" class="tk-custom" data-custom="${attr}" aria-label="Eigene Farbe wählen" title="Eigene Farbe"></button></div><div class="tk-picker-host"></div>`;
   };
 
   /* ---------- Kalender zum Anklicken ---------- */

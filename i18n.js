@@ -221,6 +221,8 @@
     'Programmieren': 'Coding', 'Vorschau': 'Preview',
     // Aufwand / Modelle
     'Schnell': 'Fast', 'Sehr hoch': 'Very high', 'Hinzufügen …': 'Add …', 'Anhängen': 'Attach', 'Diktieren': 'Dictate', 'Sprachmodus': 'Voice mode', 'Senden': 'Send', 'Stopp': 'Stop',
+    'Einsatz': 'Usage', 'Alles': 'All', 'Text': 'Text', 'E-Mail': 'Email', 'Nachricht': 'Message',
+    'Für Chat und Coden.': 'For chat and coding.', 'Nur beim Coden (Coden-Agent, Mini-Apps).': 'Only for coding (coding agent, mini apps).', 'Nur für Chats – beim Coden übernimmt ein anderer.': 'Only for chats – another one handles coding.',
     'Gearbeitet für': 'Worked for', 'Tab schließen': 'Close tab', 'Eigene Farbe': 'Custom color', 'Eigene Akzentfarbe': 'Custom accent color', 'den markierten Text zu …': 'turn the selected text into …',
     'Tippe an einer Mini-App im Chat auf das Lesezeichen oder sag der KI „speicher das“.': 'Tap the bookmark on a mini app in the chat or tell the AI “save this”.',
   };

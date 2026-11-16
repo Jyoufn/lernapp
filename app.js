@@ -1467,11 +1467,15 @@ function heftFigure(code) {
 function copyFigure(code) {
   const lines = code.textContent.replace(/\n+$/, '').split('\n');
   while (lines.length && !lines[0].trim()) lines.shift();
-  if (/^#\s+.{1,40}$/.test(lines[0] || '')) lines.shift();
+  const label = /^#\s+(.{1,40})$/.exec(lines[0] || '')?.[1].trim() || ''; // 16.11.: „# Prompt“ wird zur Beschriftung im Kopf
+  if (label) lines.shift();
   while (lines.length && !lines[0].trim()) lines.shift();
   const text = lines.join('\n');
-  const fig = el('figure', 'copybox');
+  const fig = el('figure', 'copybox cbx2');
   fig.dataset.viz = 'kopie';
+  const head = el('div', 'cbx2-head');
+  head.append(el('span', 'cbx2-label'));
+  head.firstChild.textContent = label || (/^(betreff|subject)\s*:/i.test(lines[0] || '') ? 'E-Mail' : 'Text');
   const btn = el('button', 'copybox-btn', `${FadeIcons.svg('copy', 13)}<span>Kopieren</span>`);
   btn.type = 'button';
   btn.addEventListener('click', async () => {
@@ -1485,7 +1489,8 @@ function copyFigure(code) {
     body.append(s);
     const rest = el('div', 'copybox-text'); rest.textContent = lines.slice(1).join('\n').replace(/^\n+/, ''); body.append(rest);
   } else { const t = el('div', 'copybox-text'); t.textContent = text; body.append(t); }
-  fig.append(btn, body);
+  head.append(btn);
+  fig.append(head, body);
   return fig;
 }
 /* Mindmap als Baum (kb/design.md): Thema in der Mitte, Äste links und rechts, jeder Unterpunkt ein eigenes Kästchen; Linien laufen
@@ -1737,6 +1742,7 @@ async function hydrateIllustration(figure, signal) {
       const url = new URL(result.url);
       if (url.protocol !== 'https:' || !/^(upload|thumb)\.wikimedia\.org$/.test(url.hostname)) throw new Error('Bildquelle ungültig');
       img.src = url.href;
+      if (/^https:\/\//.test(result.big || '')) img.dataset.big = result.big;
     } else {
       if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(result.mime) || !result.data) throw new Error('Bildformat ungültig'); // SVG = von Gemini gezeichnete Lerngrafik (im <img> ohne Skripte)
       img.src = `data:${result.mime};base64,${result.data}`;
@@ -1784,6 +1790,8 @@ function renderMarkdown(target, text, opts = {}) {
   // Coding-Agent: Datei- und Terminal-Blöcke werden zu Arbeitsschritten (code-agent.js)
   // nur bei Antworten des Coding-Agenten (bzw. alten Antworten mit Datei-Blöcken) – beim Allgemein-Agenten bleiben z. B. ```terminal-Blöcke normaler Code
   const codeParts = {};
+  // 16.11.: größere Code-Blöcke (auch beim Allgemein-Agenten) → Dateien im Code-Fenster statt langer Code-Blöcke im Chat
+  if (window.CodeAgent?.fromFences && !target.closest?.('.dcc-a, .dc-editor')) text = CodeAgent.fromFences(text);
   const codeAnswer = !!target.closest?.('[data-dog="code"]') || /^`{4,}file:/m.test(text);
   if (codeAnswer && window.CodeAgent?.has(text)) text = CodeAgent.mark(text, codeParts);
   const math = [];
@@ -2543,11 +2551,13 @@ async function fileToInline(file, max = 1600, onProgress = null, opts = {}) {
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   const data = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
   // kleines Vorschaubild für den gespeicherten Chat (auf dem Server liegt nur das; das ganze Foto bleibt im Gerät → fileId)
-  const t = Math.min(1, 240 / Math.max(canvas.width, canvas.height));
+  // 16.11.: Vorschaubild groß genug zum Lesen (vorher 240 px → in der Großansicht unlesbar, wenn das Original nicht im Gerät liegt)
+  const t = Math.min(1, 1000 / Math.max(canvas.width, canvas.height));
   const small = document.createElement('canvas');
   small.width = Math.max(1, Math.round(canvas.width * t)); small.height = Math.max(1, Math.round(canvas.height * t));
-  small.getContext('2d').drawImage(canvas, 0, 0, small.width, small.height);
-  const thumb = small.toDataURL('image/jpeg', 0.6).split(',')[1];
+  const smallCtx = small.getContext('2d'); smallCtx.imageSmoothingQuality = 'high';
+  if (t < 1) smallCtx.drawImage(canvas, 0, 0, small.width, small.height);
+  const thumb = (t < 1 ? small : canvas).toDataURL('image/jpeg', 0.74).split(',')[1];
   canvas.width = canvas.height = small.width = small.height = 0;
   return { mime: 'image/jpeg', data, name: file.name, thumb, ...(opts.keep === false ? {} : { fileId: keepFile(file) }) };
 }
@@ -2705,7 +2715,7 @@ function createWork() {
   const sync = () => {
     const rows = [...steps.children].filter((s) => s.classList.contains('step'));
     const one = rows.length === 1 && stepActive(rows[0]) && !rows[0].classList.contains('thought') ? stepLabel(rows[0]) : ''; // ein laufender Gedanke steht mit Inhalt in der Liste (nicht nur als Kopfzeile)
-    if (one && solo.textContent !== one) solo.textContent = one;
+    if (one && solo.textContent !== one) { if (one.startsWith(solo.textContent) || solo.textContent.startsWith(one)) { clearTimeout(solo._swap); solo.textContent = one; } else swapText(solo, one); } // 16.11.: Wechsel des laufenden Oberpunkts rollt nach oben
     work.classList.toggle('solo', !!one);
   };
   new MutationObserver(sync).observe(steps, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['class'] });
@@ -3122,14 +3132,15 @@ function swapText(node, text) {
   clearTimeout(node._swap);
   // NUR die eigene Ein-/Ausblende-Animation steuern – nie die CSS-Animation (Schimmer) abbrechen, sonst bleibt sie mitten stehen
   node._fade?.cancel();
-  node._fade = node.animate ? node.animate([{ opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }, { opacity: 0, transform: 'translateY(-5px)', filter: 'blur(2px)' }], { duration: 140, easing: 'ease-in', fill: 'forwards' }) : null;
+  // 16.11.: deutlicher „nach oben“ – der alte Text rollt nach oben weg, der neue rollt von unten nach
+  node._fade = node.animate ? node.animate([{ opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }, { opacity: 0, transform: 'translateY(-0.7em)', filter: 'blur(2px)' }], { duration: 180, easing: 'cubic-bezier(0.55, 0, 0.75, 0.2)', fill: 'forwards' }) : null;
   // Text per Timer tauschen (nicht über das Animationsende – das fehlt z. B. in Hintergrund-Tabs)
   node._swap = setTimeout(() => {
     node._fade?.cancel();
     node.textContent = text;
     if (typeof syncShimmer === 'function' && node.classList.contains('sweep')) syncShimmer(node); // Schimmer läuft im gemeinsamen Takt weiter
-    node._fade = node.animate ? node.animate([{ opacity: 0, transform: 'translateY(5px)', filter: 'blur(2px)' }, { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }) : null;
-  }, 140);
+    node._fade = node.animate ? node.animate([{ opacity: 0, transform: 'translateY(0.7em)', filter: 'blur(2px)' }, { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' }], { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }) : null;
+  }, 180);
 }
 
 /* Kleine Animationen links im Kopf – je Tätigkeit eine eigene */
@@ -4673,6 +4684,9 @@ function docMeta(tab, extra = {}) {
     .then((o) => ({ title: chatTitle || o.title, subtitle: o.subtitle }))
     .catch(() => ({ title: chatTitle }));
 }
+// 16.11.: Beschreibung eines Dokuments aus seinem aktuellen Inhalt (für docs.js → autoDescribe)
+window.docAiMeta = (doc) => docAiCall({ mode: 'meta', instruction: 'Beschreibung für dieses Dokument (ein Satz)', doc: { title: doc.title || '', html: String(doc.content || '').slice(0, 20000) } })
+  .then((o) => ({ subtitle: String(o.subtitle || '').trim().slice(0, 400) }));
 function docTurn(kind, text) {
   const tab = activeTab();
   history.push({ role: 'user', text });
@@ -4861,7 +4875,8 @@ function lbRender() {
   let el;
   if (src.tagName === 'IMG') {
     el = document.createElement('img');
-    el.src = src.src;
+    el.src = src.dataset.big || src.currentSrc || src.src; // 16.11.: große Fassung (z. B. Commons 1800 px) statt Vorschaubild
+    el.decoding = 'async';
     el.alt = src.alt;
   } else {
     el = document.createElement('div');
@@ -6053,10 +6068,12 @@ const TagMenu = (() => {
     const list = all();
     const ed = list.find((g) => g.id === editing);
     if (ed) {
-      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tk-tag-edit-l">Tag bearbeiten</span><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name" />${UIKit.colorRow(ed.c, 'data-tecolor')}`
+      pop.classList.add('tagm-sub');
+      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-tdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><span class="tge-title">Tag bearbeiten</span></span><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name" placeholder="Name" /><span class="tge-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-tecolor')}`
         + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-tdel>${fiH('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-tdone>Fertig</button></span></span>`;
       return;
     }
+    pop.classList.toggle('tagm-sub', !!creating);
     if (creating) { listEl.innerHTML = `<span class="tk-tag-new-l">Farbe für „${escapeHtml(creating)}“</span>${UIKit.colorRow('', 'data-tncolor')}`; return; }
     const on = new Set(ids()), ql = q.trim().toLowerCase();
     const found = list.filter((g) => g.name.toLowerCase().includes(ql));

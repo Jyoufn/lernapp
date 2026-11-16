@@ -61,7 +61,8 @@ const AppSearch = (() => {
   root.hidden = true;
   root.innerHTML = `<div class="cmdk-box" role="dialog" aria-modal="true" aria-label="Suchen">
       <label class="cmdk-in">${oi('search', 15)}<input type="text" placeholder="Suchen oder Aktion …" aria-label="Suchen" autocomplete="off" spellcheck="false" /></label>
-      <div class="cmdk-list" role="listbox"></div></div>`;
+      <div class="cmdk-list" role="listbox"></div>
+      <div class="cmdk-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd>Auswählen</span><span><kbd>↵</kbd>Öffnen</span><span class="grow"></span><span><kbd>esc</kbd>Schließen</span></div></div>`;
   document.body.append(root);
   const input = root.querySelector('input'), list = root.querySelector('.cmdk-list');
   let rows = [], sel = 0;
@@ -273,11 +274,11 @@ const AppSearch = (() => {
           <span class="ws-av">${wsAvatar(w, 20)}</span><span class="ws-t"><b>${esc(wsName(w))}</b>${wsSub(w) ? `<small>${wsSub(w)}</small>` : ''}</span>
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
     const full = !window.Workspaces.canAdd();
-    pop.innerHTML = `${rows}
+    pop.innerHTML = `<div class="ws-label">Workspaces</div>${rows}
       ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 12)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
-      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new">${oi('plus', 12)}<span>Workspace hinzufügen</span></button>`}
-      <button type="button" class="ws-mi" data-ws="settings">${oi('settings', 15)}<span>Einstellungen</span></button>`;
+      ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new"><span class="ws-mic">${oi('plus', 14)}</span><span>Workspace hinzufügen</span></button>`}
+      <button type="button" class="ws-mi" data-ws="settings"><span class="ws-mic">${oi('settings', 14)}</span><span>Einstellungen</span></button>`;
     const inp = pop.querySelector('.ws-in');
     if (inp) { setTimeout(() => { inp.focus(); inp.select(); }, 20); }
   };

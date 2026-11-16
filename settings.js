@@ -14,10 +14,8 @@
     // DeepSeek V4.1: kostenlos über NVIDIA (06.11.; Groq und OpenRouter sind raus). Ein NVIDIA-Schlüssel reicht für alle drei –
     // eigene Schlüssel je Modell verteilen nur das Limit (ca. 40 Anfragen/Minute je Schlüssel).
     { id: 'DEEPSEEK_API_KEY', name: 'DeepSeek V4.1 (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'deepseek' },
-    // Claude (16.11.): eigener API-Schlüssel aus console.anthropic.com (kostet je Nutzung; das Pro-Abo lässt Anthropic in eigenen Apps nicht zu)
-    { id: 'ANTHROPIC_API_KEY', name: 'Claude (Anthropic)', logo: 'claude', where: 'console.anthropic.com', multi: true, fam: 'claude' },
+    // Claude und Groq (Diktat) aus der Liste genommen (16.11. abends, Wunsch: keine Schlüssel dafür) – der Server kann beide weiter nutzen
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
-    { id: 'GROQ_API_KEY', name: 'Groq (Diktat)', logo: 'groq', where: 'console.groq.com', multi: true }, // Whisper fürs Diktat – kostenlos, schnell, Deutsch + Englisch gemischt
     { id: 'TAVILY_API_KEY', name: 'Tavily (Websuche)', logo: 'tavily', where: 'app.tavily.com', multi: true }, // Recherche: echte Treffer samt Text
     { id: 'FLUX3_API_KEY', name: 'FLUX (Bilder)', logo: 'flux', where: 'build.nvidia.com', multi: true, image: true },
     { id: 'SPOTIFY_CLIENT_ID', name: 'Spotify', logo: 'spotify', where: 'developer.spotify.com', label: 'Client-ID' },
@@ -117,7 +115,7 @@
         ${keys.map((k, i) => keyView.edit === `${p.id}:${i}`
           // Schlüssel bearbeiten (Wunsch 10.11.): Feld mit dem ganzen Schlüssel, Speichern ersetzt genau diesen
           ? `<form class="stk-add stk-edit" data-key-edit="${i}" autocomplete="off"><input class="st-key-in" type="text" value="${esc(k)}" aria-label="Schlüssel bearbeiten" spellcheck="false" /><button type="button" class="st-key-x" data-key-cancel aria-label="Abbrechen">${fi('x', 11)}</button><button type="submit" class="stk-btn">Speichern</button></form>`
-          : `<div class="st-key stk-key"><span class="stk-ki">${fi('lock', 12)}</span><span class="st-key-dots${keyView.shown.has(`${p.id}:${i}`) ? ' full' : ''}">${keyView.shown.has(`${p.id}:${i}`) ? esc(k) : `••••  ${esc(k.slice(-4))}`}</span><span class="grow"></span>`
+          : `<div class="st-key stk-key"><span class="stk-ki">${fi('lock', 12)}</span><span class="st-key-dots${keyView.shown.has(`${p.id}:${i}`) ? ' full' : ''}" data-key-ed="${i}" role="button" tabindex="0" title="Zum Bearbeiten antippen">${keyView.shown.has(`${p.id}:${i}`) ? esc(k) : `••••  ${esc(k.slice(-4))}`}</span><span class="grow"></span>`
             + `<button type="button" class="st-key-x" data-key-show="${i}" aria-label="${keyView.shown.has(`${p.id}:${i}`) ? 'Schlüssel verbergen' : 'Schlüssel anzeigen'}">${fi('eye', 12)}</button>`
             + `<button type="button" class="st-key-x" data-key-ed="${i}" aria-label="Schlüssel bearbeiten">${fi('pencil', 11)}</button>`
             + `<button type="button" class="st-key-x" data-key-rm="${i}" aria-label="Schlüssel entfernen">${fi('x', 11)}</button></div>`).join('')}
@@ -128,12 +126,12 @@
   }
   /* Rolle des Anbieters (unter seinen Schlüsseln): Haupt-KI – wird für ALLES zuerst genutzt (auch Coden, Agenten, Hintergründe);
      Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
-  const FAMS = ['gemini', 'minimax', 'deepseek', 'claude']; // Kimi entfernt (10.11.), Claude dazu (16.11.)
+  const FAMS = ['gemini', 'minimax', 'deepseek']; // Kimi entfernt (10.11.), Claude wieder raus (16.11. abends)
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
   window.AiMain = () => mainFam(); // Name im Modell-Knopf
   /* Modell-Auswahl im Eingabefeld (Wunsch 10.11.): nur verbundene Anbieter (eigener Schlüssel oder Server-Schlüssel),
      antippen macht ihn zur Haupt-KI – genau wie Einstellungen → Agenten → Rolle „Haupt-KI“ */
-  const FAM_KEY = { gemini: 'GEMINI_API_KEY', minimax: 'MINIMAX_API_KEY', deepseek: 'DEEPSEEK_API_KEY', claude: 'ANTHROPIC_API_KEY' };
+  const FAM_KEY = { gemini: 'GEMINI_API_KEY', minimax: 'MINIMAX_API_KEY', deepseek: 'DEEPSEEK_API_KEY' };
   window.AiConnected = () => FAMS.filter((f) => keyList(FAM_KEY[f]).length || fileKeys[FAM_KEY[f]]);
   window.setAiMain = (f) => {
     if (!FAMS.includes(f)) return;
@@ -144,13 +142,20 @@
     if (app.classList.contains('settings-open')) drawView();
   };
   const offFams = () => String(deviceKeys.AI_OFF || '').split(',').filter((f) => FAMS.includes(f));
+  const useMap = () => Object.fromEntries(String(deviceKeys.AI_USE || '').split(',').map((x) => x.split(':')).filter(([f, u]) => FAMS.includes(f) && ['code', 'chat'].includes(u)));
+  const useOf = (f) => useMap()[f] || 'all';
   function rolesHtml(p, has) {
     if (!p.fam) return '';
     const main = mainFam() === p.fam, role = main ? 'main' : offFams().includes(p.fam) ? 'off' : 'backup';
     const why = { main: 'Wird für alles zuerst genutzt – Antworten, Coden, Agenten, Hintergründe.', backup: 'Springt nur ein, wenn die Haupt-KI gerade nicht kann.', off: 'Wird nie genutzt.' }[role]
       + (main && !has ? ' Noch kein Schlüssel – bis dahin übernimmt die nächste.' : '');
     const opt = (v, label) => `<button type="button" role="radio" aria-checked="${role === v}" class="${role === v ? 'on' : ''}" data-ai-role="${p.fam}:${v}"${main && v !== 'main' ? ' disabled' : ''}>${label}</button>`;
-    return `<div class="st-role stk-role"><div class="stk-l"><span>Rolle</span><em>${esc(why)}</em></div><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>`;
+    // 16.11.: Einsatz – wofür dieser Anbieter genutzt wird (alles, nur Coden, nur Chat)
+    const use = useOf(p.fam);
+    const uwhy = { all: 'Für Chat und Coden.', code: 'Nur beim Coden (Coden-Agent, Mini-Apps).', chat: 'Nur für Chats – beim Coden übernimmt ein anderer.' }[use];
+    const uopt = (v, label) => `<button type="button" role="radio" aria-checked="${use === v}" class="${use === v ? 'on' : ''}" data-ai-use="${p.fam}:${v}">${label}</button>`;
+    return `<div class="st-role stk-role"><div class="stk-l"><span>Rolle</span><em>${esc(why)}</em></div><span class="st-seg st-role-seg" role="radiogroup" aria-label="Rolle von ${esc(p.name)}">${opt('main', 'Haupt-KI')}${opt('backup', 'Ersatz')}${opt('off', 'Aus')}</span></div>`
+      + (role === 'off' ? '' : `<div class="st-role stk-role"><div class="stk-l"><span>Einsatz</span><em>${esc(uwhy)}</em></div><span class="st-seg st-role-seg" role="radiogroup" aria-label="Einsatz von ${esc(p.name)}">${uopt('all', 'Alles')}${uopt('code', 'Coden')}${uopt('chat', 'Chat')}</span></div>`);
   }
 
 
@@ -193,7 +198,6 @@
         <div class="st-acc-picker" data-acc-host></div>`
         + `
         ${cfg.mode === 'glass' && ap.DESKTOP ? `<div class="st-row"><span class="st-name">Glas</span><span class="grow"></span>${seg('data-ap-glasstone', [['Hell', 'light'], ['Dunkel', 'dark']], cfg.glassTone === 'light' ? 'light' : 'dark')}</div>` : ''}
-        ${!ap.DESKTOP && /Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) && navigator.maxTouchPoints < 2 ? `<div class="st-row"><span class="st-name">Mac-App (mit Glas)</span><span class="grow"></span><a class="st-btn light" href="https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg" target="_blank" rel="noopener">Herunterladen</a></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
         <div class="st-row"><span class="st-name">Schriftart</span><span class="grow"></span>${seg('data-ap-font', Object.entries(ap.FONTS || {}).map(([id, label]) => [label, id]), cfg.font).replace(/data-ap-font="(\w+)"/g, (m, id) => `${m} style="font-family:${ap.FONT_CSS?.[id] || 'inherit'}"`)}</div>
         <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span><span class="st-fw-val" data-fw-val>${cfg.weight} %</span><label class="ui-slider st-fw" style="--p:${((cfg.weight - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"><input type="range" min="${ap.W_MIN}" max="${ap.W_MAX}" step="1" value="${cfg.weight}" data-ap-wrange aria-label="Schriftstärke in Prozent" /><i class="st-fw-mark" style="left:${((100 - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"></i></label></div>
@@ -264,8 +268,9 @@
     const row = !t.closest('.st-ws-menu') && t.closest('[data-ws-row]');
     if (row) {
       const n = row.dataset.wsRow;
-      Object.assign(wst, { open: wst.open === n ? null : n, anim: wst.open !== n, ic: false, del: false, msg: null });
-      drawView(); if (wst.open) W.load().then(() => { if (wst.open && !view.querySelector('.st-ws-pin input:focus')) drawView(); });
+      foldTo('.st-ws-panel', '.st-ws', () => Object.assign(wst, { open: wst.open === n ? null : n, anim: false, ic: false, del: false, msg: null }));
+      // Mitglieder nachladen – erst nach dem Aufziehen neu zeichnen (sonst springt die Animation)
+      if (wst.open !== n) W.load().then(() => setTimeout(() => { if (wst.open === n && !view.querySelector('.st-ws-pin input:focus')) drawView(); }, 420));
       return true;
     }
     if (!id || !(t.closest('.st-ws-pin') || t.closest('.st-ws-menu'))) { if (wst.ic) { wst.ic = false; drawView(); } return false; }
@@ -278,6 +283,24 @@
       Promise.resolve(W.remove(id)).then(() => { wst.open = null; wst.del = false; drawView(); }); return true;
     }
     return true;
+  }
+  /* 16.11.: weiches Auf-/Zuklappen (Verbindungen, Workspaces): offenes Feld erst zuziehen, dann neu zeichnen und das neue Feld aufziehen;
+     der Pfeil dreht mit. panelSel = das aufklappende Feld, rowSel = die Kopfzeile. */
+  const REDUCE_FOLD = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const EASE_FOLD = 'cubic-bezier(0.32, 0.72, 0, 1)';
+  function foldTo(panelSel, rowSel, change) {
+    const old = view.querySelector(panelSel);
+    const go = () => {
+      change(); drawView();
+      const nw = view.querySelector(panelSel); if (!nw || REDUCE_FOLD) return;
+      const h = nw.offsetHeight; nw.style.overflow = 'hidden';
+      nw.animate([{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }], { duration: 340, easing: EASE_FOLD }).finished.then(() => { nw.style.overflow = ''; }, () => {});
+      nw.previousElementSibling?.querySelector('.st-ws-chev')?.animate([{ transform: 'rotate(-90deg)' }, { transform: 'rotate(0deg)' }], { duration: 300, easing: EASE_FOLD });
+    };
+    if (!old || REDUCE_FOLD) { go(); return; }
+    old.style.overflow = 'hidden';
+    old.previousElementSibling?.classList.remove('open'); // Pfeil dreht per CSS zurück
+    old.animate([{ height: `${old.offsetHeight}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 230, easing: EASE_FOLD, fill: 'forwards' }).finished.then(go, go);
   }
   function drawView() {
     const title = PAGES[page];
@@ -377,9 +400,17 @@
       if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF;
       write(KEYS_KEY, deviceKeys); drawView(); window.renderModelChip?.(); return;
     }
+    const us = e.target.closest('[data-ai-use]');
+    if (us) {
+      const [f, v] = us.dataset.aiUse.split(':'); const m = useMap();
+      if (v === 'all') delete m[f]; else m[f] = v;
+      const str = Object.entries(m).map(([a, b]) => `${a}:${b}`).join(',');
+      if (str) deviceKeys.AI_USE = str; else delete deviceKeys.AI_USE;
+      write(KEYS_KEY, deviceKeys); drawView(); return;
+    }
     if (e.target.closest('.st-keys')) return; // Klicks im aufgeklappten Bereich (Feld) klappen nicht zu
     const ed = e.target.closest('[data-edit]');
-    if (ed) { editing = editing === ed.dataset.edit ? null : ed.dataset.edit; keyView.shown.clear(); keyView.edit = null; drawView(); return; }
+    if (ed) { const id = ed.dataset.edit; foldTo('.st-keys', '.st-prov', () => { editing = editing === id ? null : id; keyView.shown.clear(); keyView.edit = null; }); return; }
     if (e.target.closest('[data-cancel]')) { editing = null; drawView(); return; }
     if (e.target.closest('[data-remove]')) {
       delete deviceKeys[editing]; write(KEYS_KEY, deviceKeys); editing = null; drawView(); return;

@@ -664,7 +664,7 @@ const AgentBuilder = (() => {
     const l = list();
     const rows = l.map((a) => `<div class="st-row ags-row"><span class="st-dog">${window.PixelDogs?.svg(a.id, 24) || ''}</span><span class="st-name">${esc(a.name)}</span><span class="st-muted ags-meta">${esc(MODE_NAMES[MODES[a.verhalten]] || 'Allgemein')}</span><span class="grow"></span>`
             + `<button type="button" class="ags-ib" data-ags-doc="${esc(a.id)}" aria-label="Anweisung ansehen" title="Anweisung ansehen">${fi('file', 13)}</button><button type="button" class="ags-ib" data-ags-edit="${esc(a.id)}" aria-label="Im Chat bearbeiten" title="Im Chat bearbeiten">${fi('pencil', 13)}</button><button type="button" class="ags-ib del${delArm === a.id ? ' sure' : ''}" data-ags-del="${esc(a.id)}" aria-label="Löschen">${delArm === a.id ? 'Wirklich?' : fi('trash', 13)}</button></div>`).join('');
-    return `${rows}<div class="st-row ags-new" data-ags-new role="button" tabindex="0"><span class="ags-plus">${fi('plus', 13)}</span><span class="st-name">Neuen Agenten erstellen</span><span class="grow"></span><span class="st-ws-chev"><svg width="12" height="12" aria-hidden="true"><use href="#o-chev"/></svg></span></div>`; // Zeilen ohne eigene Karte: stehen in „Agenten“ unter den festen Agenten (Wunsch 05.11.)
+    return rows; // Zeilen ohne eigene Karte: stehen in „Agenten“ unter den festen Agenten (Wunsch 05.11.); „Neuen Agenten erstellen“ entfernt (16.11.)
   }
   // gespeicherter Agent: Anweisung ansehen, direkt ändern (wird gespeichert) oder im Einrichtungs-Chat verbessern
   function showSaved(a) {

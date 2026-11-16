@@ -63,6 +63,9 @@ function deviceKeysOf(req) {
     if (P.FAMILIES.includes(obj.AI_PICK)) out.AI_ORDER = obj.AI_PICK;
     const off = String(obj.AI_OFF || '').split(',').filter((f) => P.FAMILIES.includes(f) && f !== out.AI_ORDER);
     if (off.length) out.AI_OFF = off.join(',');
+    // 16.11.: Einsatz je Anbieter (nur Coden / nur Chat)
+    const use = String(obj.AI_USE || '').split(',').filter((x) => /^[a-z]+:(code|chat)$/.test(x) && P.FAMILIES.includes(x.split(':')[0]));
+    if (use.length) out.AI_USE = use.join(',');
     return out;
   } catch { return {}; }
 }
@@ -180,7 +183,9 @@ async function commonsIllustration(query, count = 1) { // count > 1: Liste der b
       + (/diagram|schem|cycle|kreislauf/i.test(title) ? 2 : 0)
       + (/german|deutsch/i.test(title) ? 1 : 0)
       - (/worksheet|poster|adapted version/i.test(title) ? 3 : 0);
-    return { source: 'commons', url: url.href, page: `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`, title, author: plain(meta.Artist?.value), license: plain(license), licenseUrl: String(meta.LicenseUrl?.value || ''), score };
+    // 16.11.: große Fassung für die Großansicht (Beschriftungen lesbar) – Original bis 1800 px, sonst 1800er-Vorschau
+    const big = (info.width <= 1800 && info.url) || (info.thumburl ? String(info.thumburl).replace(/\/\d{3,4}px-/, '/1800px-') : '');
+    return { source: 'commons', url: url.href, big: /^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(big) ? big : '', page: `https://commons.wikimedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`, title, author: plain(meta.Artist?.value), license: plain(license), licenseUrl: String(meta.LicenseUrl?.value || ''), score };
   }).filter((candidate) => candidate && candidate.score > 0).sort((a, b) => b.score - a.score);
   return count > 1 ? candidates.slice(0, count) : candidates[0] || null;
 }
@@ -1415,7 +1420,15 @@ async function handleTitle(req, res) {
   const text = String(body.text || '').replace(/\s+/g, ' ').trim().slice(0, 1500);
   if (!text) return sendJson(res, 400, { error: 'Kein Text' });
   // Gedanken (<think>…</think> oder nur das schließende Tag) und Markdown weg, dann die erste echte Zeile
-  const clean = (t) => String(t || '').replace(/^[\s\S]*<\/think>/i, '').replace(/<think>[\s\S]*$/i, '').replace(/[*_#`]/g, '').split('\n').map((l) => l.trim()).filter(Boolean)[0]?.replace(/^["„“'»«\s]+|["„“'»«.\s]+$/g, '').replace(/^titel:\s*/i, '').slice(0, 60).trim() || '';
+  // 16.11.: „Titel:“/„Chat-Titel:“ weg, höchstens 6 Wörter, nie mitten im Wort abschneiden; Sätze/Antworten (zu lang, Fragezeichen) gelten nicht als Titel
+  const clean = (t) => {
+    let v = String(t || '').replace(/^[\s\S]*<\/think>/i, '').replace(/<think>[\s\S]*$/i, '').replace(/[*_#`]/g, '').split('\n').map((l) => l.trim()).filter(Boolean)[0] || '';
+    v = v.replace(/^(chat-?)?titel\s*:\s*/i, '').replace(/^["„“'»«\s]+|["„“'»«.:;,!\s-]+$/g, '').replace(/\s+/g, ' ').trim();
+    if (!v || v.split(' ').length > 8 || /\?$/.test(v)) return '';
+    v = v.split(' ').slice(0, 6).join(' ');
+    while (v.length > 48 && v.includes(' ')) v = v.slice(0, v.lastIndexOf(' '));
+    return v.replace(/[\s,:;–-]+$/, '');
+  };
   // Titel beim Anbieter der Anfrage (Haupt-KI bzw. Auswahl im Eingabefeld, Wunsch 10.11.: mit DeepSeek & Co. kam oft kein Titel):
   // erst dieser Anbieter (ohne Nachdenken, genug Tokens, längere Zeit für NVIDIA), dann Gemini als Ersatz – und umgekehrt
   const viaGemini = async () => {
@@ -1423,7 +1436,8 @@ async function handleTitle(req, res) {
     for (const [model, thinking] of (await P.ladder(env, 'text')).slice(0, 3).map((m) => [m, m.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' }])) {
       if (model === P.GEMINI_MODEL && Date.now() < visionMainSkipUntil) continue;
       try {
-        const t = clean(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TITLE_SYSTEM, user: text, maxTokens: 200, thinking, signal: AbortSignal.timeout(10000) }));
+        // 16.11.: genug Tokens – bei Modellen mit Denkstufe zählen die Gedanken mit, sonst kam nur ein halber Titel zurück
+        const t = clean(await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TITLE_SYSTEM, user: text, maxTokens: thinking.budget === 0 ? 200 : 1200, thinking, signal: AbortSignal.timeout(10000) }));
         if (t) return t;
       } catch (e) { if (e.status === 429 && model === P.GEMINI_MODEL) visionMainSkipUntil = Date.now() + 5 * 60 * 1000; }
     }

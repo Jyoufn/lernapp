@@ -72,6 +72,28 @@ const CodeAgent = (() => {
     }
     return shown;
   }
+  /* 16.11.: Coden ohne eigenen Agenten – größere Code-Blöcke (```html, ```js, ```py …, ab 10 Zeilen) werden zu Dateien:
+     im Chat als Datei-Zeile, der Code steht im Code-Fenster (Symbol oben rechts), nicht als langer Code-Block.
+     Dateiname aus einer Kommentarzeile ganz oben („// script.js“, „<!-- index.html -->“, „# main.py“), sonst nach Sprache. */
+  const LANG_FILE = { html: 'index.html', htm: 'index.html', css: 'style.css', js: 'script.js', javascript: 'script.js', mjs: 'script.js', jsx: 'App.jsx', ts: 'main.ts', typescript: 'main.ts', tsx: 'App.tsx',
+    py: 'main.py', python: 'main.py', java: 'Main.java', c: 'main.c', cpp: 'main.cpp', 'c++': 'main.cpp', cs: 'Program.cs', csharp: 'Program.cs', go: 'main.go', rs: 'main.rs', rust: 'main.rs',
+    php: 'index.php', rb: 'main.rb', ruby: 'main.rb', swift: 'main.swift', kt: 'Main.kt', kotlin: 'Main.kt', lua: 'main.lua', luau: 'main.luau', sql: 'query.sql', sh: 'script.sh', bash: 'script.sh',
+    vue: 'App.vue', svelte: 'App.svelte', dart: 'main.dart', scss: 'style.scss' };
+  const MIN_LINES = 10;
+  const NAME_LINE = /^\s*(?:\/\/|#|--|<!--|\/\*)\s*(?:datei:\s*|file:\s*)?([\w][\w./-]*\.[a-z0-9]{1,6})\s*(?:-->|\*\/)?\s*$/i;
+  function fromFences(text) {
+    const used = new Map();
+    const conv = (all, lang, body, closed) => {
+      const base = LANG_FILE[String(lang).toLowerCase()];
+      if (!base || body.split('\n').length < MIN_LINES) return all;
+      let name = NAME_LINE.exec(body.split('\n')[0] || '')?.[1];
+      if (!name) { const n = (used.get(base) || 0) + 1; used.set(base, n); name = n === 1 ? base : base.replace(/(\.[^.]+)$/, `-${n}$1`); }
+      return `\`\`\`\`file:${name}\n${body}${closed ? '\n````' : ''}`;
+    };
+    return String(text || '')
+      .replace(/^```([\w+#-]+)[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, lang, body) => conv(all, lang, body, true))
+      .replace(/^```([\w+#-]+)[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, lang, body) => conv(all, lang, body, false)); // wird gerade geschrieben
+  }
   const has = (text) => /^`{3,}(?:file:|(?:terminal|check|read|plan|run)\s*$)/m.test(String(text || ''));
 
   /* ---------- Dateityp-Icons (wie im Dateibaum eines Editors: farbiges Zeichen, ohne Kachel) ---------- */
@@ -242,7 +264,7 @@ const CodeAgent = (() => {
   function projectFiles(tab = activeTab()) {
     const files = new Map();
     if (!tab || tab.dataset.view) return files;
-    historyOf(tab).forEach((m) => { if (m.role === 'assistant' && has(m.text)) split(m.text).forEach((s) => { if (s.type === 'file') files.set(s.path, s.content); }); });
+    historyOf(tab).forEach((m) => { const t = m.role === 'assistant' ? fromFences(m.text) : ''; if (t && has(t)) split(t).forEach((s) => { if (s.type === 'file') files.set(s.path, s.content); }); });
     if (live?.target.isConnected && tab.classList.contains('active') && chat.contains(live.target)) live.files.forEach((f) => files.set(f.path, f.content));
     return new Map([...files].sort(([a], [b]) => a.localeCompare(b)));
   }
@@ -568,6 +590,6 @@ var ce=console.error;console.error=function(){try{send([].slice.call(arguments).
     if (t.textContent !== `${text} …`) { t.textContent = `${text} …`; t.classList.remove('in'); void t.offsetWidth; t.classList.add('in'); }
     if (chat.contains(msgEl)) scrollToBottom();
   }
-  return { has, mark, build, refresh: queueRefresh, split, revealTo, status, bundle };
+  return { has, fromFences, mark, build, refresh: queueRefresh, split, revealTo, status, bundle };
 })();
 window.CodeAgent = CodeAgent;

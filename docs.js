@@ -576,7 +576,8 @@ const Docs = (() => {
   // Blatt mit Eselsohr oben rechts und drei Zeilen (06.11.) – gleiche Form in Sidebar und Bibliothek
   // Chat in Home/Chats (10.11.): eckig-runde Sprechblase mit zwei Zeilen – gleicher Strich und Stil wie das Blatt der Dokumente
   // Chat-Icon (15.11. überarbeitet): gleich hoch wie das Blatt, weich gerundete Blase, kurzer Zipfel links unten, zwei Zeilen
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M4.9 2.6h8.2a3.4 3.4 0 0 1 3.4 3.4v5.4a3.4 3.4 0 0 1-3.4 3.4H8.9l-3.05 2.75c-.42.38-1 .1-1-.46V14.8A3.4 3.4 0 0 1 1.5 11.4V6a3.4 3.4 0 0 1 3.4-3.4z"/><path class="pg-ln" d="M5.3 7.4h7.4M5.3 10.4h4.4"/></svg>';
+  // 16.11.: weichere, rundere Sprechblase mit sanft geschwungenem Zipfel und drei Punkten (statt Zeilen)
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M6.4 3.4h5.2a4.9 4.9 0 0 1 4.9 4.9v1.6a4.9 4.9 0 0 1-4.9 4.9H8.4c-1.15 1.35-2.7 2.25-4.45 2.55-.36.06-.57-.35-.34-.62.62-.75.97-1.5 1.05-2.3A4.9 4.9 0 0 1 1.5 9.9V8.3a4.9 4.9 0 0 1 4.9-4.9z"/><circle class="pg-dot" cx="5.7" cy="9.1" r=".95"/><circle class="pg-dot" cx="9" cy="9.1" r=".95"/><circle class="pg-dot" cx="12.3" cy="9.1" r=".95"/></svg>';
   // Dokument ohne eigenes Icon (10.11.): abgerundetes Blatt mit Titelzeile und Textzeilen – gleicher Strich wie die Chat-Sprechblase
   const PAGE_SHAPE = '<rect class="pg-out" x="1.6" y="1.6" width="12.8" height="16.8" rx="3.2"/><path class="pg-ln" d="M4.8 6.4h4.2M4.8 10h6.4M4.8 13.6h6.4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
@@ -636,7 +637,6 @@ const Docs = (() => {
     view.hidden = true;
     view.innerHTML = `<div class="cl-wrap lb2">
       <div class="cl-head hm-top"><h2>${CH ? 'Chats' : 'Home'}</h2></div>
-      ${CH ? '' : '<section class="hm-next" aria-label="Als Nächstes" hidden></section>'}
       <span class="cl-find-slot"></span>
       <div class="lb2-bar"><span class="lb2-all">Alle Einträge</span><span class="lb2-sel" hidden><b></b></span>
         <button type="button" class="lb2-filter" data-act="filter" aria-label="Filter">${fi('filter', 15)}</button></div>
@@ -736,7 +736,7 @@ const Docs = (() => {
         api.open = true; view.hidden = false; if (!CH) panel()?.classList.add('view-docs');
         if (CH) { find.value = ''; view.scrollTop = 0; }
         api.render();
-        if (!CH) window.Home?.render(view.querySelector('.hm-next'));
+        // „Als Nächstes“ entfernt (16.11.)
       },
       hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); if (!CH) window.Home?.leave(); closeMenu(); window.TagMenu?.close(); if (!CH && !editor.open) panel()?.classList.remove('view-docs'); },
       focusSearch() { setTimeout(() => { if (api.open) search.focus({ preventScroll: true }); }, 60); },
@@ -799,10 +799,13 @@ const Docs = (() => {
       const fb = e.target.closest('[data-act="filter"]');
       if (fb) {
         // Aufbau wie der Filter in Aufgaben (Wunsch 10.11.): Abschnitte mit leiser Überschrift, Zeilen nur Text (Tags mit Farbpunkt), Haken rechts
-        const html = () => (CH ? '' : `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v)).join('')}<div class="lb2-msep"></div>`)
-          + `<div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v)).join('')}`
-          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<i class="lb2-mdot" style="background:${esc(g.c)}"></i>`)).join('')}` : '')
-          + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned)}${filtered() ? `<div class="lb2-msep"></div>${item('reset', 'Filter zurücksetzen', false, '', ' muted')}` : ''}`;
+        // 16.11.: mit Icons wie das Chat-Menü oben links (Umbenennen, Anheften …)
+        const FIC = { all: 'stack', chat: 'chat', doc: 'file', any: 'clock', today: 'sun', week: 'calendar', month: 'calendar' };
+        const ic = (n) => `<span class="lb2-mic">${fi(n, 14)}</span>`;
+        const html = () => (CH ? '' : `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v, ic(FIC[v]))).join('')}<div class="lb2-msep"></div>`)
+          + `<div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v, ic(FIC[v]))).join('')}`
+          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<span class="lb2-mic"><i class="lb2-mdot" style="background:${esc(g.c)}"></i></span>`)).join('')}` : '')
+          + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned, ic('pin'))}${filtered() ? `<div class="lb2-msep"></div>${item('reset', 'Filter zurücksetzen', false, ic('x'), ' muted')}` : ''}`;
         openMenu(fb, html(), (v) => {
           if (v.startsWith('k:')) { filter = v.slice(2); localStorage.setItem(FKEY, filter); }
           else if (v.startsWith('t:')) fx.time = v.slice(2);
@@ -1676,10 +1679,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         changed();
       });
       title.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); c.focus(); } });
-      sub.addEventListener('input', () => { doc.subtitle = sub.value.replace(/\n/g, ' '); grow(sub); changed(); });
+      sub.addEventListener('input', () => { doc.subtitle = sub.value.replace(/\n/g, ' '); doc.subAuto = false; grow(sub); changed(); }); // selbst geschrieben → KI ändert sie nicht mehr
       sub.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); c.focus(); } });
       c.addEventListener('focus', () => document.execCommand('defaultParagraphSeparator', false, 'p'));
-      c.addEventListener('input', () => { window.DocBlocks?.tidy(c); const next = c.innerHTML === '<br>' ? '' : serialize(c); remember(doc.content, next); doc.content = next; changed(); clearTimeout(navT); navT = setTimeout(buildNav, 250); });
+      c.addEventListener('input', () => { window.DocBlocks?.tidy(c); const next = c.innerHTML === '<br>' ? '' : serialize(c); remember(doc.content, next); doc.content = next; changed(); autoDescribe(doc.id); clearTimeout(navT); navT = setTimeout(buildNav, 250); });
       window.DocBlocks?.attach(c, blockCtx()); // „/“ öffnet das Block-Menü
       c.addEventListener('keydown', (e) => {
         if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -1943,7 +1946,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       // Tag bearbeiten: Name, Farbe, Löschen
       const ed = tagOf(metaEdit);
       if (ed) {
-        list.innerHTML = `<span class="tk-tag-editbox"><span class="tk-tag-edit-l">Tag bearbeiten</span><input class="tk-tag-name" data-mname value="${esc(ed.name)}" maxlength="24" aria-label="Name" />${UIKit.colorRow(ed.c, 'data-medit-color')}`
+        list.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-mdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><span class="tge-title">Tag bearbeiten</span></span><input class="tk-tag-name" data-mname value="${esc(ed.name)}" maxlength="24" aria-label="Name" placeholder="Name" /><span class="tge-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-medit-color')}`
           + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-mdel="${ed.id}">${fi('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-mdone>Fertig</button></span></span>`;
         return;
       }
@@ -3018,12 +3021,31 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     if (patch.title != null) d.title = String(patch.title).slice(0, 160);
     if (patch.subtitle != null) d.subtitle = String(patch.subtitle).slice(0, 400);
     if (patch.ws != null) d.ws = String(patch.ws).slice(0, 30);
+    if (patch.content != null) autoDescribe(id);
     touch(d); renderSide(); if (list.open) list.render();
     const tab = document.querySelector(`.tab[data-doc="${id}"]`);
     if (tab) window.setTabTitle?.(tab, d.title.trim() || 'Unbenannt');
     if (editor.isShowing(id)) { if (patch.content != null) editor.redraw(); else editor.refreshMeta(); }
     window.markDrafts?.();
     return d;
+  }
+  /* 16.11.: Beschreibung schreibt die KI von selbst (kein Feld mehr im Fenster) und hält sie aktuell, solange der Nutzer sie nicht selbst
+     geändert hat: nach größeren Änderungen am Inhalt (±600 Zeichen seit der letzten Beschreibung) – ruhig verzögert, ein Aufruf. */
+  const describeT = new Map();
+  function autoDescribe(id, now = false) {
+    const d = docOf(id); if (!d || !window.docAiMeta) return;
+    if (!(d.subAuto || !(d.subtitle || '').trim())) return;
+    const len = (d.content || '').replace(/<[^>]+>/g, '').length;
+    if (!now && (len < 80 || Math.abs(len - (d.subLen || 0)) < 600)) return;
+    clearTimeout(describeT.get(id));
+    describeT.set(id, setTimeout(async () => {
+      describeT.delete(id);
+      const cur = docOf(id); if (!cur || !(cur.subAuto || !(cur.subtitle || '').trim())) return;
+      const m = await window.docAiMeta(cur).catch(() => null);
+      const again = docOf(id); if (!again || !m?.subtitle || !(again.subAuto || !(again.subtitle || '').trim())) return;
+      again.subAuto = true; again.subLen = (again.content || '').replace(/<[^>]+>/g, '').length;
+      update(id, { subtitle: m.subtitle });
+    }, now ? 0 : 15000));
   }
   /* ---------- Fenster „Dokument erstellen“ (im Chat bzw. als Fenster in der Mitte) ----------
      Gleicher Aufbau wie das Aufgaben- und Termin-Fenster (Stand 10.11.): Kasten mit Titel + Beschreibung, darunter Zeilen, die weich
@@ -3034,17 +3056,13 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     const into = onAppend && docs.length;
     form.innerHTML = `<div class="tk-sheet-main ce-headbox">
         <input class="tk-f-title" placeholder="Titel" maxlength="160" aria-label="Titel" />
-        <textarea class="tk-f-notes" rows="1" placeholder="Beschreibung – leer lassen, dann schreibt die KI sie" maxlength="400" aria-label="Beschreibung"></textarea>
       </div>
       ${into ? `<div class="tk-sheet-rows ce-rows"><div class="tk-pop" data-k="into"><button type="button" class="tk-pill" data-open="into"><span class="tk-si">${fi('file', 14)}</span><span class="tk-rv">In bestehendes Dokument übernehmen</span></button>
         <div class="tk-menu"><div class="tk-box"><div class="tk-tag-row"><input class="tk-tag-in dc-into-q" placeholder="Dokument suchen …" spellcheck="false" aria-label="Dokument suchen" /></div><div class="dc-into-list"></div></div></div></div></div>` : ''}
       <div class="tk-sheet-foot ce-foot"><span class="grow"></span>${onCancel && !into ? '<button type="button" class="dc-make-cancel" data-x>Abbrechen</button>' : ''}<button type="submit" class="tk-create tk-make">${esc(cta)}</button></div>`;
-    const ti = form.querySelector('.tk-f-title'), su = form.querySelector('.tk-f-notes');
-    const growSu = () => { su.style.height = 'auto'; su.style.height = `${Math.min(su.scrollHeight, 120)}px`; };
-    ti.value = title; su.value = subtitle;
-    setTimeout(growSu);
-    [ti, su].forEach((x) => x.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && x === su) { e.preventDefault(); form.requestSubmit(); } }));
-    su.addEventListener('input', growSu);
+    const ti = form.querySelector('.tk-f-title');
+    ti.value = title;
+    ti.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); form.requestSubmit(); } });
     if (into) {
       const pop = form.querySelector('.tk-pop[data-k="into"]'), q = form.querySelector('.dc-into-q'), listEl = form.querySelector('.dc-into-list');
       const draw = () => {
@@ -3065,7 +3083,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       e.preventDefault();
       const btn = form.querySelector('.tk-create'); if (btn.disabled) return;
       btn.disabled = true; btn.classList.add('saving');
-      onCreate({ title: ti.value.trim(), subtitle: su.value.trim(), tags: [] });
+      onCreate({ title: ti.value.trim(), subtitle: subtitle || '', tags: [] });
     });
     return { el: form };
   }
@@ -3085,13 +3103,13 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
   // Dokument anlegen, öffnen und den Inhalt sichtbar hineinschreiben (fertiges HTML oder von der KI erzeugt)
   function make({ title, subtitle, tags = [], projectId = '', html, generate, describe }) {
     const d = add({ title, subtitle, projectId });
-    d.tags = tags.slice(); save();
+    d.tags = tags.slice(); if (!subtitle) d.subAuto = true; save();
     open(d.id);
     // ohne eigene Beschreibung (oder Titel) schreibt die KI sie im Hintergrund
     if ((!subtitle || !title) && describe) describe().then((m = {}) => {
       const cur = docOf(d.id); if (!cur) return;
       const patch = {};
-      if (m.subtitle && !(cur.subtitle || '').trim()) patch.subtitle = m.subtitle;
+      if (m.subtitle && !(cur.subtitle || '').trim()) { patch.subtitle = m.subtitle; cur.subLen = (cur.content || '').replace(/<[^>]+>/g, '').length; }
       if (m.title && !cur.title.trim()) patch.title = m.title;
       if (Object.keys(patch).length) update(d.id, patch);
     }).catch(() => {});

@@ -31,6 +31,19 @@
 - **Schrift „Apple“** (Standard, Wunsch „MacBook-Stil“): Systemschrift des Geräts (San Francisco auf Mac/iPad/iPhone, `FONTS.apple.sys` in `app.js`), lädt nichts aus dem Netz; einmalige Umstellung je Gerät (`appearance.font.v2`), danach gilt die Wahl in Aussehen.
 - **Gedanken in der Zeitleiste**: fertige Gedanken bekommen statt des Punkts ein passendes Icon nach ihrem Oberpunkt (`THOUGHT_ICONS`/`thoughtIcon` in `app.js`: Lupe, Bild, Diagramm, Tabelle, Raute fürs Rechnen, Uhr, Datei, Liste, Haken, Buch, Glühbirne, Stift …); passt nichts, bleibt der Punkt.
 
+## STAND 16.11.
+- **Gedanken nach der Antwort**: „Gearbeitet für …“ bleibt zu; aufgeklappt stehen die Schritte als **Tabelle** (Karte mit Ring, Zeilen mit Trennlinie, Pfeil rechts, Klick klappt den Text in der Zeile auf; `.work:not(.active)`). Während der Arbeit: Wechsel des Oberpunkts rollt nach oben (`swapText`, `step-up-in`).
+- **Titel oben links** höchstens so breit wie sein Menü (200 px), sonst „…“. KI-Titel: max. 6 Wörter, nie mitten im Wort, genug Tokens bei Denk-Modellen.
+- **Kopier-Kasten** (```kopie): Kopf mit Beschriftung aus „# Art“ links (Prompt, E-Mail …) und „Kopieren“ rechts, Text darunter (`.cbx2`).
+- **Menüs im Stil des Chat-Menüs** (Zeilen 30 px, Radius 8, Icon in 16er-Spalte, leise Abschnitts-Überschriften): Tag-Auswahl (Suchfeld mit Lupe; „Tag bearbeiten“ als eigene Ansicht mit Zurück-Pfeil, Name, „Farbe“, Fußzeile), Filter in Home/Chats (mit Icons), Workspace-Menü, „Suchen oder Aktion“ (Icons in Kacheln, Fußzeile mit Tasten).
+- **Eigene Farbe** (`UIKit.colorRow`): steht als gewählter Punkt da, der Regenbogen-Knopf bleibt immer daneben.
+- **Chat-Icon** (Home/Chats): runde Blase mit geschwungenem Zipfel und drei Punkten.
+- **Dokument erstellen**: kein Beschreibungsfeld mehr – die KI schreibt die Beschreibung und hält sie aktuell (`autoDescribe` in `docs.js`, bis man sie selbst ändert). „In bestehendes Dokument“: Suchfeld mit Lupe, Dokumente durch feine Linien getrennt.
+- **Einstellungen**: Name-Feld ohne Rand (nur graue Fläche); Verbindungen/Workspaces klappen weich auf und zu (`foldTo`); Schlüssel als ruhige Zeilen, antippen = bearbeiten; je KI „Einsatz“ Alles · Coden · Chat (`AI_USE`). Groq und Claude stehen nicht mehr in der Liste; kein „Mac-App herunterladen“, kein „Neuen Agenten erstellen“. Home ohne „Als Nächstes“.
+- **Löschen** in Menüs bleibt beim Darüberfahren rot (auch „Wirklich löschen?“).
+- **Code**: größere Code-Blöcke (ab 10 Zeilen, Programmiersprache) werden zu Dateien (`CodeAgent.fromFences`) – im Chat eine Datei-Zeile, der Code im Code-Fenster (Symbol oben rechts).
+- **Bilder**: Vorschaubilder angehängter Fotos 1000 px (lesbar in der Großansicht); Commons-Bilder öffnen groß in 1800 px (`data-big`).
+
 ## KASTEN IM KASTEN (verbindlich, Wunsch 14.11.)
 - Steht in einem Kasten (Karte, Fenster, Menü) noch ein Kasten (Feld, Spur eines Umschalters, Schalter, Innenkarte), ist der innere IMMER eine Spur HELLER als der äußere – durchscheinendes Weiß (5–13 %), nie Schwarz, nie `--main-bg`, nie dunkler. In `.st-card`, `.ce-card`, `.tk-sheet`, `.tk-box`, `.dcs-body`, Menüs zeigt `--main-bg` deshalb auf einen helleren Ton. Vor jeder UI-Änderung prüfen.
 - **Einstellungen im UI-Stil** (14.11.): Umschalter `.st-seg` = Tableiste mit gleitender Fläche (`.cs-thumb`, `placeThumb` in `ui-kit.js`; gleitet auch über das Neuzeichnen der Einstellungen hinweg), Knöpfe `.st-btn` = Standard-Knopf, Felder = Eingabefeld-Stil, Schalter aus = helle Spur.
