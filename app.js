@@ -251,7 +251,7 @@ MODELS.filter(() => false).forEach((m) => {
 
 /* Modell + Aufwand in EINEM schlichten Menü (Wunsch 10.11., zweite Runde): oben nur die VERBUNDENEN Modelle – antippen macht es zur
    Haupt-KI (wie Einstellungen → Agenten → Rolle); darunter „Aufwand“ mit Regler (Auto · Niedrig · Mittel · Hoch · Max). Stil wie die Menüs der App. */
-const AI_NAMES = { gemini: 'Gemini', deepseek: 'DeepSeek V4.1', minimax: 'MiniMax M3.1' };
+const AI_NAMES = { gemini: 'Gemini', deepseek: 'DeepSeek V4.1', minimax: 'MiniMax M3.1', claude: 'Claude' };
 const EFF_DE = { Auto: 'Auto', Low: 'Niedrig', Medium: 'Mittel', High: 'Hoch', Max: 'Max' };
 const aiMain = () => window.AiMain?.() || 'gemini';
 popover.classList.add('mpx');

@@ -14,6 +14,8 @@
     // DeepSeek V4.1: kostenlos über NVIDIA (06.11.; Groq und OpenRouter sind raus). Ein NVIDIA-Schlüssel reicht für alle drei –
     // eigene Schlüssel je Modell verteilen nur das Limit (ca. 40 Anfragen/Minute je Schlüssel).
     { id: 'DEEPSEEK_API_KEY', name: 'DeepSeek V4.1 (NVIDIA)', logo: 'nvidia', where: 'build.nvidia.com', multi: true, fam: 'deepseek' },
+    // Claude (16.11.): eigener API-Schlüssel aus console.anthropic.com (kostet je Nutzung; das Pro-Abo lässt Anthropic in eigenen Apps nicht zu)
+    { id: 'ANTHROPIC_API_KEY', name: 'Claude (Anthropic)', logo: 'claude', where: 'console.anthropic.com', multi: true, fam: 'claude' },
     // kein NVIDIA/Nemotron mehr in der Anzeige: der Bild-Schlüssel (build.nvidia.com) steht unter „FLUX (Bilder)“
     { id: 'GROQ_API_KEY', name: 'Groq (Diktat)', logo: 'groq', where: 'console.groq.com', multi: true }, // Whisper fürs Diktat – kostenlos, schnell, Deutsch + Englisch gemischt
     { id: 'TAVILY_API_KEY', name: 'Tavily (Websuche)', logo: 'tavily', where: 'app.tavily.com', multi: true }, // Recherche: echte Treffer samt Text
@@ -126,12 +128,12 @@
   }
   /* Rolle des Anbieters (unter seinen Schlüsseln): Haupt-KI – wird für ALLES zuerst genutzt (auch Coden, Agenten, Hintergründe);
      Ersatz – springt nur ein, wenn die Haupt-KI gerade nicht kann (Kontingent). FLUX malt die Bilder. */
-  const FAMS = ['gemini', 'minimax', 'deepseek']; // Kimi entfernt (10.11.)
+  const FAMS = ['gemini', 'minimax', 'deepseek', 'claude']; // Kimi entfernt (10.11.), Claude dazu (16.11.)
   const mainFam = () => (FAMS.includes(deviceKeys.AI_ORDER) ? deviceKeys.AI_ORDER : 'gemini');
   window.AiMain = () => mainFam(); // Name im Modell-Knopf
   /* Modell-Auswahl im Eingabefeld (Wunsch 10.11.): nur verbundene Anbieter (eigener Schlüssel oder Server-Schlüssel),
      antippen macht ihn zur Haupt-KI – genau wie Einstellungen → Agenten → Rolle „Haupt-KI“ */
-  const FAM_KEY = { gemini: 'GEMINI_API_KEY', minimax: 'MINIMAX_API_KEY', deepseek: 'DEEPSEEK_API_KEY' };
+  const FAM_KEY = { gemini: 'GEMINI_API_KEY', minimax: 'MINIMAX_API_KEY', deepseek: 'DEEPSEEK_API_KEY', claude: 'ANTHROPIC_API_KEY' };
   window.AiConnected = () => FAMS.filter((f) => keyList(FAM_KEY[f]).length || fileKeys[FAM_KEY[f]]);
   window.setAiMain = (f) => {
     if (!FAMS.includes(f)) return;
