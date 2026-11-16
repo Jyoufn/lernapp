@@ -172,6 +172,7 @@
   function lookPage() {
     const ap = window.Appearance;
     if (!ap) return '';
+    ap.previewFonts?.();
     const cfg = ap.get();
     const accent = String(cfg.accent || '').toLowerCase();
     // Akzentfarbe wie im Kalender (16.11.): Vorschläge in einer Reihe, ganz rechts der bunte Knopf für eine eigene Farbe,
@@ -192,8 +193,8 @@
         ${cfg.mode === 'glass' && ap.DESKTOP ? `<div class="st-row"><span class="st-name">Glas</span><span class="grow"></span>${seg('data-ap-glasstone', [['Hell', 'light'], ['Dunkel', 'dark']], cfg.glassTone === 'light' ? 'light' : 'dark')}</div>` : ''}
         ${!ap.DESKTOP && /Mac/i.test(navigator.platform || navigator.userAgent) && !/iPhone|iPad/i.test(navigator.userAgent) && navigator.maxTouchPoints < 2 ? `<div class="st-row"><span class="st-name">Mac-App (mit Glas)</span><span class="grow"></span><a class="st-btn light" href="https://github.com/Jyoufn/lernapp/releases/latest/download/Lernapp-mac.dmg" target="_blank" rel="noopener">Herunterladen</a></div>` : ''}
         <div class="st-row"><span class="st-name">Kacheln im neuen Chat</span><span class="grow"></span>${seg('data-ap-tiles', TILES.map(([l, v]) => [l, String(v)]), String(near))}</div>
-        <div class="st-row"><span class="st-name">Schriftart</span><span class="grow"></span>${seg('data-ap-font', Object.entries(ap.FONTS || {}).map(([id, label]) => [label, id]), cfg.font)}</div>
-        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span><span class="st-fw-val" data-fw-val>${cfg.weight} %</span><label class="ui-slider st-fw" style="--p:${((cfg.weight - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"><input type="range" min="${ap.W_MIN}" max="${ap.W_MAX}" step="5" value="${cfg.weight}" data-ap-wrange aria-label="Schriftstärke in Prozent" /></label></div>
+        <div class="st-row"><span class="st-name">Schriftart</span><span class="grow"></span>${seg('data-ap-font', Object.entries(ap.FONTS || {}).map(([id, label]) => [label, id]), cfg.font).replace(/data-ap-font="(\w+)"/g, (m, id) => `${m} style="font-family:${ap.FONT_CSS?.[id] || 'inherit'}"`)}</div>
+        <div class="st-row"><span class="st-name">Schriftstärke</span><span class="grow"></span><span class="st-fw-val" data-fw-val>${cfg.weight} %</span><label class="ui-slider st-fw" style="--p:${((cfg.weight - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"><input type="range" min="${ap.W_MIN}" max="${ap.W_MAX}" step="1" value="${cfg.weight}" data-ap-wrange aria-label="Schriftstärke in Prozent" /><i class="st-fw-mark" style="left:${((100 - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%"></i></label></div>
         <div class="st-row"><span class="st-name">Sprache</span><span class="grow"></span>${seg('data-lang', [['Deutsch', 'de'], ['English', 'en']], lang)}</div></div>`
       + hooksHtml('look');
   }
@@ -337,6 +338,11 @@
     drawView.page = null;
     app.classList.remove('settings-open');
     editing = null;
+    // 16.11.: Zurück blendet den Hauptteil und die Sidebar einmal weich ein (vorher sprang alles hart zurück)
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const k = [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], o = { duration: 420, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' };
+      document.querySelectorAll('.panel > :is(.content, .composer-area, .dc-view, .cal-view, .tk-view):not([hidden]), .sidebar :is(.sb-head, .sb-main, .sb-scroll)').forEach((n) => n.animate?.(k, o));
+    }
   }
 
   /* ---------- Bedienung ---------- */
@@ -426,7 +432,7 @@
     const ap = window.Appearance, v = Number(r.value);
     r.parentElement.style.setProperty('--p', `${((v - ap.W_MIN) / (ap.W_MAX - ap.W_MIN)) * 100}%`);
     const lab = view.querySelector('[data-fw-val]'); if (lab) lab.textContent = `${v} %`;
-    clearTimeout(fwT); fwT = setTimeout(() => ap.set({ weight: v }), 180);
+    clearTimeout(fwT); fwT = setTimeout(() => ap.set({ weight: v }), 220);
   });
   view.addEventListener('focusout', (e) => { if (!e.target.matches?.('[data-name-live]')) return; write(NAME_KEY, e.target.value.trim()); applyName(); e.target.value = nameOf(); });
   view.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-name-live]') && (e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); e.target.blur(); } });

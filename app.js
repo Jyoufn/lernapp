@@ -44,6 +44,9 @@ function activateTab(tab) {
   if (tab.hidden) { tab.hidden = false; saveChats(); } // geschlossener Chat wird wieder geöffnet
   const prev = tabsEl.querySelector('.tab.active');
   const drop = prev && prev !== tab && isDraft(prev) ? prev : null; // leerer Chat / leeres Dokument wird beim Verlassen verworfen
+  // 16.11.: genau EINE Animation beim Wechsel – beim Wiederanzeigen würden sonst die Einblend-Animationen aller Nachrichten/Zeilen darin
+  // noch einmal starten (wirkte „doppelt“). Kurz alle inneren Animationen aus; Chat bzw. Ansicht blenden als Ganzes weich ein.
+  if (prev && prev !== tab) { const pn = document.querySelector('.panel'); pn?.classList.add('vt-fresh'); clearTimeout(activateTab.t); activateTab.t = setTimeout(() => pn?.classList.remove('vt-fresh'), 650); }
   if (prev && prev !== tab && typeof chat !== 'undefined' && !tab.dataset.view && chat.animate) {
     // Chat wechseln: Inhalt blendet weich ein und gleitet ein Stück hoch (statt hart umzuspringen)
     requestAnimationFrame(() => chat.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' }));
@@ -108,6 +111,10 @@ window.setTabTitle = (tab, title) => { if (!tab) return; tab.querySelector('.tab
 /* Weicher Wechsel zwischen Ansichten (07.11.): wo der Browser View Transitions kann, blendet der alte Inhalt kurz über
    (Klasse vt-on schaltet solange die eigenen Einblend-Animationen der Ansichten ab, damit nichts doppelt läuft) */
 window.softSwitch = (fn) => {
+  // 16.11.: kein View-Transition mehr – sonst lief erst der Übergang und danach die eigene Einblend-Animation der Ansicht noch einmal
+  // („doppelt, wie neu geladen“). Jede Ansicht blendet jetzt genau einmal selbst ein (style.css „view-rise“).
+  fn(); return;
+  // eslint-disable-next-line no-unreachable
   if (!document.startViewTransition || matchMedia('(prefers-reduced-motion: reduce)').matches) { fn(); return; }
   document.documentElement.classList.add('vt-on');
   const t = document.startViewTransition(fn);
@@ -6109,7 +6116,17 @@ const TagMenu = (() => {
     setTimeout(() => input.focus({ preventScroll: true }), 40);
   }
   document.addEventListener('pointerdown', () => { if (pop.classList.contains('open')) close(); });
-  addEventListener('resize', close);
+  // iPad (16.11.): Antippen von „Suchen“ öffnet die Tastatur → das Fenster ändert die Größe → das Menü ging sofort wieder zu und man konnte
+  // keinen Tag anlegen. Solange darin geschrieben wird, bleibt es offen und rückt nur nach oben, falls die Tastatur es verdeckt.
+  const keep = () => pop.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
+  const refit = () => {
+    if (!pop.classList.contains('open')) return;
+    if (!keep()) { close(); return; }
+    const vv = window.visualViewport, bottom = vv ? vv.offsetTop + vv.height : innerHeight, r = pop.firstElementChild.getBoundingClientRect();
+    if (r.bottom > bottom - 8) pop.style.top = `${Math.max(8, parseFloat(pop.style.top) - (r.bottom - bottom + 8))}px`;
+  };
+  addEventListener('resize', refit);
+  window.visualViewport?.addEventListener('resize', () => { if (pop.classList.contains('open') && keep()) refit(); });
   window.addEventListener('tags-changed', (e) => { if (e.detail !== 'tagmenu' && pop.classList.contains('open')) draw(); });
   return { open, close, all, get isOpen() { return pop.classList.contains('open'); } };
 })();
@@ -7560,6 +7577,13 @@ document.addEventListener('click', (e) => {
     DESKTOP,
     FONTS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, f.label])),
     W_MIN, W_MAX,
+    // Vorschau in Aussehen (16.11.): jede Schriftart-Taste steht in ihrer eigenen Schrift
+    FONT_CSS: Object.fromEntries(Object.entries(FONTS).map(([id, f]) => [id, (f.sys ? f.sys : `'${f.name}', Inter`).replace(/"/g, "'")])),
+    previewFonts: () => {
+      if (document.getElementById('app-font-preview')) return;
+      const fams = Object.values(FONTS).filter((f) => f.q && f.q !== 'Inter').map((f) => `family=${f.q}:wght@500;600`).join('&');
+      const l = document.createElement('link'); l.id = 'app-font-preview'; l.rel = 'stylesheet'; l.href = `https://fonts.googleapis.com/css2?${fams}&display=swap`; document.head.append(l);
+    },
     get: () => ({ ...cfg, mode: modeId(), font: fontId(), weight: weightId() }),
     set: (patch) => { Object.assign(cfg, patch); apply(); save(); },
   };
