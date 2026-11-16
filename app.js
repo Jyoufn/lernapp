@@ -1203,7 +1203,8 @@ const chartValue = (value, unit) => {
 const CHART_ACC = '#2f86ff';
 // Ring: kräftiges Blau → helles Blau → Blaugrau; gut unterscheidbar, aber ruhig
 // 16.11.: ruhiger – Akzent, dann helleres Blau, dann Grautöne (keine bunten Farben)
-const CHART_RING = ['#3d8bff', '#8bb8ff', '#5c6370', '#8a919c', '#3f444c', '#b3b8c0', '#2e3238', '#cfd3d8'];
+// 16.11. abends: klar unterscheidbare Abstufung – Akzent in vier Helligkeiten, danach Grautöne
+const CHART_RING = ['#3d8bff', '#79abff', '#b0cdff', '#dbe7ff', '#8a919c', '#5c6370', '#b3b8c0', '#3f444c'];
 const chartShort = (t, k) => (t.length > k ? `${t.slice(0, k - 1)}…` : t);
 function chartSmooth(pts) {
   return pts.map(([x, y], i) => {
@@ -1253,14 +1254,15 @@ function chartFigure(data) {
     // dünner Ring, Mitte zeigt Summe bzw. den Wert des Fachs unter der Maus
     const pct = data.unit.trim() === '%';
     // dickerer Ring mit runden Enden und kleinen Lücken (runde Enden ragen je SW/2 über → in die Lücke einrechnen)
-    const R = 62, SW = 14, L = 2 * Math.PI * R, gap = n > 1 ? 5 + SW : 0;
+    // 16.11. abends: gerade Kanten mit gleich breiten, sauberen Lücken statt runder Enden (wirkte verwaschen)
+    const R = 62, SW = 16, L = 2 * Math.PI * R, gap = n > 1 ? 3 : 0;
     const box = el('div', 'cv-ring');
     const rg = el('div', 'cv-rg');
     const svg = svgNode('svg', { viewBox: '0 0 160 160', width: 160, height: 160, role: 'img', 'aria-label': `${data.title}: ${data.labels.map((l, i) => `${l} ${chartValue(data.values[i], data.unit)}`).join(', ')}` });
     let off = 0;
     data.values.forEach((value, i) => {
       const len = total ? (value / total) * L : 0;
-      const arc = svgNode('circle', { class: 'cv-arc', 'data-i': i, cx: 80, cy: 80, r: R, fill: 'none', stroke: CHART_RING[i % CHART_RING.length], 'stroke-width': SW, 'stroke-linecap': len > gap ? 'round' : 'butt', 'stroke-dasharray': `${len > gap ? len - gap : Math.max(1, len - 5)} ${L}`, 'stroke-dashoffset': -(off + (len > gap ? gap / 2 : 2.5)), transform: 'rotate(-90 80 80)' });
+      const arc = svgNode('circle', { class: 'cv-arc', 'data-i': i, cx: 80, cy: 80, r: R, fill: 'none', stroke: CHART_RING[i % CHART_RING.length], 'stroke-width': SW, 'stroke-linecap': 'butt', 'stroke-dasharray': `${Math.max(0.8, len - gap)} ${L}`, 'stroke-dashoffset': -(off + gap / 2), transform: 'rotate(-90 80 80)' });
       arc.style.animationDelay = `${i * 70}ms`;
       svg.append(arc);
       off += len;
@@ -2122,6 +2124,7 @@ function makeRenderer(target, opts = {}) {
   let timer = null;
   let carry = 0;        // angefangene Zeichen (Tempo in Zeichen/s → ganze Zeichen je Schritt)
   let cpsNow = 0;       // aktuelles Tempo (gleitet zum Ziel)
+  let delay = REVEAL_TICK; // 16.11. abends (Ruckeln): Abstand passt sich an – teures Neuzeichnen (lange Antwort) → seltener, dafür mehr Zeichen je Schritt
   let finishWaiters = [];
   const firstSeen = [];  // Zeitpunkt, an dem Block Nr. i zuerst erschien
 
@@ -2158,9 +2161,9 @@ function makeRenderer(target, opts = {}) {
     // Tempo gleitet (16.11.): statt am Antwortende sprunghaft schneller zu werden („Schwall“), nähert es sich dem Ziel weich an
     const goal = Math.min(ended ? REVEAL_CPS_END : REVEAL_CPS_MAX, Math.max(REVEAL_CPS_MIN, backlog / (ended ? 2 : REVEAL_WINDOW_S)));
     cpsNow = cpsNow ? cpsNow + (goal - cpsNow) * 0.06 : goal;
-    carry += cpsNow * REVEAL_TICK / 1000;
+    carry += cpsNow * delay / 1000;
     let step = Math.floor(carry);
-    if (step < 1) { timer = setTimeout(tick, REVEAL_TICK); return; }
+    if (step < 1) { timer = setTimeout(tick, delay); return; }
     carry -= step;
     // nicht mitten in einer Formel oder einem Wort stoppen, wenn es knapp ist
     const nextSpace = text.slice(shown + step).search(/[\s$]/);
@@ -2168,8 +2171,11 @@ function makeRenderer(target, opts = {}) {
     shown = Math.min(text.length, shown + step);
     // Coding-Agent: Datei-/Prüf-/Plan-Blöcke nicht Zeichen für Zeichen eintippen – sobald ein Block ganz da ist, erscheint er auf einmal
     if (window.CodeAgent) shown = CodeAgent.revealTo(text, shown);
+    const t0 = performance.now();
     draw();
-    timer = setTimeout(tick, REVEAL_TICK);
+    const cost = performance.now() - t0;
+    delay = Math.round(Math.min(160, Math.max(REVEAL_TICK, delay * 0.7 + cost * 3 * 0.3))); // höchstens ~⅓ der Zeit fürs Zeichnen
+    timer = setTimeout(tick, delay);
   };
   const start = () => { if (!timer) timer = setTimeout(tick, 0); };
 
@@ -6127,9 +6133,10 @@ const TagMenu = (() => {
     target = t; q = ''; creating = ''; editing = ''; input.value = '';
     draw();
     pop.classList.add('open');
-    const r = anchor.getBoundingClientRect(), menu = pop.firstElementChild, w = menu.offsetWidth || 230, h = Math.max(menu.offsetHeight, 240);
-    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
-    pop.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 12) : r.bottom)}px`;
+    const r = anchor.getBoundingClientRect(), menu = pop.firstElementChild, w = menu.offsetWidth || 230, h = Math.max(menu.offsetHeight, 120);
+    // 16.11. abends: linksbündig unter dem Knopf (öffnet nach rechts, nicht nach links), am Rand eingefangen
+    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
+    pop.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 12) : r.bottom + 6)}px`;
     setTimeout(() => input.focus({ preventScroll: true }), 40);
   }
   document.addEventListener('pointerdown', () => { if (pop.classList.contains('open')) close(); });

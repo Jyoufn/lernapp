@@ -44,6 +44,8 @@
 - **Code**: größere Code-Blöcke (ab 10 Zeilen, Programmiersprache) werden zu Dateien (`CodeAgent.fromFences`) – im Chat eine Datei-Zeile, der Code im Code-Fenster (Symbol oben rechts).
 - **Bilder**: Vorschaubilder angehängter Fotos 1000 px (lesbar in der Großansicht); Commons-Bilder öffnen groß in 1800 px (`data-big`).
 
+- **Abends nachgebessert**: Zeitstrahl wieder im alten Aussehen (Variante A entfernt). Diagramm-Kasten ohne eigene Füllfarbe (nur feiner Ring); Ring-Diagramm mit geraden Kanten und gleich breiten Lücken, Farben = Akzent in vier Helligkeiten, dann Grau. Tag-Auswahl öffnet linksbündig unter dem Knopf (nach rechts); Projekt-Menü im Dokument mit Ordner in Projektfarbe.
+
 ## KASTEN IM KASTEN (verbindlich, Wunsch 14.11.)
 - Steht in einem Kasten (Karte, Fenster, Menü) noch ein Kasten (Feld, Spur eines Umschalters, Schalter, Innenkarte), ist der innere IMMER eine Spur HELLER als der äußere – durchscheinendes Weiß (5–13 %), nie Schwarz, nie `--main-bg`, nie dunkler. In `.st-card`, `.ce-card`, `.tk-sheet`, `.tk-box`, `.dcs-body`, Menüs zeigt `--main-bg` deshalb auf einen helleren Ton. Vor jeder UI-Änderung prüfen.
 - **Einstellungen im UI-Stil** (14.11.): Umschalter `.st-seg` = Tableiste mit gleitender Fläche (`.cs-thumb`, `placeThumb` in `ui-kit.js`; gleitet auch über das Neuzeichnen der Einstellungen hinweg), Knöpfe `.st-btn` = Standard-Knopf, Felder = Eingabefeld-Stil, Schalter aus = helle Spur.

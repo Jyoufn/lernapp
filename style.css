@@ -12855,8 +12855,8 @@ html body .tk-cal .tk-cal-grid button.on { background: rgba(255, 255, 255, 0.05)
 
 /* ===== 16.11. nachts – Diagramme, Zeitstrahl und Mindmap im Stil der Inhalts-Kästen (Fläche --win-bg, feiner Rand, Radius 14,
    Kopf mit grauem Icon). Farbe: nur die Akzentfarbe für das Wichtigste, alles andere in Grautönen. ===== */
-html body .md :is(.chat-chart, .chat-timeline.tl4, .chat-mindmap.mm4) { width: min(100%, 640px); box-sizing: border-box; margin: 16px 0 18px; padding: 14px 16px 14px; border: 1px solid rgba(255, 255, 255, 0.065); border-radius: 14px; background: var(--win-bg); }
-html body .md .chat-chart .chart-title, html body .md .chat-timeline .tl4-head { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: -0.1px; }
+html body .md :is(.chat-chart, .chat-mindmap.mm4) { width: min(100%, 640px); box-sizing: border-box; margin: 16px 0 18px; padding: 14px 16px 14px; border: 1px solid rgba(255, 255, 255, 0.065); border-radius: 14px; background: var(--win-bg); }
+html body .md .chat-chart .chart-title { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: -0.1px; }
 html body .md .chat-chart .chart-title svg { flex: none; width: 14px; height: 14px; color: var(--text-3); }
 html body .md .chat-chart .chart-title span { flex: 1 1 auto; min-width: 0; }
 html body .md .chat-chart .chart-title em { flex: none; color: var(--text-4); font-size: 12px; font-style: normal; font-weight: 500; }
@@ -12884,15 +12884,7 @@ html body .cv-rk .cv-rbar { height: 8px; border-radius: 4px; background: rgba(25
 html body .cv-rk .cv-rbar i { background: rgba(255, 255, 255, 0.16); }
 html body .cv-rk.best .cv-rbar i { background: var(--accent); }
 /* Ring: ruhige Abstufung der Akzentfarbe + Grau (Farben setzt CHART_RING) */
-/* Zeitstrahl – Variante A: Linie mit Punkten, Datum klein über dem Titel, kein Kasten je Eintrag; geöffnet = Punkt in Akzentfarbe */
-html body .tl4-box { border: 0 !important; border-radius: 10px; background: none; transition: background-color 160ms ease; }
-@media (hover: hover) { html body .tl4-box:hover { background: rgba(255, 255, 255, 0.025); } }
-html body .tl4-h { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "d c" "t c"; align-items: center; row-gap: 1px; min-height: 0; padding: 6px 10px 10px; }
-html body .tl4-h .tl4-date { grid-area: d; min-width: 0; color: var(--text-3); font-size: 12px; line-height: 18px; }
-html body .tl4-h .tl4-t { grid-area: t; font-size: 14px; font-weight: 600; line-height: 20px; }
-html body .tl4-h .tl4-chev { grid-area: c; color: var(--text-4); }
-html body .tl4-dot { top: 11px; border-color: rgba(255, 255, 255, 0.3); background: var(--win-bg); }
-html body .tl4-mi { padding: 0 10px 8px; color: var(--text-2); }
+/* Zeitstrahl: „Variante A“ (16.11. nachts) wieder entfernt – Nutzer fand das alte Aussehen schöner */
 /* Mindmap: Thema als getönte Kapsel, Äste als graue Kapseln, Unterpunkte als leiser Text mit Punkt; Linien fein */
 html body .mm4-view { border: 0; border-radius: 10px; background: none; }
 html body .mm4-n { border-radius: 999px; }
@@ -13108,3 +13100,14 @@ html body .cmdk-foot span { display: inline-flex; align-items: center; gap: 4px;
 html body .cmdk-foot kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; background: rgba(255, 255, 255, 0.07); color: var(--text-3); font: 500 10.5px var(--font-ui, Inter), sans-serif; }
 @media (hover: none) { html body .cmdk-foot { display: none; } }
 html body .cmdk-row .cmdk-dog { display: grid; place-items: center; }
+
+/* ===== 16.11. abends: Diagramm-Kasten ohne eigene Füllfarbe (nur feiner Ring wie die Gedanken-Tabelle); Ring-Diagramm ruhiger ===== */
+html body .md :is(.chat-chart, .chat-mindmap.mm4) { border: 0; background: rgba(255, 255, 255, 0.02); box-shadow: inset 0 0 0 1px var(--line); }
+html body .cv-ring .cv-arc { transition: opacity 200ms ease; }
+html body .cv-ring.focus .cv-arc.on { stroke-width: 18; }
+html body .cv-ring .cv-rr i { width: 8px; height: 8px; border-radius: 3px; }
+
+/* ===== 16.11. abends: Projekt-/Tag-Menü in der Dokument-Tabelle wie die neue Tag-Auswahl – feste Breite, mit Luft unter der Zeile ===== */
+html body .tk-menu.tags.dc-mmenu { width: 236px; margin-top: 4px; }
+html body .tk-menu.tags .dc-pj-mi { display: grid; place-items: center; width: 16px; }
+html body .tk-menu.tags .tk-mi.tag > svg:last-of-type { margin-left: auto; }

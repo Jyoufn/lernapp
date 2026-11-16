@@ -38,6 +38,12 @@
     if (deviceKeys.AI_OFF) deviceKeys.AI_OFF = String(deviceKeys.AI_OFF).split(',').filter((f) => f && !['groq', 'openrouter'].includes(f)).join(',');
     write(KEYS_KEY, deviceKeys);
   }
+  // 16.11. abends (Wunsch „nur den Gemini-Schlüssel nutzen“): einmalig MiniMax/DeepSeek als Ersatz abschalten, solange Gemini die Haupt-KI ist
+  // (sonst sprang die App bei kurzer Überlastung auf die langsamen NVIDIA-Modelle). In Einstellungen → Agenten → Rolle wieder einschaltbar.
+  if (!read('settings.onlygemini.v1', false)) {
+    if (!deviceKeys.AI_ORDER || deviceKeys.AI_ORDER === 'gemini') { deviceKeys.AI_OFF = 'minimax,deepseek,claude'; write(KEYS_KEY, deviceKeys); }
+    write('settings.onlygemini.v1', true);
+  }
   const keyHeader = () => {
     const list = Object.entries(deviceKeys).filter(([, v]) => v);
     return list.length ? btoa(unescape(encodeURIComponent(JSON.stringify(Object.fromEntries(list))))) : '';
