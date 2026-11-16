@@ -13149,3 +13149,10 @@ html body :is(.dc-view, .cal-view, .tk-view:not(.tk-embed), .uiv-view) { animati
 .md .cbx2 .cbx2-head { box-shadow: none !important; height: 40px; padding: 4px 6px 0 16px; }
 .md .cbx2 .cbx2-label { color: var(--text-2); font: 600 13px var(--font-ui, Inter), sans-serif; }
 .md .cbx2 .copybox-body { padding-top: 2px; }
+
+/* ===== 16.11. spät: Rückfragen kleiner (Nutzer: „viel zu großer Text“) ===== */
+html body .ask-panel .ask-q { font-size: 14px; line-height: 1.4; }
+html body .ask-panel .ask-opt { min-height: 36px; padding: 4px 6px; gap: 11px; border-radius: 10px; font-size: 13.5px; }
+html body .ask-panel .ask-opt.ask-own-row { padding: 4px 6px !important; }
+html body .ask-panel .ask-let { width: 24px; height: 24px; border-radius: 7px; font-size: 12px; }
+html body .ask-panel .ask-own-row .ask-own-in { height: 26px; font-size: 13.5px; }
