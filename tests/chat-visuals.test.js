@@ -4,7 +4,7 @@ const visuals = require('../chat-visuals');
 
 test('Diagrammdaten werden begrenzt und geprüft', () => {
   const result = visuals.chart(JSON.stringify({ type: 'bar', title: 'Lernfortschritt', labels: ['Bio', 'Mathe', 'Chemie'], values: [12, 18, 7], unit: 'h' }));
-  assert.equal(result.type, 'donut'); // Balken gibt es nicht mehr – Vergleiche werden als Ring gezeigt
+  assert.equal(result.type, 'bar'); // seit 16.11. wieder Säulen für Vergleiche
   assert.deepEqual(result.values, [12, 18, 7]);
   assert.equal(visuals.chart('{ kaputt'), null);
   assert.equal(visuals.chart({ type: 'bar', labels: ['A'], values: [1] }), null);
@@ -17,13 +17,13 @@ test('Die App wählt den passenden Diagrammtyp selbst', () => {
   assert.equal(pick({ labels: ['Mo', 'Di', 'Mi', 'Do', 'Fr'], values: [1, 2, 1, 3, 2], unit: 'h' }), 'area');        // Verlauf
   assert.equal(pick({ labels: ['2019', '2020', '2021', '2022'], values: [5, 6, 8, 9] }), 'area');
   assert.equal(pick({ labels: ['Wind', 'Sonne', 'Kohle'], values: [40, 35, 25], unit: '%' }), 'donut');            // Anteile
-  assert.equal(pick({ labels: ['Bio', 'Mathe', 'Chemie'], values: [5, 4, 2], unit: 'h' }), 'donut');               // Vergleich
-  assert.equal(pick({ labels: ['Nordrhein-Westfalen', 'Baden-Württemberg', 'Bayern'], values: [18, 11, 13] }), 'donut'); // lange Namen stehen in der Liste
+  assert.equal(pick({ labels: ['Bio', 'Mathe', 'Chemie'], values: [5, 4, 2], unit: 'h' }), 'bar');                 // Vergleich → Säulen
+  assert.equal(pick({ labels: ['Nordrhein-Westfalen', 'Baden-Württemberg', 'Bayern'], values: [18, 11, 13] }), 'bar');
   // Ausweg Rangliste: negative Werte oder zu viele Teile für einen Ring
   assert.equal(visuals.chart({ type: 'donut', labels: ['A', 'B'], values: [2, -1] }).type, 'hbar');
   assert.equal(pick({ labels: 'ABCDEFGHI'.split(''), values: [9, 8, 7, 6, 5, 4, 3, 2, 1] }), 'hbar');
   // Linie nur für Zeitverläufe ab 3 Punkten
-  assert.equal(visuals.chart({ type: 'line', labels: ['A', 'B'], values: [2, 3] }).type, 'donut');
+  assert.equal(visuals.chart({ type: 'line', labels: ['A', 'B'], values: [2, 3] }).type, 'bar');
   assert.equal(visuals.chart({ type: 'bar', labels: ['2020', '2021', '2022'], values: [2, 3, 5] }).type, 'area');
   // gleiche Zahlenreihe erkennt man am Schlüssel
   const a = visuals.chart({ type: 'bar', labels: ['A', 'B', 'C'], values: [1, 2, 3] });

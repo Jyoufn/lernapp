@@ -6,15 +6,23 @@ const ChatVisuals = (() => {
   // Festgelegt (kb/design.md): Verlauf über die Zeit → Linie mit Fläche, sonst immer Ring. Balken gibt es nicht.
   // Die Rangliste ist nur der Ausweg, wenn ein Ring nicht geht (negative Werte oder mehr als 8 Teile).
   const ringOk = ({ labels, values }) => labels.length <= 8 && values.every((x) => x >= 0) && values.some((x) => x > 0);
+  // 16.11. (Wunsch „mehr Diagramme, schöner“): Anteile eines Ganzen → Ring, wenige Werte vergleichen → Säulen, viele → Rangliste
+  const sum = (d) => d.values.reduce((x, y) => x + y, 0);
+  const isParts = (d) => ringOk(d) && (d.unit.trim() === '%' ? Math.abs(sum(d) - 100) <= 6 : false);
+  const timeSeries = (d) => d.labels.length >= 3 && d.labels.filter((l) => TIME.test(l)).length >= Math.ceil(d.labels.length * 0.8);
   function bestType(d) {
     const n = d.labels.length;
-    const isTime = d.labels.filter((l) => TIME.test(l)).length >= Math.ceil(n * 0.8);
-    if (isTime && n >= 3) return 'area';           // Verlauf über die Zeit
-    return ringOk(d) ? 'donut' : 'hbar';           // Vergleich / Anteile
+    if (timeSeries(d)) return 'area';              // Verlauf über die Zeit
+    if (isParts(d)) return 'donut';                // Anteile eines Ganzen
+    if (n <= 8 && d.values.every((x) => x >= 0)) return 'bar'; // wenige Werte vergleichen
+    return 'hbar';                                 // viele Werte: sortierte Rangliste
   }
-  // Ein von der KI gewünschter Typ zählt nur noch für Linien – alles andere wählt die App
+  // Ein ausdrücklich gewünschter Typ gilt, wenn er zu den Zahlen passt; sonst wählt die App
   function fitType(want, d) {
-    if ((want === 'line' || want === 'area') && d.labels.length >= 3) return 'area';
+    if (((want === 'line' || want === 'area') && d.labels.length >= 3) || timeSeries(d)) return 'area'; // Zeitreihen immer als Linie
+    if (want === 'donut' && ringOk(d)) return 'donut';
+    if (want === 'bar' && d.labels.length <= 10 && d.values.every((x) => x >= 0)) return 'bar';
+    if (want === 'hbar') return 'hbar';
     return bestType(d);
   }
   function chart(raw) {

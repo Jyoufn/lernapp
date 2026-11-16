@@ -12848,3 +12848,59 @@ html body .tk-cal .tk-cal-grid button.on { background: rgba(255, 255, 255, 0.05)
 #composer.dict-sending .send-btn { animation: dict-send 900ms ease-in-out infinite; }
 @keyframes dict-send { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .dict-view .dw-in, #composer.dict-sending .send-btn { animation: none; } }
+/* Denk-Zeitleiste: Icon erscheint weich statt hart umzuspringen (16.11.) */
+.marker.ico svg { animation: ico-in 420ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+@keyframes ico-in { from { opacity: 0; transform: scale(0.6); } }
+@media (prefers-reduced-motion: reduce) { .marker.ico svg { animation: none; } }
+
+/* ===== 16.11. nachts – Diagramme, Zeitstrahl und Mindmap im Stil der Inhalts-Kästen (Fläche --win-bg, feiner Rand, Radius 14,
+   Kopf mit grauem Icon). Farbe: nur die Akzentfarbe für das Wichtigste, alles andere in Grautönen. ===== */
+html body .md :is(.chat-chart, .chat-timeline.tl4, .chat-mindmap.mm4) { width: min(100%, 640px); box-sizing: border-box; margin: 16px 0 18px; padding: 14px 16px 14px; border: 1px solid rgba(255, 255, 255, 0.065); border-radius: 14px; background: var(--win-bg); }
+html body .md .chat-chart .chart-title, html body .md .chat-timeline .tl4-head { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: -0.1px; }
+html body .md .chat-chart .chart-title svg { flex: none; width: 14px; height: 14px; color: var(--text-3); }
+html body .md .chat-chart .chart-title span { flex: 1 1 auto; min-width: 0; }
+html body .md .chat-chart .chart-title em { flex: none; color: var(--text-4); font-size: 12px; font-style: normal; font-weight: 500; }
+/* Linie: Hilfslinien, Endwert */
+.chat-chart .cv-grid { stroke: rgba(255, 255, 255, 0.05); stroke-width: 1; }
+.chat-chart .cv-endv { fill: var(--text); font: 600 12px var(--font-ui, Inter), sans-serif; }
+.chat-chart .cv-end { animation: cv-pop 420ms 700ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards; }
+.chat-chart .cv-endv { animation: cv-fade 420ms 760ms ease backwards; }
+@keyframes cv-pop { from { opacity: 0; transform: scale(0.4); transform-box: fill-box; transform-origin: center; } }
+@keyframes cv-fade { from { opacity: 0; } }
+/* Säulen */
+.cv-cols { display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); gap: 10px; align-items: end; height: 170px; padding-top: 4px; }
+.cv-col { display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; min-width: 0; }
+.cv-col > b { color: var(--text-3); font-size: 11.5px; font-weight: 500; font-variant-numeric: tabular-nums; opacity: 0; transition: opacity 160ms ease; }
+.cv-col.best > b, .cv-col:hover > b { opacity: 1; }
+.cv-col.best > b { color: var(--text); font-weight: 600; }
+.cv-cbar { position: relative; flex: 1 1 auto; display: flex; align-items: flex-end; width: 100%; max-width: 46px; }
+.cv-cbar i { display: block; width: 100%; border-radius: 7px; background: rgba(255, 255, 255, 0.12); transform-origin: bottom; animation: cv-grow 700ms cubic-bezier(0.22, 0.61, 0.36, 1) backwards; transition: background-color 160ms ease; }
+.cv-col:hover .cv-cbar i { background: rgba(255, 255, 255, 0.2); }
+.cv-col.best .cv-cbar i { background: var(--accent); }
+.cv-cl { max-width: 100%; overflow: hidden; color: var(--text-3); font-size: 11.5px; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+@keyframes cv-grow { from { transform: scaleY(0); } }
+/* Rangliste: Spur sichtbar, Balken grau, der Größte in der Akzentfarbe */
+html body .cv-rk .cv-rbar { height: 8px; border-radius: 4px; background: rgba(255, 255, 255, 0.04); }
+html body .cv-rk .cv-rbar i { background: rgba(255, 255, 255, 0.16); }
+html body .cv-rk.best .cv-rbar i { background: var(--accent); }
+/* Ring: ruhige Abstufung der Akzentfarbe + Grau (Farben setzt CHART_RING) */
+/* Zeitstrahl – Variante A: Linie mit Punkten, Datum klein über dem Titel, kein Kasten je Eintrag; geöffnet = Punkt in Akzentfarbe */
+html body .tl4-box { border: 0 !important; border-radius: 10px; background: none; transition: background-color 160ms ease; }
+@media (hover: hover) { html body .tl4-box:hover { background: rgba(255, 255, 255, 0.025); } }
+html body .tl4-h { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "d c" "t c"; align-items: center; row-gap: 1px; min-height: 0; padding: 6px 10px 10px; }
+html body .tl4-h .tl4-date { grid-area: d; min-width: 0; color: var(--text-3); font-size: 12px; line-height: 18px; }
+html body .tl4-h .tl4-t { grid-area: t; font-size: 14px; font-weight: 600; line-height: 20px; }
+html body .tl4-h .tl4-chev { grid-area: c; color: var(--text-4); }
+html body .tl4-dot { top: 11px; border-color: rgba(255, 255, 255, 0.3); background: var(--win-bg); }
+html body .tl4-mi { padding: 0 10px 8px; color: var(--text-2); }
+/* Mindmap: Thema als getönte Kapsel, Äste als graue Kapseln, Unterpunkte als leiser Text mit Punkt; Linien fein */
+html body .mm4-view { border: 0; border-radius: 10px; background: none; }
+html body .mm4-n { border-radius: 999px; }
+html body .mm4-n.d0 { padding: 9px 16px; border: 0; background: color-mix(in srgb, var(--accent) 22%, transparent); color: var(--text); }
+html body .mm4-n.d1 { padding: 6px 13px; border: 1px solid rgba(255, 255, 255, 0.07); background: rgba(255, 255, 255, 0.05); }
+html body .mm4-n.d2, html body .mm4-n.d3 { padding: 4px 8px 4px 16px; border: 0; background: none; color: var(--text-2); }
+html body .mm4-n.d2::before, html body .mm4-n.d3::before { content: ""; position: absolute; left: 6px; top: 50%; width: 4px; height: 4px; margin-top: -2px; border-radius: 50%; background: rgba(255, 255, 255, 0.28); }
+html body .mm4-l { stroke: rgba(255, 255, 255, 0.13); stroke-width: 1.3; }
+html body .mm4-l.d2, html body .mm4-l.d3 { stroke: rgba(255, 255, 255, 0.09); }
+html body .md .chat-chart .chart-title span { color: var(--text); }
+html body .md .chat-mindmap.mm4 { padding: 8px; }

@@ -1195,7 +1195,8 @@ const chartValue = (value, unit) => {
 /* Diagramme im festgelegten Stil (kb/design.md): Grau + Blau-Akzent, ruhige Animationen, Werte beim Drüberfahren */
 const CHART_ACC = '#2f86ff';
 // Ring: kräftiges Blau → helles Blau → Blaugrau; gut unterscheidbar, aber ruhig
-const CHART_RING = ['#3d8bff', '#7bb2ff', '#b9d5ff', '#6b7a90', '#8d9bb0', '#4a5466', '#c3cad6', '#3a414d'];
+// 16.11.: ruhiger – Akzent, dann helleres Blau, dann Grautöne (keine bunten Farben)
+const CHART_RING = ['#3d8bff', '#8bb8ff', '#5c6370', '#8a919c', '#3f444c', '#b3b8c0', '#2e3238', '#cfd3d8'];
 const chartShort = (t, k) => (t.length > k ? `${t.slice(0, k - 1)}…` : t);
 function chartSmooth(pts) {
   return pts.map(([x, y], i) => {
@@ -1234,8 +1235,11 @@ function chartFigure(data) {
   const n = data.labels.length;
   const total = data.values.reduce((x, y) => x + y, 0);
   const best = data.values.indexOf(Math.max(...data.values));
+  // Kopf wie die anderen Inhalts-Kästen (16.11.): graues Icon + Titel, rechts leise die Einheit
   const cap = el('figcaption', 'chart-title');
-  cap.append(document.createTextNode(data.title));
+  cap.innerHTML = `${FadeIcons.svg({ area: 'trend', donut: 'chart', bar: 'analytics', hbar: 'bars-h' }[data.type] || 'chart', 14)}<span></span>${data.unit.trim() && data.unit.trim() !== '%' ? '<em></em>' : ''}`;
+  cap.querySelector('span').textContent = data.title;
+  if (cap.querySelector('em')) cap.querySelector('em').textContent = data.unit.trim();
   figure.append(cap);
 
   if (data.type === 'donut') {
@@ -1298,6 +1302,22 @@ function chartFigure(data) {
     box.addEventListener('pointerover', (e) => { const x = e.target.closest('[data-i]'); if (!x) return; clearTimeout(t); focus(+x.dataset.i); });
     box.addEventListener('pointerout', (e) => { if (!e.relatedTarget?.closest?.('[data-i]')) { clearTimeout(t); t = setTimeout(() => focus(null), 90); } });
     figure.append(box);
+  } else if (data.type === 'bar') {
+    // Säulen (16.11.): der größte Wert in der Akzentfarbe mit Zahl darüber, die anderen grau; Zahl erscheint beim Antippen/Darüberfahren
+    const max = Math.max(...data.values, 0) || 1;
+    const cols = el('div', 'cv-cols');
+    cols.style.setProperty('--n', n);
+    data.values.forEach((v, i) => {
+      const c = el('div', `cv-col${i === best ? ' best' : ''}`);
+      c.innerHTML = '<b></b><span class="cv-cbar"><i></i></span><span class="cv-cl"></span>';
+      c.querySelector('b').textContent = chartValue(v, data.unit);
+      c.querySelector('.cv-cbar i').style.height = `${Math.max(3, (v / max) * 100)}%`;
+      c.querySelector('.cv-cbar i').style.animationDelay = `${i * 50}ms`;
+      c.querySelector('.cv-cl').textContent = chartShort(data.labels[i], 12);
+      c.title = `${data.labels[i]}: ${chartValue(v, data.unit)}`;
+      cols.append(c);
+    });
+    figure.append(cols);
   } else if (data.type === 'hbar') {
     // Rangliste: sortiert, größter Wert blau, Rest grau
     const order = data.values.map((v, i) => i).sort((a, b) => data.values[b] - data.values[a]);
@@ -1315,7 +1335,7 @@ function chartFigure(data) {
     figure.append(rank);
   } else {
     // Breite wächst mit der Zahl der Werte (mind. 56 px je Wert). Reicht der Platz nicht, wird seitlich gescrollt statt gequetscht.
-    const W = Math.max(560, n * 56), H = 200, padB = 24, top = 22;
+    const W = Math.max(560, n * 56), H = 170, padB = 24, top = 24;
     const wrap = el('div', 'cv-rel');
     wrap.style.minWidth = `${Math.round(W * (n > 8 ? 0.95 : 0.6))}px`;
     const tip = el('div', 'cv-tip');
@@ -1341,9 +1361,15 @@ function chartFigure(data) {
     const grad = svgNode('linearGradient', { id: `cva${uid}`, x1: 0, y1: 0, x2: 0, y2: 1 });
     grad.append(svgNode('stop', { offset: '0%', 'stop-color': CHART_ACC, 'stop-opacity': 0.22 }), svgNode('stop', { offset: '100%', 'stop-color': CHART_ACC, 'stop-opacity': 0 }));
     defs.append(grad);
+    // feine Hilfslinien (16.11.) – drei waagerechte, sehr leise
+    [0, 0.5, 1].forEach((f) => svg.append(svgNode('line', { class: 'cv-grid', x1: 0, x2: W, y1: top + (H - top - padB) * f, y2: top + (H - top - padB) * f })));
     svg.append(defs, svgNode('path', { class: 'cv-area', d: `${d} L${pts[n - 1][0]},${H - padB} L${pts[0][0]},${H - padB} Z`, fill: `url(#cva${uid})` }));
     svg.append(svgNode('path', { class: 'cv-line', d, fill: 'none', stroke: CHART_ACC, 'stroke-width': 2, 'stroke-linecap': 'round', pathLength: 1 }));
     data.labels.forEach((label, i) => svg.append(svgNode('text', { class: 'cv-lab', x: xOf(i), y: H - 6, 'text-anchor': 'middle' }, chartShort(label, 10))));
+    // letzter Wert steht immer am Ende der Linie (Punkt + Zahl)
+    const [ex, ey] = pts[n - 1];
+    svg.append(svgNode('circle', { class: 'cv-end', cx: ex, cy: ey, r: 3.5, fill: CHART_ACC }));
+    svg.append(svgNode('text', { class: 'cv-endv', x: ex - 6, y: Math.max(12, ey - 10), 'text-anchor': 'end' }, chartValue(data.values[n - 1], data.unit)));
     const hl = svgNode('line', { class: 'cv-hl', x1: 0, x2: 0, y1: top - 6, y2: H - padB });
     const hd = svgNode('circle', { class: 'cv-hd', r: 4, fill: '#101010', stroke: CHART_ACC, 'stroke-width': 2 });
     svg.append(hl, hd);
@@ -1539,7 +1565,7 @@ function mindmapFigure(data) {
     const vw = view.clientWidth || 600;
     const maxH = full() ? view.clientHeight : 620;
     const whole = Math.min(1, (vw - 8) / W);
-    let s = all || full() ? whole : Math.min(1, Math.max(0.8, whole));
+    let s = all || full() ? whole : Math.min(1, Math.max(0.65, whole)); // 16.11.: etwas weiter verkleinern, damit die ganze Mindmap meist auf einmal zu sehen ist
     if (!full() && !all) view.style.height = `${Math.round(Math.max(180, Math.min(H * s + 8, maxH)))}px`;
     const vh = view.clientHeight;
     st.fitS = Math.min(whole, (vh - 4) / H, 1);
@@ -2080,6 +2106,7 @@ function makeRenderer(target, opts = {}) {
   let shown = 0;        // davon schon sichtbar
   let timer = null;
   let carry = 0;        // angefangene Zeichen (Tempo in Zeichen/s → ganze Zeichen je Schritt)
+  let cpsNow = 0;       // aktuelles Tempo (gleitet zum Ziel)
   let finishWaiters = [];
   const firstSeen = [];  // Zeitpunkt, an dem Block Nr. i zuerst erschien
 
@@ -2113,8 +2140,10 @@ function makeRenderer(target, opts = {}) {
       finishWaiters = [];
       return;
     }
-    const cps = Math.min(ended ? REVEAL_CPS_END : REVEAL_CPS_MAX, Math.max(REVEAL_CPS_MIN, backlog / REVEAL_WINDOW_S));
-    carry += cps * REVEAL_TICK / 1000;
+    // Tempo gleitet (16.11.): statt am Antwortende sprunghaft schneller zu werden („Schwall“), nähert es sich dem Ziel weich an
+    const goal = Math.min(ended ? REVEAL_CPS_END : REVEAL_CPS_MAX, Math.max(REVEAL_CPS_MIN, backlog / (ended ? 2 : REVEAL_WINDOW_S)));
+    cpsNow = cpsNow ? cpsNow + (goal - cpsNow) * 0.06 : goal;
+    carry += cpsNow * REVEAL_TICK / 1000;
     let step = Math.floor(carry);
     if (step < 1) { timer = setTimeout(tick, REVEAL_TICK); return; }
     carry -= step;
@@ -2718,6 +2747,30 @@ const THOUGHT_ICONS = [
   [/(person|autor|biograf|figur|charakter|politiker|gesellschaft|gruppe|bevölkerung)/i, 'people'],
   [/(kunst|gemälde|farbe|design|gestalt|stil\b|epoche der kunst)/i, 'palette'],
   [/(musik|lied|song|melodie|rhythmus|komponist)/i, 'music'],
+  // 16.11.: weitere Fächer und Themen (vor den allgemeinen Denk-Wörtern, damit das Konkrete gewinnt)
+  [/(licht|sonne|strahlung|wetter|tag und nacht)/i, 'sun'],
+  [/(energie|strom|spannung|elektr|kraft\b|kräfte|reaktion|chemisch|atom|molekül|teilchen)/i, 'bolt'],
+  [/(planet|stern|weltall|universum|mond|astronom)/i, 'moon'],
+  [/(gedicht|roman|novelle|lyrik|literatur|erzähl|kurzgeschichte|drama|szene|vers\b|strophe)/i, 'book'],
+  [/(zitat|aussage|textstelle|belegstelle|wörtlich)/i, 'callout'],
+  [/(krieg|revolution|herrschaft|könig|kaiser|staat|demokratie|verfassung|wahl\b|wahlen|partei|politik)/i, 'flag'],
+  [/(rangliste|ranking|reihenfolge nach|größte|kleinste|am meisten)/i, 'bars-h'],
+  [/(mindmap|überblick|übersicht|gesamtbild)/i, 'mindmap'],
+  [/(video|film|clip|youtube)/i, 'video'],
+  [/(sport|training|bewegung|muskel|fitness)/i, 'dumbbell'],
+  [/(ernährung|essen|lebensmittel|rezept|nährstoff|vitamin)/i, 'food'],
+  [/(verkehr|reise|flug|auto\b|mobilität|transport)/i, 'plane'],
+  [/(handel|kauf|verkauf|konsum|einkauf|produkt)/i, 'cart'],
+  [/(gefühl|emotion|stimmung|motivation|psycholog|verhalten)/i, 'smile'],
+  [/(sicherheit|datenschutz|passwort|schutz\b|verschlüssel)/i, 'lock'],
+  [/(dauer|zeitaufwand|minuten|stunden|tempo)/i, 'timer'],
+  [/(note\b|noten|bewertungsschema|punkte\b|punktzahl|erwartungshorizont)/i, 'star'],
+  [/(aussprache|hören|anhören|podcast|audio)/i, 'volume'],
+  [/(sprechen|rede\b|vortragen|diskussion|debatte)/i, 'mic'],
+  [/(detail|genauer|im einzelnen|feinheit)/i, 'focus'],
+  [/(perspektive|sichtweise|blickwinkel|beobacht)/i, 'eye'],
+  [/(fakt|tatsache|hintergrund|info\b|wissen)/i, 'info'],
+  [/(einstell|parameter|option|variante|anpass)/i, 'sliders'],
   [/(prüf|kontroll|korrigier|fehler|stimmt|plausib)/i, 'check-circle'],
   [/(analys|auswert|untersuch|interpret|deut\w*|beurteil|bewert|erörter|einschätz)/i, 'analytics'],
   [/(zusammenhang|verbind|verknüpf|beziehung|ursache|folge\b|folgen|wirkung|wechselwirkung)/i, 'link'],

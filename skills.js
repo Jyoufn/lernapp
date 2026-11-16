@@ -21,6 +21,8 @@ const Skills = (() => {
       strong: ['probeklausur', 'übungsklausur', 'klassenarbeit', 'probetest', 'probeprüfung'], weak: ['klausur', 'prüfung', 'abitur', 'notenpunkte', 'test'] },
     { id: 'zeitstrahl', name: 'zeitstrahl', title: 'Zeitstrahl', desc: 'Ereignisse in zeitlicher Reihenfolge', c: '#facc15',
       strong: ['zeitstrahl', 'zeitleiste', 'chronologie', 'timeline'], weak: ['geschichte', 'epoche', 'jahrhundert', 'ereignisse', 'jahreszahlen', 'verlauf'] },
+    { id: 'mindmap', name: 'mindmap', title: 'Mindmap', desc: 'Thema als Baum mit Ästen und Stichpunkten', c: '#8bb8ff',
+      strong: ['mindmap', 'mind map', 'mind-map', 'gedankenkarte'], weak: ['überblick', 'übersicht', 'zusammenhänge', 'begriffe'] },
     { id: 'bild', name: 'bild', title: 'Bild erstellen', desc: 'Illustration genau nach deiner Beschreibung', c: '#f472b6',
       strong: ['bild erstellen', 'erstelle ein bild', 'erstell ein bild', 'erzeuge ein bild', 'zeichne', 'illustration', 'male mir'], weak: ['bild', 'abbildung', 'skizze', 'zeichnung', 'grafik', 'beschriftet'] },
     { id: 'designer', name: 'designer', title: 'Designer-Modus', desc: 'Gestaltung auf Profi-Niveau: Layout, Farben, Typografie, UI', c: '#a78bfa',
