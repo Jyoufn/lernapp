@@ -338,7 +338,7 @@ test('12a API-Fehler: Limit bei Gemini → DeepSeek V4.1 (NVIDIA) übernimmt mit
 });
 test('12a2 Kimi ist entfernt: alte Wahl „kimi“ → Gemini, kein Kimi-Modell mehr', () => {
   const P = require('../lib/providers');
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'kimi' }), ['gemini', 'minimax', 'deepseek']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'kimi' }), ['gemini', 'minimax', 'deepseek', 'claude']);
   assert.equal(P.FAMILY_MODELS.kimi, undefined);
 });
 
@@ -1014,10 +1014,13 @@ test('Dateien an der Frage: keine Einschätzung (spart Zeit), schnelle Nachschau
 
 test('Haupt-KI je Anbieter: gewählte zuerst, abgeschaltete Ersatz-Anbieter fallen weg', () => {
   const P = require('../lib/providers');
-  assert.deepEqual(P.familiesFor({}), ['gemini', 'minimax', 'deepseek']);
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'deepseek']);
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,deepseek' }), ['minimax', 'gemini'], 'die Haupt-KI lässt sich nicht abschalten');
-  assert.deepEqual(P.familiesFor({ AI_ORDER: 'groq' }), ['gemini', 'minimax', 'deepseek'], 'alte Wahl Groq/OpenRouter → Gemini');
+  assert.deepEqual(P.familiesFor({}), ['gemini', 'minimax', 'deepseek', 'claude']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'gemini', AI_OFF: 'minimax' }), ['gemini', 'deepseek', 'claude']);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'minimax', AI_OFF: 'minimax,deepseek,claude' }), ['minimax', 'gemini'], 'die Haupt-KI lässt sich nicht abschalten');
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'groq' }), ['gemini', 'minimax', 'deepseek', 'claude'], 'alte Wahl Groq/OpenRouter → Gemini');
+  // Claude (16.11.): nur der eigene Schlüssel zählt, kein NVIDIA-Ersatz
+  assert.deepEqual(P.familyKeys({ FLUX3_API_KEY: 'nvapi-flux-key' }, 'claude'), []);
+  assert.deepEqual(P.familiesFor({ AI_ORDER: 'claude' })[0], 'claude');
   // ein NVIDIA-Schlüssel reicht für alle drei; ein eigener geht vor
   assert.deepEqual(P.familyKeys({ FLUX3_API_KEY: 'nvapi-flux-key' }, 'deepseek'), ['nvapi-flux-key']);
   assert.deepEqual(P.familyKeys({ DEEPSEEK_API_KEY: 'nvapi-deepseek' }, 'minimax'), ['nvapi-deepseek']);
