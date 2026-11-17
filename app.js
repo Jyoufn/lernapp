@@ -918,7 +918,7 @@ function startListening() {
   finalText = ''; consumed = 0; seen = 0; finalsEnd = 0; lastInterim = ''; liveDone = ''; rawBase = ''; liveFix = null; liveN = 0; liveLast = Date.now(); liveDoneN = 0; liveHeard = 0; dictStart = Date.now();
   // alle ~3,5 s (Groq: höchstens 20 Anfragen/Min.) bzw. ~5 s (Gemini) neu mitschreiben, solange gesprochen wird – nicht erst nach einer Pause
   clearInterval(liveTick);
-  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 5000 : 3100)) livePolish(); }, 400);
+  liveTick = setInterval(() => { if (Date.now() - liveLast >= (liveVia === 'gemini' ? 3000 : 3100)) livePolish(); }, 400); // 17.11.: mit Gemini alle 3 s (vorher 5 s)
   setMicUI(true);
   if (recOnly) { recognition = null; dictRec.chunks = []; dictRecStart(); return; }
 
@@ -5718,7 +5718,7 @@ async function vaStartBargeIn() {
    Balken, die sich wirklich bewegen – beim Zuhören mit der eigenen Stimme (Mikro-Pegel), beim Sprechen mit der Stimme des Agenten
    (Pegel der Wiedergabe), beim Nachdenken als ruhige Welle. Nur transform (flüssig auf dem iPad). */
 const vaWave = (() => {
-  const N = 28;
+  const N = 64; // 17.11.: Welle über die ganze Breite des Feldes (vorher 28 Balken in einer kleinen Pille)
   const box = el('div', 'va-wave');
   box.innerHTML = `<span class="va-wave-dot"></span><span class="va-wave-bars">${'<i></i>'.repeat(N)}</span><span class="va-wave-t">Hört zu</span>`;
   box.hidden = true;
@@ -5739,7 +5739,7 @@ const vaWave = (() => {
     if (st === 'listening') amp = Math.min(1, (va.micLevel || 0) * 9);
     else if (st === 'speaking') amp = outLevel();
     for (let i = 0; i < N; i++) {
-      const x = i / (N - 1), env = Math.sin(Math.PI * x) ** 0.8; // Mitte höher, Ränder flacher
+      const x = i / (N - 1), env = 0.35 + 0.65 * Math.sin(Math.PI * x) ** 0.6; // Mitte höher, Ränder flacher – aber bis ganz außen in Bewegung
       let target;
       if (st === 'thinking') target = 0.18 + 0.16 * (0.5 + 0.5 * Math.sin(t * 4 - x * 9));
       else if (st === 'muted') target = 0.08;

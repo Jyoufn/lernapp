@@ -13243,3 +13243,13 @@ html body .ca-step.ca-card .ca-ic .ca-fic.ln svg { width: 17px; height: 17px; }
 /* Dateiliste: ruhige Zeilen wie die Sidebar */
 @keyframes cw-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
 html body .app.cw-open .codewin:not(.wide) .cw-list > * { animation: cw-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* ===== 17.11.: Sprachmodus-Welle über die ganze Breite des Eingabefelds; Diktat-Welle füllt die ganze Mitte ===== */
+html body .va-wave { left: 0; right: 0; transform: none; width: auto; }
+html body .va-wave-bars { flex: 1; min-width: 0; justify-content: space-between; gap: 0; }
+html body .va-wave-bars i { width: 3px; }
+html body .composer.dictating .dict-wave { justify-content: space-between; gap: 0; -webkit-mask-image: none; mask-image: none; }
+@keyframes va-wave-in2 { from { opacity: 0; transform: translateY(8px); } }
+@keyframes va-wave-out2 { to { opacity: 0; transform: translateY(6px); } }
+html body .va-wave.in { animation: va-wave-in2 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html body .va-wave.out { animation: va-wave-out2 240ms ease forwards; }
