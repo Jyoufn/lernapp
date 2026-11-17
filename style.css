@@ -13188,3 +13188,32 @@ html body .tk-menu.tags .tk-tag-editbox { gap: 6px; }
 
 /* ===== 17.11.: Code-Fenster – Vorschau groß wie im Browser (Sidebar ist dann zu, der Chat bleibt schmal daneben) ===== */
 html body .app.cw-open.cw-wide.cw-preview .codewin { width: max(380px, calc(100vw - 440px)) !important; }
+/* 17.11.: „Verbindung testen“ – Ergebnis je Modell/Schlüssel */
+.stk-diag-out { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.stk-diag-r { display: flex; align-items: center; gap: 8px; min-height: 28px; padding: 0 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.03); color: #f07a6e; font-size: 12.5px; }
+.stk-diag-r.ok { color: #7db993; }
+.stk-diag-m { color: var(--text-2); }
+.stk-diag-m em { color: var(--text-4); font-style: normal; margin-left: 4px; }
+
+/* ===== 17.11.: Code im Chat als Datei-Karten; Vorschau füllt den ganzen Hauptteil (Chat ausgeblendet, ‹ führt zurück) ===== */
+html body .ca-step.ca-card { margin: 0; }
+html body .ca-step.ca-card .ca-step-h { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 54px; padding: 8px 12px; border: 0; border-radius: 0; background: rgba(255, 255, 255, 0.025); text-align: left; cursor: pointer; }
+html body .ca-step.ca-card:first-of-type .ca-step-h, html body :not(.ca-card) + .ca-step.ca-card .ca-step-h { border-top-left-radius: 12px; border-top-right-radius: 12px; }
+html body .ca-step.ca-card:last-of-type .ca-step-h, html body .ca-step.ca-card:has(+ :not(.ca-card)) .ca-step-h { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+html body .ca-step.ca-card + .ca-step.ca-card .ca-step-h { box-shadow: inset 0 1px 0 var(--line); }
+html body .ca-step.ca-card { margin-top: 0; }
+html body :not(.ca-card) + .ca-step.ca-card { margin-top: 10px; }
+html body .ca-step.ca-card:has(+ :not(.ca-card)) { margin-bottom: 10px; }
+@media (hover: hover) { html body .ca-step.ca-card .ca-step-h:hover { background: rgba(255, 255, 255, 0.05); } }
+html body .ca-step.ca-card .ca-ic { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.06); }
+html body .ca-step.ca-card .ca-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+html body .ca-step.ca-card .ca-t b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
+html body .ca-step.ca-card .ca-m { color: var(--text-4); font-size: 12px; }
+html body .ca-step.ca-card .ca-go { flex: none; height: 26px; padding: 0 10px; border-radius: 8px; display: inline-flex; align-items: center; background: rgba(255, 255, 255, 0.07); color: var(--text-2); font: 600 12px var(--font-ui, Inter), sans-serif; }
+/* Vorschau: Hauptteil gehört ganz der Vorschau */
+html body .app.cw-open.cw-preview .panel { display: none; }
+html body .app.cw-open.cw-wide.cw-preview .codewin { flex: 1; width: auto !important; min-width: 0; margin-left: 8px; }
+/* Code-Knopf oben rechts wie die anderen Knöpfe dort: ohne Fläche, nur beim Darüberfahren/aktiv leicht hinterlegt */
+html body #codeBtn { background: none; }
+html body #codeBtn.on { background: rgba(255, 255, 255, 0.07); }
+html body .app.cw-open.cw-preview > .main { display: none; }

@@ -1359,9 +1359,11 @@ async function handleTranscribe(req, res) {
   }
   if (!env.GEMINI_API_KEY) return sendJson(res, 200, { text: '' });
   const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}${partial ? 'Der Sprecher redet noch weiter – der letzte Satz kann unfertig sein: dort keinen Schlusspunkt setzen.\n' : ''}Schreibe die Aufnahme wörtlich mit.`;
-  for (const model of (await P.ladder(env, 'text')).slice(0, 2)) {
+  // 17.11.: schnell – laufend die Lite-Modelle, am Ende ein starkes; ohne Nachdenken (Mitschrift braucht keins); drei Versuche
+  const models = [...new Set([...(await P.ladder(env, partial ? 'lite' : 'text')).slice(0, 2), ...(await P.ladder(env, partial ? 'text' : 'lite')).slice(0, 1)])];
+  for (const model of models) {
     try {
-      const thinking = model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'low' };
+      const thinking = model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'minimal' };
       const out = await P.geminiOnce({ key: P.geminiKey(env, model), model, system: TRANSCRIBE_SYSTEM, user, maxTokens: 3000, thinking, files: [{ mime, data }], signal: AbortSignal.timeout(20000) });
       return done(out, 'gemini');
     } catch { /* nächstes Modell */ }
@@ -1744,6 +1746,22 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
     if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res, user);
+    // 17.11.: Verbindung prüfen (Einstellungen → Agenten → Gemini → „Verbindung testen“): jedes Modell der Leiter mit jedem Schlüssel kurz anfragen –
+    // zeigt, welches Modell antwortet, wie schnell, und welcher Fehler (Limit, abgeschaltet, Schlüssel ungültig) – damit man sieht, woran es hängt
+    if (req.method === 'GET' && urlPath === '/api/diag/gemini') {
+      const env = readEnv(), keys = P.keysOf(env, 'GEMINI_API_KEY').slice(0, 4);
+      if (!keys.length) return sendJson(res, 200, { keys: 0, results: [] });
+      const models = [...new Set([...(await P.ladder(env, 'text')).slice(0, 5), ...(await P.ladder(env, 'lite')).slice(0, 2)])];
+      const jobs = keys.flatMap((key) => models.map((model) => ({ key, model })));
+      const results = await Promise.all(jobs.map(async ({ key, model }) => {
+        const t0 = Date.now();
+        try {
+          const out = await P.geminiOnce({ key, model, system: 'Antworte nur mit: OK', user: 'Test', maxTokens: 64, thinking: model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'minimal' }, signal: AbortSignal.timeout(20000) });
+          return { model, key: `…${key.slice(-4)}`, ok: true, ms: Date.now() - t0, text: String(out || '').slice(0, 20) };
+        } catch (e) { return { model, key: `…${key.slice(-4)}`, ok: false, ms: Date.now() - t0, status: e.status || 0, error: String(e.message || e).slice(0, 160) }; }
+      }));
+      return sendJson(res, 200, { keys: keys.length, results });
+    }
     // Geteilte Workspaces (lib/workspaces.js)
     if (req.method === 'GET' && urlPath === '/api/workspaces') return sendJson(res, 200, await WSP.overview(store, serverEnv(), user.id));
     if (req.method === 'POST' && urlPath.startsWith('/api/workspaces/')) {

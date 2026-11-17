@@ -801,14 +801,36 @@ function dictRecStop() {
   clearTimeout(micIdleT);
   micIdleT = setTimeout(() => { if (dictRec.rec || dictRec.stream !== st) return; st.getTracks().forEach((t) => t.stop()); dictRec.stream = null; }, 180000);
 }
+async function toWav16k(blob) {
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+  const ctx = new AC();
+  try {
+    const ab = await blob.arrayBuffer();
+    const buf = await new Promise((ok, bad) => { const r = ctx.decodeAudioData(ab, ok, bad); if (r?.then) r.then(ok, bad); }); // Safari: nur Rückruf-Form, andere: Promise
+    const rate = 16000, len = Math.max(1, Math.round(buf.duration * rate));
+    const off = new OfflineAudioContext(1, len, rate);
+    const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
+    const pcm = (await off.startRendering()).getChannelData(0);
+    const out = new DataView(new ArrayBuffer(44 + pcm.length * 2));
+    const w = (o, str) => [...str].forEach((ch, i) => out.setUint8(o + i, ch.charCodeAt(0)));
+    w(0, 'RIFF'); out.setUint32(4, 36 + pcm.length * 2, true); w(8, 'WAVE'); w(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 1, true);
+    out.setUint32(24, rate, true); out.setUint32(28, rate * 2, true); out.setUint16(32, 2, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, pcm.length * 2, true);
+    for (let i = 0; i < pcm.length; i++) { const v = Math.max(-1, Math.min(1, pcm[i])); out.setInt16(44 + i * 2, v < 0 ? v * 0x8000 : v * 0x7fff, true); }
+    return new Blob([out], { type: 'audio/wav' });
+  } finally { ctx.close?.(); }
+}
 async function dictTranscribe(context, partial = false, chunks = dictRec.chunks) {
   if (!chunks.length) return '';
-  const blob = new Blob(chunks, { type: dictRec.mime });
+  let blob = new Blob(chunks, { type: dictRec.mime });
   if (blob.size < 3000 || blob.size > 7 * 1024 * 1024) return '';
+  // 17.11. (Nutzer: „Spracherkennung geht null“): Gemini versteht die Aufnahme des iPads (audio/mp4) bzw. von Chrome (webm) oft nicht →
+  // im Gerät in WAV (16 kHz, mono) umwandeln – das Format nimmt jedes Modell sicher an
+  let mime = dictRec.mime;
+  try { const wav = await toWav16k(blob); if (wav) { blob = wav; mime = 'audio/wav'; } } catch {}
   const data = await new Promise((ok) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ok(''); fr.readAsDataURL(blob); });
   if (!data) return '';
   try {
-    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime: dictRec.mime, hints: polishHints(), context, partial, lang: SPEECH_LANG.slice(0, 2) }) });
+    const r = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audio: data, mime, hints: polishHints(), context, partial, lang: SPEECH_LANG.slice(0, 2) }) });
     const j = await r.json(); if (j.via) liveVia = j.via;
     return String(j.text || '').trim();
   } catch { return ''; }
@@ -3326,6 +3348,7 @@ async function regenerate(msgEl) {
    Der Kopf neben der Antwort zeigt immer den Agenten, der diese Runde schreibt (z. B. nach „Zu Coden wechseln“ oder nach einer Rückfrage) */
 // tab: der Chat, zu dem diese Antwort gehört – nur sein Verlauf wird mitgeschickt (Chats sind voneinander unabhängig)
 async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '') {
+  let liveThoughtTitle = ''; // 17.11.: solange die KI eigene Gedanken-Oberpunkte liefert, steht DEREN Titel oben (keine vorgegebenen Texte)
   if (!cont && !prefix) msgEl._plan = null; // Plan dieser Runde (attachPlan) – nicht den einer früheren Fassung behalten; Weiterschreiben behält ihn
   if (window.PixelDogs?.mode) { msgEl.dataset.dog = window.PixelDogs.mode; chatOf(tab).agent = window.PixelDogs.mode; } // Kopf = Agent, der diese Runde schreibt; der Chat merkt sich den zuletzt genutzten
   let pictures = null; // Bilder der Antwort, die noch entstehen – bis dahin keine Fußzeile
@@ -3456,7 +3479,6 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     return work;
   };
   /* Kopf zeigt immer, was gerade passiert – mit eigener kleiner Animation je Tätigkeit */
-  let liveThoughtTitle = ''; // 17.11.: solange die KI eigene Gedanken-Oberpunkte liefert, steht DEREN Titel oben (keine vorgegebenen Texte)
   function setActivity(kind, text) {
     const w = work || ensureWork();
     if (liveThoughtTitle && !/^(antwort|answer)/i.test(kind || '')) text = liveThoughtTitle;

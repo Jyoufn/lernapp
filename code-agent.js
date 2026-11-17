@@ -79,7 +79,7 @@ const CodeAgent = (() => {
     py: 'main.py', python: 'main.py', java: 'Main.java', c: 'main.c', cpp: 'main.cpp', 'c++': 'main.cpp', cs: 'Program.cs', csharp: 'Program.cs', go: 'main.go', rs: 'main.rs', rust: 'main.rs',
     php: 'index.php', rb: 'main.rb', ruby: 'main.rb', swift: 'main.swift', kt: 'Main.kt', kotlin: 'Main.kt', lua: 'main.lua', luau: 'main.luau', sql: 'query.sql', sh: 'script.sh', bash: 'script.sh',
     vue: 'App.vue', svelte: 'App.svelte', dart: 'main.dart', scss: 'style.scss' };
-  const MIN_LINES = 10;
+  const MIN_LINES = 3; // 17.11.: auch kurzer Code (ab 3 Zeilen) kommt ins Code-Fenster – im Chat nur die Datei-Karte
   const NAME_LINE = /^\s*(?:\/\/|#|--|<!--|\/\*)\s*(?:datei:\s*|file:\s*)?([\w][\w./-]*\.[a-z0-9]{1,6})\s*(?:-->|\*\/)?\s*$/i;
   function fromFences(text) {
     const used = new Map();
@@ -128,11 +128,13 @@ const CodeAgent = (() => {
     + (body ? `<div class="ca-step-b"><div>${body}</div></div>` : '') + '</div>';
   function fileRow(f, existed) {
     const name = f.path.split('/').pop(), dir = f.path.split('/').slice(0, -1).join('/');
-    const verb = !f.done ? 'Schreibt' : existed ? 'Datei geändert' : 'Datei angelegt';
-    return `<div class="ca-step ca-file" data-path="${escapeHtml(f.path)}"><button type="button" class="ca-step-h ca-open">`
+    // 17.11.: als Datei-Karte (Icon-Kachel, Name, darunter Art + Zeilen, rechts „Öffnen“) statt „Datei angelegt index.html +14“
+    const KIND = { html: 'HTML', htm: 'HTML', css: 'CSS', js: 'JavaScript', mjs: 'JavaScript', jsx: 'React', ts: 'TypeScript', tsx: 'React', py: 'Python', java: 'Java', c: 'C', cpp: 'C++', cs: 'C#', go: 'Go', rs: 'Rust', php: 'PHP', rb: 'Ruby', swift: 'Swift', kt: 'Kotlin', lua: 'Lua', luau: 'Luau', sql: 'SQL', sh: 'Shell', json: 'JSON', md: 'Markdown', vue: 'Vue', svelte: 'Svelte', dart: 'Dart', scss: 'SCSS' };
+    const meta = !f.done ? 'wird geschrieben …' : `${KIND[ext(f.path)] || 'Datei'} · ${lineCount(f.content)} Zeilen${existed ? ' · geändert' : ''}`;
+    return `<div class="ca-step ca-file ca-card" data-path="${escapeHtml(f.path)}"><button type="button" class="ca-step-h ca-open">`
       + `<span class="ca-ic">${f.done ? fileIcon(f.path) : '<i class="ca-spin"></i>'}</span>`
-      + `<span class="ca-t"><span class="ca-v">${verb}</span> <b>${escapeHtml(name)}</b>${dir ? ` <span class="ca-m">${escapeHtml(dir)}</span>` : ''}</span>`
-      + `${f.done ? `<span class="ca-plus">+${lineCount(f.content)}</span>` : ''}</button></div>`;
+      + `<span class="ca-t"><b>${escapeHtml(name)}</b><span class="ca-m">${dir ? `${escapeHtml(dir)} · ` : ''}${meta}</span></span>`
+      + `${f.done ? '<span class="ca-go">Öffnen</span>' : ''}</button></div>`;
   }
   const dirRow = (d) => row(folderIcon(), `<span class="ca-v">Ordner angelegt</span> <b>${escapeHtml(d.split('/').pop())}</b>${d.includes('/') ? ` <span class="ca-m">${escapeHtml(d.split('/').slice(0, -1).join('/'))}</span>` : ''}`);
   function termRow(t) {

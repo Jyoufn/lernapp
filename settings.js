@@ -107,6 +107,11 @@
   // jeder Schlüssel als Zeile (••••1234, × entfernt), darunter ein Feld zum Hinzufügen. Mehrere Schlüssel = mehr Gratis-Kontingent, die App wechselt selbst.
   const keyView = { shown: new Set(), edit: null }; // angezeigte Schlüssel („Anbieter:Index“) und der gerade bearbeitete
   const keyList = (id) => String(deviceKeys[id] || '').split(/[\s,;]+/).map((k) => k.trim()).filter(Boolean);
+  // 17.11.: Ergebnis von „Verbindung testen“ (je Modell und Schlüssel: OK mit Zeit, sonst der Fehler)
+  let diag = null;
+  const diagHtml = () => !diag ? '' : diag.busy ? '<p class="st-ws-note">Wird geprüft …</p>'
+    : !diag.results?.length ? `<p class="st-ws-note">${diag.keys === 0 ? 'Kein Gemini-Schlüssel gefunden – die App schickt keinen mit.' : 'Keine Antwort vom Server.'}</p>`
+    : diag.results.map((r) => `<div class="stk-diag-r${r.ok ? ' ok' : ''}"><span class="stk-diag-m">${esc(r.model)} <em>${esc(r.key)}</em></span><span class="grow"></span><span>${r.ok ? `OK · ${(r.ms / 1000).toFixed(1)} s` : esc(r.status === 429 ? 'Limit erreicht' : r.status === 404 ? 'Modell nicht verfügbar' : r.status === 400 || r.status === 403 ? `Abgelehnt (${r.status})` : r.error || 'Fehler')}</span></div>`).join('');
   function providerRow(p) {
     const keys = keyList(p.id), open = editing === p.id, what = p.label || 'API-Key';
     const status = keys.length ? `<span class="st-ok">${fi('check', 12)}${p.multi ? `${keys.length} ${keys.length === 1 ? 'Schlüssel' : 'Schlüssel'}` : 'Verbunden'}</span>`
@@ -128,6 +133,7 @@
         ${fileKeys[p.id] && !keys.length ? '<p class="st-ws-note">Ein Schlüssel ist auf dem Server hinterlegt.</p>' : ''}
         ${p.multi || !keys.length ? `<form class="st-key-add stk-add" data-key="${p.id}" autocomplete="off"><input class="st-key-in" type="password" placeholder="${keys.length ? 'Weiteren ' : ''}${esc(what)} von ${esc(p.where)} einfügen" aria-label="${esc(what)} für ${esc(p.name)}" spellcheck="false" /><button type="submit" class="stk-btn">Hinzufügen</button></form>` : ''}</div>
         ${rolesHtml(p, keys.length || fileKeys[p.id])}
+        ${p.fam === 'gemini' ? `<div class="st-role stk-role stk-diag"><div class="stk-l"><span>Verbindung</span><em>Prüft jedes Modell mit jedem Schlüssel – zeigt, was antwortet und was nicht.</em></div><button type="button" class="st-btn" data-diag>Verbindung testen</button></div><div class="stk-diag-out" data-diag-out>${diagHtml()}</div>` : ''}
       </div></div>`;
   }
   /* Rolle des Anbieters (unter seinen Schlüsseln): Haupt-KI – wird für ALLES zuerst genutzt (auch Coden, Agenten, Hintergründe);
@@ -407,6 +413,11 @@
       else if (v === 'off') off.add(f); else off.delete(f);
       if (off.size) deviceKeys.AI_OFF = [...off].join(','); else delete deviceKeys.AI_OFF;
       write(KEYS_KEY, deviceKeys); drawView(); window.renderModelChip?.(); return;
+    }
+    if (e.target.closest('[data-diag]')) {
+      diag = { busy: true }; const out = view.querySelector('[data-diag-out]'); if (out) out.innerHTML = diagHtml();
+      fetch('/api/diag/gemini').then((r) => r.json()).then((j) => { diag = j; }).catch(() => { diag = { results: [] }; }).finally(() => { const o = view.querySelector('[data-diag-out]'); if (o) o.innerHTML = diagHtml(); });
+      return;
     }
     const us = e.target.closest('[data-ai-use]');
     if (us) {
