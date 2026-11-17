@@ -102,7 +102,14 @@ const CodeAgent = (() => {
       if (!views.length) return null;
       return views.map((v, k) => `\`\`\`\`file:${k ? `${slug(v.name)}.html` : 'index.html'}\n${v.code}${closed || k < views.length - 1 ? '\n````' : ''}`).join('\n\n');
     };
-    text = String(text || '')
+    // 17.11. (3): falls das Modell Dateien als <datei pfad="…">…</datei> schreibt (Format aus dem Prompt nachgeahmt) → ebenfalls Dateien
+    text = String(text || '').replace(/<datei pfad="([^"\n]+)">\n?([\s\S]*?)(?:\n?<\/datei>|$)/g, (all, p, body, off, whole) => `\`\`\`\`file:${p.trim()}\n${body.replace(/\n$/, '')}${all.includes('</datei>') ? '\n````' : ''}`);
+    // roher HTML-Code ganz ohne Code-Block (kommt bei Gemini vor) → ebenfalls index.html
+    if (!/^`{3,}/m.test(text)) {
+      const at = text.search(/^[ \t]*(<!doctype html|<html[\s>])/im);
+      if (at >= 0) { const endM = /<\/html>[ \t]*/i.exec(text.slice(at)); const end = endM ? at + endM.index + endM[0].length : text.length; text = `${text.slice(0, at)}\`\`\`\`file:index.html\n${text.slice(at, end).trim()}${endM ? '\n````' : ''}${text.slice(end)}`; }
+    }
+    text = text
       .replace(/^```widget[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, body) => widget(body, true) ?? all)
       .replace(/^```widget[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, body) => widget(body, false) ?? '````file:index.html\n');
     return String(text || '')
