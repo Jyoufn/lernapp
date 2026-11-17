@@ -4109,6 +4109,12 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'deep') onDeep(data);
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
+      // 17.11.: welches Modell gerade gefragt wird – hängt eins, sieht man das (statt endlos „lädt“)
+      else if (event === 'attempt') {
+        const nm = String(data.model || '').replace(/^gemini-/, 'Gemini ').replace(/-flash-lite/, ' Flash-Lite').replace(/-flash/, ' Flash').replace(/-preview.*$/, '');
+        if (data.failed) setActivity('work', `${nm} ${data.reason || 'antwortet nicht'} – nächstes Modell …`);
+        else if (data.n > 1 && !liveThoughtTitle) setActivity('work', `Frage ${nm} …`);
+      }
       else if (event === 'todos') onTodos(data.items, data.done, data.fixed);
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort
       else if (event === 'reset') {
