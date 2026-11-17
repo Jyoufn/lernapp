@@ -87,6 +87,8 @@ const CodeAgent = (() => {
     const guess = (b) => (/^\s*(<!doctype|<html|<head|<body|<div|<canvas|<script|<style|<!--|<main|<section|<svg|<template)/i.test(b) || /<\/(html|body|script|canvas)>/i.test(b) ? 'html' : /^\s*(def |import |from \w+ import|print\(|class \w+:)/m.test(b) ? 'py'
       : /(function\s+\w+\s*\(|const |let |=>|document\.|addEventListener)/.test(b) ? 'js' : /^\s*[.#]?[\w-]+\s*\{[^}]*:[^}]*\}/m.test(b) ? 'css' : '');
     const conv = (all, lang, body, closed) => {
+      // 17.11. abends: Gemini packt Programmcode manchmal in den Kopier-Kasten (```kopie mit „# Titel“) oder ```text → ist der Inhalt Code, wird er trotzdem eine Datei
+      if (/^(kopie|text|plaintext|txt|code|plain)$/i.test(lang || '')) { const b = body.replace(/^\s*#\s+[^\n]{1,60}\n/, ''); const g = guess(b) || guess(b.split('\n').slice(0, 30).join('\n')); if (!g) return all; lang = g; body = b; }
       if (!lang) lang = guess(body);
       const base = LANG_FILE[String(lang).toLowerCase()];
       if (!base || (closed && body.split('\n').length < MIN_LINES)) return all; // 17.11. (2): offener Block gleich als Datei (kein kurzes Aufblitzen als Code im Chat)
