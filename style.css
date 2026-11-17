@@ -13180,3 +13180,8 @@ html body .pd-actor { transform: scale(0.74); transform-origin: right center; le
 html body .lb2-dock-pill { height: 32px; padding: 0 2px; gap: 1px; border-radius: 11px; }
 html body .lb2-dock-pill button { height: 26px; padding: 0 9px; gap: 5px; border-radius: 8px; font-size: 12.5px; }
 html body .lb2-dock-pill button svg { width: 13px; height: 13px; }
+
+/* ===== 17.11.: „Tag bearbeiten“ – oben nur Pfeil + Name (direkt bearbeitbar), darunter die Farben ohne Überschrift, Trennlinie, Löschen/Fertig ===== */
+html body .tk-menu.tags .tge-head { gap: 4px; height: 32px; margin: 0 0 4px; }
+html body .tk-menu.tags .tge-head .tk-tag-name { flex: 1; min-width: 0; height: 30px; padding: 0 8px; }
+html body .tk-menu.tags .tk-tag-editbox { gap: 6px; }

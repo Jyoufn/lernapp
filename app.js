@@ -6050,7 +6050,7 @@ const TagMenu = (() => {
     const ed = list.find((g) => g.id === editing);
     if (ed) {
       pop.classList.add('tagm-sub');
-      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-tdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><span class="tge-title">Tag bearbeiten</span></span><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name" placeholder="Name" /><span class="tge-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-tecolor')}`
+      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-tdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name des Tags" placeholder="Name" /></span>${UIKit.colorRow(ed.c, 'data-tecolor')}`
         + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-tdel>${fiH('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-tdone>Fertig</button></span></span>`;
       return;
     }

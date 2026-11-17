@@ -1952,7 +1952,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       // Tag bearbeiten: Name, Farbe, Löschen
       const ed = tagOf(metaEdit);
       if (ed) {
-        list.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-mdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><span class="tge-title">Tag bearbeiten</span></span><input class="tk-tag-name" data-mname value="${esc(ed.name)}" maxlength="24" aria-label="Name" placeholder="Name" /><span class="tge-l">Farbe</span>${UIKit.colorRow(ed.c, 'data-medit-color')}`
+        list.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-mdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><input class="tk-tag-name" data-mname value="${esc(ed.name)}" maxlength="24" aria-label="Name des Tags" placeholder="Name" /></span>${UIKit.colorRow(ed.c, 'data-medit-color')}`
           + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-mdel="${ed.id}">${fi('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-mdone>Fertig</button></span></span>`;
         return;
       }
