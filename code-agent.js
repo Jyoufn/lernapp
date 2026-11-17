@@ -84,7 +84,7 @@ const CodeAgent = (() => {
   const NAME_LINE = /^\s*(?:\/\/|#|--|<!--|\/\*)\s*(?:datei:\s*|file:\s*)?([\w][\w./-]*\.[a-z0-9]{1,6})\s*(?:-->|\*\/)?\s*$/i;
   function fromFences(text) {
     const used = new Map();
-    const guess = (b) => (/^\s*(<!doctype|<html|<head|<body|<div|<canvas|<script)/i.test(b) ? 'html' : /^\s*(def |import |from \w+ import|print\(|class \w+:)/m.test(b) ? 'py'
+    const guess = (b) => (/^\s*(<!doctype|<html|<head|<body|<div|<canvas|<script|<style|<!--|<main|<section|<svg|<template)/i.test(b) || /<\/(html|body|script|canvas)>/i.test(b) ? 'html' : /^\s*(def |import |from \w+ import|print\(|class \w+:)/m.test(b) ? 'py'
       : /(function\s+\w+\s*\(|const |let |=>|document\.|addEventListener)/.test(b) ? 'js' : /^\s*[.#]?[\w-]+\s*\{[^}]*:[^}]*\}/m.test(b) ? 'css' : '');
     const conv = (all, lang, body, closed) => {
       if (!lang) lang = guess(body);
@@ -102,6 +102,8 @@ const CodeAgent = (() => {
       if (!views.length) return null;
       return views.map((v, k) => `\`\`\`\`file:${k ? `${slug(v.name)}.html` : 'index.html'}\n${v.code}${closed || k < views.length - 1 ? '\n````' : ''}`).join('\n\n');
     };
+    // 17.11. (3): eingerückte Code-Zäune (in Listen) und ~~~-Zäune wie normale ```-Blöcke behandeln; Sprachen wie xml/svg/markup → html
+    text = String(text || '').replace(/^[ \t]{1,4}(`{3,}|~{3,})/gm, '$1').replace(/^~{3,}/gm, '```').replace(/^```(markup|xml|xhtml|svg|vue-html)\b/gim, '```html');
     // 17.11. (3): falls das Modell Dateien als <datei pfad="…">…</datei> schreibt (Format aus dem Prompt nachgeahmt) → ebenfalls Dateien
     text = String(text || '').replace(/<datei pfad="([^"\n]+)">\n?([\s\S]*?)(?:\n?<\/datei>|$)/g, (all, p, body, off, whole) => `\`\`\`\`file:${p.trim()}\n${body.replace(/\n$/, '')}${all.includes('</datei>') ? '\n````' : ''}`);
     // roher HTML-Code ganz ohne Code-Block (kommt bei Gemini vor) → ebenfalls index.html
