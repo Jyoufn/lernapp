@@ -25,15 +25,29 @@ const ChatVisuals = (() => {
     if (want === 'hbar') return 'hbar';
     return bestType(d);
   }
+  // 17.11. (Nutzer: „manchmal Probleme beim Diagramm“): nachsichtig lesen – kleine JSON-Fehler der KI (Kommentare, Komma am Ende,
+  // typografische Anführungszeichen), andere Formen (series, [{label,value}]), deutsche Zahlen („12,5 %“), ungleich lange Listen
+  const looseJson = (t) => {
+    try { return JSON.parse(t); } catch {}
+    const fixed = String(t).replace(/[“”„]/g, '"').replace(/\/\/[^\n]*$/gm, '').replace(/,\s*([}\]])/g, '$1').replace(/([{,]\s*)([A-Za-z_]\w*)\s*:/g, '$1"$2":').replace(/'([^'\n]*)'/g, '"$1"');
+    try { return JSON.parse(fixed); } catch { return null; }
+  };
+  const num = (x) => { if (typeof x === 'number') return x; const t = String(x ?? '').replace(/[^\d,.\-]/g, '').replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); return /\d/.test(t) ? Number(t) : NaN; };
+  const TYPE_ALIAS = { pie: 'donut', doughnut: 'donut', ring: 'donut', kreis: 'donut', torte: 'donut', column: 'bar', columns: 'bar', säule: 'bar', saeule: 'bar', balken: 'hbar', horizontal: 'hbar', linie: 'line', kurve: 'line', verlauf: 'line' };
   function chart(raw) {
-    let data;
-    try { data = typeof raw === 'string' ? JSON.parse(raw) : raw; } catch { return null; }
+    let data = typeof raw === 'string' ? looseJson(raw.trim()) : raw;
+    if (Array.isArray(data)) data = { labels: data.map((x) => x?.label ?? x?.name ?? x?.[0]), values: data.map((x) => x?.value ?? x?.y ?? x?.[1]) };
     if (!data || typeof data !== 'object') return null;
-    const want = { pie: 'donut', column: 'bar' }[data.type] || data.type; // fehlt „type“ oder ist „auto“: die App wählt selbst
-    if (want != null && !['bar', 'hbar', 'line', 'area', 'donut', 'auto'].includes(want)) return null;
-    if (!Array.isArray(data.labels) || !Array.isArray(data.values) || data.labels.length !== data.values.length || data.labels.length < 2 || data.labels.length > 12) return null;
-    const labels = data.labels.map((x) => String(x ?? '').trim().slice(0, 32));
-    const values = data.values.map(Number);
+    if (!Array.isArray(data.values) && Array.isArray(data.series) && data.series[0]) data = { ...data, values: data.series[0].values || data.series[0].data };
+    if (!Array.isArray(data.values) && Array.isArray(data.data)) data = { ...data, values: data.data };
+    let want = String(data.type || '').toLowerCase().trim() || null; // fehlt „type“ oder ist „auto“: die App wählt selbst
+    want = TYPE_ALIAS[want] || want;
+    if (want != null && !['bar', 'hbar', 'line', 'area', 'donut', 'auto'].includes(want)) want = 'auto';
+    if (!Array.isArray(data.labels) || !Array.isArray(data.values)) return null;
+    const n = Math.min(data.labels.length, data.values.length, 24);
+    if (n < 2) return null;
+    const labels = data.labels.slice(0, n).map((x) => String(x ?? '').trim().slice(0, 32));
+    const values = data.values.slice(0, n).map(num);
     if (labels.some((x) => !x) || values.some((x) => !Number.isFinite(x))) return null;
     const unit = String(data.unit || '').slice(0, 18);
     return { type: fitType(want, { labels, values, unit }), title: String(data.title || 'Statistik').slice(0, 100), labels, values, unit, source: String(data.source || '').trim().slice(0, 160) };

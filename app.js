@@ -3456,8 +3456,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     return work;
   };
   /* Kopf zeigt immer, was gerade passiert – mit eigener kleiner Animation je Tätigkeit */
+  let liveThoughtTitle = ''; // 17.11.: solange die KI eigene Gedanken-Oberpunkte liefert, steht DEREN Titel oben (keine vorgegebenen Texte)
   function setActivity(kind, text) {
     const w = work || ensureWork();
+    if (liveThoughtTitle && !/^(antwort|answer)/i.test(kind || '')) text = liveThoughtTitle;
     const act = w.head.querySelector('.act');
     if (act && act.dataset.kind !== kind) {
       act.dataset.kind = kind;
@@ -3968,6 +3970,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       }
       if (st.title !== seg.title) {
         st.title = seg.title;
+        if (seg.title && !st.done) { // erst zeigen, wenn der Titel fertig geschrieben ist (kurz ruhig) – sonst flackert er Wort für Wort
+          clearTimeout(st.titleT); const tt = seg.title;
+          st.titleT = setTimeout(() => { if (st.title !== tt) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
+        }
         if (st.done) st.head.textContent = seg.title;
         else st.head.innerHTML = `<span class="shimmer">${escapeHtml(seg.title)}</span>`;
       }

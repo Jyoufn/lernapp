@@ -13174,3 +13174,9 @@ html body :is(.lb2-row, .cl-row) { animation: none; }
 /* 17.11.: Kalender-Kacheln flüssiger – nur Deckkraft (kein Skalieren, das ruckelt bei großen Kacheln), etwas länger, weicher Verlauf */
 @keyframes cal-tile-in2 { from { opacity: 0; } }
 .cal-view.cal-enter .cm-cell { animation: cal-tile-in2 560ms cubic-bezier(0.25, 0.1, 0.25, 1) var(--td, 0ms) both; will-change: opacity; }
+
+/* ===== 17.11. mittags: Agent (Hund) links neben der Antwort kleiner; Auswahl-Leiste in Home (Anheften · Löschen · Abbrechen) kompakter ===== */
+html body .pd-actor { transform: scale(0.74); transform-origin: right center; left: -32px; }
+html body .lb2-dock-pill { height: 32px; padding: 0 2px; gap: 1px; border-radius: 11px; }
+html body .lb2-dock-pill button { height: 26px; padding: 0 9px; gap: 5px; border-radius: 8px; font-size: 12.5px; }
+html body .lb2-dock-pill button svg { width: 13px; height: 13px; }

@@ -9,7 +9,8 @@ test('Diagrammdaten werden begrenzt und geprüft', () => {
   assert.equal(visuals.chart('{ kaputt'), null);
   assert.equal(visuals.chart({ type: 'bar', labels: ['A'], values: [1] }), null);
   assert.equal(visuals.chart({ type: 'bar', labels: ['A', 'B'], values: [1, 'Infinity'] }), null);
-  assert.equal(visuals.chart({ type: 'radar', labels: ['A', 'B'], values: [1, 2] }), null);
+  assert.ok(visuals.chart({ type: 'radar', labels: ['A', 'B'], values: [1, 2] }), 'unbekannter Typ → die App wählt selbst (17.11.)');
+  assert.deepEqual(visuals.chart('{labels:["a","b",], values:["12,5 %", "1.200"]}').values, [12.5, 1200], 'nachsichtig gelesen');
 });
 
 test('Die App wählt den passenden Diagrammtyp selbst', () => {

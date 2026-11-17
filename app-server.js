@@ -48,7 +48,7 @@ const cleanKeys = (v) => (typeof v === 'string' ? v.split(/[\s,;]+/).map((k) => 
 const requestKeys = new AsyncLocalStorage();
 function deviceKeysOf(req) {
   const raw = req.headers['x-app-keys'];
-  if (!raw || raw.length > 4000) return {};
+  if (!raw || raw.length > 12000) return {}; // 17.11.: vorher 4000 – mit mehreren Schlüsseln je Anbieter wurde der Kopf zu groß und ALLE eigenen Schlüssel fielen weg
   try {
     const obj = JSON.parse(Buffer.from(String(raw), 'base64').toString('utf8'));
     const out = {};
