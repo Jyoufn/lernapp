@@ -577,7 +577,7 @@ const Docs = (() => {
   // Chat in Home/Chats (10.11.): eckig-runde Sprechblase mit zwei Zeilen – gleicher Strich und Stil wie das Blatt der Dokumente
   // Chat-Icon (15.11. überarbeitet): gleich hoch wie das Blatt, weich gerundete Blase, kurzer Zipfel links unten, zwei Zeilen
   // 16.11.: weichere, rundere Sprechblase mit sanft geschwungenem Zipfel und drei Punkten (statt Zeilen)
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="-0.2 -1 16.6 18.4" aria-hidden="true"><path class="pg-out" d="M5.25 13.6A6.1 6.1 0 1 0 2.5 10.9L1.9 14.2z"/></svg>'; // 17.11.: dieselbe runde Sprechblase wie „Chat“ in der App (Linie wie das Dokument-Blatt)
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="16" height="20" viewBox="0 0 16 20" aria-hidden="true"><path class="pg-out" d="M8 3.2c3.6 0 6.5 2.5 6.5 5.6S11.6 14.4 8 14.4c-.8 0-1.6-.1-2.3-.4L2.6 15.6c-.3.15-.65-.12-.57-.45L2.6 12.6C1.9 11.6 1.5 10.3 1.5 8.8c0-3.1 2.9-5.6 6.5-5.6z"/></svg>'; // 17.11.: ovale Sprechblase mit weichem Zipfel, gleicher Strich und Fläche wie das Dokument-Blatt
   // Dokument ohne eigenes Icon (10.11.): abgerundetes Blatt mit Titelzeile und Textzeilen – gleicher Strich wie die Chat-Sprechblase
   const PAGE_SHAPE = '<rect class="pg-out" x="1.6" y="1.6" width="12.8" height="16.8" rx="3.2"/><path class="pg-ln" d="M4.8 6.4h4.2M4.8 10h6.4M4.8 13.6h6.4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
@@ -655,6 +655,7 @@ const Docs = (() => {
     dock.innerHTML = `<div class="lb2-dock-pill">
       <button type="button" class="lb2-dk-pin" data-bulk="pin">${fi('pin', 14)}<span class="lb2-dk-l">Anheften</span></button><i class="lb2-dk-sep"></i>
       <button type="button" class="lb2-dk-del" data-bulk="del">${fi('trash', 14)}<span class="lb2-dk-l"><span class="lb2-dk-pre">Wirklich&nbsp;</span><span class="lb2-dk-w">löschen</span></span></button><i class="lb2-dk-sep"></i>
+      <button type="button" class="lb2-dk-all" data-bulk="all">${fi('check-circle', 14)}<span class="lb2-dk-l">Alle auswählen</span></button><i class="lb2-dk-sep"></i>
       <button type="button" class="lb2-dk-none" data-bulk="none"><span class="lb2-dk-l">Abbrechen</span></button></div>`;
     const sel = new Set(); // Schlüssel „doc:ID“ / „chat:ID“
     /* Filter (Wunsch 09.11.): Art (Alle · Chats · Dokumente), Zeitraum, Tags (mehrere), nur Angeheftete – das Menü bleibt beim Wählen offen */
@@ -778,6 +779,10 @@ const Docs = (() => {
     function doBulk(bulk) {
       const keys = [...sel];
       if (bulk.dataset.bulk === 'none') { sel.clear(); api.render(); }
+      else if (bulk.dataset.bulk === 'all') { // 17.11.: alle sichtbaren Einträge auswählen
+        rows.querySelectorAll('.lb2-row[data-k]').forEach((r) => { sel.add(r.dataset.k); r.classList.add('picked'); r.querySelector('.lb2-check')?.setAttribute('aria-checked', 'true'); });
+        syncBar();
+      }
       else if (bulk.dataset.bulk === 'pin') { const all = entries(''); sel.clear(); pinKeys(keys, !keys.every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned)); }
       else if (!bulk.classList.contains('confirm')) { // erster Tipp: „Wirklich löschen“ in Rot, zweiter löscht
         bulk.classList.add('confirm');

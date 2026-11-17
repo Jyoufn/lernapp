@@ -13217,3 +13217,22 @@ html body .app.cw-open.cw-wide.cw-preview .codewin { flex: 1; width: auto !impor
 html body #codeBtn { background: none; }
 html body #codeBtn.on { background: rgba(255, 255, 255, 0.07); }
 html body .app.cw-open.cw-preview > .main { display: none; }
+
+/* ===== 17.11. mittags: Home-Auswahl ohne grauen Kasten – gewählte Zeilen werden nur blasser (Haken bleibt hell) ===== */
+html body .lb2-row.picked, html body .lb2-row.picked:hover { background: none; }
+html body .lb2-row.picked::before, html body .lb2-row.picked + .lb2-row::before { opacity: 1; }
+html body .lb2-picking .lb2-row.picked > :not(.lb2-check) { opacity: .42; }
+
+/* ===== 17.11. mittags: Workspace-Menü über die ganze Sidebar-Breite, ohne Überschrift, Namen kräftiger, Symbol ohne Fläche ===== */
+html body .ws-menu { left: 8px; right: 8px; width: auto; }
+html body .ws-menu .ws-row .ws-t b { font-weight: 600; font-size: 13.5px; }
+html body .ws-menu .ws-row .ws-av, html body .sb-ws .sb-ws-av { background: none !important; box-shadow: none !important; }
+/* 17.11. mittags: Kalender noch weicher – Ansicht selbst nur kurz, Kacheln länger mit sanfter Kurve und minimalem Aufsteigen (2 px, ohne Skalieren) */
+html body .cal-view.cal-enter { animation-duration: 180ms; }
+@keyframes cal-tile-in3 { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: none; } }
+html body .cal-view.cal-enter .cm-cell { animation: cal-tile-in3 720ms cubic-bezier(0.33, 0, 0.2, 1) var(--td, 0ms) both; backface-visibility: hidden; }
+/* 17.11. mittags: Einstellungen öffnen – Einstellungs-Navigation gleitet von links herein, der Inhalt blendet weich ein */
+@keyframes st-side-in2 { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+@keyframes st-view-in2 { from { opacity: 0; } to { opacity: 1; } }
+html body .app.settings-open .st-side { animation: st-side-in2 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+html body .app.settings-open .st-view { animation: st-view-in2 320ms cubic-bezier(0.22, 0.61, 0.36, 1) both; }

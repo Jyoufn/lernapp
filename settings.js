@@ -379,8 +379,10 @@
     // 16.11.: Zurück blendet den Hauptteil und die Sidebar einmal weich ein – 17.11.: NUR wenn die Einstellungen wirklich offen waren
     // (close() läuft bei jedem Klick in der Sidebar → Sidebar und Ansicht ruckelten bei jedem Wechsel), nur Einblenden ohne Verschieben
     if (wasOpen && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const k = [{ opacity: 0 }, { opacity: 1 }], o = { duration: 260, easing: 'ease-out' };
-      document.querySelectorAll('.panel > :is(.content, .composer-area, .dc-view, .cal-view, .tk-view):not([hidden]), .sidebar :is(.sb-head, .sb-main, .sb-scroll)').forEach((n) => n.animate?.(k, o));
+      // 17.11.: zurück – Sidebar gleitet ein kleines Stück von rechts zurück an ihren Platz, der Hauptteil blendet weich ein
+      const ease = 'cubic-bezier(0.22, 0.61, 0.36, 1)';
+      document.querySelectorAll('.sidebar :is(.sb-head, .sb-main, .sb-scroll)').forEach((n) => n.animate?.([{ opacity: 0, transform: 'translateX(10px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: ease }));
+      document.querySelectorAll('.panel > :is(.content, .composer-area, .dc-view, .cal-view, .tk-view):not([hidden])').forEach((n) => n.animate?.([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: ease }));
     }
   }
 

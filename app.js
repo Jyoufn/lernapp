@@ -53,6 +53,16 @@ function activateTab(tab) {
   // starteten sie neu (zweite Bewegung). Jetzt: die Ansicht blendet nur weich ein (ohne Verschieben), alle inneren Einblend-Animationen
   // werden sofort fertig gesetzt; nur die Kalender-Kacheln erscheinen gewollt einzeln (calTiles).
   if (prev && prev !== tab) requestAnimationFrame(() => settleSwitch(!tab.dataset.view));
+  // 17.11.: aus einem Chat zur Startseite („Erstellen“): der alte Chat gleitet nach oben weg und blendet aus, die Startseite erscheint darunter
+  if (prev && prev !== tab && typeof chat !== 'undefined' && !prev.dataset.view && !tab.dataset.view && history.length && !historyOf(tab).length && !REDUCE_MOTION_EARLY()) {
+    const box = chat.closest('.content'), r = chat.getBoundingClientRect(), br = box?.getBoundingClientRect();
+    if (box && br) {
+      const ghost = chat.cloneNode(true); ghost.removeAttribute('id'); ghost.setAttribute('aria-hidden', 'true');
+      Object.assign(ghost.style, { position: 'absolute', left: `${r.left - br.left}px`, top: `${r.top - br.top}px`, width: `${r.width}px`, margin: '0', pointerEvents: 'none', zIndex: '5' });
+      box.style.position ||= 'relative'; box.append(ghost);
+      ghost.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-48px)' }], { duration: 360, easing: 'cubic-bezier(0.4, 0, 0.2, 1)', fill: 'forwards' }).onfinish = () => ghost.remove();
+    }
+  }
   if (prev && prev !== tab && typeof chat !== 'undefined') {
     const nodes = document.createDocumentFragment();
     nodes.append(...chat.childNodes);
@@ -79,12 +89,13 @@ function settleSwitch(isChat) {
   const views = '.dc-view, .cal-view, .tk-view, .uiv-view, .chats-view';
   pn.getAnimations({ subtree: true }).forEach((a) => {
     const el = a.effect?.target;
-    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'cal-tile-in2' || a.animationName === 'step-up-in') return;
+    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'cal-tile-in2' || a.animationName === 'cal-tile-in3' || a.animationName === 'step-up-in') return;
     if (el.closest?.(`#chat, ${views}`)) a.finish();
   });
   if (isChat && typeof chat !== 'undefined' && chat.animate && !REDUCE_MOTION) chat.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' });
 }
 /* Leere Chats und leere Dokumente erscheinen erst oben als Tab, wenn etwas drin steht */
+const REDUCE_MOTION_EARLY = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 function isDraft(tab) {
   if (tab.classList.contains('uil-tab')) return false;
   if (tab.dataset.view === 'doc') return !!window.Docs?.isEmpty(tab.dataset.doc);

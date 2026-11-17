@@ -274,7 +274,7 @@ const AppSearch = (() => {
           <span class="ws-av">${wsAvatar(w, 20)}</span><span class="ws-t"><b>${esc(wsName(w))}</b>${wsSub(w) ? `<small>${wsSub(w)}</small>` : ''}</span>
           ${w.id === wsData.active ? `<span class="ws-check">${fi('check', 13)}</span>` : ''}</div>`).join('');
     const full = !window.Workspaces.canAdd();
-    pop.innerHTML = `<div class="ws-label">Workspaces</div>${rows}
+    pop.innerHTML = `${rows}
       ${adding ? `<div class="ws-row edit"><span class="ws-av ws-av-new">${oi('plus', 12)}</span><input class="ws-in" data-new maxlength="32" placeholder="Name des Workspace" aria-label="Name des neuen Workspace" /></div>` : ''}
       <div class="ws-sep"></div>
       ${full ? '<div class="ws-note">Höchstens 3 Workspaces</div>' : `<button type="button" class="ws-mi" data-ws="new"><span class="ws-mic">${oi('plus', 14)}</span><span>Workspace hinzufügen</span></button>`}
