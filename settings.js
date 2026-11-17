@@ -366,12 +366,14 @@
     loadStatus();
   }
   function close() {
+    const wasOpen = app.classList.contains('settings-open');
     drawView.page = null;
     app.classList.remove('settings-open');
     editing = null;
-    // 16.11.: Zurück blendet den Hauptteil und die Sidebar einmal weich ein (vorher sprang alles hart zurück)
-    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const k = [{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], o = { duration: 420, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' };
+    // 16.11.: Zurück blendet den Hauptteil und die Sidebar einmal weich ein – 17.11.: NUR wenn die Einstellungen wirklich offen waren
+    // (close() läuft bei jedem Klick in der Sidebar → Sidebar und Ansicht ruckelten bei jedem Wechsel), nur Einblenden ohne Verschieben
+    if (wasOpen && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const k = [{ opacity: 0 }, { opacity: 1 }], o = { duration: 260, easing: 'ease-out' };
       document.querySelectorAll('.panel > :is(.content, .composer-area, .dc-view, .cal-view, .tk-view):not([hidden]), .sidebar :is(.sb-head, .sb-main, .sb-scroll)').forEach((n) => n.animate?.(k, o));
     }
   }

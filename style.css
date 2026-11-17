@@ -13166,3 +13166,11 @@ html body .work:not(.active) .step > .marker.ico { left: 3px; top: 13px; }
 @media (hover: hover) { html body .work:not(.active) .step.thought:hover { background: none; } html body .work:not(.active) .step.thought:hover .thought-head { color: var(--text); } }
 html body .work:not(.active):has(.step.thought) .step:not(.thought):not(:has(a, .chips, .plan-list, .ph-src, img)) { display: none; }
 html body .work:not(.active) .step.finished { display: none; }
+/* 17.11.: Startseite öffnen – Feld ohne Gleiten an seinen Platz, Hund ohne eigene Sprung-Animation (blendet mit allem ein) */
+.panel.home-snap .composer-area { transition: none !important; }
+.panel.home .dog-hero { animation: none; }
+/* 17.11.: Listen-Zeilen (Home/Chats) ohne eigene Einblendung – sonst lief beim Neuzeichnen der Liste eine zweite Bewegung; die Ansicht blendet als Ganzes ein */
+html body :is(.lb2-row, .cl-row) { animation: none; }
+/* 17.11.: Kalender-Kacheln flüssiger – nur Deckkraft (kein Skalieren, das ruckelt bei großen Kacheln), etwas länger, weicher Verlauf */
+@keyframes cal-tile-in2 { from { opacity: 0; } }
+.cal-view.cal-enter .cm-cell { animation: cal-tile-in2 560ms cubic-bezier(0.25, 0.1, 0.25, 1) var(--td, 0ms) both; will-change: opacity; }

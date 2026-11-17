@@ -79,10 +79,10 @@ function settleSwitch(isChat) {
   const views = '.dc-view, .cal-view, .tk-view, .uiv-view, .chats-view';
   pn.getAnimations({ subtree: true }).forEach((a) => {
     const el = a.effect?.target;
-    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'step-up-in') return;
+    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'cal-tile-in2' || a.animationName === 'step-up-in') return;
     if (el.closest?.(`#chat, ${views}`)) a.finish();
   });
-  if (isChat && typeof chat !== 'undefined' && chat.animate && !REDUCE_MOTION) chat.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
+  if (isChat && typeof chat !== 'undefined' && chat.animate && !REDUCE_MOTION) chat.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' });
 }
 /* Leere Chats und leere Dokumente erscheinen erst oben als Tab, wenn etwas drin steht */
 function isDraft(tab) {
@@ -7383,11 +7383,21 @@ document.addEventListener('click', (e) => {
     const tab = activeTab();
     const on = !!tab && !tab.dataset.view && !historyOf(tab).length;
     const was = panel.classList.contains('home');
+    // 17.11. (Nutzer: „Create-Animation nicht gut“): beim Öffnen springt das Feld nicht mehr von unten hoch – es steht sofort an seinem Platz,
+    // und die ganze Startseite (Hund, Frage, Feld) blendet ruhig ein; die Kacheln dahinter erscheinen gruppenweise
+    if (on && !was) panel.classList.add('home-snap');
     panel.classList.toggle('home', on);
-    if (on && !was && !REDUCE_MOTION) { plaza.classList.remove('pz-in'); void plaza.offsetWidth; plaza.classList.add('pz-in'); } // Kacheln erscheinen gruppenweise
-    if (on) setTimeout(lift, 0);
+    if (on) lift();
+    if (on && !was) {
+      void panel.offsetHeight;
+      requestAnimationFrame(() => panel.classList.remove('home-snap'));
+      if (!REDUCE_MOTION) {
+        plaza.classList.remove('pz-in'); void plaza.offsetWidth; plaza.classList.add('pz-in');
+        [composerArea, panel.querySelector('.dog-hero')].filter(Boolean).forEach((n) => n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' }));
+      }
+    }
   }
-  window.addEventListener('chat-tab-switched', () => setTimeout(updateHome, 0)); // nicht rAF: läuft in Hintergrund-Tabs nicht
+  window.addEventListener('chat-tab-switched', () => updateHome()); // sofort (nicht erst im nächsten Takt) – sonst sieht man kurz die alte Lage
   window.addEventListener('resize', () => { if (panel.classList.contains('home')) lift(); });
   // Leiste/Ideen klappen erst auf → Höhe ändert sich noch: dann neu mitteln
   new ResizeObserver(() => { if (panel.classList.contains('home')) lift(); }).observe(composerArea);
