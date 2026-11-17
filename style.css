@@ -13229,3 +13229,17 @@ html body .composer.dictating #input { color: var(--text-4); transition: color 2
 html body .composer #input { transition: color 260ms ease; }
 html body .composer.dictating .mic-btn.active { background: rgba(255, 255, 255, 0.1); color: var(--text); }
 @media (prefers-reduced-motion: reduce) { html body .composer.dictating .dict-wave i { transition: none; } }
+
+/* ===== 17.11. mittags: Code-Fenster auf derselben Ebene wie die Sidebar – keine eigene Fläche, kein Rand, keine Rundung;
+   oben nur die Suche; kein ✕ (das Code-Symbol schließt); schneller auf- und zuklappen ===== */
+html body .codewin { margin: 0 !important; border: 0 !important; border-radius: 0; background: var(--sidebar-bg, var(--main-bg)); transition: width 300ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 180ms ease; }
+html body .app.cw-open .codewin { width: 320px; margin: 0 !important; }
+html body .app.cw-open.cw-wide .codewin { margin: 0 !important; }
+html body .codewin .cw-close { display: none !important; }
+html body .codewin:not(.wide) .cw-head { display: none; }
+html body .codewin:not(.wide) { padding-top: 10px; }
+html body .ca-fic.ln { display: inline-grid; place-items: center; width: 16px; height: 16px; background: none !important; }
+html body .ca-step.ca-card .ca-ic .ca-fic.ln svg { width: 17px; height: 17px; }
+/* Dateiliste: ruhige Zeilen wie die Sidebar */
+@keyframes cw-in { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+html body .app.cw-open .codewin:not(.wide) .cw-list > * { animation: cw-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }

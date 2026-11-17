@@ -114,13 +114,26 @@ const CodeAgent = (() => {
   const ext = (p) => (p.match(/\.([a-z0-9]+)$/i)?.[1] || '').toLowerCase();
   const GLYPH = { html: ['g-html', '&lt;&gt;'], htm: ['g-html', '&lt;&gt;'], css: ['g-css', '#'], scss: ['g-css', '#'], json: ['g-json', '{}'], md: ['g-md', 'M↓'], py: ['g-py', 'py'] };
   const BOX = { js: ['b-js', 'JS'], mjs: ['b-js', 'JS'], cjs: ['b-js', 'JS'], jsx: ['b-js', 'JS'], ts: ['b-ts', 'TS'], tsx: ['b-ts', 'TS'] };
+  // 17.11.: Datei-Icons im runden Linien-Stil der App (Strich 1,5), je Art leicht eingefärbt – wie in Glass
+  const FI = (c, d) => `<span class="ca-fic ln" style="color:${c}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`;
+  const CHEV = '<path d="M5.25 4.75 2 8l3.25 3.25M10.75 4.75 14 8l-3.25 3.25"/>';
+  const BRACE = '<path d="M5.5 2.75c-1.4 0-2 .6-2 1.9v1.5c0 .9-.45 1.6-1.25 1.85.8.25 1.25.95 1.25 1.85v1.5c0 1.3.6 1.9 2 1.9M10.5 2.75c1.4 0 2 .6 2 1.9v1.5c0 .9.45 1.6 1.25 1.85-.8.25-1.25.95-1.25 1.85v1.5c0 1.3-.6 1.9-2 1.9"/>';
+  const HASH = '<path d="M6.25 2.75 5 13.25M11 2.75 9.75 13.25M3 6h10.5M2.5 10h10.5"/>';
+  const TERM = '<path d="m3 4.75 3.25 3.25L3 11.25M8.5 11.75H13"/>';
+  const PIC = '<rect x="2.25" y="2.75" width="11.5" height="10.5" rx="2.5"/><circle cx="6" cy="6.25" r="1.1"/><path d="m2.75 11.25 3.1-3 2.4 2.2 1.7-1.5 3.3 3"/>';
+  const DOC = '<rect x="3" y="1.75" width="10" height="12.5" rx="2.5"/><path d="M5.75 5.5h3.5M5.75 8h4.5M5.75 10.5h4.5"/>';
   function fileIcon(p) {
     const e = ext(p);
-    if (BOX[e]) return `<span class="ca-fic box ${BOX[e][0]}">${BOX[e][1]}</span>`;
-    if (GLYPH[e]) return `<span class="ca-fic glyph ${GLYPH[e][0]}">${GLYPH[e][1]}</span>`;
-    if (/^(png|jpe?g|gif|webp|svg|ico|avif)$/.test(e)) return `<span class="ca-fic img">${icon('f-image', 14)}</span>`;
-    return `<span class="ca-fic doc">${icon('f-file', 14)}</span>`;
+    if (/^html?$/.test(e)) return FI('#e8865c', CHEV);
+    if (/^(css|scss|sass|less)$/.test(e)) return FI('#6bb0d7', HASH);
+    if (/^(js|mjs|cjs|jsx)$/.test(e)) return FI('#e2c45c', BRACE);
+    if (/^(ts|tsx)$/.test(e)) return FI('#5f9ee8', BRACE);
+    if (/^(json|ya?ml|toml)$/.test(e)) return FI('#b8a8e8', BRACE);
+    if (/^(py|sh|bash|rb|php|go|rs|java|kt|swift|c|cpp|cs|lua|luau|dart)$/.test(e)) return FI('#7db993', TERM);
+    if (/^(png|jpe?g|gif|webp|svg|ico|avif)$/.test(e)) return FI('#cb88ab', PIC);
+    return FI('var(--text-3)', DOC);
   }
+
   const folderIcon = () => `<span class="ca-fic dir">${icon('f-folder', 14)}</span>`;
   const lineCount = (s) => (s ? s.split('\n').length : 0);
   const chev = '<svg class="ca-chev" width="14" height="14"><use href="#f-chevron-down"/></svg>';
@@ -447,7 +460,7 @@ const CodeAgent = (() => {
     if (!ui.file || !files.has(ui.file)) ui.file = files.has('index.html') ? 'index.html' : [...files.keys()][0];
     const name = ui.file || '';
     const title = win.querySelector('.cw-title');
-    if (ui.view === 'files') title.innerHTML = `<b>${escapeHtml(chatOf(activeTab())?.title || 'Projekt')}</b><span class="cw-count">${files.size} ${files.size === 1 ? 'Datei' : 'Dateien'}</span>`;
+    if (ui.view === 'files') title.innerHTML = ''; // 17.11.: oben nur die Suche – kein Chat-Titel, keine Dateizahl
     else if (ui.view === 'code') title.innerHTML = name ? `${fileIcon(name)}<span class="cw-fname">${escapeHtml(name)}</span>` : '';
     else title.innerHTML = `<span class="cw-fname">${escapeHtml(chatOf(activeTab())?.title || 'Vorschau')}</span>`;
     const code = win.querySelector('.cw-code');
