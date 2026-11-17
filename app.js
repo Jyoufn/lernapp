@@ -3613,17 +3613,37 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     row.addEventListener('click', (e) => {
       e.stopPropagation();
       if (!row._log.length) return;
-      if (!row.classList.contains('open')) inner.innerHTML = row._log.map((st) => `<div class="pi-sub">${escapeHtml(String(stepLabel(st) || st.textContent.trim()).slice(0, 160))}</div>`).join('');
       row.classList.toggle('open');
+      if (row.classList.contains('open')) todoSubs(row);
     });
     if (!plan.obs && work) {
       plan.obs = new MutationObserver((ml) => ml.forEach((m) => m.addedNodes.forEach((n) => {
         if (!(n instanceof HTMLElement) || !n.classList.contains('step') || n.classList.contains('todo-step') || plan.kind !== 'todos') return;
         const it = plan.items.find((x) => x.state === 'active') || [...plan.items].reverse().find((x) => x.state === 'done') || plan.items[0];
-        if (it?.row._log) { it.row._log.push(n); it.row.classList.add('has-steps'); }
+        if (it?.row._log) { it.row._log.push(n); it.row.classList.add('has-steps'); if (it.row.classList.contains('open')) requestAnimationFrame(() => todoSubs(it.row)); }
       })));
       plan.obs.observe(work.steps, { childList: true });
     }
+  };
+  // Liste unter einem Punkt (live: offen → bei jedem neuen Schritt/Titel neu)
+  const todoSubs = (row) => {
+    const labels = row._log.map((st) => String(stepLabel(st) || st.textContent || '').trim()).filter(Boolean);
+    row._steps.innerHTML = labels.map((t) => `<div class="pi-sub">${escapeHtml(t.slice(0, 160))}</div>`).join('');
+  };
+  /* Live abhaken (17.11. (3)): jeder neue Gedanken-Titel wird dem passenden To-do zugeordnet – passt er zu einem späteren Punkt, sind die
+     davor erledigt. Passt er zu keinem, rückt der laufende Punkt nach drei eigenen Gedanken weiter (nie über den letzten hinaus). */
+  const todoOnThought = (title) => {
+    if (plan.kind !== 'todos' || !plan.items.length || plan.fixed) return;
+    const t = String(title).toLowerCase();
+    const has = (w) => t.includes(w.length > 6 ? w.slice(0, -2) : w);
+    const cur = plan.progress || 0;
+    let best = -1, bestN = 0;
+    plan.items.forEach((it, i) => { const n = it.terms.filter(has).length; if (n > bestN || (n === bestN && n > 0 && i === cur)) { best = i; bestN = n; } });
+    plan.seen = (plan.seen || 0) + 1;
+    if (best > cur) { plan.progress = best; plan.seen = 0; }
+    else if (best < 0 && plan.seen > 3 && cur < plan.items.length - 1) { plan.progress = cur + 1; plan.seen = 0; }
+    updatePlan();
+    plan.items.forEach((it) => { if (it.row.classList.contains('open')) todoSubs(it.row); });
   };
   const attachPlan = (step, points, kind = '') => {
     if (!points?.length || step.querySelector('.plan-list')) return;
@@ -3686,7 +3706,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       // bzw. ein Punkt ohne eigene Kernbegriffe schon dran
       const later = covered.slice(i + 1).some(Boolean);
       const todo = plan.kind === 'todos';
-      const done = covered[i] || (!plan.fixed && (i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has))
+      const done = covered[i] || (plan.kind === 'todos' && i < (plan.progress || 0)) || (!plan.fixed && (i === 0 || !it.terms.length) && later) || (final && !it.terms.length && text.length > 200) || (final && it.terms.some(has))
         || (todo && final && !signal.aborted && text.length > 200); // To-dos: Antwort ganz fertig → Arbeit erledigt
       const state = done ? 'done' : !final && (answerR || todo) && !active ? ((active = true), 'active') : 'todo';
       if (state === it.state) return;
@@ -4064,7 +4084,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st.title = seg.title;
         if (seg.title && !st.done) { // erst zeigen, wenn der Titel fertig geschrieben ist (kurz ruhig) – sonst flackert er Wort für Wort
           clearTimeout(st.titleT); const tt = seg.title;
-          st.titleT = setTimeout(() => { if (st.title !== tt) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
+          st.titleT = setTimeout(() => { if (st.title !== tt) return; todoOnThought(tt); liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
         }
         if (st.done) st.head.textContent = seg.title;
         else st.head.innerHTML = `<span class="shimmer">${escapeHtml(seg.title)}</span>`;
