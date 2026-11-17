@@ -44,6 +44,9 @@ function activateTab(tab) {
   if (tab.hidden) { tab.hidden = false; saveChats(); } // geschlossener Chat wird wieder geöffnet
   const prev = tabsEl.querySelector('.tab.active');
   const drop = prev && prev !== tab && isDraft(prev) ? prev : null; // leerer Chat / leeres Dokument wird beim Verlassen verworfen
+  // 17.11.: Chat ohne Antwort (gestartet, aber abgebrochen) wird beim Verlassen ebenfalls gelöscht
+  const unanswered = prev && prev !== tab && !drop && !prev.dataset.view && !runOf(prev) && !chatOf(prev)?.pinned && historyOf(prev).length && !chatAnswered(historyOf(prev)) ? prev : null;
+  if (unanswered) setTimeout(() => { if (unanswered.isConnected && !unanswered.classList.contains('active') && !runOf(unanswered)) deleteChat(unanswered); }, 0);
   // 16.11.: genau EINE Animation beim Wechsel – beim Wiederanzeigen würden sonst die Einblend-Animationen aller Nachrichten/Zeilen darin
   // noch einmal starten (wirkte „doppelt“). Kurz alle inneren Animationen aus; Chat bzw. Ansicht blenden als Ganzes weich ein.
   // 16.11. spät (Nutzer: „buggt, geht mal hoch, mal runter“): früher schaltete .vt-fresh die inneren Animationen 650 ms ab – danach
@@ -4182,14 +4185,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         pictures.finally(() => { endTitle(); const tt = work.head.querySelector('.t'); tt.classList.remove('live'); tt.textContent = secs(); });
       } else endTitle();
       // Abschluss: blauer Haken mit kurzer Zusammenfassung (Schritte, Quellen) – nur, wenn wirklich fertig
-      if (!signal.aborted && !failed && !/```ask/.test(answerR?.text || '') && !work.steps.querySelector('.step.finished')) {
-        const n = work.steps.querySelectorAll(':scope > .step:not([hidden])').length;
-        const used = renderOpts.sources.filter(Boolean).length;
-        const meta = [n ? `${n} ${n === 1 ? 'Schritt' : 'Schritte'}` : '', used ? `${used} ${used === 1 ? 'Quelle' : 'Quellen'}` : ''].filter(Boolean).join(' · ');
-        const fin = stepLine('dot', `<strong>${P('done').sub}</strong>${meta ? ` <span class="t">${meta}</span>` : ''}`);
-        fin.classList.add('finished');
-        markerIcon(fin, 'check-circle', 'done');
-        work.steps.append(fin);
+      if (!signal.aborted && !failed && !/```ask/.test(answerR?.text || '')) {
+        // 17.11.: keine vorgegebene Abschlusszeile („Antwort fertig · 3 Schritte“) mehr – es stehen nur die Schritte da, die die KI selbst beschrieben hat
         // fertig → die Zeitleiste klappt kurz danach weich zu (per Klick wieder auf)
         const w = work.work;
         const collapse = () => setTimeout(() => { if (w.isConnected && !w.classList.contains('collapsed')) toggleWork(w, true); }, 900);
@@ -6299,14 +6296,14 @@ const chatsView = (() => {
 // „+“ in der Chats-Ansicht: neuer leerer Chat
 /* Leere Chats aufräumen (Wunsch 10.11.): Chats, in denen eine Frage steht, aber nie eine Antwort ankam (abgebrochen, Fehler, nur gedacht),
    werden automatisch gelöscht – nicht der offene Chat, nichts was gerade läuft, und erst wenn er ein paar Minuten alt ist. */
+const chatAnswered = (h) => h.some((m) => m.role === 'assistant' && (m.doc || m.images?.length || !['', '(keine Antwort)'].includes(String(m.text || m.content || '').trim())));
 function sweepEmptyChats() {
   const now = Date.now();
   [...tabsEl.querySelectorAll('.tab')].forEach((tab) => {
     if (tab.dataset.view || tab.classList.contains('active') || runOf(tab) || !tab.dataset.cid) return;
     const c = chatOf(tab), h = tabChats.get(tab)?.history || [];
-    if (!h.length || c?.pinned || now - (Number(c?.updated) || now) < 3 * 60 * 1000) return;
-    const answered = h.some((m) => m.role === 'assistant' && (m.doc || m.images?.length || !['', '(keine Antwort)'].includes(String(m.text || m.content || '').trim())));
-    if (!answered) deleteChat(tab);
+    if (!h.length || c?.pinned || now - (Number(c?.updated) || now) < 30 * 1000) return;
+    if (!chatAnswered(h)) deleteChat(tab);
   });
 }
 setTimeout(sweepEmptyChats, 6000);

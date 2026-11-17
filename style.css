@@ -13156,3 +13156,13 @@ html body .ask-panel .ask-opt { min-height: 36px; padding: 4px 6px; gap: 11px; b
 html body .ask-panel .ask-opt.ask-own-row { padding: 4px 6px !important; }
 html body .ask-panel .ask-let { width: 24px; height: 24px; border-radius: 7px; font-size: 12px; }
 html body .ask-panel .ask-own-row .ask-own-in { height: 26px; font-size: 13.5px; }
+
+/* ===== 17.11.: Gedanken nach der Antwort – wie vorher ohne Fläche und ohne Rahmen, nur feine Linien zwischen den Zeilen;
+   gibt es Gedanken der KI, fallen die vorgegebenen Ablauf-Zeilen weg (nur Schritte mit Inhalt wie Quellen bleiben) ===== */
+html body .work:not(.active) .steps { background: none; box-shadow: none; border-radius: 0; margin-top: 6px; }
+html body .work:not(.active) .step { padding: 8px 4px 8px 26px; }
+html body .work:not(.active) .step > .marker { left: 4px; top: 13px; }
+html body .work:not(.active) .step > .marker.ico { left: 3px; top: 13px; }
+@media (hover: hover) { html body .work:not(.active) .step.thought:hover { background: none; } html body .work:not(.active) .step.thought:hover .thought-head { color: var(--text); } }
+html body .work:not(.active):has(.step.thought) .step:not(.thought):not(:has(a, .chips, .plan-list, .ph-src, img)) { display: none; }
+html body .work:not(.active) .step.finished { display: none; }
