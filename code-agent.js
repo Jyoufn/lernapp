@@ -337,6 +337,7 @@ const CodeAgent = (() => {
       </div>
       <div class="cw-stage">
         <div class="cw-view" data-view="files">
+          <label class="cw-find">${icon('f-search', 14)}<input type="search" placeholder="Dateien suchen" aria-label="Dateien suchen"></label>
           <div class="cw-list"></div>
           <button type="button" class="cw-prevbtn">${icon('f-globe', 14)}Vorschau öffnen</button>
         </div>
@@ -358,6 +359,8 @@ const CodeAgent = (() => {
     win.querySelectorAll('.cw-seg button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
     win.querySelector('.cw-prevbtn').addEventListener('click', () => setView('preview'));
     win.querySelectorAll('.cw-list').forEach((l) => l.addEventListener('click', (e) => { const f = e.target.closest('[data-path]'); if (f) { ui.file = f.dataset.path; setView('code'); } }));
+    win.querySelector('.cw-find input').addEventListener('input', (e) => { ui.query = e.target.value.trim().toLowerCase(); renderList(projectFiles()); });
+    win.querySelector('.cw-title').addEventListener('click', (e) => { if (e.target.closest('.cw-reload2')) { ui.sent = ''; preview(true); } });
     win.querySelector('.cw-sb').addEventListener('click', () => { window.setCollapsed?.(!appEl()?.classList.contains('collapsed')); ui.sbWasCollapsed = null; });
     win.querySelector('.cw-reload').addEventListener('click', () => { ui.sent = ''; preview(true); });
     win.querySelector('.cw-openext').addEventListener('click', async () => {
@@ -462,7 +465,8 @@ const CodeAgent = (() => {
     const title = win.querySelector('.cw-title');
     if (ui.view === 'files') title.innerHTML = ''; // 17.11.: oben nur die Suche – kein Chat-Titel, keine Dateizahl
     else if (ui.view === 'code') title.innerHTML = name ? `${fileIcon(name)}<span class="cw-fname">${escapeHtml(name)}</span>` : '';
-    else title.innerHTML = `<span class="cw-fname">${escapeHtml(chatOf(activeTab())?.title || 'Vorschau')}</span>`;
+    else title.innerHTML = `<button type="button" class="icon-btn cw-reload2" aria-label="Neu laden" title="Neu laden">${icon('f-refresh', 14)}</button>${icon('f-globe', 13)}<span class="cw-fname">Vorschau · ${escapeHtml(entryOf(files) || '')}</span>`; // 17.11. (2): Adressleiste oben statt eigener Zeile
+    title.classList.toggle('cw-ispv', ui.view === 'preview');
     const code = win.querySelector('.cw-code');
     const src = files.get(name) ?? '';
     if (code._src !== src || code._name !== name) {

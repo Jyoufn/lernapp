@@ -13295,3 +13295,31 @@ html body .codewin.wide::before { content: ""; position: absolute; z-index: 0; t
 html body .codewin.wide .cw-head { position: relative; z-index: 1; margin: 9px 321px 0 9px; background: none; }
 html body .codewin.wide .cw-view:not([data-view="files"]) { z-index: 1; top: 57px; left: 9px; right: 321px; bottom: 9px; background: none; border-radius: 0 0 11px 11px; overflow: hidden; }
 html body .app.cw-open.cw-wide .codewin { background: var(--sidebar-bg, rgb(14, 14, 14)); }
+
+/* ===== 17.11. (3): Code-Fenster oben wie eine Browserleiste – „‹ Chat“ ohne Kasten, daneben die Adresse (Neu laden + Vorschau · index.html)
+   bzw. der Dateiname in einer flachen Leiste, rechts Code/Vorschau in derselben Höhe; keine eigene Vorschau-Zeile, kein „Im Browser öffnen“ ===== */
+html body .codewin.wide .cw-head { gap: 8px; height: 48px; padding: 0 9px 0 8px; }
+html body .codewin .cw-head .cw-back { height: 30px; padding: 0 8px 0 4px; background: none !important; color: var(--text-3); }
+@media (hover: hover) { html body .codewin .cw-head .cw-back:hover { color: var(--text); } }
+html body .codewin.wide .cw-title { flex: 1; height: 30px; gap: 8px; padding: 0 12px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); color: var(--text-2); font-size: 12.5px; }
+html body .codewin.wide .cw-title.cw-ispv { padding-left: 3px; }
+html body .codewin.wide .cw-title .cw-fname { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+html body .codewin.wide .cw-title .cw-reload2 { flex: none; width: 24px; height: 24px; border-radius: 7px; color: var(--text-3); }
+html body .codewin.wide .cw-title > svg { flex: none; color: var(--text-4); }
+html body .codewin.wide .cw-head > .flex-spacer { display: none; }
+html body .codewin.wide .cw-seg { height: 30px; padding: 2px; border-radius: 9px; background: rgba(255, 255, 255, 0.05); }
+html body .codewin.wide .cw-seg-pill { top: 2px; bottom: 2px; left: 2px; width: calc(50% - 2px); border-radius: 7px; background: rgba(255, 255, 255, 0.08); }
+html body .codewin.wide .cw-seg button { height: 26px; padding: 0 12px; }
+html body .codewin .cw-pvbar { display: none !important; }
+html body .codewin.wide .cw-view[data-view="preview"] .cw-pvstage { border-radius: 0 0 11px 11px; overflow: hidden; }
+/* Dateiliste rechts: oben „Dateien suchen“ als schlichte Zeile (kein Kasten, Klick = tippen), Zeilen wie in der Sidebar */
+html body .cw-find { flex: none; display: flex; align-items: center; gap: 10px; height: 34px; margin: 0 0 6px; padding: 0 10px; color: var(--text-4); cursor: text; }
+html body .cw-find input { flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; background: none; color: var(--text); font: 500 13.5px var(--font-ui, Inter), sans-serif; }
+html body .cw-find input::placeholder { color: var(--text-4); }
+html body .cw-find input::-webkit-search-cancel-button { display: none; }
+html body .codewin .cw-fi { gap: 10px; height: 32px; padding: 0 10px 0 calc(10px + var(--d, 0) * 16px); border-radius: 8px; color: var(--text-2); font: 500 13.5px var(--font-ui, Inter), sans-serif; }
+@media (hover: hover) { html body .codewin .cw-fi:hover { background: rgba(255, 255, 255, 0.04); color: var(--text); } }
+html body .codewin .cw-fi.on { background: rgba(255, 255, 255, 0.07); color: var(--text); }
+html body .codewin .cw-dir { height: 30px; font: 500 13px var(--font-ui, Inter), sans-serif; color: var(--text-3); }
+html body .codewin.wide .cw-prevbtn { display: none; }
+html body .codewin .cw-prevbtn { height: 34px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.05); color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; }
