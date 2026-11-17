@@ -13219,3 +13219,13 @@ html body .codewin:not(.wide) .cw-back { width: 28px; padding: 0; justify-conten
 html body .codewin .cw-head .cw-back { display: inline-flex !important; flex-direction: row !important; align-items: center; height: 28px; }
 html body .codewin .cw-head .cw-back svg { flex: none; }
 html body .codewin:not(.wide) .cw-head .cw-back { display: none !important; }
+
+/* ===== 17.11.: Diktat wie bei Claude – Text grau, bis man stoppt; mittig die Pegel-Welle; Modell/Aufwand und Sprachmodus ausgeblendet ===== */
+.dict-wave { display: none; }
+html body .composer.dictating .dict-wave { display: flex; align-items: center; justify-content: flex-end; gap: 2.5px; flex: 1; min-width: 0; height: 26px; margin: 0 10px; overflow: hidden; -webkit-mask-image: linear-gradient(to right, transparent, #000 22%); mask-image: linear-gradient(to right, transparent, #000 22%); }
+html body .composer.dictating .dict-wave i { flex: none; width: 3px; height: 22px; border-radius: 2px; background: var(--text-2); transform: scaleY(0.12); transition: transform 90ms linear; }
+html body .composer.dictating :is(.model-chip, .eff-chip, .voice-btn, .flex-spacer) { display: none !important; }
+html body .composer.dictating #input { color: var(--text-4); transition: color 200ms ease; }
+html body .composer #input { transition: color 260ms ease; }
+html body .composer.dictating .mic-btn.active { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+@media (prefers-reduced-motion: reduce) { html body .composer.dictating .dict-wave i { transition: none; } }

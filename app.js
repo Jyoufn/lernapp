@@ -696,7 +696,35 @@ function showHint(text) {
   hintTimer = setTimeout(hideListening, 3500);
 }
 
+/* 17.11. (Wunsch „wie bei Claude“): beim Diktieren steht in der Leiste mittig eine Pegel-Welle (statt Modell/Aufwand), der Sprachmodus-Knopf
+   ist weg, das Mikro wird zum Stopp; der Text oben ist grau, bis man stoppt – dann wird er normal. */
+const dictWave = el('div', 'dict-wave');
+dictWave.setAttribute('aria-hidden', 'true');
+dictWave.innerHTML = Array.from({ length: 72 }, () => '<i></i>').join('');
+$('modelChip')?.after(dictWave);
+let waveRaf = 0, waveCtx = null, waveAn = null, waveSrcStream = null;
+function waveTick() {
+  const bars = dictWave.children, n = bars.length;
+  let lv = 0;
+  if (waveAn) { const d = new Uint8Array(waveAn.fftSize); waveAn.getByteTimeDomainData(d); let sum = 0; for (let i = 0; i < d.length; i++) { const v = (d[i] - 128) / 128; sum += v * v; } lv = Math.min(1, Math.sqrt(sum / d.length) * 4.5); }
+  else lv = 0.15 + Math.random() * 0.2; // ohne Mikro-Strom (Sofort-Erkennung): ruhige Bewegung
+  // Welle wandert von rechts nach links: neuer Pegel kommt rechts dazu
+  for (let i = 0; i < n - 1; i++) bars[i].style.transform = bars[i + 1].style.transform;
+  bars[n - 1].style.transform = `scaleY(${Math.max(0.12, lv).toFixed(3)})`;
+  waveRaf = setTimeout(() => requestAnimationFrame(waveTick), 70);
+}
+function waveStart() {
+  clearTimeout(waveRaf);
+  const s = dictRec.stream;
+  if (s && s !== waveSrcStream) {
+    try { const AC = window.AudioContext || window.webkitAudioContext; waveCtx ||= new AC(); waveAn = waveCtx.createAnalyser(); waveAn.fftSize = 512; waveCtx.createMediaStreamSource(s).connect(waveAn); waveSrcStream = s; waveCtx.resume?.(); } catch { waveAn = null; }
+  }
+  waveTick();
+}
+function waveStop() { clearTimeout(waveRaf); [...dictWave.children].forEach((b) => { b.style.transform = ''; }); }
 function setMicUI(active) {
+  composer.classList.toggle('dictating', active);
+  if (active) { waveStart(); setTimeout(() => { if (composer.classList.contains('dictating')) waveStart(); }, 900); } else waveStop(); // Strom kommt erst nach der Freigabe
   micBtn.classList.toggle('active', active);
   micBtn.setAttribute('aria-pressed', String(active));
   const label = active ? 'Sprachaufnahme stoppen' : 'Sprachaufnahme starten';
