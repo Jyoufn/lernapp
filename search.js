@@ -132,7 +132,7 @@ const AppSearch = (() => {
   document.getElementById('sbSearch')?.addEventListener('click', () => open());
 
   /* ---------- Workspaces (höchstens 3) – im Konto gespeichert (workspaces.v1, wird wie der übrige Browser-Speicher übertragen) ---------- */
-  const WS_KEY = 'workspaces.v1', WS_MAX = 3, WS_DOGS = ['general', 'research', 'learn', 'boerse'];
+  const WS_KEY = 'workspaces.v1', WS_MAX = 3, WS_DOGS = ['general', 'research', 'learn'];
   const wsLoad = () => { try { const o = JSON.parse(localStorage.getItem(WS_KEY) || 'null'); if (o?.list?.length) return o; } catch {} return { list: [{ id: 'main', dog: 'general' }], active: 'main' }; };
   let wsData = wsLoad();
   const wsSave = () => { try { localStorage.setItem(WS_KEY, JSON.stringify(wsData)); } catch {} };

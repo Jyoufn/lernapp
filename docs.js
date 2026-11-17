@@ -577,7 +577,7 @@ const Docs = (() => {
   // Chat in Home/Chats (10.11.): eckig-runde Sprechblase mit zwei Zeilen – gleicher Strich und Stil wie das Blatt der Dokumente
   // Chat-Icon (15.11. überarbeitet): gleich hoch wie das Blatt, weich gerundete Blase, kurzer Zipfel links unten, zwei Zeilen
   // 16.11.: weichere, rundere Sprechblase mit sanft geschwungenem Zipfel und drei Punkten (statt Zeilen)
-  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="0 0 18 20" aria-hidden="true"><path class="pg-out" d="M6.4 3.4h5.2a4.9 4.9 0 0 1 4.9 4.9v1.6a4.9 4.9 0 0 1-4.9 4.9H8.4c-1.15 1.35-2.7 2.25-4.45 2.55-.36.06-.57-.35-.34-.62.62-.75.97-1.5 1.05-2.3A4.9 4.9 0 0 1 1.5 9.9V8.3a4.9 4.9 0 0 1 4.9-4.9z"/><circle class="pg-dot" cx="5.7" cy="9.1" r=".95"/><circle class="pg-dot" cx="9" cy="9.1" r=".95"/><circle class="pg-dot" cx="12.3" cy="9.1" r=".95"/></svg>';
+  const CHAT_ICON = '<svg class="lb2-page lb2-chat" width="18" height="20" viewBox="-0.2 -1 16.6 18.4" aria-hidden="true"><path class="pg-out" d="M5.25 13.6A6.1 6.1 0 1 0 2.5 10.9L1.9 14.2z"/></svg>'; // 17.11.: dieselbe runde Sprechblase wie „Chat“ in der App (Linie wie das Dokument-Blatt)
   // Dokument ohne eigenes Icon (10.11.): abgerundetes Blatt mit Titelzeile und Textzeilen – gleicher Strich wie die Chat-Sprechblase
   const PAGE_SHAPE = '<rect class="pg-out" x="1.6" y="1.6" width="12.8" height="16.8" rx="3.2"/><path class="pg-ln" d="M4.8 6.4h4.2M4.8 10h6.4M4.8 13.6h6.4"/>';
   const SIDE_PAGE_ICON = `<svg class="lb2-page sb-page" width="13" height="16" viewBox="0 0 16 20" aria-hidden="true">${PAGE_SHAPE}</svg>`;
@@ -757,6 +757,12 @@ const Docs = (() => {
       menu.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w))}px`;
       menu.style.top = `${down ? r.bottom + 6 : Math.max(8, r.top - 6 - Math.min(h, room))}px`;
       menu.classList.toggle('up', !down);
+      // 17.11.: weich aufklappen (vom Knopf aus, kurz und ruhig)
+      if (menu.animate && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        menu.style.transformOrigin = `${down ? 'top' : 'bottom'} right`;
+        menu.getAnimations().forEach((a) => a.cancel());
+        menu.animate([{ opacity: 0, transform: `translateY(${down ? -4 : 4}px) scale(0.97)` }, { opacity: 1, transform: 'none' }], { duration: 200, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' });
+      }
       menu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) { e.stopPropagation(); onPick(b.dataset.v, b); } };
     }
     const item = (v, label, on, icon = '', cls = '') => `<button type="button" role="menuitem" class="lb2-mi${cls}" data-v="${esc(v)}">${icon}<span>${esc(label)}</span>${on ? `<i class="lb2-tick">${fi('check', 13)}</i>` : ''}</button>`;
@@ -802,9 +808,9 @@ const Docs = (() => {
         // 16.11.: mit Icons wie das Chat-Menü oben links (Umbenennen, Anheften …)
         const FIC = { all: 'stack', chat: 'chat', doc: 'file', any: 'clock', today: 'sun', week: 'calendar', month: 'calendar' };
         const ic = (n) => `<span class="lb2-mic">${fi(n, 14)}</span>`;
-        const html = () => (CH ? '' : `<div class="lb2-ml">Anzeigen</div>${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v, ic(FIC[v]))).join('')}<div class="lb2-msep"></div>`)
-          + `<div class="lb2-ml">Zeitraum</div>${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v, ic(FIC[v]))).join('')}`
-          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<span class="lb2-mic"><i class="lb2-mdot" style="background:${esc(g.c)}"></i></span>`)).join('')}` : '')
+        const html = () => (CH ? '' : `${Object.entries(FILTERS).map(([v, l]) => item(`k:${v}`, l, filter === v, ic(FIC[v]))).join('')}<div class="lb2-msep"></div>`)
+          + `${Object.entries(TIMES).map(([v, l]) => item(`t:${v}`, l, fx.time === v, ic(FIC[v]))).join('')}`
+          + (tags.length ? `<div class="lb2-msep"></div>${tags.map((g) => item(`g:${g.id}`, g.name, fx.tags.has(g.id), `<span class="lb2-mic"><i class="lb2-mdot" style="background:${esc(g.c)}"></i></span>`)).join('')}` : '')
           + `<div class="lb2-msep"></div>${item('p', 'Nur angeheftete', fx.pinned, ic('pin'))}${filtered() ? `<div class="lb2-msep"></div>${item('reset', 'Filter zurücksetzen', false, ic('x'), ' muted')}` : ''}`;
         openMenu(fb, html(), (v) => {
           if (v.startsWith('k:')) { filter = v.slice(2); localStorage.setItem(FKEY, filter); }

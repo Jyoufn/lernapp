@@ -113,7 +113,6 @@ test('Denk-Ablauf je Format: Präsentation, Mindmap, Zeitstrahl haben eigene Sch
   assert.equal(T.formatOf('Mach mir eine Präsentation über Vulkane', 'learn'), 'praesentation');
   assert.equal(T.formatOf('Erstelle eine Mindmap zum demografischen Wandel', 'general'), null); // keine Mindmaps mehr (10.11.)
   assert.equal(T.formatOf('Zeitstrahl zur Deutschen Einheit', 'general'), 'timeline');
-  assert.equal(T.formatOf('Zeig mir das Diagramm von SAP', 'boerse'), null);
   assert.equal(T.of('learn', 'start', 'praesentation').main, 'Ziel verstehen');
   assert.equal(T.of('learn', 'work', 'praesentation').main, 'Präsentation erstellen');
   assert.equal(T.of('learn', 'work', 'praesentation').anim, 'book', 'der Hund bleibt der des Agenten');

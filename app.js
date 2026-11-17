@@ -1083,8 +1083,8 @@ function userBubble(text, cls) {
 const ASK_BLOCK = /```ask\s*([\s\S]*?)(```|$)/;
 /* Agent-Empfehlung der KI (```agent {"agent":"code"}```) – erscheint als Karte zum Wechseln, nicht als Text */
 const AGENT_BLOCK = /```agent(?![\w-])\s*([\s\S]*?)(```|$)/g;
-const AGENT_NAMES = { general: 'Allgemein', research: 'Research', learn: 'Lernen', code: 'Coden', boerse: 'Börse' };
-const AGENT_ROLE = { research: 'Recherche mit Quellen', learn: 'Erklären und Lernen', code: 'Programmieren', boerse: 'Aktien und Planspiel Börse' };
+const AGENT_NAMES = { general: 'Allgemein', research: 'Research', learn: 'Lernen', code: 'Coden' };
+const AGENT_ROLE = { research: 'Recherche mit Quellen', learn: 'Erklären und Lernen', code: 'Programmieren' };
 function parseAgentBlock(text) {
   const m = String(text || '').match(/```agent(?![\w-])\s*([\s\S]*?)```/);
   if (!m) return null;
@@ -1113,7 +1113,6 @@ function agentSuggestCard(msgEl, id) {
 const AGENT_HINTS = {
   code: /(programmier|\bcod(e|en|ing)\b|skript|script|quellcode|\bbug|fehler im code|debug|javascript|typescript|python|\bhtml\b|\bcss\b|\bjava\b|c\+\+|c#|\bsql\b|\bapi\b|\blua\b|roblox studio|unity|godot|\bapp (bauen|programmieren|entwickeln)|website (bauen|programmieren|erstellen)|spiel (programmieren|bauen|entwickeln)|game (programmieren|bauen|entwickeln)|funktion schreiben|kompilier|syntax)/i,
   research: /(recherchier|quellen|studien?\b|wissenschaftlich|belege|forschung|aktuelle (daten|zahlen|lage)|statistik zu|faktencheck|stimmt es, dass)/i,
-  boerse: /(\baktien?\b|-aktie\b|börse|boerse|mein depot|planspiel|\bdax\b|nasdaq|\betf\b|kursziel|stop-?loss|investier|einsteigen|aussteigen|dividende|charts?\b.*(aktie|kurs))/i,
   learn: /(präsentation|praesentation|powerpoint|keynote|\bfolien\b|hausaufgabe|arbeitsblatt|klausur|klassenarbeit|prüfung|lernzettel|abfragen|üben|erklär(e|en)? mir|versteh(e)? (ich )?nicht|schulstoff|lerne?n? für)/i,
 };
 function agentFor(text, current) {
@@ -1874,34 +1873,8 @@ function renderMarkdown(target, text, opts = {}) {
   // Hefteintrag (```heft): nur das, was ins Heft kommt – auf Karopapier, Zeile für Zeile, Formeln schon gesetzt
   target.querySelectorAll('pre:has(code.language-heft)').forEach((pre) => pre.replaceWith(heftFigure(pre.querySelector('code'))));
   target.querySelectorAll('pre:has(code.language-kopie)').forEach((pre) => pre.replaceWith(copyFigure(pre.querySelector('code'))));
-  // Aktienchart (```stock): Kerzen, Umsatz, Zeiträume, Echtzeitkurs – wie in einer Börsen-App (stock-chart.js)
-  target.querySelectorAll('pre:has(code.language-stock)').forEach((pre) => {
-    const raw = pre.querySelector('code').textContent, spec = window.StockChart?.parse(raw);
-    if (!spec) { pre.remove(); return; }
-    // gleicher Chart bleibt beim Weiterschreiben erhalten (kein Neuladen, kein Flackern)
-    const keep = (target._stk ||= new Map());
-    if (!keep.has(raw)) keep.set(raw, tagViz(StockChart.figure(spec), 'stock', raw));
-    pre.replaceWith(keep.get(raw));
-  });
-  // „Meine Käufe“ (```bestand): Übersicht mit Live-Kursen und Empfehlung – Karte bleibt beim Weiterschreiben dieselbe; ```merken: Bestätigung „Notiert …“
-  target.querySelectorAll('pre:has(code.language-bestand)').forEach((pre, i) => {
-    if (i || !window.BoerseBestand) { pre.remove(); return; }
-    pre.replaceWith(target._bstFig ||= BoerseBestand.figure());
-  });
-  target.querySelectorAll('pre:has(code.language-merken)').forEach((pre) => {
-    if (!window.BoerseBestand) { pre.remove(); return; }
-    pre.replaceWith(BoerseBestand.note(pre.querySelector('code').textContent));
-  });
-  // ```depot gibt es nicht mehr (kein Zugriff aufs Planspiel) – alte Blöcke ausblenden
-  target.querySelectorAll('pre:has(code.language-depot)').forEach((pre) => pre.remove());
-
-  // Chancen-Übersicht (```chancen): Kästchen Kaufen / Beobachten / Nicht kaufen (chancen-card.js) – höchstens eine je Antwort
-  target.querySelectorAll('pre:has(code.language-chancen)').forEach((pre, i) => {
-    if (i || !window.ChancenCard) { pre.remove(); return; }
-    const raw = pre.querySelector('code').textContent;
-    if (!target._chnFig || target._chnRaw !== raw) { target._chnFig = ChancenCard.figure(raw); target._chnRaw = raw; }
-    pre.replaceWith(target._chnFig);
-  });
+  // Börse entfernt (17.11.): alte Börsen-Blöcke in gespeicherten Chats ausblenden
+  target.querySelectorAll('pre:is(:has(code.language-stock), :has(code.language-bestand), :has(code.language-merken), :has(code.language-depot), :has(code.language-chancen))').forEach((pre) => pre.remove());
   // Präsentation (```praesentation, Lern-Agent): Folien-Vorschau mit PowerPoint / Keynote / PDF (praesentation.js) – Karte bleibt beim Weiterschreiben
   // ```belege: echte Quellen (vom Server nach der Antwort angehängt) → ersetzen die Quellenliste der Präsentation
   let belege = null;
@@ -2040,7 +2013,6 @@ function illustrationFigure(data) {
 }
 // Grafiken in Dokumenten: aus dem gespeicherten Quelltext neu zeichnen (gleiche Darstellung wie im Chat)
 window.renderDocViz = (kind, raw, host) => {
-  if (kind === 'stock') { const spec = window.StockChart?.parse(raw); return spec ? StockChart.figure(spec) : null; }
   const make = { chart: chartFigure, mindmap: mindmapFigure, timeline: timelineFigure, illustration: illustrationFigure }[kind];
   const data = make && ChatVisuals[kind]?.(String(raw || ''));
   if (!data) return null;
@@ -3757,7 +3729,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   let analyzedNoted = false;
   const noteAnalyze = () => {
     return; // kein eigener Schritt: das Auswerten passiert beim Schreiben (nur echte Schritte zeigen)
-    if (analyzedNoted || agentId === 'research' || agentId === 'boerse') return;
+    if (analyzedNoted || agentId === 'research') return;
     const n = renderOpts.sources.filter(Boolean).length || stages.browsing?.pages?.length || 0;
     if (!n) return;
     analyzedNoted = true;
@@ -3836,27 +3808,6 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         const row = el('div', 'chips img-chips');
         m.thumbs.slice(0, 5).forEach((src) => { const i = document.createElement('img'); i.alt = ''; i.loading = 'lazy'; i.referrerPolicy = 'no-referrer'; i.src = src; i.onerror = () => i.remove(); row.append(i); });
         st.step.append(row);
-      }
-    } else if (s.stage === 'market') {
-      // Börse: aus dem, was wirklich gerechnet wurde, die einzelnen Analyse-Schritte (nur die, die zur Frage gehören)
-      const m = s.meta || {}, n = m.count || 0;
-      const notes = Array.isArray(m.steps) ? m.steps.map(([k, x]) => [k, x || '']) : []; // vom Server: genau die Schritte dieser Frage
-      if (!Array.isArray(m.steps)) {
-      if (m.depot != null) {
-        notes.push(['portfolio', `${m.depot} ${m.depot === 1 ? 'Position' : 'Positionen'}`]);
-      }
-      if (m.indices || m.headlines) notes.push(['market', [m.indices ? `${m.indices} Indizes` : '', m.headlines ? `${m.headlines} Schlagzeilen` : ''].filter(Boolean).join(' · ')]);
-      if (n) notes.push(['charts', `${n} ${n === 1 ? 'Aktie' : 'Aktien'}${m.frames ? ' · Tag, Woche, Monat' : ''}`]);
-      if (m.fundamentals) notes.push(['fundamentals', '']);
-      if (n && (m.mode === 'ideas' || m.mode === 'both')) notes.push(['opportunities', m.radar ? `${m.radar} ${m.radar === 1 ? 'Chance' : 'Chancen'}` : 'gerade keine']);
-      }
-      if (!notes.length) { line.innerHTML = `${P('market').sub} <span class="ph-x">· Kurse gerade nicht erreichbar</span> ${dur}`; st.step.classList.add('warn'); }
-      else {
-        const [k0, x0] = notes.shift();
-        line.innerHTML = `${doneLine(k0, x0)} ${dur}`;
-        let after = st.step;
-        notes.forEach(([k, x]) => { const n2 = stepLine('dot', doneLine(k, x)); after.after(n2); after = n2; });
-        phase(notes.length ? notes[notes.length - 1][0] : k0);
       }
     } else if (s.stage === 'material') {
       const m = s.meta || {}; // Marker bleibt ein Punkt (kein Icon)
@@ -4114,12 +4065,6 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       else if (event === 'web') onWeb(data);
       else if (event === 'webbild') onWebImage(data);
       else if (event === 'deep') onDeep(data);
-      else if (event === 'bestand') { // Bär hat Käufe/Verkäufe eingetragen → eigener Schritt mit dem Ergebnis
-        const a = data.added?.length || 0, so = data.sold?.length || 0, sk = (data.skipped || 0) + (data.unchanged || 0), un = data.unknown?.length || 0;
-        const rm = data.removed?.length || 0;
-        const parts = [data.cleared ? 'Depot geleert' : '', rm ? `${rm} entfernt` : '', a ? `${a} ${a === 1 ? 'Kauf' : 'Käufe'}` : '', so ? `${so} ${so === 1 ? 'Verkauf' : 'Verkäufe'}` : '', sk ? `${sk} schon vorhanden` : '', un ? `${un} nicht erkannt` : ''].filter(Boolean);
-        if (parts.length) { noteStep('saveDepot', parts.join(' · ')); phase('saveDepot'); }
-      }
       else if (event === 'citations') citations = data;
       else if (event === 'thought') onThought(data.text);
       else if (event === 'todos') onTodos(data.items, data.done, data.fixed);
@@ -5853,11 +5798,11 @@ window.AppActions = {
   rename_chat({ title, name } = {}) { const t = title ? findChatTab(title) : activeTab(); if (t && !t.dataset.view && name) setChatTitle(t, String(name).trim().slice(0, 80)); },
   pin_chat({ title, on } = {}) { const t = title ? findChatTab(title) : activeTab(); if (t && !t.dataset.view && (on === undefined || !!chatOf(t).pinned !== !!on)) togglePin(t); },
   delete_chat({ title } = {}) { const t = title ? findChatTab(title) : null; if (t) deleteChat(t); },
-  // Agent wechseln: general | learn | research | code | boerse (oder ein eigener Agent per Name)
+  // Agent wechseln: general | learn | research | code (oder ein eigener Agent per Name)
   switch_agent({ agent } = {}) {
     if (window.PixelDogs?.ONE_AGENT) agent = 'general'; // nur ein Agent (Wunsch 10.11.)
     const q = String(agent || '').toLowerCase().trim(), modes = window.PixelDogs?.MODES || [];
-    const alias = { allgemein: 'general', lernen: 'learn', lern: 'learn', recherche: 'research', coden: 'code', programmieren: 'code', börse: 'boerse', aktien: 'boerse' };
+    const alias = { allgemein: 'general', lernen: 'learn', lern: 'learn', recherche: 'research', coden: 'code', programmieren: 'code' };
     const m = modes.find((x) => x.id === q || x.id === alias[q]) || modes.find((x) => (x.name || '').toLowerCase() === q);
     if (m) window.PixelDogs.select(m.id);
   },

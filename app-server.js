@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'stock-chart.js', 'chancen-card.js', 'praesentation.js', 'lernset.js', 'skills.js', 'boerse-bestand.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'praesentation.js', 'lernset.js', 'skills.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -37,9 +37,6 @@ const linkCache = new Map(); // Link-Vorschauen (/api/link) – je Server-Instan
 const TTS = require('./lib/tts');
 const STORE = require('./lib/store');
 const ACC = require('./lib/accounts');
-const BOERSE = require('./lib/boerse'); // Börsen-Agent: Aktienchart und Echtzeitkurs für den ```stock-Block
-const RADAR = require('./lib/radar');
-const HOLD = require('./lib/holdings'); // „Meine Käufe“ des Börsen-Bären (im Chat genannt, je Konto) // Chancen-Radar (Algorithmus): zur Börseneröffnung per Cron und zwischendurch aus der App
 const WSP = require('./lib/workspaces'); // geteilte Workspaces: teilen, Einladungen annehmen/ablehnen
 const { GEMINI_MODEL, nvidiaKeyOf } = P;
 
@@ -133,14 +130,8 @@ async function accountKeys(store, uid) {
 }
 
 /* ---------- /api/chat: Ablauf steckt in lib/workflow.js ---------- */
-// Was ein Agent zusätzlich braucht (nicht vom Browser setzbar): Börse → gespeicherter Chancen-Radar und „Meine Käufe“ des Kontos
+// Was ein Agent zusätzlich braucht (nicht vom Browser setzbar): (früher Börse; derzeit nichts)
 function withAgentData(body, user) {
-  delete body.radarStore; delete body.holdingsCtl;
-  if (body.agent === 'boerse') {
-    const store = accountStore();
-    Object.defineProperty(body, 'radarStore', { value: store, enumerable: false });
-    if (user?.id && store) Object.defineProperty(body, 'holdingsCtl', { value: { list: () => HOLD.list(store, user.id), book: () => HOLD.book(store, user.id), apply: (c) => HOLD.apply(store, user.id, c) }, enumerable: false });
-  }
   return body;
 }
 async function handleChat(req, res, user = null) {
@@ -1649,7 +1640,6 @@ async function adoptLegacyData(store, uid) {
   } catch (e) { console.log('[Anmeldung] Übernahme alter Daten:', e.message); }
 }
 
-const planspielCleaned = new Set();
 function sameHost(req) { try { return new URL(req.headers.origin).host === req.headers.host; } catch { return false; } }
 function handler(req, res) { return requestKeys.run(deviceKeysOf(req), () => handle(req, res)); }
 async function handle(req, res) {
@@ -1662,15 +1652,6 @@ async function handle(req, res) {
       store = accountStore();
       if (!store) return sendJson(res, 503, { error: 'Der Speicher für Konten ist noch nicht eingerichtet (Upstash Redis in Vercel verbinden).', setup: true });
       if (urlPath.startsWith('/api/auth/')) return await handleAuth(req, res, urlPath, store);
-      // Chancen-Radar per Zeitplan (Vercel-Cron zur Börseneröffnung, oder ein externer Dienst wie cron-job.org): ohne Anmeldung,
-      // aber mit CRON_SECRET (Vercel schickt „Authorization: Bearer …“, extern geht auch ?key=…). Ohne Geheimnis höchstens alle 10 min neu.
-      if (urlPath === '/api/boerse/radar-cron') {
-        const secret = serverEnv().CRON_SECRET, q = new URL(req.url, 'http://x').searchParams;
-        const ok = secret && (req.headers.authorization === `Bearer ${secret}` || q.get('key') === secret);
-        if (secret && !ok) return sendJson(res, 401, { error: 'Nicht erlaubt' });
-        const r = ok ? await RADAR.refresh(store) : await RADAR.latest(store, { maxAgeMs: 10 * 60000 });
-        return sendJson(res, 200, { ok: true, asOf: r.asOf, picks: r.picks.map((p) => `${p.name} (${p.type})`) });
-      }
       // Prüfseite Suche (ohne Anmeldung, nur Treffer-Titel, gedrosselt): welche Suchmaschine liefert vom Server aus brauchbare Treffer?
       if (urlPath === '/api/diag/suche') {
         if (Date.now() - (handle.diagAt || 0) < 3000) return sendJson(res, 429, { error: 'Bitte kurz warten' });
@@ -1763,33 +1744,6 @@ async function handle(req, res) {
     }
     if (req.method === 'POST' && urlPath === '/api/vorschau') { storePreview(await readBody(req, 10 * 1024 * 1024)); return sendJson(res, 200, { ok: true, port: PREVIEW_PORT }); }
     if (req.method === 'POST' && urlPath === '/api/chat') return await handleChat(req, res, user);
-    // Aktienchart im Chat (```stock): Verlauf je Zeitraum und der Kurs in Echtzeit zum Nachladen
-    if (req.method === 'GET' && urlPath === '/api/boerse/chart') { const q = new URL(req.url, 'http://x').searchParams; return sendJson(res, 200, await BOERSE.chartData(q.get('symbol'), q.get('range') || '6M')); }
-    if (req.method === 'GET' && urlPath === '/api/boerse/radar') return sendJson(res, 200, await RADAR.latest(store));
-    // „Meine Käufe“: Übersicht mit Kurs, Plus/Minus und Empfehlung (Karte ```bestand und Hinweise) – reine Rechnung; DELETE nimmt einen Wert aus der Liste
-    if (urlPath === '/api/boerse/bestand') {
-      const q = new URL(req.url, 'http://x').searchParams;
-      if (req.method === 'DELETE' && q.get('symbol')) { await HOLD.apply(store, user.id, { remove: [q.get('symbol')] }); return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: 0 })); }
-      if (req.method === 'GET') return sendJson(res, 200, await HOLD.overview(store, user.id, { maxAgeMs: q.get('fresh') ? 20000 : 120000 }));
-      // Hinzufügen aus der Karte: Aktie, Zeitpunkt, Stückzahl – den Kaufkurs sucht die App zu diesem Zeitpunkt (oder der Nutzer gibt ihn an)
-      if (req.method === 'POST') {
-        const b = await readBody(req, 4000);
-        const symbol = String(b.symbol || '').trim();
-        if (!/^[\w.^=-]{1,20}$/.test(symbol) || !(+b.qty > 0)) return sendJson(res, 400, { error: 'Aktie und Stückzahl angeben.' });
-        let price = +b.price > 0 ? +b.price : null, info = null;
-        if (!price) { try { info = await HOLD.priceAt(symbol, b.at); price = info.price; } catch { return sendJson(res, 400, { error: 'Zu diesem Zeitpunkt gibt es keinen Kurs – bitte den Kaufkurs selbst eintragen.' }); } }
-        await HOLD.apply(store, user.id, { add: [{ symbol, name: b.name || info?.name, qty: +b.qty, price, date: String(b.at || '').slice(0, 16) }] });
-        return sendJson(res, 200, { ...(await HOLD.overview(store, user.id, { maxAgeMs: 0 })), added: { symbol, price, how: info?.how || 'eigener Kurs' } });
-      }
-    }
-    // Aktie suchen (Name, Kürzel, ISIN) – für „Hinzufügen“
-    if (req.method === 'GET' && urlPath === '/api/boerse/search') return sendJson(res, 200, await BOERSE.search(new URL(req.url, 'http://x').searchParams.get('q') || ''));
-    // Chancen-Übersicht für die Karte im Chat (```chancen): NUR der gespeicherte Radar – hier wird nichts neu gerechnet
-    if (req.method === 'GET' && urlPath === '/api/boerse/chancen') return sendJson(res, 200, RADAR.overview(await RADAR.latest(store, { stored: true }).catch(() => null)) || { picks: [] });
-    // Planspiel-Börse-Zugang (Einstellungen → Agenten): verschlüsselt im Konto; zurück kommt nur „verbunden als …“, nie das Passwort
-    // Planspiel-Zugang gibt es nicht mehr (kein Login beim Spiel): früher gespeicherte, verschlüsselte Zugangsdaten einmal löschen
-    if (user && store && !planspielCleaned.has(user.id)) { planspielCleaned.add(user.id); Promise.all(['planspiel', 'planspiel-token', 'planspiel-fail'].map((k) => store.del(`u:${user.id}:${k}`))).catch(() => {}); }
-    if (req.method === 'GET' && urlPath === '/api/boerse/quote') return sendJson(res, 200, await BOERSE.quoteNow(new URL(req.url, 'http://x').searchParams.get('symbol')));
     // Geteilte Workspaces (lib/workspaces.js)
     if (req.method === 'GET' && urlPath === '/api/workspaces') return sendJson(res, 200, await WSP.overview(store, serverEnv(), user.id));
     if (req.method === 'POST' && urlPath.startsWith('/api/workspaces/')) {

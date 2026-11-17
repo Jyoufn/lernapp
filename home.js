@@ -59,44 +59,15 @@ const Home = (() => {
     const when = ago < 3600000 ? 'Gerade eben' : h < 24 ? `Vor ${h} Std.` : `Vor ${Math.round(h / 24)} Tag${Math.round(h / 24) === 1 ? '' : 'en'}`;
     return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-file', svg: d.icon && window.DocIcons?.has(d.icon.name) ? DocIcons.of(d.icon, 16) : `<svg class="lb2-page hm-page" width="14" height="18" viewBox="0 0 16 20" aria-hidden="true">${D.PAGE_SHAPE}</svg>`, title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
   }
-  // Börse: aus dem Zwischenspeicher (höchstens alle 3 Std. neu geholt)
-  function boerseCards() {
-    const c = read(BX_KEY, null); if (!c?.alerts) return [];
-    return c.alerts.map((a) => ({
-      id: `bx:${a.symbol}:${a.day}`, kind: 'boerse', icon: a.up ? 'f-trend' : 'f-alert', alarm: !a.up,
-      title: a.title, when: a.when, desc: a.desc, act: 'Nachfragen',
-      go: () => window.AppActions?.new_chat({ agent: 'boerse', prompt: a.ask, title: a.name }),
-    }));
-  }
-  async function refreshBoerse(force = false) {
-    const c = read(BX_KEY, null);
-    if (!force && c && Date.now() - c.t < BX_EVERY) return false;
-    write(BX_KEY, { ...(c || {}), t: Date.now() }); // sofort merken – kein zweiter Abruf, falls etwas hängt
-    const get = (u) => fetch(u, { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    const [best, ch] = await Promise.all([get('/api/boerse/bestand'), get('/api/boerse/chancen')]);
-    const day = isoOf(new Date()), alerts = [];
-    for (const x of best?.items || []) {
-      if (typeof x.day !== 'number' || !(x.day <= -4 || x.day >= 8)) continue;
-      const up = x.day > 0, name = x.name || x.symbol;
-      alerts.push({ symbol: x.symbol, name, day, up, title: `${name} ${num(x.day)} % heute`, when: 'Mein Depot',
-        desc: up ? 'Ungewöhnlich starker Anstieg' : 'Ungewöhnlich starker Rückgang – lohnt ein Blick',
-        ask: `${name} ist heute ${num(x.day)} % – was ist passiert, und soll ich etwas tun?` });
-    }
-    const pick = (ch?.picks || []).find((p) => p.verdict === 'kaufen' && typeof p.drop === 'number' && Math.abs(p.drop) >= 8);
-    if (pick && !alerts.some((a) => a.symbol === pick.symbol)) {
-      alerts.push({ symbol: pick.symbol, name: pick.name, day, up: false, title: `${pick.name} ${num(-Math.abs(pick.drop))} % in ${pick.dropDays || 5} Tagen`,
-        when: 'Chancen-Radar', desc: 'Starker Rückgang mit Erholungschance', ask: `Der Radar zeigt ${pick.name} nach einem Rückgang als Chance. Wie schätzt du das ein?` });
-    }
-    write(BX_KEY, { t: Date.now(), alerts: alerts.slice(0, 2) });
-    return true;
-  }
+  // Börse entfernt (17.11.)
+  const refreshBoerse = async () => false;
 
   /* ---------- Darstellung ---------- */
   let slot = null, index = 0;
   const dismissed = () => new Set(read(DISMISS_KEY, []));
   function cards() {
     const now = new Date(), gone = dismissed();
-    return [eventCard(now), ...boerseCards(), docCard(now)].filter((c) => c && !gone.has(c.id));
+    return [eventCard(now), docCard(now)].filter((c) => c && !gone.has(c.id));
   }
   function cardHtml(c, i) {
     const tone = c.alarm || c.late ? ' hm-warn' : c.soon ? ' hm-soon' : '';

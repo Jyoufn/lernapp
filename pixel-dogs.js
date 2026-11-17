@@ -830,7 +830,6 @@ const PixelDogs = (() => {
     { id: 'learn', name: 'Lernen' },
     { id: 'research', name: 'Research' },
     { id: 'code', name: 'Coden' },
-    { id: 'boerse', name: 'Börse' },
   ];
   // nicht verfügbare Agenten (ausgegraut) – Coden ist wieder frei (Mini-Apps, MiniMax zuerst)
   const UNAVAILABLE = new Set();
@@ -1264,7 +1263,6 @@ const PixelDogs = (() => {
     research: { icon: 'search', tint: 'rgba(226, 168, 104, 0.08)', text: 'Recherchiert gründlich – nur auf vertrauenswürdigen Seiten.' },
     learn: { icon: 'book', tint: 'rgba(255, 255, 255, 0.05)', text: 'Erklärt Schulstoff verständlich, auch mit deinem Material.' },
     code: { icon: 'terminal', tint: 'rgba(226, 96, 58, 0.09)', text: 'Baut ganze Projekte – Spiele, Websites, Tools – mit Code-Fenster und Vorschau.' },
-    boerse: { icon: 'trend', tint: 'rgba(140, 90, 51, 0.10)', text: 'Nur Aktien: Echtzeitkurse, Charts, Chancen-Radar – wann rein, wann raus fürs Planspiel Börse.' },
   };
   const infoOf = (id) => INFO[id] || INFO_CUSTOM[id] || INFO.general;
   registerCustom(); // eigene Agenten vor dem ersten Zeichnen (gespeicherter Modus kann einer davon sein)
