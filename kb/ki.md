@@ -86,7 +86,7 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Symbole an den Schritten (15.11.)**: fertige Gedanken bekommen ein Icon nach ihrem Oberpunkt (`THOUGHT_ICONS` in `app.js`, ~30 Gruppen: Analyse, Zusammenhang, Ziel,
   Vorbereiten, Beispiel, Karte, Biologie, Börse, Präsentation …); feste Schritte bekommen fertig ein Icon nach ihrem Schlüssel (`STEP_ICONS`/`stepIcon`: Dokumente → Datei,
   Auswerten → Balken, Antwort → Stift, Prüfen → Haken …). Nur Icons `#f-…`, keine Emojis; die KI muss dafür nichts tun (kein Prompt).
-- **To-dos**: kleine Kreise (13 px), erledigt = kleiner Haken, laufender Punkt = Ladekreis (kein Pfeil).
+- **To-dos** (17.11.): kein Kasten mehr – die Punkte gliedern die Zeitleiste; Schritte, die während eines Punkts laufen, hängen darunter (Klick klappt auf). Kopf zeigt den laufenden Punkt + „1/3“. Quellen/Suchen stehen nicht in der Zeitleiste, nur unter der Antwort. Diktat: Mitschrift beim Sprechen mit Lite (Gratis-Kontingent), Endfassung Flash.
 - Hauptstatus (Kopf): `swapText` blendet nur die eigene Text-Animation – NIE `getAnimations().cancel()` auf das Element (sonst bleibt der Schimmer mitten stehen).
 - Antwort mit Denken: der Server meldet `answering` mit `meta.think` → Kopf zeigt gleich „Nachdenken“, der Schreib-Schritt erscheint erst mit dem ersten Text (kein Springen Schreiben → Nachdenken → Schreiben).
 - **Nur echte Schritte**: Keine Zeile für „Verstehen“ (steht nur im Kopf), kein erfundenes „Analysieren“ nach der Suche, keine „Risiko bewerten“-Zeile ohne Rechnung.

@@ -89,7 +89,8 @@ const FadeIcons = (() => {
     mindmap: { b: '<circle cx="4" cy="8" r="2.5"/><rect x="10" y="1.75" width="4.75" height="3.5" rx="1.25"/><rect x="10" y="6.25" width="4.75" height="3.5" rx="1.25"/><rect x="10" y="10.75" width="4.75" height="3.5" rx="1.25"/>', k: '<path d="M6.5 8H10M8 3.5v9M8 3.5h2M8 12.5h2" style="stroke-width:1.3"/>' },
     agent: { b: '<rect x="1.5" y="1.5" width="13" height="13" rx="4"/>', c: '<rect x="5.25" y="5" width="1.75" height="4" rx=".875"/><rect x="9" y="5" width="1.75" height="4" rx=".875"/>' },
     // für Termine (Kalender)
-    'book-open': { b: '<path d="M1.5 3.4c2.3-.7 4.4-.4 5.85.75v9.5c-1.45-1-3.55-1.3-5.85-.65z"/><path d="M14.5 3.4c-2.3-.7-4.4-.4-5.85.75v9.5c1.45-1 3.55-1.3 5.85-.65z"/>' },
+    // 17.11.: runder Linien-Stil wie die übrigen Linien-Icons (vorher gefülltes Buch)
+    'book-open': { k: '<path d="M8 4.5C6.95 3.6 5.55 3.15 3.85 3.15c-.95 0-1.6.6-1.6 1.45v6.55c0 .8.6 1.35 1.4 1.35 1.65 0 3.05.45 4.35 1.4 1.3-.95 2.7-1.4 4.35-1.4.8 0 1.4-.55 1.4-1.35V4.6c0-.85-.65-1.45-1.6-1.45-1.7 0-3.1.45-4.15 1.35Z"/><path d="M8 4.5v8.9"/>' },
     sun: { b: '<circle cx="8" cy="8" r="3.1"/>' + [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="7.25" y=".6" width="1.5" height="2.5" rx=".75" transform="rotate(${a} 8 8)"/>`).join('') },
     moon: { b: '<path d="M13.7 10.15a.55.55 0 0 1 .65.72A6.75 6.75 0 1 1 5.13 1.65a.55.55 0 0 1 .72.65A5.5 5.5 0 0 0 13.7 10.15z"/>' },
     coffee: { b: '<path d="M2 5.25h9.25v4.5a3.75 3.75 0 0 1-3.75 3.75H5.75A3.75 3.75 0 0 1 2 9.75z"/>', k: '<path d="M11.25 6.5h.9a1.75 1.75 0 0 1 0 3.5h-.9M5 1.75v1.5M8.25 1.75v1.5"/>' },

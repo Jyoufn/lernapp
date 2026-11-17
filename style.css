@@ -13253,3 +13253,45 @@ html body .composer.dictating .dict-wave { justify-content: space-between; gap: 
 @keyframes va-wave-out2 { to { opacity: 0; transform: translateY(6px); } }
 html body .va-wave.in { animation: va-wave-in2 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 html body .va-wave.out { animation: va-wave-out2 240ms ease forwards; }
+
+/* ===== 17.11. (2): Code-Fenster – Dateiliste bleibt rechts unverändert stehen; Code/Vorschau nehmen den Platz des Chats ein (links),
+   oben links Sidebar-Knopf + „‹ Chat“; keine Dateisuche ===== */
+html body .codewin.wide { background: var(--sidebar-bg, var(--main-bg)); }
+html body .codewin.wide .cw-grip { display: none; }
+html body .codewin.wide .cw-stage { position: static; border-radius: 0; }
+html body .codewin.wide .cw-head { margin-right: 320px; background: var(--main-bg, #181818); border-radius: 0; padding-left: 10px; }
+html body .codewin.wide .cw-view:not([data-view="files"]) { top: 48px; right: 320px; background: var(--main-bg, #181818); }
+html body .codewin.wide .cw-view[data-view="files"] { top: 0; right: 0; left: auto; width: 320px; padding: 10px 8px 8px; opacity: 1; visibility: visible; transform: none; }
+html body .codewin.wide .cw-view[data-view="code"] { border-top: 0; }
+html body .codewin .cw-sb { display: none; }
+html body .codewin.wide .cw-sb { display: inline-grid; place-items: center; width: 28px; height: 28px; }
+html body .codewin .cw-list { padding-top: 0; }
+html body .cw-fi .ca-fic.ln svg { width: 16px; height: 16px; }
+
+/* ===== 17.11. (2): To-dos als Gliederung der Zeitleiste – kein Kasten; jeder Punkt eine Zeile (Ladekreis/Haken), darunter aufklappbar
+   die Schritte, die während dieses Punkts liefen. Im Kopf: laufender Punkt + „1/3“. Quellen/Suchen nicht in der Zeitleiste (stehen unter der Antwort). ===== */
+html body .plan-list.todo { padding: 0; border: 0; background: none; }
+html body .plan-list.todo .plan-item + .plan-item, html body .plan-list.todo .pi-fold + .plan-item { border-top: 0; }
+html body .plan-list.todo .plan-item.pi-group { gap: 10px; padding: 6px 0; font-size: 13.5px; font-weight: 500; color: var(--text-3); cursor: default; }
+html body .plan-list.todo .plan-item.pi-group.has-steps { cursor: pointer; }
+html body .plan-list.todo .plan-item.pi-group[data-state="active"] { color: var(--text); }
+html body .plan-list.todo .plan-item.pi-group[data-state="done"] { color: var(--text-2); }
+@media (hover: hover) { html body .plan-list.todo .plan-item.pi-group.has-steps:hover { color: var(--text); } }
+html body .plan-list.todo .pi-fold { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 280ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease; }
+html body .plan-list.todo .plan-item.open + .pi-fold { grid-template-rows: 1fr; opacity: 1; }
+html body .plan-list.todo .pi-steps { min-height: 0; overflow: hidden; margin-left: 6px; padding-left: 16px; border-left: 1px solid var(--line); }
+html body .plan-list.todo .pi-steps > .step:first-child { margin-top: 2px; }
+html body .work-head .wh-n { flex: none; margin-left: 6px; color: var(--text-4); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+html body .work .steps :is(.ph-src, .dq-list) { display: none !important; }
+html body .work:not(.active) .work-head .wh-n { display: none; }
+html body .plan-list.todo .pi-steps { padding: 2px 0 6px; }
+html body .plan-list.todo .pi-steps .step::before { display: none; }
+/* Datei-Karte im Chat ruhiger: schmaler, rechts nur ein Pfeil statt „Öffnen“-Knopf */
+html body .ca-step.ca-card { max-width: 440px; }
+html body .ca-step.ca-card .ca-go { width: 24px; padding: 0; justify-content: center; background: none; color: var(--text-4); font-size: 0; }
+html body .ca-step.ca-card .ca-go::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; border-radius: 1px; transform: rotate(-45deg); }
+/* Code/Vorschau im selben abgerundeten Kasten wie sonst der Chat (Abstand 8 px, Rand), rechts daneben die Dateiliste auf Sidebar-Ebene */
+html body .codewin.wide::before { content: ""; position: absolute; z-index: 0; top: 8px; left: 8px; bottom: 8px; right: 320px; border: 1px solid rgb(29, 29, 29); border-radius: 12px; background: rgb(20, 20, 20); pointer-events: none; }
+html body .codewin.wide .cw-head { position: relative; z-index: 1; margin: 9px 321px 0 9px; background: none; }
+html body .codewin.wide .cw-view:not([data-view="files"]) { z-index: 1; top: 57px; left: 9px; right: 321px; bottom: 9px; background: none; border-radius: 0 0 11px 11px; overflow: hidden; }
+html body .app.cw-open.cw-wide .codewin { background: var(--sidebar-bg, rgb(14, 14, 14)); }

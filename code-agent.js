@@ -55,7 +55,8 @@ const CodeAgent = (() => {
     while (pos < text.length) {
       const nl = text.indexOf('\n', pos);
       const lineEnd = nl < 0 ? text.length : nl;
-      const m = text.slice(pos, lineEnd).match(OPEN);
+      const ln = text.slice(pos, lineEnd);
+      const m = ln.match(OPEN) || ln.match(/^(`{3,})(?:html?|widget|css|scss|js|javascript|mjs|jsx|ts|tsx|typescript|py|python|java|cpp|cs|go|rs|rust|php|rb|swift|kt|lua|luau|sql|sh|bash|json|vue|svelte|dart)\s*$/i); // 17.11. (2): auch normale Code-Blöcke (werden zu Dateien) am Stück zeigen
       if (m) {
         const close = new RegExp(`\n\`{${m[1].length},}[ \t]*(?=\n|$)`, 'g');
         close.lastIndex = lineEnd;
@@ -88,7 +89,7 @@ const CodeAgent = (() => {
     const conv = (all, lang, body, closed) => {
       if (!lang) lang = guess(body);
       const base = LANG_FILE[String(lang).toLowerCase()];
-      if (!base || body.split('\n').length < MIN_LINES) return all;
+      if (!base || (closed && body.split('\n').length < MIN_LINES)) return all; // 17.11. (2): offener Block gleich als Datei (kein kurzes Aufblitzen als Code im Chat)
       let name = NAME_LINE.exec(body.split('\n')[0] || '')?.[1];
       if (!name) { const n = (used.get(base) || 0) + 1; used.set(base, n); name = n === 1 ? base : base.replace(/(\.[^.]+)$/, `-${n}$1`); }
       return `\`\`\`\`file:${name}\n${body}${closed ? '\n````' : ''}`;
@@ -103,10 +104,11 @@ const CodeAgent = (() => {
     };
     text = String(text || '')
       .replace(/^```widget[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, body) => widget(body, true) ?? all)
-      .replace(/^```widget[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, body) => (body.split('\n').length >= 2 ? widget(body, false) ?? all : all));
+      .replace(/^```widget[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, body) => widget(body, false) ?? '````file:index.html\n');
     return String(text || '')
       .replace(/^```([\w+#-]*)[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, lang, body) => conv(all, lang, body, true))
-      .replace(/^```([\w+#-]+)[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, lang, body) => conv(all, lang, body, false)); // wird gerade geschrieben
+      .replace(/^```([\w+#-]+)[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, lang, body) => conv(all, lang, body, false)) // wird gerade geschrieben
+      .replace(/^```(html?|widget)[ \t]*$(?![\s\S]*\n)/m, () => '````file:index.html\n'); // nur die Startzeile da
   }
   const has = (text) => /^`{3,}(?:file:|(?:terminal|check|read|plan|run)\s*$)/m.test(String(text || ''));
 
@@ -115,23 +117,27 @@ const CodeAgent = (() => {
   const GLYPH = { html: ['g-html', '&lt;&gt;'], htm: ['g-html', '&lt;&gt;'], css: ['g-css', '#'], scss: ['g-css', '#'], json: ['g-json', '{}'], md: ['g-md', 'M↓'], py: ['g-py', 'py'] };
   const BOX = { js: ['b-js', 'JS'], mjs: ['b-js', 'JS'], cjs: ['b-js', 'JS'], jsx: ['b-js', 'JS'], ts: ['b-ts', 'TS'], tsx: ['b-ts', 'TS'] };
   // 17.11.: Datei-Icons im runden Linien-Stil der App (Strich 1,5), je Art leicht eingefärbt – wie in Glass
-  const FI = (c, d) => `<span class="ca-fic ln" style="color:${c}"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg></span>`;
-  const CHEV = '<path d="M5.25 4.75 2 8l3.25 3.25M10.75 4.75 14 8l-3.25 3.25"/>';
-  const BRACE = '<path d="M5.5 2.75c-1.4 0-2 .6-2 1.9v1.5c0 .9-.45 1.6-1.25 1.85.8.25 1.25.95 1.25 1.85v1.5c0 1.3.6 1.9 2 1.9M10.5 2.75c1.4 0 2 .6 2 1.9v1.5c0 .9.45 1.6 1.25 1.85-.8.25-1.25.95-1.25 1.85v1.5c0 1.3-.6 1.9-2 1.9"/>';
-  const HASH = '<path d="M6.25 2.75 5 13.25M11 2.75 9.75 13.25M3 6h10.5M2.5 10h10.5"/>';
-  const TERM = '<path d="m3 4.75 3.25 3.25L3 11.25M8.5 11.75H13"/>';
-  const PIC = '<rect x="2.25" y="2.75" width="11.5" height="10.5" rx="2.5"/><circle cx="6" cy="6.25" r="1.1"/><path d="m2.75 11.25 3.1-3 2.4 2.2 1.7-1.5 3.3 3"/>';
-  const DOC = '<rect x="3" y="1.75" width="10" height="12.5" rx="2.5"/><path d="M5.75 5.5h3.5M5.75 8h4.5M5.75 10.5h4.5"/>';
+  // 17.11. (2): Blatt mit umgeknickter Ecke im runden Linien-Stil, darin klein das Zeichen der Sprache – Blatt und Zeichen in der Farbe der Art
+  const PAGE = '<path d="M9 1.75H5.25a2 2 0 0 0-2 2v8.5a2 2 0 0 0 2 2h5.5a2 2 0 0 0 2-2V5.5Z"/><path d="M9 1.9v2.35a1.25 1.25 0 0 0 1.25 1.25h2.35"/>';
+  const G = {
+    html: '<path d="m6.6 8.4-1.3 1.35 1.3 1.35M9.4 8.4l1.3 1.35-1.3 1.35"/>',
+    css: '<path d="M7 8.1 6.4 11.6M9.4 8.1l-.6 3.5M5.6 9.1h4.8M5.4 10.6h4.8"/>',
+    js: '<path d="M7 8.2c-.6 0-.9.3-.9.9v.25c0 .3-.15.5-.45.6.3.1.45.3.45.6v.25c0 .6.3.9.9.9M9 8.2c.6 0 .9.3.9.9v.25c0 .3.15.5.45.6-.3.1-.45.3-.45.6v.25c0 .6-.3.9-.9.9"/>',
+    term: '<path d="m5.9 8.5 1.4 1.25-1.4 1.25M8.6 11.1h1.6"/>',
+    pic: '<circle cx="6.6" cy="8.6" r=".7"/><path d="m5.4 11.6 1.8-1.6 1.2 1 1-.8 1.3 1.3"/>',
+    doc: '<path d="M6 8.6h4M6 10.9h2.8"/>',
+  };
+  const FI = (c, g) => `<span class="ca-fic ln" style="color:${c}"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${PAGE}${g}</svg></span>`;
   function fileIcon(p) {
     const e = ext(p);
-    if (/^html?$/.test(e)) return FI('#e8865c', CHEV);
-    if (/^(css|scss|sass|less)$/.test(e)) return FI('#6bb0d7', HASH);
-    if (/^(js|mjs|cjs|jsx)$/.test(e)) return FI('#e2c45c', BRACE);
-    if (/^(ts|tsx)$/.test(e)) return FI('#5f9ee8', BRACE);
-    if (/^(json|ya?ml|toml)$/.test(e)) return FI('#b8a8e8', BRACE);
-    if (/^(py|sh|bash|rb|php|go|rs|java|kt|swift|c|cpp|cs|lua|luau|dart)$/.test(e)) return FI('#7db993', TERM);
-    if (/^(png|jpe?g|gif|webp|svg|ico|avif)$/.test(e)) return FI('#cb88ab', PIC);
-    return FI('var(--text-3)', DOC);
+    if (/^html?$/.test(e)) return FI('#e8865c', G.html);
+    if (/^(css|scss|sass|less)$/.test(e)) return FI('#6bb0d7', G.css);
+    if (/^(js|mjs|cjs|jsx)$/.test(e)) return FI('#e2c45c', G.js);
+    if (/^(ts|tsx)$/.test(e)) return FI('#5f9ee8', G.js);
+    if (/^(json|ya?ml|toml)$/.test(e)) return FI('#b8a8e8', G.js);
+    if (/^(py|sh|bash|rb|php|go|rs|java|kt|swift|c|cpp|cs|lua|luau|dart)$/.test(e)) return FI('#7db993', G.term);
+    if (/^(png|jpe?g|gif|webp|svg|ico|avif)$/.test(e)) return FI('#cb88ab', G.pic);
+    return FI('var(--text-3)', G.doc);
   }
 
   const folderIcon = () => `<span class="ca-fic dir">${icon('f-folder', 14)}</span>`;
@@ -306,7 +312,6 @@ const CodeAgent = (() => {
   const ui = { file: null, view: 'files', open: false, query: '', sent: '' };
   const WIDTH_KEY = 'code.width';
   const appEl = () => document.getElementById('app');
-  const searchBox = (cls) => `<label class="cw-search ${cls}">${icon('f-search', 13)}<input type="search" placeholder="Dateien suchen" aria-label="Dateien suchen"></label>`;
   function mount() {
     if (win) return;
     btn = el('button', 'icon-btn ca-btn', icon('f-codewin', 16));
@@ -323,6 +328,7 @@ const CodeAgent = (() => {
     win.setAttribute('aria-label', 'Code-Fenster');
     win.innerHTML = `<div class="cw-grip" role="separator" aria-orientation="vertical" aria-label="Breite des Code-Fensters ändern" title="Ziehen: Breite ändern · Doppelklick: Standard"><i></i></div>
       <div class="cw-head">
+        <button type="button" class="icon-btn cw-sb" aria-label="Sidebar ein-/ausklappen" title="Sidebar ein-/ausklappen"><svg width="16" height="16"><use href="#i-sidebar"/></svg></button>
         <button type="button" class="icon-btn cw-back" aria-label="Zurück zum Chat" title="Zurück zum Chat">${icon('f-back', 14)}<span class="cw-back-l">Chat</span></button>
         <span class="cw-title"></span><span class="flex-spacer"></span>
         <div class="cw-seg" role="tablist"><span class="cw-seg-pill" aria-hidden="true"></span>
@@ -331,13 +337,11 @@ const CodeAgent = (() => {
       </div>
       <div class="cw-stage">
         <div class="cw-view" data-view="files">
-          ${searchBox('')}
           <div class="cw-list"></div>
           <button type="button" class="cw-prevbtn">${icon('f-globe', 14)}Vorschau öffnen</button>
         </div>
         <div class="cw-view" data-view="code">
           <div class="cw-code"></div>
-          <nav class="cw-tree" aria-label="Dateien">${searchBox('small')}<div class="cw-list"></div></nav>
         </div>
         <div class="cw-view" data-view="preview">
           <div class="cw-pvbar"><button type="button" class="icon-btn cw-reload" aria-label="Neu laden" title="Neu laden">${icon('f-refresh', 14)}</button>
@@ -354,11 +358,7 @@ const CodeAgent = (() => {
     win.querySelectorAll('.cw-seg button').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
     win.querySelector('.cw-prevbtn').addEventListener('click', () => setView('preview'));
     win.querySelectorAll('.cw-list').forEach((l) => l.addEventListener('click', (e) => { const f = e.target.closest('[data-path]'); if (f) { ui.file = f.dataset.path; setView('code'); } }));
-    win.querySelectorAll('.cw-search input').forEach((inp) => inp.addEventListener('input', (e) => {
-      ui.query = e.target.value.trim().toLowerCase();
-      win.querySelectorAll('.cw-search input').forEach((o) => { if (o !== inp) o.value = e.target.value; });
-      renderList(projectFiles());
-    }));
+    win.querySelector('.cw-sb').addEventListener('click', () => { window.setCollapsed?.(!appEl()?.classList.contains('collapsed')); ui.sbWasCollapsed = null; });
     win.querySelector('.cw-reload').addEventListener('click', () => { ui.sent = ''; preview(true); });
     win.querySelector('.cw-openext').addEventListener('click', async () => {
       if (typeof runOf === 'function' && runOf(activeTab())) { showHint('Der Agent programmiert noch – gleich fertig'); return; }

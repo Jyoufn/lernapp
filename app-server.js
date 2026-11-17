@@ -1360,8 +1360,8 @@ async function handleTranscribe(req, res) {
   if (!env.GEMINI_API_KEY) return sendJson(res, 200, { text: '' });
   const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n` : ''}${partial ? 'Der Sprecher redet noch weiter – der letzte Satz kann unfertig sein: dort keinen Schlusspunkt setzen.\n' : ''}Schreibe die Aufnahme wörtlich mit.`;
   // 17.11.: schnell – laufend die Lite-Modelle, am Ende ein starkes; ohne Nachdenken (Mitschrift braucht keins); drei Versuche
-  // 17.11.: auch die laufende Mitschrift mit dem starken Flash-Modell (Lite schrieb während des Sprechens zu ungenau mit); Lite nur als Ersatz
-  const models = [...new Set([...(await P.ladder(env, 'text')).slice(0, 2), ...(await P.ladder(env, 'lite')).slice(0, 1)])];
+    // 17.11. (2): Flash ist im Gratis-Kontingent schnell aufgebraucht → laufende Mitschrift mit Lite (eigenes, größeres Kontingent), nur das Endergebnis mit Flash
+  const models = [...new Set([...(await P.ladder(env, partial ? 'lite' : 'text')).slice(0, 2), ...(await P.ladder(env, partial ? 'text' : 'lite')).slice(0, 2)])];
   for (const model of models) {
     try {
       const thinking = model.startsWith('gemini-2.5') ? { budget: 0 } : { level: 'minimal' };

@@ -1212,7 +1212,11 @@ agentHint.addEventListener('click', (e) => {
 function stripAskBlock(text) { return text.replace(ASK_BLOCK, '').trimEnd(); }
 /* Vorschläge für den nächsten Schritt (```weiter, nur nach der ersten Frage im Chat): nie als Text zeigen – auch nicht halb geschrieben */
 const NEXT_BLOCK = /\n?```weiter[\s\S]*?(?:```|$)/g;
-function stripNext(text) { return String(text || '').replace(NEXT_BLOCK, '').replace(/\n?`{1,3}(w(e(i(t(e(r)?)?)?)?)?)?$/, ''); }
+// 17.11. (2): ein „```“ am Ende, das einen offenen Code-Block SCHLIESST, bleibt stehen (sonst hing die Datei-Karte auf „wird geschrieben …“)
+function stripNext(text) {
+  const t = String(text || '').replace(NEXT_BLOCK, '');
+  return t.replace(/\n?`{1,3}(w(e(i(t(e(r)?)?)?)?)?)?$/, (m) => (/^\n?```$/.test(m) && ((t.slice(0, -m.length).match(/^`{3,}/gm) || []).length % 2) ? m : ''));
+}
 function parseNext(text) {
   const m = /```weiter\s*([\s\S]*?)```/.exec(String(text || ''));
   if (!m) return [];
@@ -2784,6 +2788,8 @@ function createWork() {
   return { work, steps, head };
 }
 
+// 17.11. (2): vor einem Schritt einfügen, der evtl. unter einen To-do-Punkt gewandert ist (dort einfügen statt Fehler)
+function stepBefore(steps, step, ref) { if (ref?.parentElement) ref.parentElement.insertBefore(step, ref); else steps.append(step); }
 function stepLine(markerType, html) {
   const step = el('div', 'step');
   const marker = el('span', `marker ${markerType === 'spin' ? '' : 'dot'}`);
@@ -3595,6 +3601,36 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const PLAN_STOP = new Set(['erklären', 'erklärung', 'beispiel', 'beispiele', 'bedeutung', 'überblick', 'zusammenhang', 'zusammenhänge', 'wichtige', 'wichtigsten', 'verschiedene', 'einfach', 'kurze', 'kurzer',
     'definition', 'definitionen', 'grundkonzept', 'grundkonzepte', 'konzept', 'einleitung', 'einführung', 'grundlagen', 'grundidee', 'begriff', 'begriffe', 'begriffsklärung', 'zusammenfassung', 'fazit', 'ausblick', 'hintergrund', 'merkmale', 'aspekte', 'funktion', 'funktionen', 'funktionsweise', 'entwicklung', 'vorteile', 'nachteile']);
   const planTerms = (p) => [...new Set(String(p).toLowerCase().split(/[^a-zäöüß0-9]+/).filter((w) => w.length >= 5 && !PLAN_STOP.has(w)))];
+  /* 17.11. (2): To-dos sind die Gliederung der Zeitleiste – jeder Punkt eine Zeile; was die KI tut, während ein Punkt läuft, wandert
+     als Schritte UNTER diesen Punkt (Klick auf den Punkt klappt sie auf/zu). Oben im Kopf steht der laufende Punkt mit „1/3“. */
+  const todoGroup = (row) => {
+    row.classList.add('pi-group');
+    const fold = el('div', 'pi-fold'), inner = el('div', 'pi-steps');
+    fold.append(inner);
+    row.after(fold);
+    row._steps = inner;
+    row.addEventListener('click', (e) => { e.stopPropagation(); if (inner.children.length) row.classList.toggle('open'); });
+    if (!plan.obs && work) {
+      plan.obs = new MutationObserver((ml) => ml.forEach((m) => m.addedNodes.forEach((n) => {
+        if (!(n instanceof HTMLElement) || !n.classList.contains('step') || n.classList.contains('todo-step') || plan.kind !== 'todos') return;
+        const it = plan.items.find((x) => x.state === 'active') || [...plan.items].reverse().find((x) => x.state === 'done') || plan.items[0];
+        if (it?.row._steps) { it.row._steps.append(n); it.row.classList.add('has-steps'); }
+      })));
+      plan.obs.observe(work.steps, { childList: true });
+    }
+  };
+  const todoHead = () => {
+    if (plan.kind !== 'todos' || !plan.items.length || !work) return;
+    const i = plan.items.findIndex((x) => x.state === 'active');
+    const cur = plan.items[i >= 0 ? i : plan.items.length - 1];
+    const done = plan.items.filter((x) => x.state === 'done').length;
+    let n = work.head.querySelector('.wh-n');
+    if (!n) { n = el('span', 'wh-n'); work.head.querySelector('.work-title').after(n); }
+    n.textContent = `${Math.min(plan.items.length, done + (i >= 0 ? 1 : 0)) || 1}/${plan.items.length}`;
+    const t = cur.row.querySelector('.pi-text').textContent;
+    const wt = work.head.querySelector('.work-title');
+    if (work.work.classList.contains('active') && wt.textContent !== t) { liveThoughtTitle = t; wt.classList.add('sweep'); swapText(wt, t); }
+  };
   const attachPlan = (step, points, kind = '') => {
     if (!points?.length || step.querySelector('.plan-list')) return;
     msgEl._plan = points.slice(0, 12);
@@ -3606,6 +3642,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       row.dataset.state = 'todo';
       list.append(row);
       plan.items.push({ row, terms: planTerms(p), state: 'todo' });
+      if (kind === 'todos') todoGroup(row);
     });
     const fold = el('div', 'fold');
     const inner = el('div', 'fold-in');
@@ -3629,7 +3666,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       if (same) { updatePlan(); return; }
       const list = plan.items[0].row.parentElement;
       list.replaceChildren(); plan.items = [];
-      items.map(String).forEach((p) => { const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(p)}</span>`); row.dataset.state = 'todo'; list.append(row); plan.items.push({ row, terms: planTerms(p), state: 'todo' }); });
+      items.map(String).forEach((p) => { const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(p)}</span>`); row.dataset.state = 'todo'; list.append(row); todoGroup(row); plan.items.push({ row, terms: planTerms(p), state: 'todo' }); });
       msgEl._plan = items.map(String).slice(0, 12);
       updatePlan(); return;
     }
@@ -3662,7 +3699,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       it.state = state;
       it.row.dataset.state = state;
       it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 8 : 13) : ''; // To-dos: der laufende Punkt ist ein Ladekreis (style.css), kein Pfeil
+      if (todo && it.row._steps) it.row.classList.toggle('open', state === 'active');
     });
+    todoHead();
     const n = plan.items[0]?.row.closest('.step')?.querySelector('.todo-n');
     if (n) n.textContent = `${plan.items.filter((it) => it.state === 'done').length}/${plan.items.length}`;
   };
@@ -4025,7 +4064,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         step.append(fold);
         st = thought.steps[i] = { step, head, box, title: '', done: false };
         head.addEventListener('click', () => { if (st.done && st.box.textContent) step.classList.toggle('open'); });
-        work.steps.insertBefore(step, stages.answering?.step || null);
+        stepBefore(work.steps, step, stages.answering?.step);
         // der laufende Gedanke steht aufgeklappt da: sein Inhalt erscheint ruhig Wort für Wort unter dem Oberpunkt (Wunsch 10.11.: „zeigt zu wenig“)
         if (!late) { step.classList.add('live'); requestAnimationFrame(() => { if (!st.done) step.classList.add('open'); }); }
       }
@@ -4033,7 +4072,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st.title = seg.title;
         if (seg.title && !st.done) { // erst zeigen, wenn der Titel fertig geschrieben ist (kurz ruhig) – sonst flackert er Wort für Wort
           clearTimeout(st.titleT); const tt = seg.title;
-          st.titleT = setTimeout(() => { if (st.title !== tt) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
+          st.titleT = setTimeout(() => { if (st.title !== tt || (plan.kind === 'todos' && plan.items.length)) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
         }
         if (st.done) st.head.textContent = seg.title;
         else st.head.innerHTML = `<span class="shimmer">${escapeHtml(seg.title)}</span>`;
@@ -4062,7 +4101,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const step = stepLine('spin', `<span class="shimmer">Passendes Bild suchen</span><span class="t live" data-from="${from}">1s</span>`);
       step.classList.add('img-step');
       const w = ensureWork();
-      w.steps.insertBefore(step, stages.answering?.step || null);
+      stepBefore(w.steps, step, stages.answering?.step);
       webImg = { step, from };
       return;
     }
@@ -4074,7 +4113,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const href = /^https:\/\//.test(d.url || d.src || '') ? escapeHtml(safeUrl(d.url || d.src)) : '';
     finishStep(webImg.step, `Bild gefunden${site ? ` <span class="ph-x">· ${href ? `<a class="img-found-link" href="${href}" target="_blank" rel="noopener noreferrer">${site}</a>` : site}</span>` : ''} <span class="t">${secs(webImg.from)}</span>`);
     markerIcon(webImg.step, 'image');
-    work?.steps.insertBefore(webImg.step, stages.answering?.step || null);
+    if (work) stepBefore(work.steps, webImg.step, stages.answering?.step);
   };
   /* Große PDFs: die Seitenbilder (Handschrift, Scans, Folien) entstehen nach dem Anhängen im Hintergrund. Sind sie beim Senden noch nicht
      fertig, wartet die Antwort darauf – sichtbar als Schritt „Dokumente analysieren · 5/18“; die Server-Stufe „Dokumente analysieren“
