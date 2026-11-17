@@ -83,7 +83,10 @@ const CodeAgent = (() => {
   const NAME_LINE = /^\s*(?:\/\/|#|--|<!--|\/\*)\s*(?:datei:\s*|file:\s*)?([\w][\w./-]*\.[a-z0-9]{1,6})\s*(?:-->|\*\/)?\s*$/i;
   function fromFences(text) {
     const used = new Map();
+    const guess = (b) => (/^\s*(<!doctype|<html|<head|<body|<div|<canvas|<script)/i.test(b) ? 'html' : /^\s*(def |import |from \w+ import|print\(|class \w+:)/m.test(b) ? 'py'
+      : /(function\s+\w+\s*\(|const |let |=>|document\.|addEventListener)/.test(b) ? 'js' : /^\s*[.#]?[\w-]+\s*\{[^}]*:[^}]*\}/m.test(b) ? 'css' : '');
     const conv = (all, lang, body, closed) => {
+      if (!lang) lang = guess(body);
       const base = LANG_FILE[String(lang).toLowerCase()];
       if (!base || body.split('\n').length < MIN_LINES) return all;
       let name = NAME_LINE.exec(body.split('\n')[0] || '')?.[1];
@@ -91,7 +94,7 @@ const CodeAgent = (() => {
       return `\`\`\`\`file:${name}\n${body}${closed ? '\n````' : ''}`;
     };
     return String(text || '')
-      .replace(/^```([\w+#-]+)[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, lang, body) => conv(all, lang, body, true))
+      .replace(/^```([\w+#-]*)[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, lang, body) => conv(all, lang, body, true))
       .replace(/^```([\w+#-]+)[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, lang, body) => conv(all, lang, body, false)); // wird gerade geschrieben
   }
   const has = (text) => /^`{3,}(?:file:|(?:terminal|check|read|plan|run)\s*$)/m.test(String(text || ''));
@@ -388,15 +391,20 @@ const CodeAgent = (() => {
   }
   function setOpen(open, view = 'files') {
     mount();
+    const was = ui.open;
     ui.open = open && projectFiles().size > 0;
+    // 17.11.: Code-Fenster auf → Sidebar links zu (Platz für Code/Vorschau); wieder zu → Sidebar wie vorher
+    if (ui.open && !was) { ui.sbWasCollapsed = appEl()?.classList.contains('collapsed'); if (!ui.sbWasCollapsed) window.setCollapsed?.(true); }
+    if (!ui.open && was && ui.sbWasCollapsed === false) { window.setCollapsed?.(false); ui.sbWasCollapsed = null; }
     appEl()?.classList.toggle('cw-open', ui.open);
     btn.classList.toggle('on', ui.open);
     btn.setAttribute('aria-expanded', String(ui.open));
-    if (ui.open) { clampWidth(); setView(view); } else { stopPreview(); appEl()?.classList.remove('cw-wide'); }
+    if (ui.open) { clampWidth(); setView(view); } else { stopPreview(); appEl()?.classList.remove('cw-wide', 'cw-preview'); }
   }
   function setView(v) {
     ui.view = v;
     appEl()?.classList.toggle('cw-wide', ui.open && v !== 'files');
+    appEl()?.classList.toggle('cw-preview', ui.open && v === 'preview'); // Vorschau groß wie im Browser (der Chat bleibt schmal daneben)
     win.classList.toggle('wide', v !== 'files');
     win.querySelector('.cw-seg').dataset.on = v;
     win.querySelectorAll('.cw-seg button').forEach((b) => { b.classList.toggle('on', b.dataset.view === v); b.setAttribute('aria-selected', String(b.dataset.view === v)); });
