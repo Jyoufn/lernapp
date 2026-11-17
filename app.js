@@ -3601,35 +3601,29 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   const PLAN_STOP = new Set(['erklären', 'erklärung', 'beispiel', 'beispiele', 'bedeutung', 'überblick', 'zusammenhang', 'zusammenhänge', 'wichtige', 'wichtigsten', 'verschiedene', 'einfach', 'kurze', 'kurzer',
     'definition', 'definitionen', 'grundkonzept', 'grundkonzepte', 'konzept', 'einleitung', 'einführung', 'grundlagen', 'grundidee', 'begriff', 'begriffe', 'begriffsklärung', 'zusammenfassung', 'fazit', 'ausblick', 'hintergrund', 'merkmale', 'aspekte', 'funktion', 'funktionen', 'funktionsweise', 'entwicklung', 'vorteile', 'nachteile']);
   const planTerms = (p) => [...new Set(String(p).toLowerCase().split(/[^a-zäöüß0-9]+/).filter((w) => w.length >= 5 && !PLAN_STOP.has(w)))];
-  /* 17.11. (2): To-dos sind die Gliederung der Zeitleiste – jeder Punkt eine Zeile; was die KI tut, während ein Punkt läuft, wandert
-     als Schritte UNTER diesen Punkt (Klick auf den Punkt klappt sie auf/zu). Oben im Kopf steht der laufende Punkt mit „1/3“. */
+  /* 17.11. (3): To-dos bleiben der Kasten über der Zeitleiste (die Zeitleiste selbst wie gehabt). Jeder Punkt merkt sich die Schritte,
+     die liefen, während er dran war – Klick auf den Punkt klappt darunter die Liste dieser Schritte auf (zu Beginn alles zu). */
   const todoGroup = (row) => {
     row.classList.add('pi-group');
     const fold = el('div', 'pi-fold'), inner = el('div', 'pi-steps');
     fold.append(inner);
     row.after(fold);
+    row._log = [];
     row._steps = inner;
-    row.addEventListener('click', (e) => { e.stopPropagation(); if (inner.children.length) row.classList.toggle('open'); });
+    row.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (!row._log.length) return;
+      if (!row.classList.contains('open')) inner.innerHTML = row._log.map((st) => `<div class="pi-sub">${escapeHtml(String(stepLabel(st) || st.textContent.trim()).slice(0, 160))}</div>`).join('');
+      row.classList.toggle('open');
+    });
     if (!plan.obs && work) {
       plan.obs = new MutationObserver((ml) => ml.forEach((m) => m.addedNodes.forEach((n) => {
         if (!(n instanceof HTMLElement) || !n.classList.contains('step') || n.classList.contains('todo-step') || plan.kind !== 'todos') return;
         const it = plan.items.find((x) => x.state === 'active') || [...plan.items].reverse().find((x) => x.state === 'done') || plan.items[0];
-        if (it?.row._steps) { it.row._steps.append(n); it.row.classList.add('has-steps'); }
+        if (it?.row._log) { it.row._log.push(n); it.row.classList.add('has-steps'); }
       })));
       plan.obs.observe(work.steps, { childList: true });
     }
-  };
-  const todoHead = () => {
-    if (plan.kind !== 'todos' || !plan.items.length || !work) return;
-    const i = plan.items.findIndex((x) => x.state === 'active');
-    const cur = plan.items[i >= 0 ? i : plan.items.length - 1];
-    const done = plan.items.filter((x) => x.state === 'done').length;
-    let n = work.head.querySelector('.wh-n');
-    if (!n) { n = el('span', 'wh-n'); work.head.querySelector('.work-title').after(n); }
-    n.textContent = `${Math.min(plan.items.length, done + (i >= 0 ? 1 : 0)) || 1}/${plan.items.length}`;
-    const t = cur.row.querySelector('.pi-text').textContent;
-    const wt = work.head.querySelector('.work-title');
-    if (work.work.classList.contains('active') && wt.textContent !== t) { liveThoughtTitle = t; wt.classList.add('sweep'); swapText(wt, t); }
   };
   const attachPlan = (step, points, kind = '') => {
     if (!points?.length || step.querySelector('.plan-list')) return;
@@ -3699,9 +3693,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       it.state = state;
       it.row.dataset.state = state;
       it.row.querySelector('.pi-mark').innerHTML = state === 'done' ? FadeIcons.svg(todo ? 'check' : 'check-circle', todo ? 8 : 13) : ''; // To-dos: der laufende Punkt ist ein Ladekreis (style.css), kein Pfeil
-      if (todo && it.row._steps) it.row.classList.toggle('open', state === 'active');
     });
-    todoHead();
     const n = plan.items[0]?.row.closest('.step')?.querySelector('.todo-n');
     if (n) n.textContent = `${plan.items.filter((it) => it.state === 'done').length}/${plan.items.length}`;
   };
@@ -4072,7 +4064,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
         st.title = seg.title;
         if (seg.title && !st.done) { // erst zeigen, wenn der Titel fertig geschrieben ist (kurz ruhig) – sonst flackert er Wort für Wort
           clearTimeout(st.titleT); const tt = seg.title;
-          st.titleT = setTimeout(() => { if (st.title !== tt || (plan.kind === 'todos' && plan.items.length)) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
+          st.titleT = setTimeout(() => { if (st.title !== tt) return; liveThoughtTitle = tt; const wt = work?.head.querySelector('.work-title'); if (wt && work.work.classList.contains('active')) { wt.classList.add('sweep'); swapText(wt, tt); } }, 260);
         }
         if (st.done) st.head.textContent = seg.title;
         else st.head.innerHTML = `<span class="shimmer">${escapeHtml(seg.title)}</span>`;
