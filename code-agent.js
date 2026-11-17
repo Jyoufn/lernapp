@@ -93,6 +93,17 @@ const CodeAgent = (() => {
       if (!name) { const n = (used.get(base) || 0) + 1; used.set(base, n); name = n === 1 ? base : base.replace(/(\.[^.]+)$/, `-${n}$1`); }
       return `\`\`\`\`file:${name}\n${body}${closed ? '\n````' : ''}`;
     };
+    // 17.11.: Mini-Apps (```widget, z. B. ein Spiel) ebenfalls ins Code-Fenster: jede Ansicht wird eine HTML-Datei (die erste = index.html)
+    const slug = (t) => String(t || 'ansicht').toLowerCase().replace(/[äöüß]/g, (c) => ({ ä: 'ae', ö: 'oe', ü: 'ue', ß: 'ss' }[c])).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'ansicht';
+    const widget = (body, closed) => {
+      const spec = window.CodeBox?.parse ? CodeBox.parse(body) : { views: [{ code: body }] };
+      const views = (spec.views || []).filter((v) => String(v.code || '').trim());
+      if (!views.length) return null;
+      return views.map((v, k) => `\`\`\`\`file:${k ? `${slug(v.name)}.html` : 'index.html'}\n${v.code}${closed || k < views.length - 1 ? '\n````' : ''}`).join('\n\n');
+    };
+    text = String(text || '')
+      .replace(/^```widget[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, body) => widget(body, true) ?? all)
+      .replace(/^```widget[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, body) => (body.split('\n').length >= 2 ? widget(body, false) ?? all : all));
     return String(text || '')
       .replace(/^```([\w+#-]*)[^\n`]*\n([\s\S]*?)\n```[ \t]*$/gm, (all, lang, body) => conv(all, lang, body, true))
       .replace(/^```([\w+#-]+)[^\n`]*\n((?:(?!^```)[\s\S])*)$/m, (all, lang, body) => conv(all, lang, body, false)); // wird gerade geschrieben
@@ -299,7 +310,7 @@ const CodeAgent = (() => {
     win.setAttribute('aria-label', 'Code-Fenster');
     win.innerHTML = `<div class="cw-grip" role="separator" aria-orientation="vertical" aria-label="Breite des Code-Fensters ändern" title="Ziehen: Breite ändern · Doppelklick: Standard"><i></i></div>
       <div class="cw-head">
-        <button type="button" class="icon-btn cw-back" aria-label="Alle Dateien" title="Alle Dateien">${icon('f-back', 14)}</button>
+        <button type="button" class="icon-btn cw-back" aria-label="Zurück zum Chat" title="Zurück zum Chat">${icon('f-back', 14)}<span class="cw-back-l">Chat</span></button>
         <span class="cw-title"></span><span class="flex-spacer"></span>
         <div class="cw-seg" role="tablist"><span class="cw-seg-pill" aria-hidden="true"></span>
           <button type="button" data-view="code" role="tab">${icon('f-codewin', 13)}Code</button><button type="button" data-view="preview" role="tab">${icon('f-globe', 13)}Vorschau</button></div>
