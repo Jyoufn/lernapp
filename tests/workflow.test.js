@@ -650,7 +650,7 @@ test('Verlauf: ältere Antworten gekürzt, Bild-Aufträge bleiben vollständig',
   const msgs = [
     { role: 'user', text: 'Erstelle ein Bild einer Tierzelle' },
     { role: 'assistant', text: `Hier ist das Bild.\n${pic}\n${long}\n${fence}chart\n{"title":"Größen","labels":["a","b"],"values":[1,2]}\n${fence}` },
-    ...Array.from({ length: 10 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: `Nachricht ${i} ${long}` })),
+    ...Array.from({ length: 16 }, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', text: `Nachricht ${i} ${long}` })),
     { role: 'user', text: 'Nutze das als Referenzbild für eine Pflanzenzelle' },
   ];
   const out = W.compactHistory(msgs);

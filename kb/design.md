@@ -151,3 +151,9 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 - Akzentfarbe in Aussehen wie die Farbwahl im Termin: Kreise in einer Reihe, rechts bunter Knopf → `UIKit.colorPicker` darunter, „Übernehmen“ legt die Farbe in die Reihe darunter (`appearance.ownAccents`).
 - Mini-Kalender (`UIKit.miniCalendar`, `.tk-cal`): wie die große Monatsansicht ohne Termine – Wochentag-Pillen, Kacheln mit Zahl oben links, andere Monate ohne Fläche, gewählt = blauer Rand. Aufklapp-Zeilen (`foldRows`): Höhe 400 ms, Inhalt blendet verzögert ein bzw. zuerst aus. Regler „Uhrzeit“ gleitet per WAAPI (Zeile wird neu gezeichnet).
 - **Diagramme/Zeitstrahl/Mindmap im Chat (16.11.)**: alle im Inhalts-Kasten (Fläche `--win-bg`, Rand 6,5 % Weiß, Radius 14, Kopf 15 px/600 mit grauem Icon, Einheit rechts leise). Typ wählt `ChatVisuals.bestType`: Zeit → Linie mit Fläche (Hilfslinien, Endwert am Punkt), Anteile in % (Summe ≈ 100) → Ring, ≤ 8 Werte → Säulen (größter Wert in Akzentfarbe mit Zahl, Rest grau), sonst Rangliste. Farben nur Akzent + Grau (`CHART_RING`). Zeitstrahl = Linie mit Punkten, Datum klein über dem Titel, ohne Kasten je Eintrag. Mindmap: Thema = getönte Kapsel, Äste graue Kapseln, Unterpunkte Text mit Punkt.
+
+## STAND 17.11.
+- Filter (Home/Chats): keine Abschnitts-Überschriften, nur Trennlinien; klappt weich vom Knopf aus auf. Chat-Icon = runde Sprechblase wie „Chat“.
+- Animationen: jede Ansicht/jeder Chat blendet NUR ein (Deckkraft), nichts verschiebt sich; Einstellungen-Schließen animiert nur, wenn sie offen waren; Listen-Zeilen ohne eigene Einblendung; Startseite: Feld steht sofort, alles blendet ein, Hintergrund-Kacheln gruppenweise; Kalender-Kacheln einzeln in zufälliger Reihenfolge (nur Deckkraft).
+- Gedanken nach der Antwort: ohne Fläche/Rahmen, Zeilen mit feinen Linien; mit KI-Gedanken entfallen vorgegebene Ablauf-Zeilen und „Antwort fertig“.
+- Chats ohne Antwort (abgebrochen) werden beim Verlassen gelöscht.
