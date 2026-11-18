@@ -1,114 +1,60 @@
 /* ===================================================================
-   Homescreen-Widgets (18.11.) für iPhone und iPad über die kostenlose App „Scriptable“.
-   Eine Web-App darf auf iOS keine eigenen Widgets anlegen – deshalb erzeugt die App hier ein fertiges Scriptable-Skript mit dem
-   persönlichen Widget-Schlüssel (nur lesen). Ein Skript für alle Widgets; welches Widget es zeigt, steht im Widget-Parameter:
-     kalender  – heute + die nächsten Termine (Farbstreifen wie im Kalender)
-     aufgaben  – offene Aufgaben mit Fälligkeit
-     erstellen – „Frag die KI“: Antippen öffnet eine Eingabe, der Text geht direkt als neuer Chat in die App
-   Aussehen im App-Stil von iOS (Systemschrift, hell/dunkel nach Gerät, runde Ecken, kein eigenes Design der Lern-App).
-   Deep-Links in die App: ?open=calendar · ?open=tasks · ?open=create · ?ask=Text
+   Kurzbefehle (18.11. spät, statt Scriptable): Einstellungen → Kurzbefehle.
+   - Daten-Links mit persönlichem Schlüssel (nur lesen): /api/kurzbefehl?t=…&w=heute|kalender|aufgaben liefert fertigen
+     deutschen Text. In der App „Kurzbefehle“: „Inhalt von URL abrufen“ → „Ergebnis anzeigen“ (oder Siri liest ihn vor).
+   - Öffnen-Links ohne Schlüssel: ?open=calendar · ?open=tasks · ?open=create · ?ask=Text (handleLink unten).
+   iOS öffnet Links aus Kurzbefehlen immer in Safari, nie in der Homescreen-App – das kann eine Web-App nicht ändern.
    =================================================================== */
 const Widgets = (() => {
-  function script(base, token) {
-    return `// Lern-App – Widgets (Kalender · Aufgaben · Erstellen)
-// Widget-Parameter: kalender | aufgaben | erstellen
-const BASE = ${JSON.stringify(base)};
-const TOKEN = ${JSON.stringify(token)};
-const KIND = String(args.widgetParameter || args.queryParameters?.w || 'kalender').toLowerCase().trim();
-
-async function main() {
-// in der App angetippt (Erstellen-Widget): Frage eingeben und als neuen Chat schicken
-if (!config.runsInWidget && (args.queryParameters?.frage || KIND.startsWith('erst'))) {
-  const a = new Alert(); a.title = 'Frag die KI'; a.addTextField('Was möchtest du wissen?', ''); a.addAction('Senden'); a.addCancelAction('Abbrechen');
-  if (await a.presentAlert() === 0) { const q = a.textFieldValue(0).trim(); Safari.open(BASE + (q ? '/?ask=' + encodeURIComponent(q) : '/?open=create')); }
-  return;
-}
-
-const dark = Device.isUsingDarkAppearance();
-const C = { bg: dark ? new Color('#1c1c1e') : new Color('#ffffff'), t1: dark ? new Color('#ffffff') : new Color('#000000'),
-  t2: dark ? new Color('#8e8e93') : new Color('#6c6c70'), red: new Color('#ff3b30'), acc: new Color('#0a84ff'), line: dark ? new Color('#3a3a3c') : new Color('#e5e5ea') };
-const fam = config.widgetFamily || 'medium';
-const w = new ListWidget(); w.backgroundColor = C.bg; w.setPadding(14, 15, 12, 15);
-
-async function data() {
-  try { const r = new Request(BASE + '/api/widget?t=' + encodeURIComponent(TOKEN)); r.timeoutInterval = 12; const j = await r.loadJSON();
-    if (j && !j.error) { Keychain.set('lernapp.widget', JSON.stringify(j)); return j; } }
-  catch (e) {}
-  try { return JSON.parse(Keychain.get('lernapp.widget')); } catch (e) { return { events: [], tasks: [], today: '' }; } // offline: letzter Stand
-}
-const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-const label = (s) => { const t = new Date(), m = new Date(); m.setDate(m.getDate() + 1); if (s === iso(t)) return 'Heute'; if (s === iso(m)) return 'Morgen';
-  const d = new Date(s + 'T12:00:00'); return d.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' }); };
-const txt = (s, size, color, weight) => { const x = w.addText(s); x.font = weight === 'bold' ? Font.boldSystemFont(size) : weight === 'semi' ? Font.semiboldSystemFont(size) : Font.systemFont(size); x.textColor = color; x.lineLimit = 1; return x; };
-
-if (KIND.startsWith('auf') || KIND.startsWith('todo') || KIND.startsWith('task')) {
-  const d = await data();
-  w.url = BASE + '/?open=tasks';
-  const h = w.addStack(); h.centerAlignContent();
-  const ht = h.addText('Aufgaben'); ht.font = Font.boldSystemFont(15); ht.textColor = C.acc;
-  h.addSpacer(); const hn = h.addText(String(d.openTasks || 0)); hn.font = Font.boldSystemFont(15); hn.textColor = C.t2;
-  w.addSpacer(8);
-  const max = fam === 'small' ? 4 : fam === 'large' ? 11 : 4;
-  const list = (d.tasks || []).slice(0, max);
-  if (!list.length) { w.addSpacer(); txt('Alles erledigt', 13, C.t2); w.addSpacer(); }
-  list.forEach((t) => {
-    const r = w.addStack(); r.centerAlignContent(); r.spacing = 8;
-    const c = r.addImage(SFSymbol.named('circle').image); c.imageSize = new Size(15, 15); c.tintColor = C.t2;
-    const tt = r.addText(t.title); tt.font = Font.systemFont(13); tt.textColor = C.t1; tt.lineLimit = 1;
-    if (t.due && fam !== 'small') { r.addSpacer(); const du = r.addText(label(t.due)); du.font = Font.systemFont(11); du.textColor = t.due < iso(new Date()) ? C.red : C.t2; }
-    w.addSpacer(6);
-  });
-  w.addSpacer();
-} else if (KIND.startsWith('erst') || KIND.startsWith('create') || KIND.startsWith('ki')) {
-  w.url = 'scriptable:///run/' + encodeURIComponent(Script.name()) + '?frage=1';
-  const top = w.addStack(); top.centerAlignContent();
-  const ic = top.addImage(SFSymbol.named('sparkles').image); ic.imageSize = new Size(18, 18); ic.tintColor = C.acc;
-  top.addSpacer(6); const tt = top.addText('Erstellen'); tt.font = Font.boldSystemFont(15); tt.textColor = C.t1;
-  w.addSpacer();
-  const box = w.addStack(); box.layoutHorizontally(); box.centerAlignContent(); box.setPadding(9, 11, 9, 11); box.cornerRadius = 12;
-  box.backgroundColor = dark ? new Color('#2c2c2e') : new Color('#f2f2f7');
-  const q = box.addText('Frag die KI …'); q.font = Font.systemFont(13); q.textColor = C.t2; box.addSpacer();
-  if (fam !== 'small') {
-    w.addSpacer(8);
-    const row = w.addStack(); row.spacing = 8;
-    [['Neuer Chat', '/?open=create', 'bubble.left'], ['Kalender', '/?open=calendar', 'calendar'], ['Aufgaben', '/?open=tasks', 'checklist']].forEach(([n, u, s]) => {
-      const b = row.addStack(); b.centerAlignContent(); b.setPadding(5, 8, 5, 8); b.cornerRadius = 9; b.url = BASE + u;
-      b.backgroundColor = dark ? new Color('#2c2c2e') : new Color('#f2f2f7');
-      const im = b.addImage(SFSymbol.named(s).image); im.imageSize = new Size(12, 12); im.tintColor = C.t1; b.addSpacer(4);
-      const bt = b.addText(n); bt.font = Font.mediumSystemFont(11); bt.textColor = C.t1;
-    });
-  }
-} else {
-  const d = await data(), now = new Date();
-  w.url = BASE + '/?open=calendar';
-  const h = w.addStack(); h.layoutVertically();
-  const wd = h.addText(now.toLocaleDateString('de-DE', { weekday: 'long' }).toUpperCase()); wd.font = Font.semiboldSystemFont(11); wd.textColor = C.red;
-  const dn = h.addText(String(now.getDate())); dn.font = Font.lightSystemFont(fam === 'small' ? 30 : 26); dn.textColor = C.t1;
-  w.addSpacer(4);
-  const max = fam === 'small' ? 2 : fam === 'large' ? 9 : 3;
-  const list = (d.events || []).slice(0, max);
-  if (!list.length) txt('Keine Termine', 12, C.t2);
-  list.forEach((e) => {
-    const r = w.addStack(); r.spacing = 7; r.centerAlignContent();
-    const bar = r.addStack(); bar.size = new Size(3, 28); bar.cornerRadius = 1.5; bar.backgroundColor = new Color(e.color || '#0a84ff');
-    const col = r.addStack(); col.layoutVertically();
-    const t = col.addText(e.title); t.font = Font.semiboldSystemFont(12); t.textColor = C.t1; t.lineLimit = 1;
-    const s = col.addText((e.date === d.today ? '' : label(e.date) + ' · ') + (e.time ? e.time + (e.end ? '–' + e.end : '') : 'Ganztägig')); s.font = Font.systemFont(11); s.textColor = C.t2; s.lineLimit = 1;
-    w.addSpacer(5);
-  });
-  w.addSpacer();
-}
-w.refreshAfterDate = new Date(Date.now() + 15 * 60 * 1000);
-if (config.runsInWidget) Script.setWidget(w); else await (fam === 'small' ? w.presentSmall() : w.presentMedium());
-}
-await main();
-Script.complete();
-`;
-  }
-  async function setup(renew = false) {
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  let token = '';
+  async function getToken(renew = false) {
+    if (token && !renew) return token;
     const r = await fetch('/api/widget/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ renew }) });
     const j = await r.json(); if (!j.token) throw new Error(j.error || 'Kein Schlüssel');
-    return script(location.origin, j.token);
+    token = j.token; return token;
+  }
+  const DATA = [['heute', 'Mein Tag', 'Heutige Termine und die wichtigsten Aufgaben', 'f-sun'], ['kalender', 'Meine Termine', 'Die nächsten 14 Tage', 'f-calendar'], ['aufgaben', 'Meine Aufgaben', 'Offene Aufgaben, wichtigste zuerst', 'o-todo']];
+  const OPEN = [['?open=create', 'Neuer Chat', 'f-chat'], ['?open=calendar', 'Kalender öffnen', 'f-calendar'], ['?open=tasks', 'Aufgaben öffnen', 'o-todo']];
+  const ic = (id) => `<svg width="15" height="15" aria-hidden="true"><use href="#${id}"/></svg>`;
+  function page() {
+    return `<h2>Apple Kalender</h2>
+      <p class="st-kb-intro">Empfohlen: Abonniere deine Termine und fälligen Aufgaben in Apple Kalender. Dann zeigen die normalen Apple-Widgets (Kalender, „Als Nächstes“) alles im Apple-Design an, aktualisieren sich von selbst und öffnen beim Antippen nichts Fremdes.</p>
+      <div class="st-card"><div class="st-row"><span class="st-kb-ic">${ic('f-calendar')}</span><span class="st-name">Kalender abonnieren<em class="st-sub">Nur lesen – Änderungen machst du in der Lern-App</em></span><span class="grow"></span><button type="button" class="st-btn" data-ics-copy>Link kopieren</button><button type="button" class="st-btn dark" data-ics>Abonnieren</button></div></div>
+      <ol class="st-wg-steps"><li><b>Abonnieren</b> tippen → „Abonnieren“ bestätigen (Apple Kalender öffnet sich).</li><li>Klappt das nicht: Einstellungen → Kalender → Accounts → Account hinzufügen → Andere → <b>Kalenderabo hinzufügen</b> → kopierten Link einfügen.</li><li>Homescreen lange drücken → <b>+</b> → <b>Kalender</b> → Widget wählen.</li></ol>
+      <h2>Kurzbefehle</h2>
+      <p class="st-kb-intro">Mit der App <b>Kurzbefehle</b> auf iPhone und iPad zeigt Siri, ein Homescreen-Symbol oder das Kurzbefehle-Widget deine Termine und Aufgaben an – ohne die Lern-App zu öffnen.</p>
+      <div class="st-card">${DATA.map(([w, n, sub, i]) => `<div class="st-row"><span class="st-kb-ic">${ic(i)}</span><span class="st-name">${n}<em class="st-sub">${sub}</em></span><span class="grow"></span><button type="button" class="st-btn dark" data-kb="${w}">Link kopieren</button></div>`).join('')}</div>
+      <ol class="st-wg-steps"><li>Oben einen Link kopieren.</li><li>App <b>Kurzbefehle</b> öffnen → <b>+</b> → Aktion <b>„Inhalt von URL abrufen“</b> → Link einfügen.</li>
+        <li>Darunter die Aktion <b>„Ergebnis anzeigen“</b> hinzufügen.</li><li>Oben den Namen geben, z. B. „Meine Termine“ – dann reicht „Hey Siri, meine Termine“. Fürs Homescreen-Symbol: <b>Teilen → Zum Home-Bildschirm</b>.</li></ol>
+      <h2>Lern-App öffnen</h2>
+      <div class="st-card">${OPEN.map(([q, n, i]) => `<div class="st-row"><span class="st-kb-ic">${ic(i)}</span><span class="st-name">${n}</span><span class="grow"></span><button type="button" class="st-btn dark" data-kbo="${esc(q)}">Link kopieren</button></div>`).join('')}</div>
+      <p class="st-kb-intro">Kurzbefehl mit <b>„URL öffnen“</b> und diesem Link. Für „Frag die KI“: zuerst <b>„Nach Eingabe fragen“</b>, dann „URL öffnen“ mit <b>${esc(location.origin)}/?ask=</b> und dahinter die Eingabe. iOS öffnet solche Links in Safari, nicht in der App auf dem Homescreen.</p>
+      <div class="st-card"><div class="st-row"><span class="st-name">Schlüssel erneuern<em class="st-sub">Alte Daten-Links funktionieren danach nicht mehr</em></span><span class="grow"></span><button type="button" class="st-btn" data-kb-renew>Erneuern</button></div></div>`;
+  }
+  const copy = async (btn, text) => {
+    let ok = false; try { await navigator.clipboard.writeText(text); ok = true; } catch {}
+    if (!ok) window.prompt('Link kopieren:', text);
+    const was = btn.textContent; btn.textContent = ok ? 'Kopiert' : was; setTimeout(() => { btn.textContent = 'Link kopieren'; }, 1600);
+  };
+  function click(e) {
+    const ics = e.target.closest('[data-ics], [data-ics-copy]');
+    if (ics) {
+      ics.disabled = true;
+      getToken().then((t) => { const url = `${location.host}/api/kalender.ics?t=${encodeURIComponent(t)}`;
+        if (ics.hasAttribute('data-ics')) location.href = `webcal://${url}`; else return copy(ics, `${location.protocol}//${url}`); })
+        .catch(() => { ics.textContent = 'Fehler'; }).finally(() => { ics.disabled = false; });
+      return true;
+    }
+    const d = e.target.closest('[data-kb]'), o = e.target.closest('[data-kbo]'), rn = e.target.closest('[data-kb-renew]');
+    if (o) { copy(o, location.origin + '/' + o.dataset.kbo); return true; }
+    if (d || rn) {
+      const btn = d || rn; btn.disabled = true;
+      getToken(!!rn).then((t) => { if (d) return copy(d, `${location.origin}/api/kurzbefehl?w=${d.dataset.kb}&t=${encodeURIComponent(t)}`); rn.textContent = 'Erneuert'; })
+        .catch(() => { btn.textContent = 'Fehler'; }).finally(() => { btn.disabled = false; });
+      return true;
+    }
+    return false;
   }
   /* ---------- Deep-Links aus den Widgets ---------- */
   function handleLink() {
@@ -133,6 +79,6 @@ Script.complete();
     setTimeout(wait, 300);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', handleLink); else handleLink();
-  return { setup, script };
+  return { page, click, getToken };
 })();
 window.Widgets = Widgets;

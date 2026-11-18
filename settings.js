@@ -70,7 +70,7 @@
   const app = document.getElementById('app');
   const inner = document.querySelector('.sidebar-inner');
   const panel = document.querySelector('.panel');
-  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten' }; // „Gespeichert“ entfällt (Wunsch 05.11.)
+  const PAGES = { general: 'Allgemein', look: 'Aussehen', agents: 'Agenten', shortcuts: 'Widgets' }; // „Gespeichert“ entfällt (Wunsch 05.11.)
   // Erweiterungen anderer Dateien (code-box.js, chat-bg.js, agent-builder.js): { page, order, html(), click(e, redraw), input(e), change(e) }
   const hooks = (pg) => (window.SettingsHooks || []).filter((h) => !pg || h.page === pg).sort((a, b) => (a.order || 0) - (b.order || 0));
   const hooksHtml = (pg) => hooks(pg).map((h) => { try { return h.html(); } catch { return ''; } }).join('');
@@ -86,7 +86,8 @@
   side.innerHTML = `<button type="button" class="st-back"><svg width="14" height="14"><use href="#o-chev"/></svg><span>Zurück</span></button>
     <a class="st-item" href="#" data-st="general"><svg width="15" height="15"><use href="#o-user"/></svg><span>Allgemein</span></a>
     <a class="st-item" href="#" data-st="look"><svg width="15" height="15"><use href="#o-look"/></svg><span>Aussehen</span></a>
-    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>`;
+    <a class="st-item" href="#" data-st="agents"><svg width="15" height="15"><use href="#o-agent"/></svg><span>Agenten</span></a>
+    <a class="st-item" href="#" data-st="shortcuts"><svg width="15" height="15"><use href="#o-shortcut"/></svg><span>Widgets</span></a>`;
   inner?.append(side);
 
   const view = document.createElement('section');
@@ -328,10 +329,9 @@
         <h2>Daten</h2><div class="st-card">
           <div class="st-row"><span class="st-name">Chats und Dokumente</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
           <div class="st-row"><span class="st-name">Einstellungen und Aufgaben</span><span class="grow"></span><span class="st-muted">Im Konto</span></div>
-          <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Im Konto' : 'Aus .env'}</span></div></div>
-        <h2>Widgets</h2><div class="st-card st-widgets">
-          <div class="st-row"><span class="st-name">Homescreen-Widgets für iPhone und iPad<em class="st-sub">Kalender, Aufgaben und „Frag die KI“ – über die kostenlose App Scriptable</em></span><span class="grow"></span><button type="button" class="st-btn dark" data-widget>Skript kopieren</button></div>
-          <div class="st-wg-help" hidden></div></div>`;
+          <div class="st-row"><span class="st-name">API-Keys</span><span class="grow"></span><span class="st-muted">${onDevice ? 'Im Konto' : 'Aus .env'}</span></div></div>`;
+    } else if (page === 'shortcuts') {
+      body = window.Widgets?.page?.() || '';
     } else if (page === 'look') {
       body = lookPage();
     } else if (page === 'saved') {
@@ -476,21 +476,7 @@
       nb.replaceWith(inp); inp.focus(); inp.select();
       return;
     }
-    const wg = e.target.closest('[data-widget]');
-    if (wg) {
-      wg.disabled = true;
-      window.Widgets?.setup(!!wg.dataset.renew).then(async (code) => {
-        let copied = false; try { await navigator.clipboard.writeText(code); copied = true; } catch {}
-        const help = view.querySelector('.st-wg-help');
-        help.hidden = false;
-        help.innerHTML = `<ol class="st-wg-steps"><li>${copied ? 'Das Skript ist kopiert.' : 'Kopieren ging nicht – unten markieren und kopieren.'}</li><li><b>Scriptable</b> aus dem App Store laden und öffnen, oben rechts <b>+</b>, Skript einfügen, oben den Namen <b>Lern-App</b> geben.</li>
-          <li>Auf dem Homescreen lange drücken → <b>+</b> → <b>Scriptable</b> → Größe wählen → Widget hinzufügen.</li><li>Widget lange drücken → <b>Widget bearbeiten</b>: Script <b>Lern-App</b>, bei <b>Parameter</b> <b>kalender</b>, <b>aufgaben</b> oder <b>erstellen</b> eintragen.</li></ol>
-          ${copied ? '' : `<textarea class="st-wg-code" readonly>${esc(code)}</textarea>`}
-          <button type="button" class="st-btn" data-widget data-renew="1">Neuen Schlüssel erstellen</button>`;
-        wg.textContent = copied ? 'Kopiert' : 'Skript';
-      }).catch((err) => { wg.textContent = 'Fehler'; console.warn(err); }).finally(() => { wg.disabled = false; });
-      return;
-    }
+    if (window.Widgets?.click?.(e, view)) return;
     const lo = e.target.closest('[data-logout]');
     if (lo) { lo.disabled = true; lo.textContent = 'Abmelden …'; window.Auth?.logout(); return; }
     if (wsClick(e)) return;

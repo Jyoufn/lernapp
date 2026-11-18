@@ -7471,10 +7471,11 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 
 /* Vom Home-Bildschirm gestartet (iPad/iPhone): Statusleiste liegt durchsichtig auf dem App-Hintergrund (#141414).
    Die App rückt nur so weit nach unten, wie die Statusleiste hoch ist – minus 6 px, dafür startet die Seitenleiste etwas höher */
+/* 18.11. spät: volle Höhe der Statusleiste frei lassen (sonst ragen Uhrzeit/Akku in die App) und Seitenleiste wie im Browser –
+   Suche und Ein-/Ausklapp-Knopf stehen so auf einer Linie */
 @media (display-mode: standalone) {
-  .app { box-sizing: border-box; padding-top: max(0px, calc(env(safe-area-inset-top) - 6px)); }
-  .sb-head { margin-top: 10px; }
-  .titlebar-controls { top: max(0px, calc(env(safe-area-inset-top) - 6px)); }
+  .app { box-sizing: border-box; padding-top: env(safe-area-inset-top); }
+  .titlebar-controls { top: env(safe-area-inset-top); }
 }
 
 /* Zeitleiste: Zusatz hinter einem Unterpunkt („· 5 sources“, „· no issues found“) – leiser als der Unterpunkt selbst */
@@ -13796,3 +13797,11 @@ html body .dcs-ic svg { width: 15px; height: 15px; }
 html body .dcs-item.on .dcs-ic { color: var(--text); }
 html body .dcs-glyph { font-size: 12.5px; }
 html body .dcs-name { font: 500 12.5px var(--font-ui, Inter), sans-serif; color: var(--text-2); }
+/* Einstellungen → Kurzbefehle */
+.st-kb-intro { margin: 0 0 12px; color: var(--text-3); font: 500 13px/1.5 var(--font-ui, Inter), sans-serif; }
+.st-kb-ic { flex: none; display: inline-flex; color: var(--text-3); margin-right: 10px; }
+.st-wg-steps { margin: 12px 0 24px; padding-left: 20px; color: var(--text-2); font: 500 13px/1.6 var(--font-ui, Inter), sans-serif; }
+.st-card .st-row .st-btn + .st-btn { margin-left: 6px; }
+html body .st-view .st-name .st-sub, html body .st-name em.st-sub { display: block; font-style: normal; margin-top: 2px; color: var(--text-4); font-size: 12px; }
+html body .st-row .st-name { min-width: 0; }
+@media (max-width: 700px) { html body .st-row [data-ics-copy] { display: none; } }

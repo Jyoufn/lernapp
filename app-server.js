@@ -1350,9 +1350,57 @@ async function widgetData(store, uid) {
   const events = parse('calendarEvents').filter((e) => e && e.date >= from && e.date <= to)
     .map((e) => ({ title: String(e.title || 'Termin').slice(0, 80), date: e.date, time: e.time || '', end: e.end || '', color: /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#6d9fff' }))
     .sort((a, b) => (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'))).slice(0, 20);
-  const tasks = parse('tasks.items.v1').filter((t) => t && !t.done).map((t) => ({ title: String(t.title || '').slice(0, 120), due: t.due || '' }))
-    .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999')).slice(0, 20);
+  const RANK = { urgent: 4, high: 3, medium: 2, low: 1 };
+  const tasks = parse('tasks.items.v1').filter((t) => t && !t.done).map((t) => ({ title: String(t.title || '').slice(0, 120), due: t.due || '', priority: t.priority || '' }))
+    .sort((a, b) => (RANK[b.priority] || 0) - (RANK[a.priority] || 0) || (a.due || '9999').localeCompare(b.due || '9999')).slice(0, 20);
   return { today: from, events, tasks, openTasks: parse('tasks.items.v1').filter((t) => t && !t.done).length };
+}
+function icsOf(ls) {
+  const parse = (k) => { try { const v = JSON.parse(ls[k] || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const esc = (t) => String(t || '').replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1').slice(0, 900);
+  const d8 = (iso) => iso.replace(/-/g, ''), t6 = (hm) => `${hm.replace(':', '')}00`;
+  const next = (iso) => { const t = new Date(`${iso}T12:00:00Z`); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+  const from = new Date(Date.now() - 60 * 864e5).toISOString().slice(0, 10);
+  const out = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Lern-App//Kalender//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:Lern-App', 'X-WR-TIMEZONE:Europe/Berlin', 'REFRESH-INTERVAL;VALUE=DURATION:PT15M', 'X-PUBLISHED-TTL:PT15M'];
+  const ok = (iso) => /^\d{4}-\d{2}-\d{2}$/.test(iso || '') && iso >= from;
+  for (const e of parse('calendarEvents')) {
+    if (!e || !ok(e.date) || e.task) continue; // mit einer Aufgabe verknüpfte Termine kommen unten als Aufgabe
+    out.push('BEGIN:VEVENT', `UID:${esc(e.id || e.date + e.title)}@lernapp`, `DTSTAMP:${stamp}`, `SUMMARY:${esc(e.title || 'Termin')}`);
+    if (/^\d{2}:\d{2}$/.test(e.time || '')) { out.push(`DTSTART;TZID=Europe/Berlin:${d8(e.date)}T${t6(e.time)}`, `DTEND;TZID=Europe/Berlin:${d8(e.date)}T${t6(/^\d{2}:\d{2}$/.test(e.end || '') && e.end > e.time ? e.end : `${String(Math.min(23, +e.time.slice(0, 2) + 1)).padStart(2, '0')}${e.time.slice(2)}`)}`); }
+    else out.push(`DTSTART;VALUE=DATE:${d8(e.date)}`, `DTEND;VALUE=DATE:${d8(next(e.date))}`);
+    if (e.description) out.push(`DESCRIPTION:${esc(e.description)}`);
+    out.push('END:VEVENT');
+  }
+  for (const t of parse('tasks.items.v1')) {
+    if (!t || t.done || !ok(t.due)) continue;
+    out.push('BEGIN:VEVENT', `UID:${esc(t.id)}@lernapp-aufgabe`, `DTSTAMP:${stamp}`, `SUMMARY:${esc(t.title)}`);
+    if (/^\d{2}:\d{2}$/.test(t.time || '')) out.push(`DTSTART;TZID=Europe/Berlin:${d8(t.due)}T${t6(t.time)}`, `DTEND;TZID=Europe/Berlin:${d8(t.due)}T${t6(t.end && t.end > t.time ? t.end : t.time)}`);
+    else out.push(`DTSTART;VALUE=DATE:${d8(t.due)}`, `DTEND;VALUE=DATE:${d8(next(t.due))}`);
+    out.push(`DESCRIPTION:${esc(`Aufgabe${t.note ? `\n${t.note}` : ''}`)}`, 'END:VEVENT');
+  }
+  out.push('END:VCALENDAR');
+  return out.map((l) => (l.length > 74 ? l.match(/.{1,74}/g).join('\r\n ') : l)).join('\r\n') + '\r\n';
+}
+function widgetText(d, what) {
+  const WD = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'], MO = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
+  const tomorrow = (() => { const t = new Date(`${d.today}T12:00:00`); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); })();
+  const day = (iso) => { if (iso === d.today) return 'Heute'; if (iso === tomorrow) return 'Morgen'; const t = new Date(`${iso}T12:00:00`); return `${WD[t.getDay()]} ${t.getDate()}. ${MO[t.getMonth()]}`; };
+  const PR = { urgent: 'Dringend', high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
+  const cal = (max) => {
+    if (!d.events.length) return 'Keine Termine in den nächsten 14 Tagen.';
+    const out = []; let last = '';
+    d.events.slice(0, max).forEach((e) => { if (e.date !== last) { out.push(`${out.length ? '\n' : ''}${day(e.date)}`); last = e.date; } out.push(`• ${e.time ? `${e.time}${e.end ? `–${e.end}` : ''}` : 'Ganztägig'}  ${e.title}`); });
+    return out.join('\n');
+  };
+  const tasks = (max) => {
+    if (!d.tasks.length) return 'Keine offenen Aufgaben.';
+    return d.tasks.slice(0, max).map((t) => `• ${t.title}${t.priority && PR[t.priority] ? ` (${PR[t.priority]})` : ''}${t.due ? ` – ${t.due < d.today ? 'überfällig' : day(t.due)}` : ''}`).join('\n') + (d.openTasks > max ? `\n… und ${d.openTasks - max} weitere` : '');
+  };
+  if (/^kal/.test(what)) return `Termine\n\n${cal(12)}`;
+  if (/^auf/.test(what)) return `Offene Aufgaben (${d.openTasks})\n\n${tasks(12)}`;
+  const todayEv = d.events.filter((e) => e.date === d.today);
+  return `${day(d.today)}\n\n${todayEv.length ? todayEv.map((e) => `• ${e.time || 'Ganztägig'}  ${e.title}`).join('\n') : 'Heute keine Termine.'}\n\nAufgaben (${d.openTasks})\n${tasks(5)}`;
 }
 async function handleTranscribe(req, res) {
   const env = envOf(req);
@@ -1670,6 +1718,21 @@ async function handle(req, res) {
       if (!store) return sendJson(res, 503, { error: 'Der Speicher für Konten ist noch nicht eingerichtet (Upstash Redis in Vercel verbinden).', setup: true });
       if (urlPath.startsWith('/api/auth/')) return await handleAuth(req, res, urlPath, store);
       // Homescreen-Widgets (Scriptable): nur lesen, mit dem Widget-Schlüssel statt Anmeldung – Termine der nächsten 14 Tage und offene Aufgaben
+      // 18.11. spät: Kalender-Abo für Apple Kalender / Google (webcal://…/api/kalender.ics?t=…): Termine + fällige Aufgaben (ganztägig), nur lesen
+      if (req.method === 'GET' && urlPath === '/api/kalender.ics') {
+        const uid = await ACC.widgetUid(store, new URL(req.url, 'http://x').searchParams.get('t'));
+        if (!uid) return sendJson(res, 401, { error: 'Link ungültig' });
+        res.setHeader('Content-Type', 'text/calendar; charset=utf-8'); res.setHeader('Cache-Control', 'no-store');
+        res.statusCode = 200; return res.end(icsOf((await ACC.getStorage(store, uid)) || {}));
+      }
+      // 18.11. spät: für Kurzbefehle („Inhalt von URL abrufen“ → „Ergebnis anzeigen“ / Siri): fertiger deutscher Text statt JSON
+      if (req.method === 'GET' && urlPath === '/api/kurzbefehl') {
+        const sp = new URL(req.url, 'http://x').searchParams;
+        const uid = await ACC.widgetUid(store, sp.get('t'));
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8'); res.setHeader('Cache-Control', 'no-store');
+        if (!uid) { res.statusCode = 200; return res.end('Der Link ist nicht mehr gültig. Öffne die Lern-App → Einstellungen → Widgets und kopiere den Link neu.'); }
+        res.statusCode = 200; return res.end(widgetText(await widgetData(store, uid), String(sp.get('w') || 'heute')));
+      }
       if (req.method === 'GET' && urlPath === '/api/widget') {
         res.setHeader('Access-Control-Allow-Origin', '*');
         const uid = await ACC.widgetUid(store, new URL(req.url, 'http://x').searchParams.get('t'));
