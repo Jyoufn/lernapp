@@ -89,7 +89,7 @@ function settleSwitch(isChat) {
   const views = '.dc-view, .cal-view, .tk-view, .uiv-view, .chats-view';
   pn.getAnimations({ subtree: true }).forEach((a) => {
     const el = a.effect?.target;
-    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'cal-tile-in2' || a.animationName === 'cal-tile-in3' || a.animationName === 'step-up-in') return;
+    if (!el || !(a instanceof CSSAnimation) || el.matches?.(views) || a.animationName === 'cal-tile-in' || a.animationName === 'cal-tile-in2' || a.animationName === 'cal-tile-in3' || a.animationName === 'cal-tile-in4' || a.animationName === 'step-up-in') return;
     if (el.closest?.(`#chat, ${views}`)) a.finish();
   });
   if (isChat && typeof chat !== 'undefined' && chat.animate && !REDUCE_MOTION) chat.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 360, easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)' });

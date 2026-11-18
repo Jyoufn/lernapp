@@ -13332,9 +13332,9 @@ html body .step-srcs .ss-ico img { width: 11px; height: 11px; border-radius: 2px
 html body .step-srcs .ss-more { margin-left: 5px; font-size: 11.5px; color: var(--text-4); }
 
 /* ===== 18.11.: Sidebar (und alles auf Sidebar-Ebene rund um den Hauptkasten) in der Farbe des Eingabefelds (#181818) ===== */
-html:root { --sidebar-bg: #181818; }
-html body { background: #181818; }
-html body .sidebar { background: #181818; }
+html:root { --sidebar-bg: #161616; } /* 18.11. abends: nur ein Hauch heller als der Hauptkasten (#141414) */
+html body { background: #161616; }
+html body .sidebar { background: #161616; }
 
 /* ===== 18.11.: Warte-Welle (Bild/Präsentation wird erstellt) flüssig: ein Lichtband wandert per transform über ein maskiertes Kachel-Raster ===== */
 html body .ill-frame.ill-fast { position: relative; overflow: hidden; contain: strict; }
@@ -13371,8 +13371,6 @@ html body .dc-ppop .dc-pj-grid .dc-pj-ic { width: auto !important; min-width: 0;
    Kacheln nur noch per Deckkraft einblenden, ohne Verschieben und ohne Ebenen-Wechsel */
 @keyframes cal-tile-in4 { from { opacity: 0; } to { opacity: 1; } }
 html body .cal-view.cal-enter .cm-cell { animation: cal-tile-in4 640ms cubic-bezier(0.33, 0, 0.2, 1) var(--td, 0ms) both; backface-visibility: visible; will-change: auto; transform: none; }
-html body .cal-view.cal-enter { animation-name: cal-view-fade4; }
-@keyframes cal-view-fade4 { from { opacity: 0; } to { opacity: 1; } }
 
 /* ===== 18.11.: Lernzettel – Karte im Chat, Fenster rechts neben dem Chat, Blatt im Papier-Stil (weiß) ===== */
 .lzwin { position: relative; flex: none; display: flex; flex-direction: column; width: 0; min-width: 0; margin: 8px 0; border: 0 solid #1d1d1d; border-radius: 12px; background: #141414; opacity: 0; overflow: hidden;

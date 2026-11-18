@@ -149,7 +149,7 @@ test('Quellen-Gedächtnis: Dateien bleiben für den ganzen Chat Material – auc
 test('Kern: genau das Gefragte, Fähigkeiten der App als Liste, Gedächtnis im Kern', () => {
   assert.equal(A.FORMS, undefined, 'keine Antwortformen mehr');
   assert.match(W.NATIVE_CORE, /Nicht weniger – und nicht mehr/);
-  assert.ok(W.NATIVE_CORE.length < 4200, 'kurzer Kern');
+  assert.ok(W.NATIVE_CORE.length < 5400, 'kurzer Kern (18.11.: mit Ablauf Verstehen → Antwortform → Antworten)');
   for (const key of ['Tabellen', 'Diagramme', 'Zeitstrahl', 'Echte Bilder', 'Kopier-Kasten']) assert.ok(A.TOOLS_HEAD.includes(key), key);
   assert.match(W.NATIVE_CORE, /GESPRÄCH UND GEDÄCHTNIS/);
 });
