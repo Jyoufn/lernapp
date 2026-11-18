@@ -8,30 +8,31 @@
    Browser und Node (Tests) nutzen dieselbe Liste und dieselbe Erkennung.
    =================================================================== */
 const Skills = (() => {
+  // hidden (18.11.): nicht in der „/“-Liste – wird aber weiter automatisch erkannt und erstellt
   const SKILLS = [
-    { id: 'praesentation', name: 'praesentation', title: 'Präsentation', desc: 'Folien mit Bildern und Quellen – als PowerPoint, Keynote oder PDF', c: '#f0913a',
+    { id: 'praesentation', hidden: true, name: 'praesentation', title: 'Präsentation', desc: 'Folien mit Bildern und Quellen – als PowerPoint, Keynote oder PDF', c: '#f0913a',
       strong: ['präsentation', 'praesentation', 'powerpoint', 'keynote', 'foliensatz', 'folien'], weak: ['vortrag', 'referat', 'slides', 'vortragen'] },
-    { id: 'infografik', name: 'infografik', title: 'Infografik', desc: 'Zahlen als Diagramme mit kurzer Einordnung', c: '#6aa8ff',
+    { id: 'infografik', hidden: true, name: 'infografik', title: 'Infografik', desc: 'Zahlen als Diagramme mit kurzer Einordnung', c: '#6aa8ff',
       strong: ['infografik', 'diagramm', 'schaubild', 'statistik'], weak: ['zahlen', 'entwicklung', 'prozent', 'anteil', 'vergleich', 'daten'] },
-    { id: 'karteikarten', name: 'karteikarten', title: 'Karteikarten', desc: 'Lernkarten zum Umdrehen und Selbst-Bewerten', c: '#2dd4bf',
+    { id: 'karteikarten', hidden: true, name: 'karteikarten', title: 'Karteikarten', desc: 'Lernkarten zum Umdrehen und Selbst-Bewerten', c: '#2dd4bf',
       strong: ['karteikarte', 'lernkarte', 'flashcard'], weak: ['vokabeln', 'auswendig', 'begriffe lernen', 'abfragen'] },
-    { id: 'quiz', name: 'quiz', title: 'Quiz', desc: 'Fragen mit Auswertung und Erklärungen', c: '#b49cff',
+    { id: 'quiz', hidden: true, name: 'quiz', title: 'Quiz', desc: 'Fragen mit Auswertung und Erklärungen', c: '#b49cff',
       strong: ['quiz', 'testfragen', 'übungsfragen', 'frag mich ab', 'teste mich'], weak: ['multiple choice', 'wissen testen', 'übungsaufgaben', 'abfragen'] },
-    { id: 'probeklausur', name: 'probeklausur', title: 'Probeklausur', desc: 'Klausur mit Zeit, strenger Korrektur und Notenpunkten', c: '#f07a6e',
+    { id: 'probeklausur', hidden: true, name: 'probeklausur', title: 'Probeklausur', desc: 'Klausur mit Zeit, strenger Korrektur und Notenpunkten', c: '#f07a6e',
       strong: ['probeklausur', 'übungsklausur', 'klassenarbeit', 'probetest', 'probeprüfung'], weak: ['klausur', 'prüfung', 'abitur', 'notenpunkte', 'test'] },
-    { id: 'zeitstrahl', name: 'zeitstrahl', title: 'Zeitstrahl', desc: 'Ereignisse in zeitlicher Reihenfolge', c: '#facc15',
+    { id: 'zeitstrahl', hidden: true, name: 'zeitstrahl', title: 'Zeitstrahl', desc: 'Ereignisse in zeitlicher Reihenfolge', c: '#facc15',
       strong: ['zeitstrahl', 'zeitleiste', 'chronologie', 'timeline'], weak: ['geschichte', 'epoche', 'jahrhundert', 'ereignisse', 'jahreszahlen', 'verlauf'] },
-    { id: 'mindmap', name: 'mindmap', title: 'Mindmap', desc: 'Thema als Baum mit Ästen und Stichpunkten', c: '#8bb8ff',
+    { id: 'mindmap', hidden: true, name: 'mindmap', title: 'Mindmap', desc: 'Thema als Baum mit Ästen und Stichpunkten', c: '#8bb8ff',
       strong: ['mindmap', 'mind map', 'mind-map', 'gedankenkarte'], weak: ['überblick', 'übersicht', 'zusammenhänge', 'begriffe'] },
-    { id: 'bild', name: 'bild', title: 'Bild erstellen', desc: 'Illustration genau nach deiner Beschreibung', c: '#f472b6',
+    { id: 'bild', hidden: true, name: 'bild', title: 'Bild erstellen', desc: 'Illustration genau nach deiner Beschreibung', c: '#f472b6',
       strong: ['bild erstellen', 'erstelle ein bild', 'erstell ein bild', 'erzeuge ein bild', 'zeichne', 'illustration', 'male mir'], weak: ['bild', 'abbildung', 'skizze', 'zeichnung', 'grafik', 'beschriftet'] },
-    { id: 'designer', name: 'designer', title: 'Designer-Modus', desc: 'Gestaltung auf Profi-Niveau: Layout, Farben, Typografie, UI', c: '#a78bfa',
+    { id: 'designer', hidden: true, name: 'designer', title: 'Designer-Modus', desc: 'Gestaltung auf Profi-Niveau: Layout, Farben, Typografie, UI', c: '#a78bfa',
       strong: ['designer', 'webdesign', 'ui-design', 'ui design', 'ux', 'logo', 'poster', 'flyer', 'layout', 'mockup'], weak: ['design', 'farben', 'farbpalette', 'gestaltung', 'schriftart', 'ästhetisch', 'modern', 'abstände'] },
-    { id: 'humanizer', name: 'humanizer', title: 'Humanizer', desc: 'Text klingt natürlich und menschlich – nicht nach KI', c: '#34d399',
+    { id: 'humanizer', hidden: true, name: 'humanizer', title: 'Humanizer', desc: 'Text klingt natürlich und menschlich – nicht nach KI', c: '#34d399',
       strong: ['humanizer', 'humanize', 'vermenschlich', 'menschlicher', 'natürlicher klingen', 'nicht nach ki'], weak: ['umschreiben', 'umformulieren', 'natürlich', 'klingt', 'ki-text', 'menschlich', 'flüssiger'] },
     { id: 'lernzettel', name: 'lernzettel', title: 'Lernzettel', desc: 'Kompakte Zusammenfassung mit allem Klausurrelevanten', c: '#60a5fa',
       strong: ['lernzettel', 'spickzettel', 'zusammenfassung'], weak: ['zusammenfassen', 'wichtigste', 'kompakt', 'klausurrelevant', 'stichpunkte'] },
-    { id: 'hefteintrag', name: 'hefteintrag', title: 'Hefteintrag', desc: 'Lösung sauber so, wie sie ins Heft gehört', c: '#a3a3a3',
+    { id: 'hefteintrag', hidden: true, name: 'hefteintrag', title: 'Hefteintrag', desc: 'Lösung sauber so, wie sie ins Heft gehört', c: '#a3a3a3',
       strong: ['hefteintrag', 'ins heft', 'fürs heft'], weak: ['abschreiben', 'tafelbild', 'heft'] },
     { id: 'recherche', name: 'recherche', title: 'Recherche', desc: 'Gründlich mit mehreren Fachquellen und Belegen', c: '#22d3ee',
       strong: ['recherchiere', 'recherche', 'recherchier'], weak: ['quellen', 'studien', 'belege', 'aktuell', 'nachforschen', 'fakten'] },
@@ -62,7 +63,7 @@ const Skills = (() => {
   // Text als HTML mit getönten Skill-Wörtern (Nachricht im Chat nach dem Senden)
   function html(text) { return escHtml(String(text || '')); }
   function htmlMarked(text) { const t = String(text || ''); let out = '', at = 0; for (const r of marks(t)) { out += escHtml(t.slice(at, r.a)) + `<mark class="sk-mark" style="--c:${r.c}">${escHtml(t.slice(r.a, r.b))}</mark>`; at = r.b; } return out + escHtml(t.slice(at)); }
-  const list = (q = '') => { const k = String(q).toLowerCase(); return SKILLS.filter((s) => !k || s.name.startsWith(k) || s.title.toLowerCase().includes(k) || s.desc.toLowerCase().includes(k)); };
+  const list = (q = '') => { const k = String(q).toLowerCase(); return SKILLS.filter((s) => !s.hidden).filter((s) => !k || s.name.startsWith(k) || s.title.toLowerCase().includes(k) || s.desc.toLowerCase().includes(k)); };
 
   /* ---------- Eingabefeld (nur im Browser) ---------- */
   let mentionSrc = null; // „@“: Chats und Dokumente (app.js → Skills.setMentions)

@@ -89,6 +89,9 @@ const FadeIcons = (() => {
     mindmap: { b: '<circle cx="4" cy="8" r="2.5"/><rect x="10" y="1.75" width="4.75" height="3.5" rx="1.25"/><rect x="10" y="6.25" width="4.75" height="3.5" rx="1.25"/><rect x="10" y="10.75" width="4.75" height="3.5" rx="1.25"/>', k: '<path d="M6.5 8H10M8 3.5v9M8 3.5h2M8 12.5h2" style="stroke-width:1.3"/>' },
     agent: { b: '<rect x="1.5" y="1.5" width="13" height="13" rx="4"/>', c: '<rect x="5.25" y="5" width="1.75" height="4" rx=".875"/><rect x="9" y="5" width="1.75" height="4" rx=".875"/>' },
     // für Termine (Kalender)
+    // 18.11.: Quellen suchen = Weltkugel mit Lupe; Quellen analysieren = Blatt mit Zeilen und Haken (runder Linien-Stil)
+    'globe-search': { k: '<path d="M12.2 8.2A5.25 5.25 0 1 0 8.2 12.2"/><path d="M7 1.75C5.6 3.2 4.9 5 4.9 7s.7 3.8 2.1 5.25M7 1.75c1.4 1.45 2.1 3.25 2.1 5.25M1.75 7h7.35"/><circle cx="11.6" cy="11.6" r="2.1"/><path d="m13.15 13.15 1.35 1.35"/>' },
+    'src-check': { k: '<path d="M11.5 7.6V4.25a2 2 0 0 0-2-2H4.25a2 2 0 0 0-2 2v7.5a2 2 0 0 0 2 2H7.5"/><path d="M4.9 5.4h3.9M4.9 8h2.6"/><path d="m9.6 12.1 1.5 1.5 2.9-3.1"/>' },
     // 17.11.: runder Linien-Stil wie die übrigen Linien-Icons (vorher gefülltes Buch)
     'book-open': { k: '<path d="M8 4.5C6.95 3.6 5.55 3.15 3.85 3.15c-.95 0-1.6.6-1.6 1.45v6.55c0 .8.6 1.35 1.4 1.35 1.65 0 3.05.45 4.35 1.4 1.3-.95 2.7-1.4 4.35-1.4.8 0 1.4-.55 1.4-1.35V4.6c0-.85-.65-1.45-1.6-1.45-1.7 0-3.1.45-4.15 1.35Z"/><path d="M8 4.5v8.9"/>' },
     sun: { b: '<circle cx="8" cy="8" r="3.1"/>' + [0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<rect x="7.25" y=".6" width="1.5" height="2.5" rx=".75" transform="rotate(${a} 8 8)"/>`).join('') },

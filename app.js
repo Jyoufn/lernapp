@@ -2051,6 +2051,16 @@ function renderMarkdown(target, text, opts = {}) {
    Abstand, nichts angeschnitten, kein Zufall) – unsichtbar, bis eine weiche Welle Spalte für Spalte von links nach rechts
    durchfließt (oben minimal früher) und sie kurz aufleuchten lässt: höchstens 9 % Deckkraft. */
 let illWaveSvg = '';
+/* 18.11.: Warte-Welle im gleichen Takt halten – beim Neuzeichnen der Antwort wird die Karte neu eingehängt, dabei startete die Animation
+   jedes Mal von vorn (Ruckeln). Die Verzögerung richtet sich nach der Uhr, so läuft das Lichtband ohne Sprung weiter. */
+function syncWave(root) {
+  const bands = root?.querySelectorAll?.('.ill-band');
+  if (!bands?.length) return;
+  const now = document.timeline?.currentTime;
+  if (now == null) return;
+  const start = Math.floor(now / 2600) * 2600; // gleicher Startpunkt für alle → Phase = Uhrzeit, egal wie oft neu eingehängt
+  bands.forEach((b) => b.getAnimations?.().forEach((a) => { if (a.startTime !== start && Math.abs(((now - (a.startTime ?? now)) % 2600) - (now % 2600)) > 20) a.startTime = start; }));
+}
 function illustrationWave() {
   if (illWaveSvg) return illWaveSvg;
   const W = 1024, H = 576, COLS = 31, ROWS = 17, SIZE = 24, GAP = 8, SWEEP = 2600;
@@ -2062,7 +2072,10 @@ function illustrationWave() {
       tiles += `<rect x="${ox + c * (SIZE + GAP)}" y="${oy + r * (SIZE + GAP)}" width="${SIZE}" height="${SIZE}" rx="6" style="animation-delay:${delay}ms"/>`;
     }
   }
-  illWaveSvg = `<div class="ill-frame" aria-hidden="true"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"><g fill="#fff" fill-opacity="0.09">${tiles}</g></svg></div>`;
+  // 18.11.: flüssig auch beim Schreiben – statt 527 einzeln animierter SVG-Kacheln (jede Kachel ein Neuzeichnen pro Bild, ruckelte v. a. auf dem iPad)
+  // ein Kachel-Raster als Maske, darüber EIN Lichtband, das nur per transform wandert (läuft auf der Grafikkarte, unabhängig vom Seitenaufbau)
+  const mask = `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}"><g fill="#fff">${tiles.replace(/ style="[^"]*"/g, '')}</g></svg>`)}")`;
+  illWaveSvg = `<div class="ill-frame ill-fast" aria-hidden="true"><div class="ill-mask" style='-webkit-mask-image:${mask};mask-image:${mask}'><i class="ill-band"></i></div></div>`;
   return illWaveSvg;
 }
 function illustrationFigure(data) {
@@ -2194,6 +2207,7 @@ function makeRenderer(target, opts = {}) {
   let ended = false; // Antwort komplett (finish/flush) → Blöcke wie Lernsets wissen, dass nichts mehr kommt
   const draw = () => {
     renderMarkdown(target, text.slice(0, shown), { ...opts, live: !ended || shown < text.length });
+    syncWave(target);
     // neue Blöcke weich einblenden – auch über Neuzeichnungen hinweg ohne Flackern
     const now = performance.now();
     if (!opts.noInk) { try { inkTail(target, inkSteps, now); } catch {} }
@@ -2801,7 +2815,7 @@ function finishStep(step, html) {
   const marker = step.querySelector('.marker');
   marker.className = 'marker dot';
   marker.replaceChildren();
-  if (html != null) step.querySelector('.step-line').innerHTML = html;
+  if (html != null) { const line = step.querySelector('.step-line'); const keep = line.querySelector('.step-srcs'); line.innerHTML = html; if (keep) line.append(keep); } // Quellen-Logos bleiben hinter dem neuen Text
 }
 /* Marker als kleines Icon statt Punkt – Lupe bei der Suche, Haken beim Abschluss */
 function markerIcon(step, name, cls = '') {
@@ -2873,7 +2887,7 @@ const THOUGHT_ICONS = [
    ein passendes Icon – nach dem Schlüssel des Schritts (thinking.js), nicht nach dem Text. Suche behält die Lupe. */
 const STEP_ICONS = { material: 'file', extract: 'file', depot: 'briefcase', portfolio: 'briefcase', saveDepot: 'download', plan: 'target', strategy: 'list',
   analyze: 'analytics', depotAnalysis: 'analytics', allocation: 'analytics', fundamentals: 'analytics', risk: 'alert', compare: 'table', credibility: 'check-circle',
-  crosscheck: 'check-circle', review: 'check-circle', gather: 'book-open', discover: 'book-open', synthesize: 'link', charts: 'trend', chartsLoad: 'trend',
+  crosscheck: 'check-circle', review: 'check-circle', gather: 'src-check', discover: 'src-check', synthesize: 'link', charts: 'trend', chartsLoad: 'trend',
   work: 'pencil', picture: 'image', thoughts: 'bulb' };
 const stepIcon = (step, key) => { const n = STEP_ICONS[key]; if (n && step && !step.querySelector(':scope > .marker.ico')) markerIcon(step, n); };
 function thoughtIcon(title) {
@@ -3091,15 +3105,23 @@ function srcFold(step) {
 }
 function srcStack(step, items) {
   const list = [...new Map((items || []).filter((x) => x && (x.domain || x.url)).map((x) => [x.domain || x.url, x])).values()];
-  let st = step.querySelector(':scope > .step-srcs');
+  const line = step.querySelector(':scope > .step-line') || step;
+  let st = step.querySelector('.step-srcs');
   if (!list.length) { st?.remove(); return; }
   if (!st) {
-    st = el('button', 'step-srcs'); st.type = 'button'; st.title = 'Suchanfragen und Quellen anzeigen';
-    st.addEventListener('click', (e) => { e.stopPropagation(); step.classList.toggle('open'); });
-    step.append(st);
+    // 18.11.: die Logos stehen direkt hinter dem Text (nicht ganz rechts), kleiner; jedes Logo öffnet seine Seite, „+N“ klappt die Liste auf
+    st = el('span', 'step-srcs');
+    line.append(st);
   }
-  st.replaceChildren(...list.slice(0, 3).map((x) => siteIcon(x.domain, x.title, 'ss-ico')));
-  if (list.length > 3) st.append(el('span', 'ss-more', `+${list.length - 3}`));
+  st.replaceChildren(...list.slice(0, 4).map((x) => {
+    const a = el('a', 'ss-link');
+    if (x.url) { a.href = x.url; a.target = '_blank'; a.rel = 'noopener'; }
+    a.title = x.title || x.domain || '';
+    a.addEventListener('click', (e) => { e.stopPropagation(); if (!x.url) e.preventDefault(); });
+    a.append(siteIcon(x.domain || (() => { try { return new URL(x.url).hostname.replace(/^www\./, ''); } catch { return ''; } })(), x.title, 'ss-ico'));
+    return a;
+  }));
+  if (list.length > 4) st.append(el('span', 'ss-more', `+${list.length - 4}`));
 }
 function srcQueries(box, queries) {
   let list = box.querySelector(':scope > .dq-list');
@@ -3741,7 +3763,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const fold = st.step.querySelector('.fold');
     finishStep(st.step, `${html} <span class="t">${secs(st.from)}</span>`);
     if (fold) { st.step.querySelector('.step-line').insertAdjacentHTML('beforeend', `<svg class="fold-chev" width="10" height="10" aria-hidden="true"><use href="#i-chevron-down"/></svg>`); }
-    if (key === 'search' || key === 'gaps') markerIcon(st.step, 'search'); // Lupe wie bei der Websuche
+    if (key === 'search' || key === 'gaps') markerIcon(st.step, 'globe-search'); // Lupe wie bei der Websuche
     // Suchen fertig → die Liste der Suchen klappt weich zu (eine Zeile); Klick auf die Zeile öffnet sie wieder – sonst wird es zu voll
     if ((key === 'search' || key === 'gaps') && fold) setTimeout(() => st.step.classList.remove('open'), 500);
   };
@@ -3889,7 +3911,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     const dur = `<span class="t">${st.serverFrom && s.ts ? secs(st.serverFrom, Date.parse(s.ts)) : secs(st.from)}</span>`;
     const line = st.step.querySelector('.step-line');
     finishStep(st.step);
-    if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources' || s.stage === 'images') markerIcon(st.step, 'search');
+    if ((s.stage === 'browsing' && !st.gathering) || s.stage === 'searching_sources') markerIcon(st.step, 'globe-search'); // 18.11.: Weltkugel mit Lupe
+    else if (s.stage === 'images') markerIcon(st.step, 'search');
     else stepIcon(st.step, st.gathering ? 'gather' : st.key || stageKey(s.stage, st.news));
     st.step.hidden = false;
     const sub = P(st.key || stageKey(s.stage, st.news)).sub;
@@ -3905,8 +3928,9 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const n = st.pages.length;
       const k = st.gathering ? 'gather' : st.key;
       if (!n) { st.step.remove(); return; } // nichts gefunden → kein Schritt (kein „keine Quellen“)
-      if (!st.news) { const box = srcFold(st.step); srcQueries(box, st.queries); box.append(st.chips); srcStack(st.step, st.pages); }
+      if (!st.news) { const box = srcFold(st.step); srcQueries(box, st.queries); box.append(st.chips); }
       line.innerHTML = st.news ? `${P(k).sub} <span class="ph-x">· ${n} Artikel</span> ${dur}` : P(k).sub; // statt „· 7 Quellen 2s“ stehen rechts die Website-Logos (Wunsch 05.11.)
+      if (!st.news) srcStack(st.step, st.pages);
     } else if (s.stage === 'searching_sources') {
       const used = renderOpts.sources.filter(Boolean);
       if (!used.length) { st.step.remove(); return; } // nichts Brauchbares → Schritt verschwindet
@@ -3916,6 +3940,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       box.append(chips);
       fillChips(chips, used, () => openSourcesModal(renderOpts.sources.filter(Boolean), citations));
       srcStack(st.step, used);
+      if (st.shown) setTimeout(() => st.step.classList.remove('open'), 600);
     } else if (s.stage === 'images') {
       // Funde heraussuchen: Anzahl + bis zu 5 kleine Vorschaubilder (abgerundet, wie Datei-Chips)
       const m = s.meta || {};
@@ -4004,7 +4029,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       groundSrc = r.sources; // für unten an der Antwort, wenn es keine nummerierten Belege gibt
       return;
     }
-    if (r.status === 'running' && Array.isArray(r.queries) && stages.searching_sources) stages.searching_sources.queries = r.queries.map((q) => (typeof q === 'string' ? q : q?.q || q?.query || '')).filter(Boolean).slice(0, 8);
+    if (r.status === 'running' && Array.isArray(r.queries) && stages.searching_sources) stages.searching_sources.queries = r.queries.map((q) => (typeof q === 'string' ? q : q?.q || q?.query || '')).filter(Boolean).slice(0, 8); if (r.status === 'running' && stages.searching_sources?.queries?.length && stages.searching_sources.step) { const ss = stages.searching_sources; srcQueries(srcFold(ss.step), ss.queries); if (!ss.ended && !ss.shown) { ss.shown = true; ss.step.classList.add('open'); } } // 18.11.: Suchanfragen schon während der Suche zeigen (offen, am Ende wieder zu)
     if (r.status === 'done' || r.status === 'failed') {
       renderOpts.sources = [];
       (r.sources || []).forEach((s) => { renderOpts.sources[s.n - 1] = s; });
