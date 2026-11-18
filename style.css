@@ -13932,3 +13932,15 @@ html body .au-inl .ce-card :is(.ce-headbox, .tk-pop, .tk-pop.open, .tk-menu, .tk
 html body .au-inl .ce-card :is(.ce-headbox, .tk-pop) { box-shadow: inset 0 0 0 1px #242424 !important; }
 html body .au-inl .ce-card .tk-mi:hover, html body .au-inl .ce-card .tagm .tk-mi:hover { background: rgba(255, 255, 255, 0.04); }
 html body .au-inl .ce-card .tk-pill:hover { background: transparent; }
+/* 19.11. spät: Aufgaben – Priorität oben rechts im Titel, Cover auch unten abgerundet (eingerückt), Bearbeiten im echten Haupthintergrund, Titel bei eingeklappter Sidebar direkt neben dem Knopf */
+.au-ctr { align-items: flex-start; }
+.au-ctr .au-cprio { flex: none; margin-top: 3px; }
+.au-ccov { margin: 5px 5px 0; height: 54px; border-radius: 8px; }
+.au-board { --au-bg: var(--main-bg, #141414); }
+.au-card2.editing, .au-card2.editing:hover { background: var(--au-bg) !important; }
+html body .au-inl .ce-card :is(.ce-headbox, .tk-pop, .tk-pop.open, .tk-menu, .tk-box, .ce-vrow) { background: var(--au-bg) !important; }
+html body .app.collapsed .au-view .au-head { padding-left: 30px; }
+/* iPad: kein Systemmenü / Bild-Ziehen beim langen Drücken einer Karte */
+.au-card2, .au-card2 * { -webkit-touch-callout: none; -webkit-user-drag: none; }
+.au-ghost { transition: none !important; will-change: left, top, transform; }
+.au-card2.au-ghost { position: fixed !important; margin: 0; }

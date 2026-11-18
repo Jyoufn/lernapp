@@ -50,19 +50,19 @@ const Aufgaben = (() => {
   view.append(main);
   const board = main.querySelector('.au-board');
   main.querySelector('.au-search input').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
-  const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const reduced = () => false; // 19.11.: Ziehen zeigt seine Bewegung immer (auf dem iPad mit „Bewegung reduzieren“ war sie sonst weg)
 
   function card(t) {
     const st = statusOf(t), over = (st === 'open' || st === 'doing') && t.due && t.due < today(), bg = coverBg(t.cover);
     return `<article class="au-card2 st-${st}${bg ? ' has-cov' : ''}" data-id="${esc(t.id)}" tabindex="0">
       ${bg ? `<div class="au-ccov" style="background:${esc(bg)}"></div>` : ''}
       <button type="button" class="au-edit" data-au="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil', 13)}</button>
-      <div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${st === 'done' ? `<span class="au-ok">${icon('f-check', 9)}</span>` : ''}</div>
+      <div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${t.priority && t.priority !== 'none' && window.UIKit?.prioIcon ? `<span class="au-cprio p-${esc(t.priority)}">${window.UIKit.prioIcon(t.priority, 13)}</span>` : ''}${st === 'done' ? `<span class="au-ok">${icon('f-check', 9)}</span>` : ''}</div>
       ${(() => { // 19.11.: Titel oben über die ganze Breite, darunter die Tags, darunter Priorität und direkt daneben das Datum (mit Kalender-Symbol)
         const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
         const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
         const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
-        const foot = pr || t.due ? `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>` : '';
+        const foot = t.due ? `<div class="au-cm">${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>` : '';
         const desc = t.note ? `<div class="au-cdesc">${esc(t.note)}</div>` : '';
         return desc + tags + foot;
       })()}</div></article>`;

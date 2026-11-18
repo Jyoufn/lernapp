@@ -384,7 +384,7 @@ const Calendar = (() => {
       </div>
       <div class="ce-vrow"><span class="tk-si">${icon('f-calendar')}</span><span class="ce-vval">${dateText(ev.date)}${ev.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}</span></div>
       <div class="ce-vrow"><span class="tk-si">${icon('f-clock')}</span><span class="ce-vval">${timeHtml}</span>${dur ? `<span class="ce-dur">${dur}</span>` : ''}</div>
-      ${(() => { const tg = (window.TagMenu?.all?.() || []).filter((g) => (ev.tags || []).includes(g.id)); return tg.length ? `<div class="ce-vrow"><span class="tk-si">${icon('f-tag')}</span><span class="ce-vval ce-vtags">${tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}</span></div>` : ''; })()}
+      ${(() => { const tg = (window.TagMenu?.all?.() || []).filter((g) => (ev.tags || []).includes(g.id)); return tg.length ? `<div class="ce-vrow"><span class="tk-si">${icon('f-tag')}</span><span class="ce-vval ce-vtags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</span></div>` : ''; })()}
       <div class="ce-cbox"><div class="ce-clist"></div>
         <label class="ce-cnew"><span class="tk-si">${icon('f-chat')}</span><input class="ce-cin" maxlength="300" placeholder="Kommentar hinzufügen" aria-label="Kommentar hinzufügen" autocomplete="off" /></label></div>
     </div>`;
@@ -513,7 +513,7 @@ const Calendar = (() => {
         form.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === (e.status || 'open')));
       }
       const tg = (window.TagMenu?.all?.() || []).filter((g) => e.tags.includes(g.id));
-      form.querySelector('.ce-tchips').innerHTML = tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('');
+      form.querySelector('.ce-tchips').innerHTML = tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') + (tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''); // ab 4 Tags: „+N“
       form.querySelector('.ce-tags-row').classList.toggle('has', !!tg.length);
       if (T) form.querySelector('[data-act="cal"]').innerHTML = `<span class="tk-si">${icon('f-calendar')}</span><span class="tk-rv${e.cal ? '' : ' ce-off'}">Im Kalender eintragen</span><span class="ce-check${e.cal ? ' on' : ''}" role="checkbox" aria-checked="${!!e.cal}">${icon('f-check')}</span>`;
       if (T) { const st = e.status || 'open'; set('status', icon(STI[st]), esc((STATI.find(([k]) => k === st) || STATI[0])[1])); }
