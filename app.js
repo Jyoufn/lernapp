@@ -312,6 +312,10 @@ document.addEventListener('click', () => { if (!effMenu.hidden) { effMenu.hidden
 function render(redraw = true) {
   if (redraw) drawModelMenu();
   $('chipModel').textContent = AI_NAMES[aiMain()] || 'Gemini';
+  // 18.11.: nur EIN verbundenes Modell → nichts zu wählen: kein Menü, kein Pfeil, schlichter Text
+  const solo = (window.AiConnected?.() || []).length <= 1;
+  chip.classList.toggle('solo', solo);
+  chip.tabIndex = solo ? -1 : 0;
   $('chipEffort').textContent = '';
   effChip.querySelector('span').textContent = EFF_DE[EFFORTS[state.effort]];
   chip.classList.remove('has-effort');
@@ -358,6 +362,7 @@ function setPopover(open) {
 
 chip.addEventListener('click', (e) => {
   e.stopPropagation();
+  if (chip.classList.contains('solo')) return; // nur ein Modell → kein Menü
   if (!popover.classList.contains('open')) drawModelMenu(); // verbundene Modelle können sich geändert haben
   setPopover(!popover.classList.contains('open'));
 });
@@ -420,6 +425,7 @@ composer.addEventListener('submit', (e) => {
   if (!attachments.length && !window.PixelDogs?.ONE_AGENT && window.AgentBuilder?.intercept(text)) { input.value = ''; autoGrow(); return; } // „erstell mir einen Agenten“ → Fenster „Neuer Agent“
   const images = attachments.filter((a) => a.file && a.status !== 'error').map((a) => ({ url: a.url, name: a.file.name, file: a.file, pdf: !!a.pdf, prep: a.prep })); // URLs bleiben für den Chat erhalten; prep = schon gelesen bzw. wird gerade gelesen
   const mentioned = attachments.filter((a) => a.mention).map((a) => a.mention);
+  const pickedSkills = window.Skills?.picked?.() || []; window.Skills?.clearPicked?.(); // 18.11.: gewählte Skills (Marke im Feld)
   input.value = '';
   attachments = [];
   renderAttachments();
@@ -427,7 +433,7 @@ composer.addEventListener('submit', (e) => {
   input.focus();
   // @Chat/@Dokument: der Inhalt geht als Text-Quelle mit (die KI sieht ihn wie eine angehängte Datei)
   Promise.all(mentioned.map(async (m) => ({ name: `${m.kind === 'chat' ? 'Chat' : 'Dokument'}: ${m.title}`, text: await mentionText(m).catch(() => '') })))
-    .then((texts) => sendMessage(text, images, { texts: texts.filter((t) => t.text).map((t) => ({ mime: 'text/plain', name: t.name, text: t.text })), chips: mentioned.map((m) => ({ name: m.title, pdf: true })), skills: window.Skills?.active(text) || [] }));
+    .then((texts) => sendMessage(text, images, { texts: texts.filter((t) => t.text).map((t) => ({ mime: 'text/plain', name: t.name, text: t.text })), chips: mentioned.map((m) => ({ name: m.title, pdf: true })), skills: [...new Set([...(window.Skills?.active(text) || []), ...pickedSkills])] }));
 });
 
 /* @-Erwähnungen: Chats und Dokumente als Quelle (im Eingabefeld „@“ tippen oder im Lernset-Fenster) */
@@ -1880,6 +1886,7 @@ function renderMarkdown(target, text, opts = {}) {
   // nur bei Antworten des Coding-Agenten (bzw. alten Antworten mit Datei-Blöcken) – beim Allgemein-Agenten bleiben z. B. ```terminal-Blöcke normaler Code
   const codeParts = {};
   // 16.11.: größere Code-Blöcke (auch beim Allgemein-Agenten) → Dateien im Code-Fenster statt langer Code-Blöcke im Chat
+  if (window.Lernzettel?.fixFence) text = Lernzettel.fixFence(text); // ```lernzettel mit drei Backticks → sicher als ein Block
   if (window.CodeAgent?.fromFences && !target.closest?.('.dcc-a, .dc-editor')) text = CodeAgent.fromFences(text);
   const codeAnswer = !!target.closest?.('[data-dog="code"]') || /^`{4,}file:/m.test(text);
   if (codeAnswer && window.CodeAgent?.has(text)) text = CodeAgent.mark(text, codeParts);
@@ -4218,10 +4225,10 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       // 17.11.: welches Modell gerade gefragt wird – hängt eins, sieht man das (statt endlos „lädt“)
       else if (event === 'attempt') {
         const nm = String(data.model || '').replace(/^gemini-/, 'Gemini ').replace(/-flash-lite/, ' Flash-Lite').replace(/-flash/, ' Flash').replace(/-preview.*$/, '');
-        if (data.failed) setActivity('work', `${nm} ${data.reason || 'antwortet nicht'} – nächstes Modell …`);
-        else if (data.n > 1 && !liveThoughtTitle) setActivity('work', `Frage ${nm} …`);
+        // 18.11.: Modellwechsel nicht mehr oben anzeigen („… überlastet – nächstes Modell“) – nur in der Konsole
+        console.info('[ki]', data.failed ? `${nm} ${data.reason || 'antwortet nicht'} – nächstes Modell` : `Versuch ${data.n}: ${nm}`);
       }
-      else if (event === 'todos') onTodos(data.items, data.done, data.fixed);
+      else if (event === 'todos') { if (data.fixed) onTodos(data.items, data.done, data.fixed); } // 18.11.: Einschätzungs-To-dos aus (zu oft); nur der Coding-Agent-Plan bleibt
       else if (event === 'codestatus') window.CodeAgent?.status(msgEl, data.text); // Coding-Agent: „Datei wird angelegt: …“ live unter der Antwort
       else if (event === 'reset') {
         // Prüfung hat Fehler gefunden: Entwurf weich ausblenden, korrigierte Fassung neu schreiben
@@ -4524,11 +4531,9 @@ function renderAsk(dir = 0) {
     b.setAttribute('aria-checked', String(a.picked.has(i)));
     b.innerHTML = `<span class="ask-let">${LET[i]}</span><span class="ask-label md"></span><span class="ask-mark">${icon('i-check')}</span>`;
     renderInline(b.querySelector('.ask-label'), opt);
-    b.addEventListener('click', () => {
-      pickOption(i);
-      // Einfachauswahl (wie im Vorbild): antippen = Antwort – kurz zeigen, dann weiter bzw. senden
-      if (!q.multi && a.picked.has(i)) { const at = ask.index; setTimeout(() => { if (ask && ask.index === at) askNext(); }, 220); }
-    });
+    // 18.11.: antippen wählt nur aus (man kann umentscheiden); Doppelklick/-tipp = auswählen und gleich weiter bzw. senden
+    b.addEventListener('click', () => { if (!q.multi && a.picked.has(i)) return; pickOption(i); });
+    b.addEventListener('dblclick', () => { if (!a.picked.has(i)) pickOption(i); askNext(); });
     list.append(b);
   });
 
@@ -4670,6 +4675,7 @@ function answerText(i) {
 // Weiter nur mit Antwort; Senden (letzte Frage) erst, wenn ALLE Fragen beantwortet sind – sonst wegklicken (×/Überspringen)
 const allAnswered = () => ask.questions.every((_, k) => !!answerText(k));
 function updateAskButtons() {
+  askPanel.classList.toggle('has-answer', !!(ask && (answerText(ask.index) || ask.index > 0))); // Senden/Weiter erst zeigen, wenn etwas gewählt ist
   const btn = askPanel.querySelector('#askNext');
   if (btn) btn.disabled = !answerText(ask.index) || (ask.index === ask.questions.length - 1 && !allAnswered());
 }

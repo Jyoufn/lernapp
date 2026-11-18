@@ -186,7 +186,24 @@ const Lernzettel = (() => {
       else if (cur?.key === key) show(raw, key);
     });
   }
+  /* Die KI schreibt den Block manchmal mit nur drei Backticks – dann würde ein innerer ```illustration-Block ihn vorzeitig schließen.
+     Vor dem Darstellen: Öffnung auf vier Backticks, und das passende Ende (das nicht zu einem inneren Block gehört) ebenso. */
+  function fixFence(text) {
+    const t = String(text || '');
+    if (!/^```lernzettel/m.test(t)) return t;
+    const lines = t.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (!/^```lernzettel\s*$/.test(lines[i])) continue;
+      lines[i] = '````lernzettel';
+      let inner = false;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^```[\w-]+/.test(lines[j]) && !inner) { inner = true; continue; }
+        if (/^```\s*$/.test(lines[j])) { if (inner) { inner = false; continue; } lines[j] = '````'; i = j; break; }
+      }
+    }
+    return lines.join('\n');
+  }
   window.addEventListener('chat-tab-switched', () => close());
-  return { parse, sheet, card, enhance, show, close, get open() { return !!cur; } };
+  return { parse, sheet, card, enhance, show, close, fixFence, get open() { return !!cur; } };
 })();
 window.Lernzettel = Lernzettel;

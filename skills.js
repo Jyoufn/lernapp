@@ -67,6 +67,8 @@ const Skills = (() => {
 
   /* ---------- Eingabefeld (nur im Browser) ---------- */
   let mentionSrc = null; // „@“: Chats und Dokumente (app.js → Skills.setMentions)
+  let picked = []; // 18.11.: gewählte Skills als farbige Marke am Anfang des Feldes (wie die Tags in Home), gehen beim Senden mit
+  let drawPicked = () => {};
   function attach(input, host) {
     if (!input || !host || input._skills) return;
     input._skills = true;
@@ -118,6 +120,24 @@ const Skills = (() => {
       draw();
       if (opening && !matchMedia('(prefers-reduced-motion: reduce)').matches) pop.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(.16,1,.3,1)' });
     };
+    // Marke(n) oben links im Feld; die erste Zeile rückt per text-indent ein → Schreibmarke bleibt richtig
+    const chips = document.createElement('span');
+    chips.className = 'sk-chips'; chips.hidden = true;
+    host.append(chips);
+    drawPicked = () => {
+      chips.hidden = !picked.length;
+      chips.innerHTML = picked.map((p) => `<span class="sk-chip" style="--c:${p.c}">${esc(p.title)}<button type="button" data-skx="${p.id}" aria-label="Entfernen">×</button></span>`).join('');
+      if (!picked.length) { input.style.textIndent = ''; return; }
+      const cs = getComputedStyle(input), lh = parseFloat(cs.lineHeight) || 22;
+      chips.style.left = `${input.offsetLeft + parseFloat(cs.paddingLeft)}px`;
+      chips.style.top = `${input.offsetTop + parseFloat(cs.paddingTop) + (lh - 24) / 2}px`;
+      input.style.textIndent = `${Math.ceil(chips.getBoundingClientRect().width) + 6}px`;
+    };
+    const pick = (s) => { if (!picked.some((p) => p.id === s.id)) picked.push({ id: s.id, title: s.title, c: s.c }); drawPicked(); };
+    chips.addEventListener('mousedown', (e) => e.preventDefault());
+    chips.addEventListener('click', (e) => { const x = e.target.closest('[data-skx]'); if (!x) return; picked = picked.filter((p) => p.id !== x.dataset.skx); drawPicked(); input.focus(); });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Backspace' && picked.length && input.selectionStart === 0 && input.selectionEnd === 0) { picked.pop(); drawPicked(); } });
+    addEventListener('resize', () => { if (picked.length) drawPicked(); });
     const choose = (i) => {
       const s = items[i]; if (!s || !slash) return;
       if (s.mention) { // „@…“ verschwindet aus dem Text, der Chat/das Dokument hängt als Quelle an
@@ -125,10 +145,10 @@ const Skills = (() => {
         input.setSelectionRange(slash.start, slash.start); close(); input.focus();
         const { kind, id, title } = s; mentionSrc.pick({ kind, id, title }); input.dispatchEvent(new Event('input', { bubbles: true })); return;
       }
-      const end = input.selectionStart, ins = `${s.title} `;
-      input.value = input.value.slice(0, slash.start) + ins + input.value.slice(end);
-      const pos = slash.start + ins.length; input.setSelectionRange(pos, pos);
-      close(); input.focus();
+      const end = input.selectionStart;
+      input.value = (input.value.slice(0, slash.start) + input.value.slice(end)).replace(/^\s+/, '');
+      const pos = Math.min(slash.start, input.value.length); input.setSelectionRange(pos, pos);
+      pick(s); close(); input.focus();
       input.dispatchEvent(new Event('input', { bubbles: true }));
     };
     // „/mindmap “ fertig getippt → „Mindmap “ (ohne Schrägstrich)
@@ -136,9 +156,10 @@ const Skills = (() => {
       const pos = input.selectionStart, v = input.value;
       const m = /(^|\s)\/([\p{L}\p{N}-]+)(\s)$/u.exec(v.slice(0, pos)); if (!m) return;
       const s = SKILLS.find((x) => x.name === m[2].toLowerCase()); if (!s) return;
-      const a = pos - m[2].length - 2, rep = `${s.title}${m[3]}`;
-      input.value = v.slice(0, a) + rep + v.slice(pos);
-      const np = a + rep.length; input.setSelectionRange(np, np);
+      const from = pos - m[0].length + m[1].length; // ab dem „/“ bis zur Schreibmarke entfernen
+      input.value = (v.slice(0, from) + v.slice(pos)).replace(/^\s+/, '');
+      const np = Math.min(from, input.value.length); input.setSelectionRange(np, np);
+      pick(s);
     };
     input.addEventListener('input', () => { unslash(); sel = 0; update(); paint(); });
     input.addEventListener('click', update);
@@ -163,7 +184,8 @@ const Skills = (() => {
     paint();
   }
 
-  return { SKILLS, detect, active, list, attach, html, setMentions: (items, pick) => { mentionSrc = { items, pick }; } };
+  return { SKILLS, detect, active, list, attach, html, setMentions: (items, pick) => { mentionSrc = { items, pick }; },
+    picked: () => picked.map((p) => p.id), pickedFull: () => picked.slice(), clearPicked: () => { picked = []; drawPicked(); } };
 })();
 if (typeof window !== 'undefined') {
   window.Skills = Skills;

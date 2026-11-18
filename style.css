@@ -13451,3 +13451,35 @@ html body .cal-view.cal-enter { animation-name: cal-view-fade4; }
 .lz-card.on .lz-go { color: var(--text); }
 @media (max-width: 900px) { .app.lz-open .lzwin { position: fixed; inset: 8px; z-index: 300; width: auto; margin: 0; } }
 @media print { .lz-print .lz-sheet { width: auto; padding: 0; border-radius: 0; } }
+/* 18.11.: Modell-Chip bei nur einem Modell: schlichter Text, kein Pfeil, nicht klickbar */
+html body .model-chip.solo { cursor: default; pointer-events: none; font-weight: 500; color: var(--text-3); }
+html body .model-chip.solo .chip-chev { display: none; }
+html body .model-chip.solo #chipModel { font-weight: 500; }
+/* 18.11.: gewählter Skill als Marke am Anfang des Eingabefelds – getönt wie die Tags in Home, etwas runder, fett */
+html body .composer { position: relative; }
+html body .sk-chips { position: absolute; z-index: 2; display: inline-flex; gap: 4px; pointer-events: auto; }
+html body .sk-chips[hidden] { display: none; }
+html body .sk-chip { display: inline-flex; align-items: center; gap: 2px; height: 24px; padding: 0 4px 0 9px; border-radius: 8px; background: color-mix(in srgb, var(--c) 18%, transparent); color: color-mix(in srgb, var(--c) 85%, #fff); font: 600 13px var(--font-ui, Inter), sans-serif; white-space: nowrap; animation: sk-chip-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+html body .sk-chip button { display: grid; place-items: center; width: 16px; height: 16px; padding: 0; border: 0; border-radius: 5px; background: none; color: inherit; font: 600 13px/1 var(--font-ui, Inter), sans-serif; opacity: 0.6; cursor: pointer; }
+@media (hover: hover) { html body .sk-chip button:hover { opacity: 1; background: rgba(255, 255, 255, 0.08); } }
+@keyframes sk-chip-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+
+/* ===== 18.11.: Rückfrage – × oben auf Höhe der Frage; alle Zeilen (auch „Etwas anderes …“) gleich hoch und bündig, als durchscheinende Kästchen;
+   „Senden/Weiter“ erscheint erst nach einer Auswahl (Feld wächst weich nach oben), weißer Knopf, kein Trennstrich ===== */
+html body #composer .ask-panel .ask-top { position: absolute; top: 10px; right: 10px; margin: 0; }
+html body #composer .ask-panel .ask-head { position: relative; padding-right: 34px; }
+html body #composer .ask-panel .ask-options { display: flex; flex-direction: column; gap: 4px; }
+html body #composer .ask-panel .ask-opt, html body #composer .ask-panel .ask-opt.ask-own-row { box-sizing: border-box; height: 40px; min-height: 40px; margin: 0 !important; padding: 0 8px !important; gap: 11px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+html body #composer .ask-panel .ask-opt.selected { background: rgba(255, 255, 255, 0.07); }
+@media (hover: hover) { html body #composer .ask-panel .ask-opt:not(.selected):hover { background: rgba(255, 255, 255, 0.05); } }
+html body #composer .ask-panel .ask-let { background: rgba(255, 255, 255, 0.07); }
+html body #composer .ask-panel .ask-opt.selected .ask-let { background: rgba(255, 255, 255, 0.88); color: #141414; }
+html body #composer .ask-panel .ask-own-row .ask-own-in { height: 28px; }
+html body #composer .ask-panel .ask-foot { display: grid; grid-template-rows: 0fr; margin: 0 !important; padding: 0 !important; border: 0 !important; overflow: hidden; opacity: 0; transition: grid-template-rows 280ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease, margin 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+html body #composer .ask-panel .ask-foot > * { min-height: 0; }
+html body #composer .ask-panel.has-answer .ask-foot { display: flex; grid-template-rows: 1fr; margin-top: 10px !important; opacity: 1; }
+html body #composer .ask-panel .ask-btn.primary { height: 30px; padding: 0 14px; border-radius: 9px; background: #f2f2f2; color: #141414; font: 600 13px var(--font-ui, Inter), sans-serif; }
+html body #composer .ask-panel .ask-btn.primary:disabled { background: rgba(255, 255, 255, 0.12); color: var(--text-4); }
+html body #composer .ask-panel .ask-top { top: -1px; right: -4px; }
+html body #composer .ask-panel .ask-foot { display: flex !important; max-height: 0; transition: max-height 280ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease, margin 280ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+html body #composer .ask-panel.has-answer .ask-foot { max-height: 48px; }
