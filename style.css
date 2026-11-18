@@ -13340,3 +13340,28 @@ html body .ill-fast .ill-mask { position: absolute; inset: 0; overflow: hidden; 
 html body .ill-fast .ill-band { position: absolute; top: -10%; bottom: -10%; left: 0; width: 45%; background: linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.10) 50%, transparent 100%); transform: translate3d(-110%, 0, 0); animation: ill-band 2.6s cubic-bezier(0.45, 0, 0.55, 1) infinite; will-change: transform; }
 @keyframes ill-band { from { transform: translate3d(-110%, 0, 0); } to { transform: translate3d(330%, 0, 0); } }
 @media (prefers-reduced-motion: reduce) { html body .ill-fast .ill-band { animation: none; transform: none; width: 100%; background: rgba(255, 255, 255, 0.06); } }
+
+/* ===== 18.11.: Tag-Menü – dunkler; „Hinzufügen **Name**“ ganz links; Bearbeiten: Name über die ganze Breite, unten Zurück | Löschen ohne Trennstrich ===== */
+html body .tagm-pop .tk-menu.tags { background: #161616; }
+html body .tagm-pop .tk-menu.tags .tk-tag-row { background-color: rgba(255, 255, 255, 0.04); }
+html body .tk-menu.tags .tk-mi.tk-tag-add { justify-content: flex-start; gap: 0; padding-left: 10px; color: var(--text-3); }
+html body .tk-menu.tags .tk-mi.tk-tag-add b { margin-left: 4px; color: var(--text); font-weight: 600; }
+html body .tk-menu.tags .tk-tag-edit-foot { box-shadow: none; padding-top: 4px; }
+html body .tk-menu.tags .tk-tag-edit-foot .tk-mini { font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .tk-menu.tags .tge-head .tk-tag-name { flex: 1; width: 100%; }
+/* 18.11.: Dokument-Tabelle – Menüs bündig mit dem grauen Feld des Knopfs; Tags-Knopf bleibt markiert, solange die Auswahl offen ist */
+html body .dc-mpop .dc-mmenu { left: -6px; }
+html body .dc-mbtn.tm-on { background: #212121; color: var(--text); }
+/* 18.11.: Projekt bearbeiten in einer Ansicht – Name, Farben, Icons (4 Reihen, scrollbar, nur umrandet), unten Zurück | Löschen */
+html body .dc-ppop .dc-pj-namerow { margin-bottom: 6px; padding-left: 10px; background-image: none; }
+html body .dc-ppop .dc-pj-grid { grid-template-columns: repeat(7, 1fr); gap: 5px; max-height: calc(4 * 30px + 3 * 5px + 4px); margin: 8px 0 4px; padding: 2px; overflow-y: auto; scrollbar-width: none; }
+html body .dc-ppop .dc-pj-grid::-webkit-scrollbar { display: none; }
+html body .dc-ppop .dc-pj-grid .dc-pj-ic { display: grid; place-items: center; height: 30px; border: 1px solid rgba(255, 255, 255, 0.09) !important; border-radius: 8px; background: none !important; color: inherit; }
+html body .dc-ppop .dc-pj-grid .dc-pj-ic.on { border-color: currentColor !important; background: none !important; }
+@media (hover: hover) { html body .dc-ppop .dc-pj-grid .dc-pj-ic:hover { border-color: rgba(255, 255, 255, 0.22) !important; } }
+html body .dc-ppop .dc-pj-acts { display: flex; align-items: center; margin-top: 4px; padding-top: 4px; border: 0; box-shadow: none; }
+html body .dc-ppop .dc-pj-acts button { background: none !important; font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .dc-ppop .tk-menu:has(.dc-pj-namerow) .tk-tag-row:has(.dc-proj-in) { display: none; }
+html body .dc-ppop .tk-tag-row.dc-pj-namerow { padding-left: 10px !important; background-image: none !important; }
+html body .dc-ppop .dc-pj-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; max-height: calc(4 * 30px + 3 * 4px + 4px); }
+html body .dc-ppop .dc-pj-grid .dc-pj-ic { width: auto !important; min-width: 0; aspect-ratio: auto; }

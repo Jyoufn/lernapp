@@ -1983,10 +1983,12 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (projStep === 'color') { list.innerHTML = back('Farbe') + UIKit.colorRow(ed.c, 'data-pjecolor'); }
         else if (projStep === 'icon') { list.innerHTML = back('Icon') + `<span class="dc-pj-icons" style="color:${esc(ed.c)}">${DocIcons.pickList(ed.icon).map((n) => `<button type="button" class="dc-pj-ic${n === ed.icon ? ' on' : ''}" data-pjeicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>`; }
         else {
-          list.innerHTML = `<span class="tk-tag-row"><input class="tk-tag-in dc-pj-name" value="${esc(ed.name)}" maxlength="40" aria-label="Projektname" /></span>
-            <span class="tk-mi dc-pj-step" data-pjstep="color" role="button" tabindex="0"><span>Farbe</span><i class="dc-pj-sw" style="background:${esc(ed.c)}"></i>${fi('chevron-right', 11)}</span>
-            <span class="tk-mi dc-pj-step" data-pjstep="icon" role="button" tabindex="0"><span>Icon</span><span class="dc-pj-cur" style="color:${esc(ed.c)}">${DocIcons.svg(ed.icon && DocIcons.has(ed.icon) ? ed.icon : 'folder', 15, '', !!ed.fill)}</span>${fi('chevron-right', 11)}</span>
-            <span class="dc-pj-acts">${doc.projectId === ed.id ? '<button type="button" data-pjout>Aus Dokument entfernen</button>' : ''}<span class="grow"></span><button type="button" class="danger" data-pjdel>Löschen</button></span>`;
+          // 18.11.: alles in EINER Ansicht wie im Chat-Menü – oben der Name, darunter die Farben, darunter die Icons (4 Reihen, scrollbar,
+          // nur umrandet), unten links Zurück, rechts Löschen
+          list.innerHTML = `<span class="tk-tag-row dc-pj-namerow"><input class="tk-tag-in dc-pj-name" value="${esc(ed.name)}" maxlength="40" aria-label="Projektname" placeholder="Name" /></span>
+            ${UIKit.colorRow(ed.c, 'data-pjecolor')}
+            <span class="dc-pj-icons dc-pj-grid" style="color:${esc(ed.c)}">${DocIcons.pickList(ed.icon).map((n) => `<button type="button" class="dc-pj-ic${n === ed.icon ? ' on' : ''}" data-pjeicon="${n}" aria-label="Icon">${DocIcons.svg(n, 16)}</button>`).join('')}</span>
+            <span class="dc-pj-acts"><button type="button" data-pjback>Zurück</button><span class="grow"></span><button type="button" class="danger" data-pjdel>Löschen</button></span>`;
         }
         list.firstElementChild?.parentElement.animate([{ opacity: 0, transform: `translateX(${projStep ? 10 : -10}px)` }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
         return;
@@ -2030,9 +2032,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         if (projEdit) {
           const ed = projOf(projEdit);
           const st = e.target.closest('[data-pjstep]'); if (st) { projStep = st.dataset.pjstep; drawMetaProj(); return; }
+          if (e.target.closest('[data-pjback]')) { projEdit = ''; projStep = ''; drawMetaProj(); return; }
           const after = () => { save(); drawProj(); renderSide(); if (list.open) list.render(); };
-          const ec = e.target.closest('[data-pjecolor]'); if (ec && ed && ec.dataset.pjecolor) { ed.c = ec.dataset.pjecolor; after(); projStep = ''; drawMetaProj(); return; }
-          const ei = e.target.closest('[data-pjeicon]'); if (ei && ed) { ed.icon = ei.dataset.pjeicon; delete ed.line; after(); projStep = ''; drawMetaProj(); return; }
+          const ec = e.target.closest('[data-pjecolor]'); if (ec && ed && ec.dataset.pjecolor) { ed.c = ec.dataset.pjecolor; after(); projStep = ''; const keep = view.querySelector('.dc-proj-list .dc-pj-grid')?.scrollTop || 0; drawMetaProj(); const g = view.querySelector('.dc-proj-list .dc-pj-grid'); if (g) g.scrollTop = keep; return; }
+          const ei = e.target.closest('[data-pjeicon]'); if (ei && ed) { ed.icon = ei.dataset.pjeicon; delete ed.line; after(); projStep = ''; const keep = view.querySelector('.dc-proj-list .dc-pj-grid')?.scrollTop || 0; drawMetaProj(); const g = view.querySelector('.dc-proj-list .dc-pj-grid'); if (g) g.scrollTop = keep; return; }
           if (e.target.closest('[data-pjout]')) { doc.projectId = ''; touch(doc); changed(); projEdit = ''; drawProj(); pop.classList.remove('open'); return; }
           if (e.target.closest('[data-pjdel]') && ed) {
             projects = projects.filter((x) => x.id !== ed.id);

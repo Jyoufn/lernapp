@@ -6193,8 +6193,8 @@ const TagMenu = (() => {
     const ed = list.find((g) => g.id === editing);
     if (ed) {
       pop.classList.add('tagm-sub');
-      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><button type="button" class="tge-back" data-tdone aria-label="Zurück"><svg width="12" height="12" aria-hidden="true"><use href="#f-chevron-right"/></svg></button><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name des Tags" placeholder="Name" /></span>${UIKit.colorRow(ed.c, 'data-tecolor')}`
-        + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini danger" data-tdel>${fiH('trash', 11)}Löschen</button><span class="grow"></span><button type="button" class="tk-mini" data-tdone>Fertig</button></span></span>`;
+      listEl.innerHTML = `<span class="tk-tag-editbox"><span class="tge-head"><input class="tk-tag-name" data-tname value="${escapeHtml(ed.name)}" maxlength="24" aria-label="Name des Tags" placeholder="Name" /></span>${UIKit.colorRow(ed.c, 'data-tecolor')}`
+        + `<span class="tk-tag-edit-foot"><button type="button" class="tk-mini" data-tdone>Zurück</button><span class="grow"></span><button type="button" class="tk-mini danger" data-tdel>Löschen</button></span></span>`; // 18.11.: unten links Zurück, rechts Löschen, kein Trennstrich
       return;
     }
     pop.classList.toggle('tagm-sub', !!creating);
@@ -6202,7 +6202,7 @@ const TagMenu = (() => {
     const on = new Set(ids()), ql = q.trim().toLowerCase();
     const found = list.filter((g) => g.name.toLowerCase().includes(ql));
     const exact = list.some((g) => g.name.toLowerCase() === ql);
-    listEl.innerHTML = (ql && !exact ? `<span class="tk-mi tk-tag-add" data-tadd role="button" tabindex="0">${fiH('plus', 12)}<span><b>${escapeHtml(q.trim())}</b> hinzufügen</span></span>` : '')
+    listEl.innerHTML = (ql && !exact ? `<span class="tk-mi tk-tag-add" data-tadd role="button" tabindex="0"><span>Hinzufügen <b>${escapeHtml(q.trim())}</b></span></span>` : '')
       + found.map((g) => `<span class="tk-mi tag${on.has(g.id) ? ' on' : ''}" data-ttag="${escapeHtml(g.id)}" role="button" tabindex="0"><i style="background:${escapeHtml(g.c)}"></i><span>${escapeHtml(g.name)}</span>${fiH('check', 12)}<button type="button" class="tk-tag-pen" data-tedit="${escapeHtml(g.id)}" aria-label="Tag bearbeiten">${fiH('pencil', 11)}</button></span>`).join('')
       + (!found.length && !ql ? '<span class="tk-ml">Noch keine Tags</span>' : '');
   }
@@ -6245,13 +6245,24 @@ const TagMenu = (() => {
     if (hit) { const cur = ids(); setIds(cur.includes(hit.id) ? cur.filter((x) => x !== hit.id) : [...cur, hit.id]); }
     else if (q.trim()) { creating = q.trim(); draw(); }
   });
-  function close() { pop.classList.remove('open'); target = null; }
+  let anchorEl = null; // 18.11.: der Knopf, der das Menü geöffnet hat, bleibt markiert, solange es offen ist
+  function close() { pop.classList.remove('open'); target = null; anchorEl?.classList.remove('tm-on'); anchorEl = null; }
   function open(anchor, t) {
     if (pop.classList.contains('open') && target && target.key && target.key === t.key) { close(); return; }
+    anchorEl?.classList.remove('tm-on'); anchorEl = anchor; anchor.classList.add('tm-on');
     target = t; q = ''; creating = ''; editing = ''; input.value = '';
     draw();
     pop.classList.add('open');
     const r = anchor.getBoundingClientRect(), menu = pop.firstElementChild, w = menu.offsetWidth || 230, h = Math.max(menu.offsetHeight, 120);
+    // 18.11.: Tag-Knopf oben rechts im Chat → die Suche steht in derselben Zeile LINKS neben dem Knopf, die Liste darunter
+    pop.classList.toggle('tagm-inline', anchor.id === 'chatTags');
+    if (anchor.id === 'chatTags') {
+      const row = menu.querySelector('.tk-tag-row'), mr = menu.getBoundingClientRect(), rr = row.getBoundingClientRect();
+      pop.style.left = `${Math.round(Math.max(8, r.left - 6 - w))}px`;
+      pop.style.top = `${Math.round(r.top + r.height / 2 - (rr.top - mr.top + rr.height / 2))}px`;
+      setTimeout(() => input.focus({ preventScroll: true }), 40);
+      return;
+    }
     // 16.11. abends: linksbündig unter dem Knopf (öffnet nach rechts, nicht nach links), am Rand eingefangen
     pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
     pop.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 12) : r.bottom + 6)}px`;
