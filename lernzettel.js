@@ -91,7 +91,7 @@ const Lernzettel = (() => {
     win.className = 'lzwin';
     win.setAttribute('aria-label', 'Lernzettel');
     win.innerHTML = `<div class="lz-bar"><span class="lz-bt">Lernzettel</span><span class="lz-chip" hidden></span><span class="lz-grow"></span>
-        <button type="button" class="icon-btn lz-ib" data-lz="share" aria-label="Teilen und Speichern" title="Teilen">${icon('share', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="close" aria-label="Schließen" title="Schließen">${icon('x', 14)}</button></div>
+        <button type="button" class="icon-btn lz-ib" data-lz="share" aria-label="Teilen und Speichern" title="Teilen">${icon('share-up', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="close" aria-label="Schließen" title="Schließen">${icon('x', 14)}</button></div>
       <div class="lz-scroll"></div>`;
     appEl()?.insertBefore(win, document.getElementById('rpane'));
     win.addEventListener('click', (e) => {
@@ -189,7 +189,8 @@ const Lernzettel = (() => {
     c.className = `lz-card${cur?.key === key ? ' on' : ''}`;
     c.dataset.key = key;
     const meta = live ? 'wird geschrieben …' : ['Lernzettel', caps ? `${caps} Kapitel` : '', pics ? `${pics} ${pics === 1 ? 'Abbildung' : 'Abbildungen'}` : ''].filter(Boolean).join(' · ');
-    c.innerHTML = `<span class="lz-tile"><span class="lz-ti"></span></span><span class="lz-tx"><b>${esc(z.title || 'Lernzettel')}</b><span>${esc(meta)}</span></span><span class="lz-go" aria-hidden="true"></span>`;
+    // 18.11. spät: schlicht wie die Datei-Karten der Vorlage – Dokument-Symbol, Titel, leise Zeile darunter, kein Pfeil
+    c.innerHTML = `<span class="lz-fic">${icon('filedoc', 18)}</span><span class="lz-tx"><b>${esc(z.title || 'Lernzettel')}</b><span>${esc(meta)}</span></span>`;
     c.addEventListener('click', () => { if (cur?.key === key) close(true); else { dismissed.delete(key); show(raw, key); } });
     c._raw = raw; c._title = z.title || 'Lernzettel';
     return c;

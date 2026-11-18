@@ -451,6 +451,7 @@ const Calendar = (() => {
     const e = ev ? { ...ev } : T ? { id: '', title: '', description: '', date: '', time: '', end: '', status: 'open', priority: 'none', tags: [] } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: EV_COLORS[6] || COLORS[0], icon: 'f-calendar' };
     if (!Array.isArray(e.tags)) e.tags = [];
     const STATI = [['open', 'Offen'], ['doing', 'In Arbeit'], ['done', 'Erledigt'], ['archived', 'Archiviert']];
+    const STI = { open: 'f-st-open', doing: 'f-st-doing', done: 'f-st-done', archived: 'f-st-arch' };
     const PRIOS = window.UIKit?.PRIOS || [{ id: 'none', name: 'Keine' }];
     let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
@@ -465,13 +466,13 @@ const Calendar = (() => {
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
       <input type="file" accept="image/*" class="ce-cover-in" hidden />
-      ${T ? `<div class="ce-stbox">${STATI.map(([k, n]) => `<button type="button" data-st="${k}">${n}</button>`).join('')}</div>` : ''}
       <div class="tk-sheet-rows ce-rows">
+        ${T ? pill('status', STATI.map(([k, n]) => `<button type="button" class="tk-mi" data-st="${k}">${icon(STI[k])}<span>${n}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${T ? '' : pill('color', evColorRow(e.color), 'color')}
         ${T ? pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${window.UIKit?.prioIcon?.(p.id, 15) || ''}<span>${esc(p.name)}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
-        <div class="tk-pop ce-tags-row"><button type="button" class="tk-pill" data-act="tags"></button></div>
+        <div class="tk-pop ce-tags-row" data-k="tags"><div class="tk-pill" data-open="tags" role="button" tabindex="0"><span class="tk-si">${icon('f-tag')}</span><span class="tk-rv"><span class="ce-tl">Tags</span><span class="ce-tchips"></span></span><span class="ce-tsearch"></span><span class="ce-chev">${icon('f-chevron-down')}</span></div><div class="tk-menu tags"><div class="tk-box ce-tagbox"></div></div></div>
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
       </div>
       <div class="tk-sheet-foot ce-foot">${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen">${icon('f-trash')}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
@@ -496,7 +497,9 @@ const Calendar = (() => {
         form.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === (e.status || 'open')));
       }
       const tg = (window.TagMenu?.all?.() || []).filter((g) => e.tags.includes(g.id));
-      form.querySelector('[data-act="tags"]').innerHTML = `<span class="tk-si">${icon('f-tag')}</span><span class="tk-rv">${tg.length ? tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') : '<span class="ce-off">Tags</span>'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
+      form.querySelector('.ce-tchips').innerHTML = tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('');
+      form.querySelector('.ce-tags-row').classList.toggle('has', !!tg.length);
+      if (T) { const st = e.status || 'open'; set('status', icon(STI[st]), esc((STATI.find(([k]) => k === st) || STATI[0])[1])); }
       // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
       const s = toMin(e.time), en = toMin(e.end), dur = s != null && en != null && en > s ? en - s : null;
       const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
@@ -524,6 +527,10 @@ const Calendar = (() => {
     const openPop = (k) => {
       form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open')));
       const p = form.querySelector(`.tk-pop[data-k="${k}"].open`);
+      const tagsOpen = form.querySelector('.tk-pop[data-k="tags"].open');
+      if (tagsOpen && k === 'tags') window.TagMenu?.embed?.(form.querySelector('.ce-tagbox'), form.querySelector('.ce-tsearch'), { key: 'embed', get: () => e.tags, set: (ids) => { e.tags = ids; draw(); } });
+      else if (window.TagMenu?.isOpen) window.TagMenu.close();
+      if (k === 'tags' && tagsOpen) setTimeout(() => form.querySelector('.ce-tsearch input')?.focus({ preventScroll: true }), 60);
       if (k === 'date' && p) cal.open();
       if (k === 'time' && p) requestAnimationFrame(() => { wStart.setValue(e.time || '09:00'); wEnd.setValue(e.end || '10:00'); });
     };
@@ -551,10 +558,10 @@ const Calendar = (() => {
       }
       if (x.target.closest('[data-act="date-x"]')) { e.date = ''; e.time = ''; e.end = ''; form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); draw(); return; }
       if (op) { openPop(op.dataset.open); return; }
-      const stb = x.target.closest('[data-st]'); if (stb) { e.status = stb.dataset.st; draw(); return; }
+      if (x.target.closest('.ce-tsearch')) return; // Suchfeld in der Tags-Zeile
+      const stb = x.target.closest('[data-st]'); if (stb) { e.status = stb.dataset.st; draw(); stb.closest('.tk-pop')?.classList.remove('open'); return; }
       const prb = x.target.closest('[data-prio]'); if (prb) { e.priority = prb.dataset.prio; draw(); prb.closest('.tk-pop').classList.remove('open'); return; }
-      const tgb = x.target.closest('[data-act="tags"]');
-      if (tgb) { form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); window.TagMenu?.open?.(tgb, { key: `${T ? 'task' : 'event'}:${e.id || 'neu'}`, get: () => e.tags, set: (ids) => { e.tags = ids; draw(); } }); return; }
+
       const cu = x.target.closest('[data-custom]');
       if (cu) {
         // Eigene Farbe: der bunte Knopf bleibt, wie er ist; die Farbe erscheint oben in der Zeile (Vorschau) und kommt mit „Übernehmen“

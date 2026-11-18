@@ -13653,8 +13653,6 @@ html body .files-menu .fm-head span { margin-left: auto; color: var(--text-4); f
 html body .files-menu .fm-row { height: 32px; font-size: 13px; color: var(--text-2); }
 /* 18.11.: Lernzettel-Leiste mit durchgehendem Trennstrich unter Titel und Symbolen */
 html body .lzwin .lz-bar { box-shadow: inset 0 -1px 0 #242424; }
-/* Linie läuft bei offenem Lernzettel auch unter der Chat-Leiste weiter (auf Höhe der Lernzettel-Linie) */
-html body #app.lz-open .panel::after { content: ""; position: absolute; left: 0; right: 0; top: 48px; height: 1px; background: #242424; pointer-events: none; z-index: 5; }
 /* 18.11. (Vorlage Claude-Desktop): Dateien-Knopf ganz rechts, leichtes dünnes Symbol; Karte rechtsbündig, weich einblenden */
 html body .files-btn { color: var(--text-3); }
 html body .files-btn:hover, html body .files-btn.on { color: var(--text); }
@@ -13805,3 +13803,56 @@ html body .dcs-name { font: 500 12.5px var(--font-ui, Inter), sans-serif; color:
 html body .st-view .st-name .st-sub, html body .st-name em.st-sub { display: block; font-style: normal; margin-top: 2px; color: var(--text-4); font-size: 12px; }
 html body .st-row .st-name { min-width: 0; }
 @media (max-width: 700px) { html body .st-row [data-ics-copy] { display: none; } }
+/* 18.11. spät: Aufgaben – Suche oben mittig (breit, ohne Hintergrund), Spalten je in einem eigenen Kasten (Karten darin heller) */
+html body .au-view .au-head { position: relative; }
+html body .au-search { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: min(520px, 46%); height: 28px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border-radius: 8px; color: var(--text-4); background: none; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+html body .au-search:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16); color: var(--text-3); }
+html body .au-search input { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--text); font: 500 13px var(--font-ui, Inter), sans-serif; -webkit-appearance: none; }
+html body .au-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+@media (max-width: 760px) { html body .au-search { position: static; transform: none; width: auto; flex: 1; margin: 0 8px; } }
+.au-board { gap: 10px; padding: 0 0 12px; }
+.au-col, .au-col:first-child, .au-col:last-child { border: 1px solid #242424; border-radius: 14px; background: #181818; padding: 4px 10px 0; min-height: 0; }
+.au-col.over { background: #1b1b1b; border-color: #2c2c2c; }
+.au-card2 { background: #212121; border-color: #2a2a2a; }
+.au-card2:hover { background: #242424; border-color: #303030; }
+.au-ph { border-color: #2c2c2c; background: rgba(255, 255, 255, 0.03); }
+/* Fenster: Tags-Zeile – Suche rechts neben „Tags“, Liste darunter wie bei Priorität */
+html body .ce-card .ce-tags-row .tk-rv { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; min-width: 0; }
+html body .ce-card .ce-tags-row .ce-tl { color: var(--text-3); }
+html body .ce-card .ce-tags-row.has:not(.open) .ce-tl { display: none; }
+html body .ce-card .ce-tags-row.open .ce-tchips { display: none; }
+html body .ce-card .ce-tags-row .ce-tchips { display: flex; flex-wrap: wrap; gap: 4px; }
+html body .ce-card .ce-tsearch { display: none; flex: 1; min-width: 0; }
+html body .ce-card .ce-tags-row.open .ce-tsearch { display: flex; }
+html body .ce-card .ce-tsearch .tk-tag-row { display: flex; align-items: center; width: 100%; height: 26px; margin: 0 6px 0 10px; padding: 0 8px; border-radius: 7px; background: rgba(255, 255, 255, 0.05); }
+html body .ce-card .ce-tsearch .tk-tag-in { width: 100%; border: 0; outline: 0; background: none; color: var(--text); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .tagm-embed { position: static !important; display: block !important; opacity: 1 !important; transform: none !important; pointer-events: auto !important; }
+html body .tagm-embed > .tk-menu { position: static !important; display: flex !important; flex-direction: column; width: auto !important; max-width: none !important; margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; background: none !important; opacity: 1 !important; transform: none !important; visibility: visible !important; }
+html body .tagm-embed .tk-tag-list { max-height: 200px; overflow-y: auto; }
+html body .tagm-pop.tagm-embed { width: auto !important; height: auto !important; z-index: auto; }
+html body .tagm-pop.tagm-embed > .tk-menu { height: auto !important; max-height: none !important; overflow: visible !important; }
+html body .ce-card .ce-tags-row.open .ce-tsearch { flex: 1 1 auto; margin-left: 4px; }
+html body .ce-card .ce-tsearch .tk-tag-row { width: 100% !important; max-width: none !important; flex: 1; justify-content: flex-start; }
+html body .ce-card .ce-tsearch .tk-tag-in { text-align: left; }
+html body .ce-card .ce-tags-row.open .tk-rv { flex: none; }
+/* 18.11. spät: Lernzettel-Karte im Chat wie die Datei-Karten der Vorlage – kompakt, kleines Dokument-Symbol, kleinere Schrift */
+html body .lz-card { gap: 10px; max-width: 360px; min-height: 0; height: 46px; padding: 0 12px; border-radius: 11px; background: #141414; box-shadow: inset 0 0 0 1px #242424; }
+@media (hover: hover) { html body .lz-card:hover { background: rgba(255, 255, 255, 0.035); } }
+html body .lz-card.on { background: rgba(255, 255, 255, 0.05); }
+html body .lz-card .lz-fic { flex: none; display: inline-flex; color: var(--text-3); }
+html body .lz-card .lz-tx { gap: 1px; min-width: 0; }
+html body .lz-card .lz-tx b { font: 500 13px/1.3 var(--font-ui, Inter), sans-serif; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .lz-card .lz-tx > span { font: 500 11.5px/1.3 var(--font-ui, Inter), sans-serif; color: var(--text-4); }
+/* Öffnen: Inhalt gleitet kurz von rechts herein */
+html body .app.lz-open .lzwin .lz-scroll { animation: lz-show 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes lz-show { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { html body .app.lz-open .lzwin .lz-scroll { animation: none; } }
+/* 18.11. spät: Nachricht bearbeiten – kleinere Knöpfe, sauber unter dem Text, Form bleibt beim Drücken gleich */
+html body .ue-box { padding: 10px 12px 10px; }
+html body .ue-in { padding-bottom: 2px; }
+html body .ue-bar { margin-top: 10px; gap: 6px; }
+html body .ue-bar button, html body .ue-bar button:hover, html body .ue-bar button:active { flex: none; height: 26px; min-width: 0; min-height: 0; padding: 0 10px; border-radius: 8px; font: 600 12px/26px var(--font-ui, Inter), sans-serif; white-space: nowrap; transform: none !important; box-shadow: none; transition: background-color 120ms ease; }
+html body .ue-cancel:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+html body .ue-send:hover { background: #ffffff; }
+/* Dateien-Karte liegt immer über dem Chat-Text */
+html body .files-menu { z-index: 1300 !important; }

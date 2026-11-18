@@ -43,11 +43,13 @@ const Aufgaben = (() => {
   const main = document.createElement('div');
   main.className = 'au-main';
   const SI = { open: icon('f-st-open', 14), doing: icon('f-st-doing', 14), done: icon('f-st-done', 14), archived: icon('f-st-arch', 14) }; // grau, runde Linien
-  main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1><span class="grow"></span>
+  main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1>
+      <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /></label><span class="grow"></span>
       <button class="cal-new" type="button" data-au="new" aria-label="Neue Aufgabe">${icon('f-plus')}<span>Neue Aufgabe</span></button></header>
     <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch"><span class="au-si">${SI[k]}</span><span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
   view.append(main);
   const board = main.querySelector('.au-board');
+  main.querySelector('.au-search input').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function card(t) {
@@ -65,11 +67,18 @@ const Aufgaben = (() => {
   function counts() {
     TABS.forEach(([k]) => { const n = items.filter((t) => statusOf(t) === k).length; const el = main.querySelector(`[data-n="${k}"]`); if (el) el.textContent = String(n); });
   }
+  // Suche oben in der Mitte: Titel, Notiz und Tag-Namen
+  let query = '';
+  const hit = (t) => {
+    if (!query) return true;
+    const tags = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id)).map((g) => g.name).join(' ');
+    return `${t.title} ${t.note || ''} ${tags}`.toLowerCase().includes(query);
+  };
   function render() {
     counts();
     TABS.forEach(([k]) => {
       const box = board.querySelector(`[data-cards="${k}"]`);
-      const mine = items.filter((t) => statusOf(t) === k).slice(0, 150);
+      const mine = items.filter((t) => statusOf(t) === k && hit(t)).slice(0, 150);
       box.innerHTML = mine.map(card).join('');
     });
   }

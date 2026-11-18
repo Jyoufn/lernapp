@@ -6232,7 +6232,7 @@ function renderChatBar() {
 /* ---------- Dateien des Chats oben rechts (18.11., wie bei Claude): Symbol → kleines Fenster darunter mit allem, was die KI erstellt hat
    (Lernzettel, Code-Dateien, Präsentationen) – antippen öffnet es rechts bzw. springt hin ---------- */
 const ChatFiles = (() => {
-  const btn = el('button', 'icon-btn files-btn', icon('f-filestack', 16));
+  const btn = el('button', 'icon-btn files-btn', icon('f-folder-full', 17));
   btn.type = 'button'; btn.id = 'filesBtn'; btn.hidden = true;
   btn.setAttribute('aria-label', 'Dateien dieses Chats'); btn.title = 'Dateien';
   const pop = el('div', 'lb2-menu files-menu'); pop.hidden = true; pop.setAttribute('role', 'menu'); // 18.11.: wie das Aufwand-Menü (nur Rand, Titel mit kleinem Icon)
@@ -6418,11 +6418,12 @@ const TagMenu = (() => {
     const t = e.target.closest('[data-ttag]');
     if (t) { const cur = ids(); setIds(cur.includes(t.dataset.ttag) ? cur.filter((x) => x !== t.dataset.ttag) : [...cur, t.dataset.ttag]); }
   });
-  pop.addEventListener('input', (e) => {
+  const onInput = (e) => {
     if (e.target === input) { q = input.value; creating = ''; draw(); return; }
     if (e.target.matches('[data-tname]')) { const list = all(), g = list.find((x) => x.id === editing); const v = e.target.value.trim(); if (g && v) { g.name = v.slice(0, 24); saveAll(list); } }
-  });
-  pop.addEventListener('keydown', (e) => {
+  };
+  pop.addEventListener('input', onInput);
+  const onKey = (e) => {
     e.stopPropagation();
     if (e.key === 'Escape') { if (creating || editing) { creating = ''; editing = ''; draw(); } else close(); return; }
     if (e.key !== 'Enter' || e.target !== input) return;
@@ -6430,9 +6431,33 @@ const TagMenu = (() => {
     const hit = all().find((g) => g.name.toLowerCase() === q.trim().toLowerCase());
     if (hit) { const cur = ids(); setIds(cur.includes(hit.id) ? cur.filter((x) => x !== hit.id) : [...cur, hit.id]); }
     else if (q.trim()) { creating = q.trim(); draw(); }
-  });
+  };
+  pop.addEventListener('keydown', onKey);
+  // eingebettet liegt die Suche außerhalb von pop – dann hören ihre Ereignisse hier
+  const tagRow = pop.querySelector('.tk-tag-row');
+  tagRow.addEventListener('input', (e) => { if (embedded) onInput(e); });
+  tagRow.addEventListener('keydown', (e) => { if (embedded) onKey(e); });
+  /* 18.11. spät: eingebettet (Aufgaben-/Termin-Fenster): Suche rechts in der Tags-Zeile, Liste aufgeklappt darunter – wie bei Priorität */
+  let embedded = null;
+  function embed(host, searchHost, t) {
+    close();
+    target = t; q = ''; creating = ''; editing = ''; input.value = '';
+    const row = pop.querySelector('.tk-tag-row');
+    searchHost.append(row); host.append(pop);
+    pop.classList.remove('tk-pop'); pop.classList.add('tagm-embed', 'open');
+    embedded = { row };
+    draw();
+  }
+  function unembed() {
+    if (!embedded) return;
+    pop.firstElementChild.prepend(embedded.row); document.body.append(pop);
+    pop.classList.add('tk-pop'); pop.classList.remove('tagm-embed');
+    embedded = null;
+  }
+  pop.querySelector('.tk-tag-row').addEventListener('pointerdown', (e) => e.stopPropagation());
+  pop.querySelector('.tk-tag-row').addEventListener('click', (e) => e.stopPropagation());
   let anchorEl = null; // 18.11.: der Knopf, der das Menü geöffnet hat, bleibt markiert, solange es offen ist
-  function close() { pop.classList.remove('open'); target = null; anchorEl?.classList.remove('tm-on'); anchorEl = null; }
+  function close() { pop.classList.remove('open'); target = null; anchorEl?.classList.remove('tm-on'); anchorEl = null; unembed(); }
   function open(anchor, t) {
     if (pop.classList.contains('open') && target && target.key && target.key === t.key) { close(); return; }
     anchorEl?.classList.remove('tm-on'); anchorEl = anchor; anchor.classList.add('tm-on');
@@ -6454,7 +6479,7 @@ const TagMenu = (() => {
     pop.style.top = `${Math.round(r.bottom + 6 + h > innerHeight - 8 ? Math.max(8, r.top - h - 12) : r.bottom + 6)}px`;
     setTimeout(() => input.focus({ preventScroll: true }), 40);
   }
-  document.addEventListener('pointerdown', () => { if (pop.classList.contains('open')) close(); });
+  document.addEventListener('pointerdown', () => { if (pop.classList.contains('open') && !embedded) close(); });
   // iPad (16.11.): Antippen von „Suchen“ öffnet die Tastatur → das Fenster ändert die Größe → das Menü ging sofort wieder zu und man konnte
   // keinen Tag anlegen. Solange darin geschrieben wird, bleibt es offen und rückt nur nach oben, falls die Tastatur es verdeckt.
   const keep = () => pop.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
@@ -6467,7 +6492,7 @@ const TagMenu = (() => {
   addEventListener('resize', refit);
   window.visualViewport?.addEventListener('resize', () => { if (pop.classList.contains('open') && keep()) refit(); });
   window.addEventListener('tags-changed', (e) => { if (e.detail !== 'tagmenu' && pop.classList.contains('open')) draw(); });
-  return { open, close, all, get isOpen() { return pop.classList.contains('open'); } };
+  return { open, close, embed, all, get isOpen() { return pop.classList.contains('open'); } };
 })();
 window.TagMenu = TagMenu;
 const ChatTags = (() => {
