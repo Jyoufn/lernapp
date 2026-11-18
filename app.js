@@ -1112,7 +1112,20 @@ function userFooter(text, msg) {
     copy.classList.add('done');
     setTimeout(() => { copy.innerHTML = icon('i-copy'); copy.classList.remove('done'); }, 1400);
   });
-  bar.append(copy);
+  // 18.11.: Stift = Nachricht bearbeiten (neu senden → neue Antwort); bei mehreren Fassungen links „‹ 1 / 2 ›“ zum Umschalten
+  const edit = el('button', 'msg-btn', icon('f-pencil', 14));
+  edit.type = 'button';
+  edit.setAttribute('aria-label', 'Nachricht bearbeiten');
+  edit.title = 'Bearbeiten';
+  edit.addEventListener('click', (e) => { e.stopPropagation(); editUserMessage(msg); });
+  const nav = el('span', 'ver-nav');
+  nav.innerHTML = `<button type="button" class="msg-btn ver-prev" aria-label="Vorherige Fassung">${icon('f-back', 12)}</button><span class="ver-n"></span><button type="button" class="msg-btn ver-next" aria-label="Nächste Fassung">${icon('f-forward', 12)}</button>`;
+  nav.hidden = true;
+  nav.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('.ver-prev, .ver-next'); if (b) switchVersion(msg, b.classList.contains('ver-prev') ? -1 : 1); });
+  bar.prepend(nav);
+  bar.append(edit, copy);
+  copy.remove(); bar.insertBefore(copy, edit); // Reihenfolge: Fassungen · Kopieren · Bearbeiten
+  queueMicrotask(() => drawVersionNav(msg));
   if (window.matchMedia?.('(hover: none)').matches) {
     msg.addEventListener('click', (e) => {
       if (e.target.closest('button, a, .oi, .out-pdfs')) return;
@@ -1121,6 +1134,76 @@ function userFooter(text, msg) {
     });
   }
   return bar;
+}
+
+/* ---------- Eigene Nachricht bearbeiten und Fassungen (18.11.) ----------
+   Jede Nutzernachricht im Verlauf kann Fassungen haben: h.alts = [Zweig, Zweig, …] (ein Zweig = diese Nachricht und alles danach), h.alt = gezeigte.
+   Bearbeiten → der bisherige Zweig wird gesichert, ab dieser Nachricht neu gesendet. Umschalten → anderer Zweig wird eingesetzt und neu gezeichnet. */
+function userIndexOf(msg) {
+  const outs = [...chat.querySelectorAll('.msg-out')], n = outs.indexOf(msg);
+  if (n < 0) return -1;
+  let k = -1;
+  return history.findIndex((h) => h.role === 'user' && ++k === n);
+}
+const branchOf = (from) => history.slice(from).map((h, j) => { if (j) return h; const { alts, alt, ...rest } = h; return rest; });
+function drawVersionNav(msg) {
+  const nav = msg.querySelector('.ver-nav'); if (!nav) return;
+  const h = history[userIndexOf(msg)];
+  const n = h?.alts?.length || 0;
+  nav.hidden = n < 2;
+  if (n < 2) return;
+  nav.querySelector('.ver-n').textContent = `${(h.alt ?? n - 1) + 1} / ${n}`;
+  nav.querySelector('.ver-prev').disabled = (h.alt ?? 0) <= 0;
+  nav.querySelector('.ver-next').disabled = (h.alt ?? 0) >= n - 1;
+}
+function dropFrom(msg) { // diese Nachricht und alles danach aus dem Chat nehmen
+  let x = msg;
+  while (x) { const nx = x.nextElementSibling; if (x.matches?.('.msg-out, .msg-ai, .msg-sugs, .next-sugs')) x.remove(); x = nx; }
+}
+function switchVersion(msg, dir) {
+  if (runOf()) return;
+  const i = userIndexOf(msg), h = history[i]; if (!h?.alts) return;
+  const cur = h.alt ?? h.alts.length - 1, k = cur + dir;
+  if (k < 0 || k >= h.alts.length || !h.alts[k]) return;
+  const alts = h.alts.slice(); alts[cur] = branchOf(i);
+  const branch = alts[k].map((x) => ({ ...x }));
+  branch[0] = { ...branch[0], alts, alt: k };
+  history.length = i; history.push(...branch);
+  dropFrom(msg);
+  branch.forEach((b, j) => { try { renderSavedItem(b, i + j); } catch (err) { console.error(err); } });
+  saveChats();
+  scrollToBottom(true);
+}
+function editUserMessage(msg) {
+  if (runOf() || msg.classList.contains('editing')) return;
+  const i = userIndexOf(msg), h = history[i]; if (!h) return;
+  const bubble = msg.querySelector('.out-bubble'); if (!bubble) return;
+  msg.classList.add('editing');
+  const box = el('div', 'ue-box');
+  const ta = document.createElement('textarea');
+  ta.className = 'ue-in'; ta.value = h.text || ''; ta.rows = 1;
+  const bar = el('div', 'ue-bar', '<span class="flex-spacer"></span><button type="button" class="ue-cancel">Abbrechen</button><button type="button" class="ue-send">Senden</button>');
+  box.append(ta, bar);
+  bubble.after(box);
+  const fit = () => { ta.style.height = 'auto'; ta.style.height = `${Math.min(320, ta.scrollHeight)}px`; };
+  requestAnimationFrame(() => { fit(); ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length); });
+  ta.addEventListener('input', fit);
+  const cancel = () => { box.remove(); msg.classList.remove('editing'); };
+  const send = () => {
+    const text = ta.value.trim(); if (!text || runOf()) return;
+    if (text === (h.text || '').trim()) { cancel(); return; }
+    const alts = (h.alts || [branchOf(i)]).slice();
+    if (h.alts) alts[h.alt ?? alts.length - 1] = branchOf(i);
+    alts.push(null); // die neue Fassung entsteht gleich
+    const keepImages = (h.images || []).filter((x) => x && (x.data || x.text || x.fileId));
+    history.length = i;
+    dropFrom(msg);
+    sendMessage(text, [], { inlineImages: keepImages, alts, alt: alts.length - 1, skills: h.skills || [],
+      chips: keepImages.filter((x) => x.mime && /^image\//.test(x.mime) && x.data).map((x) => ({ url: `data:${x.mime};base64,${x.data}`, name: x.name || 'Bild' })) });
+  };
+  ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } else if (e.key === 'Escape') { e.preventDefault(); cancel(); } });
+  bar.querySelector('.ue-cancel').addEventListener('click', cancel);
+  bar.querySelector('.ue-send').addEventListener('click', send);
 }
 
 /* Eigene Nachricht als Blase. Lange Nachrichten (nur die eigenen, nie die der KI) sind eingeklappt:
@@ -4985,7 +5068,8 @@ async function sendMessage(text, images, extra = {}) {
     const inline = (await Promise.all(images.map((i) => (i.prep || fileToInline(i.file, 1600, null, { defer: true })).catch(() => null)))).flat();
     if (slow) { clearTimeout(slow); waitNote.remove(); } // schon beim Anhängen gelesen; gescanntes PDF → mehrere Seitenbilder
     const hist = historyOf(tab);
-    hist.push({ role: 'user', text, images: [...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}), ...(extra.skills?.length ? { skills: extra.skills } : {}) });
+    hist.push({ role: 'user', text, images: [...(extra.inlineImages || []), ...inline.filter(Boolean), ...(extra.texts || [])], ...(extra.lernset ? { lernset: extra.lernset } : {}), ...(extra.skills?.length ? { skills: extra.skills } : {}), ...(extra.alts ? { alts: extra.alts, alt: extra.alt } : {}) });
+    const outEl = [...chat.querySelectorAll('.msg-out')].pop(); if (extra.alts && outEl) queueMicrotask(() => drawVersionNav(outEl)); // „2 / 2“ an der bearbeiteten Nachricht
     markDrafts();
     msgEl._historyAt = hist.length; // hier landet die Antwort – für „Neu erzeugen“
 
