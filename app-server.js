@@ -1403,7 +1403,7 @@ function widgetText(d, what) {
   return `${day(d.today)}\n\n${todayEv.length ? todayEv.map((e) => `• ${e.time || 'Ganztägig'}  ${e.title}`).join('\n') : 'Heute keine Termine.'}\n\nAufgaben (${d.openTasks})\n${tasks(5)}`;
 }
 async function handleTranscribe(req, res) {
-  const env = envOf(req);
+  const env = readEnv();
   const body = await readBody(req, 12 * 1024 * 1024);
   const data = String(body.audio || ''), mime = String(body.mime || 'audio/webm').split(';')[0].slice(0, 40);
   if (data.length < 2000 || !/^audio\//.test(mime)) return sendJson(res, 200, { text: '' });
