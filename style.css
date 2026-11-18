@@ -2560,7 +2560,7 @@ textarea::selection, input::selection { background: transparent; }
 }
 #topStack > .ft:not([hidden]),
 #topStack:has(> .voice-agent:not([hidden])) > .mu-mini:not([hidden]),
-#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini:not([hidden]) > *,
+#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini:not([hidden]) > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 #topStack > .voice-agent:not([hidden]) .va-face,
 #topStack > .voice-agent:not([hidden]) .va-actions {
   animation: seg-in 420ms var(--out) backwards !important;
@@ -2568,7 +2568,7 @@ textarea::selection, input::selection { background: transparent; }
 #topStack > .voice-agent:not([hidden]) .va-actions { animation-delay: 60ms !important; }
 #topStack > .ft.closing,
 #topStack > .mu-mini.closing,
-#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > *,
+#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 #topStack > .voice-agent.closing .va-face,
 #topStack > .voice-agent.closing .va-actions {
   animation: seg-out 240ms ease-in forwards !important;
@@ -2585,18 +2585,18 @@ textarea::selection, input::selection { background: transparent; }
 /* Einblenden nur beim echten Erscheinen (Klasse .entering), nicht bei jedem Umbau der Leiste */
 #topStack > .ft:not([hidden]),
 #topStack:has(> .voice-agent:not([hidden])) > .mu-mini:not([hidden]),
-#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini:not([hidden]) > *,
+#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini:not([hidden]) > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 #topStack > .voice-agent:not([hidden]) .va-face,
 #topStack > .voice-agent:not([hidden]) .va-actions { animation: none !important; }
 #topStack > .ft.entering:not(.closing),
 #topStack:has(> .voice-agent:not([hidden])) > .mu-mini.entering:not(.closing),
-#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > *,
+#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 #topStack > .voice-agent.entering:not(.closing) .va-face,
 #topStack > .voice-agent.entering:not(.closing) .va-actions { animation: seg-in 420ms var(--out) backwards !important; }
 #topStack > .voice-agent.entering:not(.closing) .va-actions { animation-delay: 60ms !important; }
 #topStack > .ft.closing,
 #topStack > .mu-mini.closing,
-#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > *,
+#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 #topStack > .voice-agent.closing .va-face,
 #topStack > .voice-agent.closing .va-actions { animation: seg-out 240ms ease-in forwards !important; }
 
@@ -5293,7 +5293,9 @@ input.dcb-inl.dcb-tm-t { flex: 0 1 160px; width: 160px; font-weight: 500; }
 /* Diagramme: alle Werte gleich stark (keine Hervorhebung des größten), Wert beim Darüberfahren */
 .dcb-hrow .dcb-hb i { background: var(--cc); }
 .dcb-bar rect { transition: fill 140ms ease, opacity 140ms ease; }
-.dcb-svg svg:has(.dcb-bar:hover) .dcb-bar:not(:hover) rect { opacity: .55; }
+/* 18.11.: ohne :has(:hover) – der Selektor liess bei jeder Änderung an irgendeinem SVG (Hund, Icons) alle Stile neu berechnen (Laggen) */
+.dcb-svg svg .dcb-bar { transition: opacity 120ms; }
+@media (hover: hover) { .dcb-svg svg:hover .dcb-bar:not(:hover) rect { opacity: .55; } }
 /* Hintergrund aus: kein Kasten mehr, die Hilfslinien bleiben */
 .dcb-chart.bare { border-color: transparent; background: transparent; padding-left: 0; padding-right: 0; }
 .dcb-card:has(> .dcb-chart.bare) { border-color: transparent; background: transparent; }
@@ -6657,7 +6659,7 @@ svg.pd { display: block; image-rendering: pixelated; }
 .panel #topStack#topStack > .ft:not([hidden]) { animation: none !important; }
 .panel #topStack#topStack > .voice-agent.entering:not(.closing) :is(.va-face, .va-text, .va-actions),
 .panel #topStack#topStack:has(> .voice-agent:not([hidden])) > .mu-mini.entering:not(.closing),
-.panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > *,
+.panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 .panel #topStack#topStack > .ft.entering:not(.closing) { animation: dock-seg-in var(--dock-ms) var(--dock-ease) backwards !important; }
 .panel #topStack#topStack > .voice-agent.entering:not(.closing) .va-text,
 .panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > .mu-mini-text { animation-delay: 30ms !important; }
@@ -6665,7 +6667,7 @@ svg.pd { display: block; image-rendering: pixelated; }
 .panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.entering:not(.closing) > .mu-mini-actions { animation-delay: 60ms !important; }
 .panel #topStack#topStack > .voice-agent.closing :is(.va-face, .va-text, .va-actions),
 .panel #topStack#topStack:has(> .voice-agent:not([hidden])) > .mu-mini.closing,
-.panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > *,
+.panel #topStack#topStack:not(:has(> .voice-agent:not([hidden]))) > .mu-mini.closing > :is(.mu-mini-cover, .mu-mini-text, .mu-mini-actions),
 .panel #topStack#topStack > .ft.closing { animation: dock-seg-out 200ms var(--dock-in) forwards !important; }
 
 @media (prefers-reduced-motion: reduce) {

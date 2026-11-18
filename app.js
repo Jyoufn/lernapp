@@ -2297,8 +2297,38 @@ function makeRenderer(target, opts = {}) {
   const inkSteps = []; // { t, len } – wann wie viel sichtbarer Text da war (für den weichen Schreib-Saum)
 
   let ended = false; // Antwort komplett (finish/flush) → Blöcke wie Lernsets wissen, dass nichts mehr kommt
+  /* 18.11. (Laggen): lange Antworten nicht bei jedem Schritt komplett neu bauen – fertige Absätze bleiben stehen (gleiche Knoten, keine neue
+     Stilberechnung), neu gezeichnet wird nur das Ende ab dem letzten sicheren Absatz. Ganz am Schluss einmal alles sauber am Stück. */
+  let stableLen = 0, tailNodes = [], chunked = false;
+  const LIST = /^\s*([-*+]|\d+[.)])\s/;
+  const safeCut = (t) => {
+    const lines = t.split('\n');
+    let cut = 0, off = 0, fence = 0;
+    for (let i = 0; i < lines.length - 1; i++) {
+      const L = lines[i], m = /^(`{3,}|~{3,})/.exec(L);
+      if (m) { if (!fence) fence = m[1].length; else if (m[1].length >= fence && /^(`{3,}|~{3,})\s*$/.test(L)) fence = 0; }
+      off += L.length + 1;
+      const next = lines[i + 1];
+      if (fence || L.trim() || !i || !lines[i - 1].trim() || !next.trim() || /^\s/.test(next)) continue;
+      if (LIST.test(next) && LIST.test(lines[i - 1])) continue; // Liste nicht zerteilen
+      cut = off;
+    }
+    if (((t.slice(0, cut).match(/\$\$/g) || []).length) % 2) return 0; // nicht mitten in einer Formel
+    return cut;
+  };
+  const renderInto = (md, live) => { const host = el('div'); target.append(host); renderMarkdown(host, md, { ...opts, live }); const nodes = [...host.childNodes]; host.replaceWith(...nodes); return nodes; };
   const draw = () => {
-    renderMarkdown(target, text.slice(0, shown), { ...opts, live: !ended || shown < text.length });
+    const cur = text.slice(0, shown), live = !ended || shown < text.length;
+    const cut = live && cur.length > 2500 && !opts.noChunk ? safeCut(cur) : 0;
+    if (cut && (!chunked || cut >= stableLen)) {
+      if (!chunked) { target.replaceChildren(); stableLen = 0; tailNodes = []; chunked = true; }
+      tailNodes.forEach((n) => n.remove()); tailNodes = [];
+      if (cut > stableLen) { renderInto(cur.slice(stableLen, cut), true); stableLen = cut; }
+      tailNodes = renderInto(cur.slice(cut), live);
+    } else {
+      chunked = false; stableLen = 0; tailNodes = [];
+      renderMarkdown(target, cur, { ...opts, live });
+    }
     syncWave(target);
     // neue Blöcke weich einblenden – auch über Neuzeichnungen hinweg ohne Flackern
     const now = performance.now();
@@ -2340,7 +2370,10 @@ function makeRenderer(target, opts = {}) {
     const t0 = performance.now();
     draw();
     const cost = performance.now() - t0;
-    delay = Math.round(Math.min(160, Math.max(REVEAL_TICK, delay * 0.7 + cost * 3 * 0.3))); // höchstens ~⅓ der Zeit fürs Zeichnen
+    // 18.11. (Laggen bei langen Antworten): jedes Neuzeichnen baut die ganze Antwort neu und lässt den Browser alle Stile neu berechnen –
+    // das misst `cost` nicht mit. Deshalb zusätzlich nach Länge drosseln: kurze Antworten ~40 Bilder/s, lange (10 000 Zeichen) ~6/s.
+    const floor = Math.min(170, REVEAL_TICK + shown / 70);
+    delay = Math.round(Math.min(220, Math.max(floor, delay * 0.7 + cost * 4 * 0.3)));
     timer = setTimeout(tick, delay);
   };
   const start = () => { if (!timer) timer = setTimeout(tick, 0); };
