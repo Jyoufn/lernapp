@@ -13543,7 +13543,7 @@ html body .tk-view.au-view { gap: 0; padding-left: max(32px, calc((100% - 720px)
 .au-x { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-4); opacity: 0; cursor: pointer; }
 @media (hover: none) { .au-x { opacity: 0.6; } }
 .au-empty { padding: 30px 0; color: var(--text-4); font: 500 13.5px var(--font-ui, Inter), sans-serif; text-align: center; }
-html body .tk-view.au-view:not(.tk-embed) { padding-top: 64px; }
+html body .tk-view.au-view:not(.tk-embed) { padding-top: 0; }
 /* 18.11.: Einstellungen → Widgets */
 html body .st-widgets .st-sub { display: block; margin-top: 2px; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; font-style: normal; }
 html body .st-wg-help { padding: 4px 14px 14px; }
@@ -13585,3 +13585,44 @@ html body .lz-card .lz-go::before { content: ""; width: 7px; height: 7px; border
 html body .lz-card.on { background: rgba(255, 255, 255, 0.06); }
 html body .sk-chip { padding: 0 9px; }
 html body .app.lz-open .panel { margin-right: 0; }
+
+/* ===== 18.11. spät: Banner (Wallpaper) oben in Aufgaben und Kalender ===== */
+.vb { position: relative; flex: none; height: 168px; margin: 0 -1px; overflow: hidden; }
+.vb-img { position: absolute; inset: 0; background-size: cover; background-position: center; transition: background 300ms ease; }
+.vb::after { content: ""; position: absolute; inset: auto 0 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--main-bg, #141414)); pointer-events: none; }
+.vb.empty { height: 64px; }
+.vb.empty::after { display: none; }
+.vb-acts { position: absolute; z-index: 1; right: 14px; bottom: 14px; opacity: 0; transition: opacity 180ms ease; }
+.vb:hover .vb-acts, .vb.empty .vb-acts { opacity: 1; }
+@media (hover: none) { .vb-acts { opacity: 1; } }
+.vb-btn { height: 28px; padding: 0 11px; border: 0; border-radius: 8px; background: rgba(20, 20, 20, 0.62); color: #f2f2f2; font: 600 12px var(--font-ui, Inter), sans-serif; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.vb.empty .vb-btn { background: rgba(255, 255, 255, 0.05); color: var(--text-3); }
+html body .tk-view.au-view { padding: 0 0 40px !important; }
+html body .au-view > .vb { margin: 0; }
+html body .au-main { width: min(720px, calc(100% - 64px)); margin: -26px auto 0; position: relative; z-index: 1; }
+html body .vb.empty + .au-main { margin-top: 0; }
+html body .au-head { margin-bottom: 14px; }
+html body .au-tabs { width: max-content; max-width: 100%; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
+html body .au-tabs button { display: inline-flex; align-items: center; gap: 6px; }
+html body .au-tabs .au-n { display: inline-block; min-width: 0; color: var(--text-4); font-size: 12px; font-variant-numeric: tabular-nums; }
+html body .au-tabs .au-n:empty { display: none; }
+html body .au-tabs button.drop { color: var(--text); background: rgba(255, 255, 255, 0.07); }
+html body .au-row { position: relative; cursor: default; }
+html body .au-row.dragging { opacity: 0.4; }
+html body .au-row.moving { z-index: 5; pointer-events: none; background: #1d1d1d; }
+html body .au-row.ticked .au-check, html body .au-row.st-done .au-check { border-color: #7db993; background: #7db993; color: #141414; }
+html body .au-row.st-done .au-t, html body .au-row.st-archived .au-t { color: var(--text-4); }
+html body .au-row.st-done .au-t { text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
+html body .au-row.st-doing .au-check { border-color: #e8a85c; }
+html body .au-row.st-archived .au-check { opacity: 0.4; }
+html body .au-acts { display: inline-flex; gap: 2px; opacity: 0; transition: opacity 160ms ease; }
+@media (hover: hover) { html body .au-row:hover .au-acts { opacity: 1; } }
+@media (hover: none) { html body .au-acts { opacity: 0.7; } }
+html body .au-a { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-4); cursor: pointer; }
+@media (hover: hover) { html body .au-a:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); } }
+html body .au-gap { overflow: hidden; }
+html body .au-row .au-x { display: none; }
+/* Kalender mit Banner */
+html body .cal-view > .vb.vb-cal { height: 96px; margin: -18px -30px 0; }
+html body .cal-view > .vb.vb-cal.empty { height: 0; margin-bottom: 0; }
+html body .cal-view > .vb.vb-cal.empty .vb-acts { display: none; }

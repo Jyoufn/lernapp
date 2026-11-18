@@ -2464,6 +2464,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     ];
     const OLD_STYLE = { wave: 'waves', soft: 'dunes', mesh: 'ribbons', aurora: 'ribbons', lines: 'arcs', flat: 'plain' };
     const styleOfCover = (cv) => (cv?.kind === 'preset' ? COVER_PRESETS.find((p) => p.id === cv.id)?.group : cv?.kind === 'color' ? (OLD_STYLE[cv.style] || cv.style) : null);
+    /* 18.11.: dasselbe Cover-Fenster auch für Banner anderer Ansichten (Aufgaben, Kalender): coverTarget = { get, set } */
+    let coverTarget = null;
+    const curCover = () => (coverTarget ? coverTarget.get() : doc?.cover);
+    const applyCover = (cv) => (coverTarget ? coverTarget.set(cv) : setCover(cv));
     function openCoverPop(editAi = false) {
       if (coverPop) { coverPop.close(); return; }
       // gleiches Fenster wie bei Kalender und Aufgaben: mittig über einer leicht abgedunkelten Fläche
@@ -2478,9 +2482,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
       const body = pop.querySelector('.dc-cpop-body'), file = pop.querySelector('input[type=file]'), title = pop.querySelector('.dc-cpop-title');
       let step = null; // null = Übersicht, sonst die ID des gewählten Stils
-      let pick = { c: doc.cover?.kind === 'color' ? doc.cover.c : UIKit.COLORS[0] };
+      let pick = { c: curCover()?.kind === 'color' ? curCover().c : UIKit.COLORS[0] };
       const ai = { open: false, busy: false, text: '', err: '', photos: [] }; // „Mit KI“: nur noch ein kleines Eingabefeld (wie im Chat) – Fenster bleibt offen
-      const isOn = (cv) => JSON.stringify(cv) === JSON.stringify(doc.cover || null);
+      const isOn = (cv) => JSON.stringify(cv) === JSON.stringify(curCover() || null);
       const tile = (cv, bg, label, extra = '') => `<button type="button" class="dc-ctile${isOn(cv) ? ' on' : ''}${extra}" data-cv='${esc(JSON.stringify(cv))}' title="${esc(label)}" aria-label="${esc(label)}"><span style="background:${esc(bg)}"></span></button>`;
       const previewOf = (st) => { const x = COVER_STYLES.find((y) => y.id === st); return (x.preview && COVER_PRESETS.find((p) => p.id === x.preview)?.bg) || colorCover(x.color, st); };
       function render(dir = 0) {
@@ -2506,7 +2510,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
           }
         } else if (!step) {
           title.textContent = 'Cover';
-          const cur = styleOfCover(doc.cover);
+          const cur = styleOfCover(curCover());
           const own = ownImages();
           body.innerHTML = `<div class="dc-cgrid">
               <div class="dc-cstyle"><button type="button" class="dc-ctile dc-cupload" data-upload aria-label="Bild hochladen" title="Bild hochladen">
@@ -2541,7 +2545,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         return colorH;
       }
       const showPreview = (hex) => { const p = body.querySelector('.dc-cpreview span'); if (p) p.style.background = colorCover(hex, step); };
-      const applyColor = (hex) => { pick.c = hex; setCover({ kind: 'color', c: hex, style: step }); };
+      const applyColor = (hex) => { pick.c = hex; applyCover({ kind: 'color', c: hex, style: step }); };
       // Darüberfahren zeigt die Farbe schon in der Vorschau, Verlassen zeigt wieder die gewählte
       body.addEventListener('pointerover', (e) => { const sw = e.target.closest('[data-c]'); if (sw && step) showPreview(sw.dataset.c); });
       body.addEventListener('pointerout', (e) => { if (e.target.closest('[data-c]') && step && !e.relatedTarget?.closest?.('[data-c]')) showPreview(pick.c); });
@@ -2551,7 +2555,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const sb = e.target.closest('[data-style]');
         if (sb) { // Startfarbe: die des aktuellen Covers (gleicher Stil), sonst die Farbe der Vorschau
           step = sb.dataset.style;
-          pick.c = doc.cover?.kind === 'color' && styleOfCover(doc.cover) === step ? doc.cover.c : COVER_STYLES.find((x) => x.id === step).color;
+          pick.c = curCover()?.kind === 'color' && styleOfCover(curCover()) === step ? curCover().c : COVER_STYLES.find((x) => x.id === step).color;
           render(1); return;
         }
         if (e.target.closest('.tk-picker')) return; // Ziehen im Farbwähler
@@ -2575,7 +2579,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const rm = e.target.closest('[data-ai-rm]'); if (rm) { ai.photos.splice(+rm.dataset.aiRm, 1); ai.text = body.querySelector('.dc-cai-in').value; render(); return; }
         const mic = e.target.closest('[data-ai-mic]'); if (mic) { window.dictateInto?.(body.querySelector('.dc-cai-in'), mic); return; }
         const tl = e.target.closest('[data-cv]');
-        if (tl) { const cv = JSON.parse(tl.dataset.cv); if (cv.kind === 'color') pick.c = cv.c; setCover(cv); render(); }
+        if (tl) { const cv = JSON.parse(tl.dataset.cv); if (cv.kind === 'color') pick.c = cv.c; applyCover(cv); render(); }
       });
       pop.addEventListener('submit', async (e) => {
         if (!e.target.closest('[data-ai-form]')) return;
@@ -2585,11 +2589,11 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         window.stopDictateInto?.();
         ai.busy = true; ai.err = ''; render();
         try {
-          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos, ...(ai.edit ? { edit: true, base: doc.cover?.kind === 'image' ? doc.cover.src : '', baseDesc: doc.cover?.kind !== 'image' ? `abstraktes Farb-Cover (${COVER_STYLES.find((x) => x.id === styleOfCover(doc.cover))?.name || 'Verlauf'}, Farbe ${doc.cover?.c || ''})` : '' } : {}) }) });
+          const r = await fetch('/api/cover-image', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ wish: ai.text, photos: ai.photos, ...(ai.edit ? { edit: true, base: curCover()?.kind === 'image' ? curCover().src : '', baseDesc: curCover()?.kind !== 'image' ? `abstraktes Farb-Cover (${COVER_STYLES.find((x) => x.id === styleOfCover(curCover()))?.name || 'Verlauf'}, Farbe ${curCover()?.c || ''})` : '' } : {}) }) });
           const j = await r.json().catch(() => ({}));
           if (!r.ok || !j.src) throw new Error(j.error || 'Das Cover konnte gerade nicht erstellt werden.');
           const src = await shrinkCover(j.src); // JPEG – passt in den Speicher „Deine Bilder“
-          setCover({ kind: 'image', src, ai: true }); // KI-Cover: normales Banner-Format wie die anderen Cover (kein eigenes Seitenverhältnis)
+          applyCover({ kind: 'image', src, ai: true }); // KI-Cover: normales Banner-Format wie die anderen Cover (kein eigenes Seitenverhältnis)
           saveOwnImage(src);
           ai.open = false; ai.text = ''; ai.photos = []; ai.busy = false;
           if (coverPop) close(); // fertig → ganzes Cover-Fenster zu
@@ -2600,7 +2604,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       });
       const upload = async (f) => {
         if (!f || !/^image\//.test(f.type)) return;
-        try { const im = await readImage(f); setCover({ kind: 'image', src: im.src, ai: true, y: 50 }); saveOwnImage(im.src); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
+        try { const im = await readImage(f); applyCover({ kind: 'image', src: im.src, ai: true, y: 50 }); saveOwnImage(im.src); step = null; render(); } catch (err) { body.insertAdjacentHTML('afterbegin', `<div class="dc-cerr">${esc(err.message)}</div>`); }
       };
       file.addEventListener('change', () => { upload(file.files[0]); file.value = ''; });
       pop.addEventListener('dragover', (e) => { e.preventDefault(); pop.classList.add('drag'); });
@@ -2612,7 +2616,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         window.stopDictateInto?.();
         modal.classList.add('closing');
         setTimeout(() => modal.remove(), 220);
-        coverPop = null;
+        coverPop = null; coverTarget = null;
       }
       document.addEventListener('keydown', esc_);
       coverPop = { close, refresh: render };
@@ -3018,6 +3022,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       redraw() { if (tab) { doc = docOf(tab.dataset.doc); draw(); } },
       isShowing: (id) => api.open && doc?.id === id,
       typeIn, insertBlocks, setWriting, remember: (prev, next) => remember(prev, next),
+      pickCover(target) { if (coverPop) coverPop.close(); coverTarget = target; openCoverPop(); }, coverCss: (cv) => coverCss(cv),
       refreshMeta() { if (!doc) return; const t = view.querySelector('.dc-title-in'), s2 = view.querySelector('.dc-sub-in'); if (t && document.activeElement !== t) { t.value = doc.title; grow(t); } if (s2 && document.activeElement !== s2) { s2.value = doc.subtitle || ''; grow(s2); s2.classList.add('dc-in'); setTimeout(() => s2.classList.remove('dc-in'), 500); } },
     });
     return api;

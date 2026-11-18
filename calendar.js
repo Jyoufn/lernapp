@@ -627,6 +627,9 @@ const Calendar = (() => {
   }
   function show() {
     mount();
+    // 18.11.: Banner (Wallpaper) oben wie bei den Aufgaben – Vorlagen, Farben, eigenes Bild, KI
+    if (!view._vb && window.ViewBanner) { view._vb = window.ViewBanner('calendar.banner', { kind: 'preset', id: 'd-dusk' }); view._vb.classList.add('vb-cal'); view.prepend(view._vb); }
+    view._vb?.draw();
     dv.hidden = true;
     dvWrap.hidden = true;
     open = true;
