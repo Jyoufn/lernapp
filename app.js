@@ -6186,6 +6186,55 @@ function renderChatBar() {
   closeChatPops();
   renderChatTags();
 }
+/* ---------- Dateien des Chats oben rechts (18.11., wie bei Claude): Symbol → kleines Fenster darunter mit allem, was die KI erstellt hat
+   (Lernzettel, Code-Dateien, Präsentationen) – antippen öffnet es rechts bzw. springt hin ---------- */
+const ChatFiles = (() => {
+  const btn = el('button', 'icon-btn files-btn', icon('f-files', 15));
+  btn.type = 'button'; btn.id = 'filesBtn'; btn.hidden = true;
+  btn.setAttribute('aria-label', 'Dateien dieses Chats'); btn.title = 'Dateien';
+  const pop = el('div', 'files-pop'); pop.hidden = true; pop.setAttribute('role', 'menu');
+  document.body.append(pop);
+  const items = () => {
+    const out = [];
+    chat.querySelectorAll('.lz-card').forEach((c) => out.push({ kind: 'lz', title: c._title || 'Lernzettel', sub: 'Lernzettel', el: c }));
+    try { [...(window.CodeAgent?.files?.() || new Map()).keys()].forEach((p) => out.push({ kind: 'code', title: p.split('/').pop(), sub: p.includes('/') ? p : 'Code', path: p })); } catch {}
+    chat.querySelectorAll('figure.pz:not(.pz-waiting)').forEach((f, i) => out.push({ kind: 'pz', title: f.querySelector('.pz-big h1, .pz-big h2, .pz-slide h1')?.textContent?.trim() || `Präsentation ${i + 1}`, sub: 'Präsentation', el: f }));
+    return out;
+  };
+  let list = [];
+  const icoOf = (it) => (it.kind === 'lz' ? '<span class="fp-paper"></span>' : it.kind === 'code' ? (window.CodeAgent?.icon?.(it.path) || icon('f-file', 15)) : icon('f-slides', 15));
+  const refresh = () => {
+    const tab = activeTab();
+    if (!btn.isConnected) { const wrap = document.querySelector('.chats-wrap'); if (wrap) wrap.insertBefore(btn, $('chatTags')); }
+    list = tab && !tab.dataset.view ? items() : [];
+    btn.hidden = !list.length;
+    if (!list.length) close();
+  };
+  function close() { pop.hidden = true; btn.classList.remove('on'); }
+  function open() {
+    refresh(); if (!list.length) return;
+    pop.innerHTML = list.map((it, i) => `<button type="button" class="fp-row" data-i="${i}" role="menuitem"><span class="fp-ic">${icoOf(it)}</span><span class="fp-t"><b>${escapeHtml(it.title)}</b><span>${escapeHtml(it.sub)}</span></span></button>`).join('');
+    pop.hidden = false; btn.classList.add('on');
+    const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
+    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
+    pop.style.top = `${Math.round(r.bottom + 6)}px`;
+  }
+  btn.addEventListener('click', (e) => { e.stopPropagation(); if (pop.hidden) open(); else close(); });
+  pop.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const b = e.target.closest('[data-i]'); const it = b && list[+b.dataset.i]; if (!it) return;
+    close();
+    if (it.kind === 'lz') window.Lernzettel?.openCard?.(it.el);
+    else if (it.kind === 'code') window.CodeAgent?.openFile?.(it.path);
+    else it.el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  document.addEventListener('pointerdown', (e) => { if (!pop.hidden && !pop.contains(e.target) && e.target !== btn && !btn.contains(e.target)) close(); });
+  let t = 0;
+  new MutationObserver(() => { clearTimeout(t); t = setTimeout(refresh, 400); }).observe(chat, { childList: true, subtree: true });
+  window.addEventListener('chat-tab-switched', () => { close(); setTimeout(refresh, 300); });
+  return { refresh };
+})();
+
 /* Tags des offenen Chats oben rechts (neben dem Chats-Symbol, Wunsch 09.11.): Punkt + Name, antippen öffnet die Tag-Auswahl */
 function renderChatTags() {
   const box = $('chatTags'); if (!box) return;

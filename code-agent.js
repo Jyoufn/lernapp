@@ -639,6 +639,7 @@ var ce=console.error;console.error=function(){try{send([].slice.call(arguments).
     if (t.textContent !== `${text} …`) { t.textContent = `${text} …`; t.classList.remove('in'); void t.offsetWidth; t.classList.add('in'); }
     if (chat.contains(msgEl)) scrollToBottom();
   }
-  return { has, fromFences, mark, build, refresh: queueRefresh, split, revealTo, status, bundle };
+  return { has, fromFences, mark, build, refresh: queueRefresh, split, revealTo, status, bundle,
+    files: () => projectFiles(), icon: (p) => fileIcon(p), openFile: (p) => { mount(); ui.file = p; if (ui.open) setView('code'); else setOpen(true, 'code'); } };
 })();
 window.CodeAgent = CodeAgent;

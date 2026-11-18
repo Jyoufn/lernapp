@@ -164,6 +164,7 @@ const Lernzettel = (() => {
     const meta = live ? 'wird geschrieben …' : ['Lernzettel', caps ? `${caps} Kapitel` : '', pics ? `${pics} ${pics === 1 ? 'Abbildung' : 'Abbildungen'}` : ''].filter(Boolean).join(' · ');
     c.innerHTML = `<span class="lz-ti"></span><span class="lz-tx"><b>${esc(z.title || 'Lernzettel')}</b><span>${esc(meta)}</span></span><span class="lz-go">${cur?.key === key ? 'Geöffnet' : 'Öffnen'}</span>`;
     c.addEventListener('click', () => { if (cur?.key === key) close(true); else { dismissed.delete(key); show(raw, key); } });
+    c._raw = raw; c._title = z.title || 'Lernzettel';
     return c;
   }
   /* aus renderMarkdown: ````lernzettel-Blöcke → Karte; im offenen Chat öffnet sich das Blatt von selbst (während des Schreibens live) */
@@ -204,6 +205,6 @@ const Lernzettel = (() => {
     return lines.join('\n');
   }
   window.addEventListener('chat-tab-switched', () => close());
-  return { parse, sheet, card, enhance, show, close, fixFence, get open() { return !!cur; } };
+  return { parse, sheet, card, enhance, show, close, fixFence, openCard: (c) => { dismissed.delete(c.dataset.key); show(c._raw, c.dataset.key); }, get open() { return !!cur; } };
 })();
 window.Lernzettel = Lernzettel;
