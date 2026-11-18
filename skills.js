@@ -187,7 +187,9 @@ const Skills = (() => {
   }
 
   return { SKILLS, detect, active, list, attach, html, setMentions: (items, pick) => { mentionSrc = { items, pick }; },
-    picked: () => picked.map((p) => p.id), pickedFull: () => picked.slice(), clearPicked: () => { picked = []; drawPicked(); } };
+    picked: () => picked.map((p) => p.id), pickedFull: () => picked.slice(), clearPicked: () => { picked = []; drawPicked(); },
+    // 19.11.: von außen an-/ausschalten (Plus-Fenster: „Recherche“, „Lernzettel“)
+    toggle(id, on) { const s = SKILLS.find((x) => x.id === id); if (!s) return; const has = picked.some((p) => p.id === id); if (on ?? !has) { if (!has) picked.push({ id: s.id, title: s.title, c: s.c }); } else picked = picked.filter((p) => p.id !== id); drawPicked(); } };
 })();
 if (typeof window !== 'undefined') {
   window.Skills = Skills;
