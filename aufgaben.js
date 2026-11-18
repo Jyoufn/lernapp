@@ -62,8 +62,9 @@ const Aufgaben = (() => {
         const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
         const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
         const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
-        const foot = pr || t.due || t.note ? `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}${t.note && !pr && !t.due ? `<span class="au-cnote">${icon('f-file', 12)}<span>Notiz</span></span>` : ''}</div>` : '';
-        return tags + foot;
+        const foot = pr || t.due ? `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>` : '';
+        const desc = t.note ? `<div class="au-cdesc">${esc(t.note)}</div>` : '';
+        return desc + tags + foot;
       })()}</div></article>`;
   }
   function counts() {
