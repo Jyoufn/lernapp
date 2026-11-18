@@ -1345,7 +1345,7 @@ async function handleTranscribe(req, res) {
   const body = await readBody(req, 12 * 1024 * 1024);
   const data = String(body.audio || ''), mime = String(body.mime || 'audio/webm').split(';')[0].slice(0, 40);
   if (data.length < 2000 || !/^audio\//.test(mime)) return sendJson(res, 200, { text: '' });
-  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 60);
+  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 110);
   const partial = body.partial === true;
   const done = (text, via) => {
     let t = String(text || '').trim().replace(/^["„“]|["“”]$/g, '');
@@ -1378,7 +1378,7 @@ async function handlePolish(req, res) {
   const text = String(body.text || '').trim().slice(0, 6000);
   if (text.length < 3) return sendJson(res, 200, { text });
   // Wörterliste aus der App (Tags, Projekte, Dokument-/Chat-Titel) hilft bei Fachbegriffen und Namen
-  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 60);
+  const hints = (Array.isArray(body.hints) ? body.hints : []).map((h) => String(h || '').trim().slice(0, 60)).filter(Boolean).slice(0, 110);
   const user = `${hints.length ? `WÖRTERLISTE (so schreibt der Nutzer diese Begriffe): ${hints.join(', ')}\n\n` : ''}${body.context ? `ZUSAMMENHANG: ${String(body.context).slice(0, 300)}\n\n` : ''}TEXT:\n${text}`;
   try {
     const out = String(await P.textTask(env, { system: POLISH_SYSTEM, user, maxTokens: 3000, timeoutMs: 15000 }) || '').replace(/^[\s\S]*<\/think>/, '').replace(/^TEXT:\s*/i, '').trim().replace(/^["„“]|["“”]$/g, '');

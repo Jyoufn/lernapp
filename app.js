@@ -798,8 +798,17 @@ function dictOverlayEnd() {
 input.addEventListener('scroll', () => { if (dictView.isConnected) dictView.scrollTop = input.scrollTop; });
 const DICT_WORDS = ['Prompt', 'Prompts', 'Chat', 'Agent', 'Thinking', 'Skill', 'Skills', 'Design', 'Button', 'Icon', 'Icons', 'Hover', 'Input', 'Feature', 'Update', 'Layout', 'Sidebar', 'Settings',
   'Dashboard', 'Workspace', 'Tags', 'Font', 'Sign Out', 'API-Key', 'Vercel', 'GitHub', 'Gemini', 'Claude', 'ChatGPT', 'DeepSeek', 'MiniMax', 'iPad', 'MacBook', 'Quiz', 'Podcast', 'Screenshot'];
-const polishHints = () => [...new Set([...DICT_WORDS, ...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 15).map((d) => d.title),
-  ...(window.LibChats?.items() || []).slice(0, 9).map((c) => c.title)].filter(Boolean))].slice(0, 60);
+const DICT_SCHOOL = ['Lernzettel', 'Lagebeschreibung', 'Klausur', 'Präsentation', 'Karteikarten', 'Probeklausur', 'Hefteintrag', 'Zusammenfassung', 'Erörterung', 'Interpretation',
+  'Photosynthese', 'Mitochondrien', 'Chloroplasten', 'Zellatmung', 'Enzym', 'Gleichung', 'Funktion', 'Ableitung', 'Integral', 'Vektor', 'Stochastik', 'Wahrscheinlichkeit',
+  'Weimarer Republik', 'Industrialisierung', 'Globalisierung', 'Demokratie', 'Gewaltenteilung', 'Bundestag', 'Klimawandel', 'Infrastruktur', 'Bevölkerungsdichte'];
+// 18.11. (Fachbegriffe): dazu die Fachwörter aus dem offenen Chat (lange und groß geschriebene Wörter der letzten Nachrichten) – die KI-Mitschrift schreibt sie dann richtig
+const chatTerms = () => {
+  const words = (history || []).slice(-6).map((h) => String(h.text || '').replace(/```[\s\S]*?```/g, ' ')).join(' ').match(/[A-ZÄÖÜ][\p{L}-]{5,}|[\p{L}]+-[\p{L}-]+/gu) || [];
+  const n = new Map(); words.forEach((w) => n.set(w, (n.get(w) || 0) + 1));
+  return [...n].sort((a, b) => b[1] - a[1]).slice(0, 30).map(([w]) => w);
+};
+const polishHints = () => [...new Set([...chatTerms(), ...DICT_WORDS, ...DICT_SCHOOL, ...(window.TagMenu?.all() || []).map((g) => g.name), ...(window.Docs?.docs || []).slice(0, 15).map((d) => d.title),
+  ...(window.LibChats?.items() || []).slice(0, 9).map((c) => c.title)].filter(Boolean))].slice(0, 110);
 /* Ton-Mitschnitt fürs genaue Verstehen (Wunsch 10.11.: Browser-Erkennung versteht zu wenig): neben der Sofort-Erkennung läuft eine Aufnahme;
    nach jeder Pause und beim Stoppen hört Gemini sie an (/api/transcribe) und der Text im Feld wird durch die genaue Mitschrift ersetzt.
    Klappt die Aufnahme nicht (kein Recht, Gerät erlaubt nicht beides, kein Gemini-Schlüssel), bleibt es bei Erkennung + Glättung. */
