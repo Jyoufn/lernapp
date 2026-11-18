@@ -29,7 +29,7 @@ const Aufgaben = (() => {
     const tm = new Date(); tm.setDate(tm.getDate() + 1);
     if (s === today()) return 'Heute';
     if (s === iso(tm)) return 'Morgen';
-    return new Date(`${s}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+    return new Date(`${s}T12:00:00`).toLocaleDateString(window.I18n?.lang?.() === 'en' ? 'en-GB' : 'de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
   };
   let tab = 'open', newDue = '';
 

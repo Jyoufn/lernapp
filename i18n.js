@@ -227,6 +227,12 @@
     'Für Chat und Coden.': 'For chat and coding.', 'Nur beim Coden (Coden-Agent, Mini-Apps).': 'Only for coding (coding agent, mini apps).', 'Nur für Chats – beim Coden übernimmt ein anderer.': 'Only for chats – another one handles coding.',
     'Gearbeitet für': 'Worked for', 'Tab schließen': 'Close tab', 'Eigene Farbe': 'Custom color', 'Eigene Akzentfarbe': 'Custom accent color', 'den markierten Text zu …': 'turn the selected text into …',
     'Tippe an einer Mini-App im Chat auf das Lesezeichen oder sag der KI „speicher das“.': 'Tap the bookmark on a mini app in the chat or tell the AI “save this”.',
+    // Aufgaben (18.11.): Reiter, Knöpfe, Detailfenster
+    'Aufgaben': 'To-dos', 'Offen': 'Open', 'In Arbeit': 'In progress', 'Erledigt': 'Done', 'Archiviert': 'Archived', 'Archivieren': 'Archive',
+    'Zurück zu Offen': 'Move back to Open', 'Wieder öffnen': 'Reopen', 'Wiederherstellen': 'Restore', 'Endgültig löschen': 'Delete permanently', 'Nicht erledigt': 'Mark as not done',
+    'Archiv ist leer': 'Archive is empty', 'Gerade ist nichts in Arbeit': 'Nothing in progress', 'Noch nichts erledigt': 'Nothing done yet', 'Keine offenen Aufgaben': 'No open to-dos',
+    'Neue Aufgabe …': 'New to-do …', 'Neue Aufgabe': 'New to-do', 'Überfällig': 'Overdue', 'Heute': 'Today', 'Morgen': 'Tomorrow', 'Demnächst': 'Upcoming', 'Ohne Datum': 'No date',
+    'Fällig am': 'Due date', 'Status': 'Status', 'Titel': 'Title', 'Notiz': 'Note', 'Notiz hinzufügen': 'Add a note', 'Cover hinzufügen': 'Add cover', 'Cover ändern': 'Change cover', 'Cover entfernen': 'Remove cover', 'Fertig': 'Done', 'Löschen': 'Delete', 'Dateien': 'Files',
   };
   Object.assign(D, D2);
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten

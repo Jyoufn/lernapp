@@ -5937,8 +5937,8 @@ input.dcb-inl.dcb-tm-t { flex: none; font-size: 13.5px; font-weight: 500; }
 .dog-modes button { display: grid; place-items: center; flex: none; padding: 0; border: 0; background: transparent; cursor: pointer; }
 .dog-modes .dm-dog { width: 28px; height: 28px; border-radius: 14px; }
 .dog-modes .dm-dog.on { background: #212121; }
-svg.pd { display: block; image-rendering: pixelated; }
-[data-theme="light"] svg.pd { filter: invert(1) hue-rotate(180deg); }
+.pd { display: block; image-rendering: pixelated; }
+[data-theme="light"] .pd { filter: invert(1) hue-rotate(180deg); }
 
 /* Begleiter: sitzt mit dem Kinn auf dem Rand, alles darunter ist abgeschnitten (taucht hinter dem Rand ab) */
 .dog-peek { position: absolute; right: 28px; bottom: calc(100% + 1px); width: 46px; height: 32px; overflow: hidden; z-index: 2; pointer-events: none; }
@@ -6136,7 +6136,7 @@ svg.pd { display: block; image-rendering: pixelated; }
 .dcc-form .agent-picker { border-radius: 16px; clip-path: inset(100% 0 0 0 round 16px); }
 .dcc-form .agent-picker.open { clip-path: inset(0 0 0 0 round 16px); }
 .dcc-form .ap-art { height: 66px; }
-.dcc-form .ap-art > svg.pd { width: 54px; height: 54px; }
+.dcc-form .ap-art > .pd { width: 54px; height: 54px; }
 
 /* Bild entsteht v2: Raster füllt den Rahmen genau (31 × 17, `illustrationWave()`); die Welle läuft weich und gleichmäßig
    Spalte für Spalte durch, jede Kachel erreicht nur kurz ihre volle Stärke (9 %) */
@@ -6257,7 +6257,7 @@ svg.pd { display: block; image-rendering: pixelated; }
   .dcc-form .ap-grid { grid-template-columns: minmax(0, 1fr); gap: 6px; }
   .dcc-form .ap-card[data-agent] { flex-direction: row; align-items: center; }
   .dcc-form .ap-card[data-agent] .ap-art { flex: none; width: 128px; height: 50px; padding-left: 6px; align-items: center; border-bottom: 0; border-right: 1px solid #242424; }
-  .dcc-form .ap-card[data-agent] .ap-art > svg.pd { width: 38px; height: 38px; }
+  .dcc-form .ap-card[data-agent] .ap-art > .pd { width: 38px; height: 38px; }
   .dcc-form .ap-card[data-agent] .ap-chip { right: 5px; bottom: 5px; height: 20px; padding: 0 7px; font-size: 10.5px; }
   .dcc-form .ap-card[data-agent] .ap-text { min-height: 0; padding: 6px 10px; font-size: 11px; line-height: 15px; }
   .dcc-form .ap-card[data-agent] .ap-actions { padding: 0 8px 0 0; }
@@ -8000,7 +8000,7 @@ html.native-selection body *:not(input):not(textarea)::selection, html.native-se
 .dcc-form .ap-card[data-agent] .ap-art { align-self: stretch; height: auto; min-height: 56px; margin: 0; border: 0 !important; border-radius: 10px; overflow: hidden; isolation: isolate; }
 .dcc-form .ap-card[data-agent] .ap-art .ap-tiles { inset: 3px; width: auto; height: auto; border-radius: 8px;
   -webkit-mask-image: linear-gradient(90deg, transparent 15%, #000 70%); mask-image: linear-gradient(90deg, transparent 15%, #000 70%); }
-.dcc-form .ap-card[data-agent] .ap-art > svg.pd { position: relative; z-index: 1; }
+.dcc-form .ap-card[data-agent] .ap-art > .pd { position: relative; z-index: 1; }
 .dcc-form .ap-card[data-agent] .ap-chip { z-index: 1; background: rgba(30, 30, 30, 0.92); }
 .dcc-form .ap-card[data-agent] .ap-text { padding: 4px 8px 4px 8px; }
 /* Dokument-Chat: Hund neben dem Hauptstatus wie im Haupt-Chat (statt des Kopfs links) */
@@ -9042,7 +9042,7 @@ div.tl4-h { cursor: default; }
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07); transition: box-shadow 140ms ease; -webkit-tap-highlight-color: transparent; }
 .st-ws-avbtn:hover, .st-ws-avbtn.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2); }
 .st-ws-avbtn:disabled { cursor: default; box-shadow: none; }
-.st-ws-avbtn svg.pd, .st-ws-avbtn img { width: 32px; height: 32px; }
+.st-ws-avbtn .pd, .st-ws-avbtn img { width: 32px; height: 32px; }
 .st-ws-avbtn img { border-radius: 50%; object-fit: cover; }
 .st-ws-top .st-ws-in { flex: 0 1 260px; margin-left: 0; font-size: 14px; font-weight: 500; }
 .st-ws-cur { color: var(--text-4); font-size: 12px; }
@@ -9051,7 +9051,7 @@ div.tl4-h { cursor: default; }
   box-shadow: inset 0 0 0 1px transparent; transition: box-shadow 140ms ease, color 120ms ease; -webkit-tap-highlight-color: transparent; }
 .st-ws-ic:hover { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-2); }
 .st-ws-ic.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28); }
-.st-ws-ic svg.pd { width: 32px; height: 32px; image-rendering: pixelated; }
+.st-ws-ic .pd { width: 32px; height: 32px; image-rendering: pixelated; }
 .st-ws-ic img { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; }
 .st-ws-ic.up:not(.on) { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
 .st-ws-pin .st-ws-h { margin: 16px 0 8px; }
@@ -9088,7 +9088,7 @@ div.tl4-h { cursor: default; }
 .st-ws-foot { justify-content: flex-end; border-top: 0; padding-top: 4px; margin-top: 12px; }
 .st-ws-del { margin: 0 -9px 0 0; color: #e5705f; background: rgba(239, 107, 95, 0.07); }
 .st-ws-del:hover, .st-ws-del.sure { background: rgba(239, 107, 95, 0.14); color: #f07a6e; }
-.st-row.st-ws .st-ws-avbtn svg.pd, .st-row.st-ws .st-ws-avbtn img { width: 24px; height: 24px; }
+.st-row.st-ws .st-ws-avbtn .pd, .st-row.st-ws .st-ws-avbtn img { width: 24px; height: 24px; }
 .st-ws-del { margin: 0; }
 
 /* =====================================================================
@@ -10376,8 +10376,8 @@ html.kb-open body { position: fixed; inset: 0 0 auto 0; height: var(--vvh, 100dv
 .agent-picker .ap-card.ap-new { background: transparent; }
 .ap-card.ap-new .ap-art { align-items: flex-end; justify-content: flex-start; padding-left: 10px; }
 .ap-ghost { position: relative; display: block; }
-.ap-ghost svg.pd { filter: grayscale(1) brightness(0.55); opacity: 0.55; transition: opacity 220ms ease; }
-.ap-card.ap-new:hover .ap-ghost svg.pd { opacity: 0.75; }
+.ap-ghost .pd { filter: grayscale(1) brightness(0.55); opacity: 0.55; transition: opacity 220ms ease; }
+.ap-card.ap-new:hover .ap-ghost .pd { opacity: 0.75; }
 .ap-ghost .ap-plus { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -16px 0 0 -13px; border-radius: 8px; background: #212121; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); color: var(--text); }
 .ap-ghost .ap-plus svg { width: 13px; height: 13px; filter: none; opacity: 1; }
 [data-theme="light"] .ap-ghost .ap-plus svg { filter: none; }
@@ -13650,3 +13650,18 @@ html body .files-menu .fm-head { display: flex; align-items: baseline; gap: 8px;
 html body .files-menu .fm-head b { color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
 html body .files-menu .fm-head span { margin-left: auto; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
 html body .files-menu .fm-row { height: 32px; font-size: 13px; color: var(--text-2); }
+/* 18.11.: Lernzettel-Leiste mit durchgehendem Trennstrich unter Titel und Symbolen */
+html body .lzwin .lz-bar { box-shadow: inset 0 -1px 0 #242424; }
+/* Linie läuft bei offenem Lernzettel auch unter der Chat-Leiste weiter (auf Höhe der Lernzettel-Linie) */
+html body #app.lz-open .panel::after { content: ""; position: absolute; left: 0; right: 0; top: 48px; height: 1px; background: #242424; pointer-events: none; z-index: 5; }
+/* 18.11. (Vorlage Claude-Desktop): Dateien-Knopf ganz rechts, leichtes dünnes Symbol; Karte rechtsbündig, weich einblenden */
+html body .files-btn { color: var(--text-3); }
+html body .files-btn:hover, html body .files-btn.on { color: var(--text); }
+html body .files-menu { width: 280px; max-width: 280px; padding: 6px; border-radius: 16px; background: #181818; border: 1px solid #242424; transform-origin: top right; }
+html body .files-menu .fm-head { padding: 8px 10px 10px; margin: 0 -6px 6px; border-bottom: 1px solid #242424; padding-left: 16px; padding-right: 16px; }
+html body .files-menu .fm-row { height: 34px; gap: 10px; border-radius: 10px; }
+html body .files-menu .fm-ic { color: var(--text-3); display: inline-flex; }
+html body .files-menu.fm-anim { animation: fm-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1); }
+@keyframes fm-in { from { opacity: 0; transform: translateY(-6px) scale(0.97); } to { opacity: 1; transform: none; } }
+/* 18.11.: Kachel-Hintergrund als Masken-Ebenen (statt tausender SVG-Formen) */
+.home-plaza > i.pz-g { position: absolute; inset: 0; background: currentColor; -webkit-mask: var(--m) center / cover no-repeat; mask: var(--m) center / cover no-repeat; }

@@ -6232,7 +6232,7 @@ function renderChatBar() {
 /* ---------- Dateien des Chats oben rechts (18.11., wie bei Claude): Symbol → kleines Fenster darunter mit allem, was die KI erstellt hat
    (Lernzettel, Code-Dateien, Präsentationen) – antippen öffnet es rechts bzw. springt hin ---------- */
 const ChatFiles = (() => {
-  const btn = el('button', 'icon-btn files-btn', icon('f-files', 15));
+  const btn = el('button', 'icon-btn files-btn', icon('f-filestack', 16));
   btn.type = 'button'; btn.id = 'filesBtn'; btn.hidden = true;
   btn.setAttribute('aria-label', 'Dateien dieses Chats'); btn.title = 'Dateien';
   const pop = el('div', 'lb2-menu files-menu'); pop.hidden = true; pop.setAttribute('role', 'menu'); // 18.11.: wie das Aufwand-Menü (nur Rand, Titel mit kleinem Icon)
@@ -6245,10 +6245,10 @@ const ChatFiles = (() => {
     return out;
   };
   let list = [];
-  const icoOf = (it) => (it.kind === 'lz' ? '<span class="fp-paper"></span>' : it.kind === 'code' ? (window.CodeAgent?.icon?.(it.path) || icon('f-file', 15)) : icon('f-slides', 15));
+  const icoOf = (it) => (it.kind === 'code' ? (window.CodeAgent?.icon?.(it.path) || icon('f-filedoc', 16)) : it.kind === 'pz' ? icon('f-slides', 15) : icon('f-filedoc', 16)); // Lernzettel: Dokument-Symbol
   const refresh = () => {
     const tab = activeTab();
-    if (!btn.isConnected) { const wrap = document.querySelector('.chats-wrap'); if (wrap) wrap.insertBefore(btn, $('chatTags')); }
+    if (!btn.isConnected) { const wrap = document.querySelector('.chats-wrap'); if (wrap) wrap.append(btn); } // 18.11.: immer ganz rechts
     list = tab && !tab.dataset.view ? items() : [];
     btn.hidden = !list.length;
     if (!list.length) close();
@@ -6260,7 +6260,8 @@ const ChatFiles = (() => {
     pop.innerHTML = `<div class="fm-head"><b>Dateien</b><span>${list.length}</span></div>` + list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
     pop.hidden = false; btn.classList.add('on');
     const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
-    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
+    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 12, r.right - w)))}px`;
+    pop.classList.remove('fm-anim'); void pop.offsetWidth; pop.classList.add('fm-anim');
     pop.style.top = `${Math.round(r.bottom + 10)}px`;
   }
   btn.addEventListener('click', (e) => { e.stopPropagation(); if (pop.hidden) open(); else close(); });
@@ -7716,7 +7717,8 @@ document.addEventListener('click', (e) => {
     }
   }
   const ORDER = [3, 6, 0, 5, 1, 7, 2, 4]; // zufällige Reihenfolge der Gruppen
-  plaza.innerHTML = `<svg viewBox="0 0 1600 1120" preserveAspectRatio="xMidYMid slice"><g fill="currentColor">${groups.map((g, k) => `<g class="pz-g" style="--td:${ORDER.indexOf(k) * 55}ms">${g || ''}</g>`).join('')}</g></svg>`;
+  // 18.11. (Ruckeln): jede Gruppe als EIN Element mit Maske statt ~3200 einzelner SVG-Formen im DOM
+  plaza.innerHTML = groups.map((g, k) => `<i class="pz-g" style="--td:${ORDER.indexOf(k) * 55}ms;--m:url(&quot;data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1120"><g fill="#fff">${g || ''}</g></svg>`).replace(/'/g, '%27')}&quot;)"></i>`).join('');
   panel.prepend(plaza);
 
   /* An/aus: leerer Chat-Tab → Startseite */

@@ -952,7 +952,19 @@ const PixelDogs = (() => {
     });
     return out;
   }
-  const svg = (id, size) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][size])}</svg>`;
+  /* 18.11. (Ruckeln): feste Pixelbilder als EIN <img> statt hunderter <rect> im DOM – bei ~15 000 Elementen war jede Stil-Berechnung zäh.
+     Ergebnis wird je SVG-Text zwischengespeichert. Animierte Szenen bleiben echte SVGs. */
+  const imgCache = new Map();
+  const toImg = (svgStr) => {
+    let h = imgCache.get(svgStr); if (h) return h;
+    const head = /^<svg [^>]*>/.exec(svgStr)[0], vb = (/viewBox="([^"]+)"/.exec(head)?.[1] || '0 0 24 24').split(/\s+/);
+    const src = `data:image/svg+xml,${encodeURIComponent(svgStr.replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '))}`;
+    h = `${head}<image href="${src}" x="${vb[0]}" y="${vb[1]}" width="${vb[2]}" height="${vb[3]}" preserveAspectRatio="none" style="image-rendering:pixelated"/></svg>`;
+    if (imgCache.size > 400) imgCache.clear();
+    imgCache.set(svgStr, h); return h;
+  };
+  const svgRaw = (id, size) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][size])}</svg>`;
+  const svg = (id, size) => toImg(svgRaw(id, size));
   // Avatar im Chat: scharfes 24er-Raster (1 Rasterpunkt = 1 px, wie in der Leiste oben)
   const iconUrl = (id) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" shape-rendering="crispEdges">${rects(DOGS[id][24])}</svg>`)}")`;
   const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1267,7 +1279,8 @@ const PixelDogs = (() => {
   const infoOf = (id) => INFO[id] || INFO_CUSTOM[id] || INFO.general;
   registerCustom(); // eigene Agenten vor dem ersten Zeichnen (gespeicherter Modus kann einer davon sein)
   const fine = (id) => (DOGS[id][64] ? 64 : 32); // feineres Raster für die großen Ansichten
-  const art = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;
+  const artRaw = (id, size = 64) => `<svg class="pd" width="${size}" height="${size}" viewBox="0 0 ${fine(id)} ${fine(id)}" shape-rendering="crispEdges" aria-hidden="true">${rects(DOGS[id][fine(id)])}</svg>`;
+  const art = (id, size = 64) => toImg(artRaw(id, size));
   // Kachel-Bild rechts: dieselben abgerundeten Quadrate wie beim Bild-Erzeugen – gerades Raster, ohne Animation, 9 % Deckkraft;
   // von rechts nach links blendet die Maske (style.css) sie aus. Breiter als jede Karte, rechts bündig → nie oben/unten angeschnitten.
   const tilesArt = (() => {
@@ -1915,11 +1928,11 @@ const PixelDogs = (() => {
     return () => timers.forEach((x) => clearTimeout(x));
   }
   // Raster als SVG (für die Größen-Vorschau eines selbst gezeichneten Bildes)
-  const rasterSvg = (r, px) => `<svg class="pd" width="${px}" height="${px}" viewBox="0 0 ${r.rows.length} ${r.rows.length}" shape-rendering="crispEdges" aria-hidden="true">${rects(r)}</svg>`;
+  const rasterSvg = (r, px) => toImg(`<svg class="pd" width="${px}" height="${px}" viewBox="0 0 ${r.rows.length} ${r.rows.length}" shape-rendering="crispEdges" aria-hidden="true">${rects(r)}</svg>`);
   // Vorschau eines noch nicht gespeicherten Agenten (Profil-Karte im Einrichtungs-Chat)
   const previewArt = (figur, fur, size = 64, raster = null) => {
     if (figur === 'eigenes') return raster && okRaster(raster[32], 32) ? rasterSvg(raster[32], size) : '';
-    const base = FIGURES[figur] || 'general', m = furMap(base, fur); return art(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`);
+    const base = FIGURES[figur] || 'general', m = furMap(base, fur); return toImg(artRaw(base, size).replace(/fill="(#[0-9a-fA-F]{6})"/g, (all, c) => `fill="${m[c.toLowerCase()] || c}"`));
   };
   return { ONE_AGENT, actor, DOGS, MODES, ANIMALS, UNAVAILABLE, FIGURES, FURS, BASE, reloadCustom, previewArt, preview, rasterSvg, ACTIONS, isCustom: (id) => !!BASE[id], SCENE_W, SCENE_H, sceneTracks: (id) => sceneTracks(BASE[id] || id), svg, art, select: (id) => (DOGS[id] && !ANIMALS[id] && !UNAVAILABLE.has(id) ? selectFn?.(id) : null), rowsOf: (id) => DOGS[id][32], get mode() { return mode; } };
 })();
