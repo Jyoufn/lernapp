@@ -6257,7 +6257,7 @@ const ChatFiles = (() => {
   function open() {
     refresh(); if (!list.length) return;
     // 18.11.: als schwebende Karte unter den Symbolen (wie die Vorlage): oben „Dateien“ + Anzahl, darunter Icon + Titel
-    pop.innerHTML = `<div class="fm-head"><b>Dateien</b><span>${list.length}</span></div>` + list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
+    pop.innerHTML = list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
     pop.hidden = false; btn.classList.add('on');
     const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
     pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 12, r.right - w)))}px`;

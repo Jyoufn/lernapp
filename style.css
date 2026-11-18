@@ -13713,3 +13713,25 @@ body.au-dragging, body.au-dragging * { cursor: grabbing !important; }
   html body .app.lz-open .lzwin { width: min(920px, calc((100vw - var(--sidebar-w, 264px) - 16px) / 2)); transition: width 420ms var(--ease), margin 420ms var(--ease), opacity 260ms ease; }
   html body .app.lz-open.collapsed .lzwin { width: min(920px, calc((100vw - 16px) / 2)); }
 }
+/* 18.11. spät: Cover in Aufgabe/Termin flacher und nahtlos mit dem Titel-Kasten verbunden (eine Karte, keine Kante dazwischen) */
+html body :is(.au-card, .ce-card) .ce-cover:not([hidden]) { height: 96px !important; min-height: 0 !important; aspect-ratio: auto !important; border-radius: 11px 11px 0 0 !important; overflow: hidden; }
+html body :is(.au-card, .ce-card) .ce-cover:not([hidden]) + :is(.ce-headbox, .au-dhead) { border-top-left-radius: 0 !important; border-top-right-radius: 0 !important; margin-top: -6px !important; }
+html body :is(.au-card, .ce-card) .ce-cover:not([hidden]) { margin: 0 !important; }
+html body :is(.au-card, .ce-card) .ce-cover:not([hidden]) + :is(.ce-headbox, .au-dhead) { box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.045), inset -1px 0 0 rgba(255, 255, 255, 0.045), inset 0 -1px 0 rgba(255, 255, 255, 0.045) !important; }
+html body :is(.au-card, .ce-card) .ce-cover:not([hidden]) .ce-cover-bg { border-radius: 0 !important; }
+/* Sidebar: Abschnitts-Pfeil (Chats/Dokumente) nur, wenn eingeklappt */
+html body .sidebar .sb-sec-head[aria-expanded="true"] > svg { opacity: 0; }
+html body .sidebar .sb-sec-head[aria-expanded="false"] > svg { opacity: 1; transform: rotate(-90deg); }
+html body .sidebar .sb-sec-head > svg { transition: opacity 160ms ease, transform 200ms ease; }
+/* Sidebar-Zeilen: Auswahl-Kasten etwas kleiner, wie in den Menüs */
+html body .sidebar :is(.nav-item, .sb-chat) { height: 28px !important; min-height: 28px !important; margin-top: 1px; margin-bottom: 1px; border-radius: 8px !important; }
+/* Suche: Tastatur-Leiste unten weg, Symbole ohne Kasten */
+html body .cmdk-foot { display: none !important; }
+html body .cmdk-row .cmdk-ic, html body .cmdk-row.on .cmdk-ic, html body .cmdk-row[aria-selected="true"] .cmdk-ic { background: none !important; width: 20px; }
+html body .cmdk-row .cmdk-ic svg { width: 16px; height: 16px; }
+html body .cmdk-row .cmdk-dog svg { width: 18px; height: 18px; }
+.pj-folder .pf-paper { transition: transform 220ms var(--ease, ease); transform-box: fill-box; }
+.dc-proj.open > .sbp-head .pj-folder .pf-paper { transform: translateY(-1.5px); }
+/* 18.11. spät: Dateien-Karte ohne Kopfzeile, Hintergrund wie die Seite, etwas kantiger */
+html body .files-menu { background: #141414 !important; border-radius: 11px !important; padding: 5px; }
+html body .files-menu .fm-row { border-radius: 7px; }
