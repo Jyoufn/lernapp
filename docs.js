@@ -1646,12 +1646,15 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         </div></div>
         <nav class="prompt-nav dc-nav" aria-label="Überschriften in diesem Dokument"></nav>
         <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>
-        <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><i></i></button></div>`;
+        <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><i></i><span>Fokus-Modus</span></button></div>`;
       wireMeta(); wireProj(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
       grow(view.querySelector('.dc-title-in')); grow(view.querySelector('.dc-sub-in'));
       if (writing.has(doc.id)) busy('KI schreibt …');
       if (api.focusTitle && !focusOn) { api.focusTitle = false; setTimeout(() => view.querySelector('.dc-title-in')?.focus(), 60); }
       applyFocus();
+      // Cover-Abstand neu messen (die obere Leiste ist im Fokus weg) – sofort und nach dem Umschalten
+      const rb = () => view.querySelector('.dc-cover')?._bleed?.();
+      requestAnimationFrame(rb); setTimeout(rb, 480);
     }
     /* ---------- Fokusmodus: nur der Text, ganzer Bildschirm (Sidebar, Leisten, Griffe weg), nichts bearbeitbar;
        oben mittig ein etwas größerer Knopf beendet ihn (auch Esc) ---------- */
@@ -2193,6 +2196,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         box.style.setProperty('--bt', `${Math.max(0, b0.top - top + (sc.scrollTop || 0))}px`);
       };
       view.classList.toggle('cover-bleed', !!bg && !(doc.cover?.kind === 'image' && !doc.cover?.ai)); // Leiste oben liegt dann über dem Cover
+      box._bleed = bleed;
       bleed(); requestAnimationFrame(bleed);
       if (!box._ro && window.ResizeObserver) { box._ro = new ResizeObserver(() => bleed()); box._ro.observe(view); }
       // eigenes Bild: Banner übernimmt das Seitenverhältnis → das ganze Bild ist zu sehen (sehr hohe Bilder: ganz, mit Rand)
