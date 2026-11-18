@@ -3382,7 +3382,7 @@ document.body.append(srcModal);
 function closeSourcesModal() { srcModal.hidden = true; srcModal.replaceChildren(); }
 function openSourcesModal(sources, citations) {
   const panel = el('div', 'src-modal-panel');
-  const head = el('div', 'src-modal-head', `<span>Quellen</span><span class="t">${sources.length}</span>`);
+  const head = el('div', 'src-modal-head bare'); // 19.11.: keine Überschrift mehr, nur das × oben rechts
   const close = el('button', 'src-modal-close', icon('i-x'));
   close.type = 'button';
   close.setAttribute('aria-label', 'Schließen');
@@ -3955,13 +3955,13 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Abzweig unter einem Schritt (aufklappbar über die Zeile)
   const branchOf = (st) => {
     if (st.list) return st.list;
-    const list = el('div', 'plan-list branch');
-    const fold = el('div', 'fold'), inner = el('div', 'fold-in');
-    srcFold(st.step).append(list); // zugeklappt; rechts die Website-Bilder (srcStack)
+    const list = el('div', 'plan-list todo branch'); // 19.11.: Strategie sieht aus wie die To-do-Liste (Kreise, Haken)
+    srcFold(st.step).append(list); // rechts die Website-Bilder (srcStack)
+    st.step.classList.add('open');
     st.list = list;
     return list;
   };
-  const tick = (row) => { if (row && row.dataset.state !== 'done') { row.dataset.state = 'done'; row.querySelector('.pi-mark').innerHTML = FadeIcons.svg('check-circle', 13); } };
+  const tick = (row) => { if (row && row.dataset.state !== 'done') { row.dataset.state = 'done'; row.querySelector('.pi-mark').innerHTML = icon('f-check', 10); } };
   /* Suchen: NICHT im Plan-Kasten. Je Suche ein schmaler Kasten mit Lupe und dem Suchtext, darunter ihre Quellen als kleine Kästchen
      (links das Logo der Website, rechts der Titel) in einer Reihe + „+N“. */
   const searchList = (st) => {
@@ -3997,7 +3997,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
       const list = branchOf(st);
       e.subs.forEach((x) => {
         const row = el('div', 'plan-item', `<span class="pi-mark"></span><span class="pi-text">${escapeHtml(x.q)}</span>`);
-        row.dataset.state = 'active';
+        row.dataset.state = 'todo';
         list.append(row);
         deep.subs.set(x.id, row);
       });
@@ -4538,7 +4538,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     // Tiefen-Recherche: Quellen immer unten zeigen – ohne Belegzählung alle gelesenen Quellen
     const allSrc = renderOpts.sources.filter(Boolean);
     let main = mainSources(allSrc, citations);
-    if (!main.length && deep.all.length) main = allSrc;
+    // 19.11.: nur wirklich benutzte (belegte) Quellen – kein Rückfall mehr auf alle gelesenen
     if (!main.length && groundSrc.length) main = groundSrc; // Antwort mit Google-Suche: deren benutzte Quellen
     const loose = placeSourceStack(answer, main);
     const footer = messageFooter(msgEl, answerR.text);
