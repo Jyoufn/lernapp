@@ -126,7 +126,9 @@ const Skills = (() => {
     host.append(chips);
     drawPicked = () => {
       chips.hidden = !picked.length;
-      chips.innerHTML = picked.map((p) => `<span class="sk-chip" style="--c:${p.c}">${esc(p.title)}<button type="button" data-skx="${p.id}" aria-label="Entfernen">×</button></span>`).join('');
+      chips.innerHTML = picked.map((p) => `<span class="sk-chip" style="--c:${p.c}">${esc(p.title)}</span>`).join(''); // 18.11.: kein ×, Rücktaste am Anfang entfernt
+      if (input.dataset.ph == null) input.dataset.ph = input.placeholder;
+      input.placeholder = picked.length ? '' : input.dataset.ph; // mit Skill keinen Platzhaltertext daneben
       if (!picked.length) { input.style.textIndent = ''; return; }
       const cs = getComputedStyle(input), lh = parseFloat(cs.lineHeight) || 22;
       chips.style.left = `${input.offsetLeft + parseFloat(cs.paddingLeft)}px`;

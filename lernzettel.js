@@ -91,8 +91,7 @@ const Lernzettel = (() => {
     win.className = 'lzwin';
     win.setAttribute('aria-label', 'Lernzettel');
     win.innerHTML = `<div class="lz-bar"><span class="lz-bt">Lernzettel</span><span class="lz-chip" hidden></span><span class="lz-grow"></span>
-        <button type="button" class="lz-btn g" data-lz="doc">Als Dokument</button><button type="button" class="lz-btn g" data-lz="pdf">PDF</button>
-        <button type="button" class="lz-btn" data-lz="copy">Kopieren</button><button type="button" class="lz-btn g lz-x" data-lz="close" aria-label="Schließen">${icon('x', 13)}</button></div>
+        <button type="button" class="icon-btn lz-ib" data-lz="share" aria-label="Teilen und Speichern" title="Teilen">${icon('share', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="close" aria-label="Schließen" title="Schließen">${icon('x', 14)}</button></div>
       <div class="lz-scroll"></div>`;
     appEl()?.insertBefore(win, document.getElementById('rpane'));
     win.addEventListener('click', (e) => {
@@ -101,7 +100,8 @@ const Lernzettel = (() => {
       const b = e.target.closest('[data-lz]'); if (!b || !cur) return;
       const z = parse(cur.raw);
       if (b.dataset.lz === 'close') { close(true); return; }
-      if (b.dataset.lz === 'copy') { navigator.clipboard?.writeText(`# ${z.title}\n\n${z.body}`).then(() => flash(b, 'Kopiert')).catch(() => {}); return; }
+      if (b.dataset.lz === 'share') { shareMenu(b); return; }
+
       if (b.dataset.lz === 'doc') {
         const html = win.querySelector('.lz-body')?.innerHTML || '';
         const d = window.Docs?.add?.({ title: z.title || 'Lernzettel', subtitle: ['Lernzettel', z.fach].filter(Boolean).join(' · '), content: html });
@@ -111,6 +111,33 @@ const Lernzettel = (() => {
       if (b.dataset.lz === 'pdf') print(z);
     });
     return win;
+  }
+  // 18.11.: Teilen-Menü (wie die übrigen Auswahl-Menüs): Als Dokument · Als PDF · Text kopieren
+  let menu = null;
+  function shareMenu(btn) {
+    if (menu && !menu.hidden) { menu.hidden = true; return; }
+    if (!menu) {
+      menu = document.createElement('div'); menu.className = 'lb2-menu lz-menu'; menu.setAttribute('role', 'menu'); document.body.append(menu);
+      menu.addEventListener('click', (e) => { const it = e.target.closest('[data-lz]'); if (!it) return; menu.hidden = true; win.querySelector(`.lz-bar [data-lz="share"]`); run(it.dataset.lz); });
+      document.addEventListener('pointerdown', (e) => { if (menu && !menu.hidden && !menu.contains(e.target) && !e.target.closest('[data-lz="share"]')) menu.hidden = true; });
+    }
+    menu.innerHTML = [['doc', 'file', 'Als Dokument speichern'], ['pdf', 'download', 'Als PDF'], ['copy', 'copy', 'Text kopieren']]
+      .map(([k, ic, t]) => `<button type="button" class="lb2-mi" data-lz="${k}" role="menuitem">${icon(ic, 14)}<span>${t}</span></button>`).join('');
+    menu.hidden = false;
+    const r = btn.getBoundingClientRect(), w = menu.offsetWidth;
+    menu.style.left = `${Math.round(Math.max(8, r.right - w))}px`; menu.style.top = `${Math.round(r.bottom + 6)}px`;
+  }
+  function run(k) {
+    if (!cur) return;
+    const z = parse(cur.raw);
+    if (k === 'copy') { navigator.clipboard?.writeText(`# ${z.title}\n\n${z.body}`).catch(() => {}); window.showHint?.('Lernzettel kopiert'); return; }
+    if (k === 'doc') {
+      const html = win.querySelector('.lz-body')?.innerHTML || '';
+      const d = window.Docs?.add?.({ title: z.title || 'Lernzettel', subtitle: ['Lernzettel', z.fach].filter(Boolean).join(' · '), content: html });
+      if (d) window.Docs?.open?.(d.id);
+      return;
+    }
+    if (k === 'pdf') print(z);
   }
   function flash(b, txt) { const old = b.textContent; b.textContent = txt; setTimeout(() => { b.textContent = old; }, 1400); }
   function print(z) {
@@ -142,7 +169,7 @@ const Lernzettel = (() => {
     };
     clearTimeout(drawT);
     if (changed || !live) { lastRaw = ''; paint(); } else drawT = setTimeout(paint, 350); // live: höchstens ~3× pro Sekunde neu
-    document.querySelectorAll('.lz-card').forEach((c) => { const on = c.dataset.key === key; c.classList.toggle('on', on); const g = c.querySelector('.lz-go'); if (g) g.textContent = on ? 'Geöffnet' : 'Öffnen'; });
+    document.querySelectorAll('.lz-card').forEach((c) => { const on = c.dataset.key === key; c.classList.toggle('on', on); });
   }
   function close(user = false) {
     if (!win) return;
@@ -150,7 +177,7 @@ const Lernzettel = (() => {
     if (win._sb) { window.setCollapsed?.(false); win._sb = false; }
     if (user && cur) dismissed.add(cur.key);
     cur = null; lastRaw = '';
-    document.querySelectorAll('.lz-card.on').forEach((c) => { c.classList.remove('on'); const g = c.querySelector('.lz-go'); if (g) g.textContent = 'Öffnen'; });
+    document.querySelectorAll('.lz-card.on').forEach((c) => { c.classList.remove('on'); });
   }
   const dismissed = new Set();
 
@@ -162,7 +189,7 @@ const Lernzettel = (() => {
     c.className = `lz-card${cur?.key === key ? ' on' : ''}`;
     c.dataset.key = key;
     const meta = live ? 'wird geschrieben …' : ['Lernzettel', caps ? `${caps} Kapitel` : '', pics ? `${pics} ${pics === 1 ? 'Abbildung' : 'Abbildungen'}` : ''].filter(Boolean).join(' · ');
-    c.innerHTML = `<span class="lz-ti"></span><span class="lz-tx"><b>${esc(z.title || 'Lernzettel')}</b><span>${esc(meta)}</span></span><span class="lz-go">${cur?.key === key ? 'Geöffnet' : 'Öffnen'}</span>`;
+    c.innerHTML = `<span class="lz-tile"><span class="lz-ti"></span></span><span class="lz-tx"><b>${esc(z.title || 'Lernzettel')}</b><span>${esc(meta)}</span></span><span class="lz-go" aria-hidden="true"></span>`;
     c.addEventListener('click', () => { if (cur?.key === key) close(true); else { dismissed.delete(key); show(raw, key); } });
     c._raw = raw; c._title = z.title || 'Lernzettel';
     return c;

@@ -6235,7 +6235,7 @@ const ChatFiles = (() => {
   const btn = el('button', 'icon-btn files-btn', icon('f-files', 15));
   btn.type = 'button'; btn.id = 'filesBtn'; btn.hidden = true;
   btn.setAttribute('aria-label', 'Dateien dieses Chats'); btn.title = 'Dateien';
-  const pop = el('div', 'files-pop'); pop.hidden = true; pop.setAttribute('role', 'menu');
+  const pop = el('div', 'lb2-menu files-menu'); pop.hidden = true; pop.setAttribute('role', 'menu'); // 18.11.: wie das Aufwand-Menü (nur Rand, Titel mit kleinem Icon)
   document.body.append(pop);
   const items = () => {
     const out = [];
@@ -6256,7 +6256,7 @@ const ChatFiles = (() => {
   function close() { pop.hidden = true; btn.classList.remove('on'); }
   function open() {
     refresh(); if (!list.length) return;
-    pop.innerHTML = list.map((it, i) => `<button type="button" class="fp-row" data-i="${i}" role="menuitem"><span class="fp-ic">${icoOf(it)}</span><span class="fp-t"><b>${escapeHtml(it.title)}</b><span>${escapeHtml(it.sub)}</span></span></button>`).join('');
+    pop.innerHTML = list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
     pop.hidden = false; btn.classList.add('on');
     const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
     pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;

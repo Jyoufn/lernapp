@@ -13332,9 +13332,9 @@ html body .step-srcs .ss-ico img { width: 11px; height: 11px; border-radius: 2px
 html body .step-srcs .ss-more { margin-left: 5px; font-size: 11.5px; color: var(--text-4); }
 
 /* ===== 18.11.: Sidebar (und alles auf Sidebar-Ebene rund um den Hauptkasten) in der Farbe des Eingabefelds (#181818) ===== */
-html:root { --sidebar-bg: #161616; } /* 18.11. abends: nur ein Hauch heller als der Hauptkasten (#141414) */
-html body { background: #161616; }
-html body .sidebar { background: #161616; }
+html:root { --sidebar-bg: #151515; } /* 18.11. abends: nur ein kleiner Tick heller als der Hauptkasten (#141414) */
+html body { background: #151515; }
+html body .sidebar { background: #151515; }
 
 /* ===== 18.11.: Warte-Welle (Bild/Präsentation wird erstellt) flüssig: ein Lichtband wandert per transform über ein maskiertes Kachel-Raster ===== */
 html body .ill-frame.ill-fast { position: relative; overflow: hidden; contain: strict; }
@@ -13550,3 +13550,38 @@ html body .st-wg-help { padding: 4px 14px 14px; }
 html body .st-wg-steps { margin: 4px 0 12px; padding-left: 18px; color: var(--text-2); font: 500 13px/1.6 var(--font-ui, Inter), sans-serif; }
 html body .st-wg-steps b { color: var(--text); font-weight: 600; }
 html body .st-wg-code { width: 100%; height: 140px; margin-bottom: 10px; padding: 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.04); color: var(--text-3); font: 500 11px/1.5 ui-monospace, monospace; resize: vertical; }
+
+/* ===== 18.11. spät: Suchanfragen in „Quellen suchen“ nebeneinander und enger ===== */
+html body .src-fold > .dq-list { display: flex; flex-wrap: wrap; gap: 5px; max-width: 640px; margin: 6px 0 2px; }
+html body .src-fold .dq { flex-direction: row; gap: 0; }
+html body .src-fold .dq-q { min-height: 26px; padding: 3px 9px 3px 8px; gap: 6px; border-radius: 8px; font-size: 12.5px; }
+html body .src-fold .chips { margin-top: 4px; }
+
+/* Dateien-Menü oben rechts: wie das Aufwand-Menü – Titel mit kleinem Icon */
+html body .files-menu { min-width: 200px; max-width: 280px; }
+html body .files-menu .fm-row { gap: 9px; }
+html body .files-menu .fm-ic { flex: none; display: inline-grid; place-items: center; width: 16px; height: 16px; color: var(--text-3); }
+html body .files-menu .fm-ic svg { width: 14px; height: 14px; }
+html body .files-menu .fm-ic .fp-paper { width: 11px; height: 14px; border-radius: 2px; }
+html body .files-menu .fm-ic .fp-paper::before { left: 2.5px; right: 2.5px; top: 4px; height: 1px; box-shadow: 0 2.5px 0 #c9c4b8, 0 5px 0 #c9c4b8; }
+html body .files-menu .fm-t { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* Lernzettel im Hauptteil: rechts angesetzt, nur eine Trennlinie zum Chat (kein eigener Kasten) */
+html body .app.lz-open .panel { border-top-right-radius: 0; border-bottom-right-radius: 0; border-right-width: 0; }
+html body .app.lz-open .lzwin { margin: 8px 8px 8px 0; border: 1px solid rgb(29, 29, 29); border-left-color: var(--line); border-radius: 0 12px 12px 0; background: var(--main-bg, #141414); }
+html body .lz-bar { height: 48px; padding: 0 8px 0 18px; box-shadow: none; }
+html body .lz-ib { width: 30px; height: 30px; color: var(--text-3); }
+@media (hover: hover) { html body .lz-ib:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); } }
+html body .lz-scroll { background: var(--main-bg, #141414); padding-top: 6px; }
+
+/* Karte im Chat wie die Datei-Karten: Kachel mit Blatt, Titel, darunter Art · Kapitel, rechts ein Pfeil */
+html body .lz-card { gap: 12px; max-width: 440px; min-height: 54px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.025); box-shadow: none; }
+@media (hover: hover) { html body .lz-card:hover { background: rgba(255, 255, 255, 0.05); } }
+html body .lz-tile { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(255, 255, 255, 0.06); }
+html body .lz-tile .lz-ti { width: 16px; height: 20px; border-radius: 3px; }
+html body .lz-tile .lz-ti::before { left: 3.5px; right: 3.5px; top: 6px; height: 1.5px; box-shadow: 0 3.5px 0 #c9c4b8, 0 7px 0 #c9c4b8; }
+html body .lz-card .lz-go { width: 24px; height: 24px; padding: 0; background: none; display: grid; place-items: center; color: var(--text-4); }
+html body .lz-card .lz-go::before { content: ""; width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; border-radius: 1px; transform: rotate(-45deg); }
+html body .lz-card.on { background: rgba(255, 255, 255, 0.06); }
+html body .sk-chip { padding: 0 9px; }
+html body .app.lz-open .panel { margin-right: 0; }
