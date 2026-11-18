@@ -118,3 +118,4 @@
   (Cover, Titel + Beschreibung, Tag, Uhrzeit) und unten ein Kommentar-Kasten (`comments: [{ t, at }]` am Termin, Enter fügt hinzu).
 - Der Bereich „UI“ steht nicht mehr in der Seitenleiste (Code `ui-lab.js` bleibt). Profil-Name: immer ein Feld, Text links (`[data-name-live]` in `settings.js`).
 
+- STAND 18.11.: **Aufgaben** (`aufgaben.js`, Ansicht-Tab „tasks“, Sidebar unter Kalender; Englisch „To-dos“): localStorage „tasks.items.v1“ (über auth.js im Konto, also auf allen Geräten). **Widgets** (`widgets.js`): Einstellungen → Allgemein → Widgets kopiert ein Scriptable-Skript mit Widget-Schlüssel (`/api/widget/token`, lesend `/api/widget?t=` → Termine 14 Tage + offene Aufgaben); Widget-Parameter kalender | aufgaben | erstellen. Deep-Links: `?open=calendar|tasks|create`, `?ask=Text` (neuer Chat, sofort gesendet).

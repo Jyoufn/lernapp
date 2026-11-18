@@ -28,7 +28,7 @@ const TYPES = {
   '.ico': 'image/x-icon',
 };
 // Nur diese Dateien werden ausgeliefert – .env, server.js usw. bleiben privat
-const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'praesentation.js', 'lernset.js', 'lernzettel.js', 'skills.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
+const PUBLIC_FILES = new Set(['logo-google.svg', 'logo-github.svg', 'auth.js', 'settings.js', 'index.html', 'style.css', 'app.js', 'pixel-dogs.js', 'music.js', 'timer.js', 'chat-visuals.js', 'calendar.js', 'docs.js', 'home.js', 'line-icons.js', 'i18n.js', 'docblocks.js', 'ui-kit.js', 'ui-lab.js', 'icons.js', 'code-agent.js', 'praesentation.js', 'lernset.js', 'lernzettel.js', 'aufgaben.js', 'widgets.js', 'skills.js', 'search.js', 'thinking.js', 'workspace-invite.js', 'code-box.js', 'chat-bg.js', 'podcast.js', 'agent-builder.js', 'favicon.png', 'icon-180.png', 'icon-512.png', 'manifest.webmanifest']);
 
 const P = require('./lib/providers');
 const W = require('./lib/workflow');
@@ -1340,6 +1340,20 @@ async function groqTranscribe(env, { data, mime, hints, context, lang, model = '
   if (!r.ok) throw new Error(`Groq ${r.status}`);
   return String((await r.json()).text || '').trim();
 }
+/* Daten fürs Homescreen-Widget: aus dem Konto-Speicher (auth.js gleicht localStorage dorthin ab) */
+async function widgetData(store, uid) {
+  const ls = (await ACC.getStorage(store, uid)) || {};
+  const parse = (k) => { try { const v = JSON.parse(ls[k] || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Berlin' }));
+  const from = iso(now), toD = new Date(now); toD.setDate(toD.getDate() + 14); const to = iso(toD);
+  const events = parse('calendarEvents').filter((e) => e && e.date >= from && e.date <= to)
+    .map((e) => ({ title: String(e.title || 'Termin').slice(0, 80), date: e.date, time: e.time || '', end: e.end || '', color: /^#[0-9a-f]{6}$/i.test(e.color || '') ? e.color : '#6d9fff' }))
+    .sort((a, b) => (a.date + (a.time || '00:00')).localeCompare(b.date + (b.time || '00:00'))).slice(0, 20);
+  const tasks = parse('tasks.items.v1').filter((t) => t && !t.done).map((t) => ({ title: String(t.title || '').slice(0, 120), due: t.due || '' }))
+    .sort((a, b) => (a.due || '9999').localeCompare(b.due || '9999')).slice(0, 20);
+  return { today: from, events, tasks, openTasks: parse('tasks.items.v1').filter((t) => t && !t.done).length };
+}
 async function handleTranscribe(req, res) {
   const env = envOf(req);
   const body = await readBody(req, 12 * 1024 * 1024);
@@ -1655,6 +1669,13 @@ async function handle(req, res) {
       store = accountStore();
       if (!store) return sendJson(res, 503, { error: 'Der Speicher für Konten ist noch nicht eingerichtet (Upstash Redis in Vercel verbinden).', setup: true });
       if (urlPath.startsWith('/api/auth/')) return await handleAuth(req, res, urlPath, store);
+      // Homescreen-Widgets (Scriptable): nur lesen, mit dem Widget-Schlüssel statt Anmeldung – Termine der nächsten 14 Tage und offene Aufgaben
+      if (req.method === 'GET' && urlPath === '/api/widget') {
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        const uid = await ACC.widgetUid(store, new URL(req.url, 'http://x').searchParams.get('t'));
+        if (!uid) return sendJson(res, 401, { error: 'Widget-Schlüssel ungültig – in den Einstellungen neu erstellen.' });
+        return sendJson(res, 200, await widgetData(store, uid));
+      }
       // Prüfseite Suche (ohne Anmeldung, nur Treffer-Titel, gedrosselt): welche Suchmaschine liefert vom Server aus brauchbare Treffer?
       if (urlPath === '/api/diag/suche') {
         if (Date.now() - (handle.diagAt || 0) < 3000) return sendJson(res, 429, { error: 'Bitte kurz warten' });
@@ -1813,6 +1834,7 @@ async function handle(req, res) {
     if (req.method === 'GET' && urlPath === '/api/docs') return sendJson(res, 200, await ACC.loadDocs(store, user.id));
     if (req.method === 'PUT' && urlPath === '/api/docs') { await ACC.storeDocs(store, user.id, await readBody(req, 80 * 1024 * 1024)); return sendJson(res, 200, { ok: true }); }
     // Darstellung (Modus, Akzent, Kacheln) – im Konto, damit sie auf jedem Gerät und nach jedem Neustart gleich bleibt
+    if (req.method === 'POST' && urlPath === '/api/widget/token') { const b = await readBody(req, 200).catch(() => ({})); return sendJson(res, 200, { token: await ACC.widgetToken(store, user.id, !!b?.renew) }); }
     if (req.method === 'GET' && urlPath === '/api/appearance') return sendJson(res, 200, await ACC.getAppearance(store, user.id));
     if (req.method === 'PUT' && urlPath === '/api/appearance') { await ACC.setAppearance(store, user.id, await readBody(req, 4000)); return sendJson(res, 200, { ok: true }); }
     if (req.method === 'GET' && urlPath === '/api/account/storage') return sendJson(res, 200, { data: await ACC.getStorage(store, user.id) });

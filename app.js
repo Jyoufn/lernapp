@@ -108,6 +108,7 @@ window.markDrafts = markDrafts;
 /* Kalender, Home und UI öffnen als eigene Tabs (ein Tab je Ansicht) */
 const VIEW_TABS = {
   calendar: { title: 'Kalender', icon: 'i-calendar', view: () => window.Calendar },
+  tasks: { title: 'Aufgaben', icon: 'o-todo', view: () => window.Aufgaben },
   ui: { title: 'UI', icon: 'o-ui', view: () => window.UILab },
   docs: { title: 'Home', icon: 'f-home', view: () => window.Docs?.list },
   doc: { title: 'Dokument', icon: 'f-file', view: () => window.Docs?.editor },

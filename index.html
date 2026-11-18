@@ -93,6 +93,7 @@
     <symbol id="o-palette" viewBox="0 0 16 16"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M8 1.75a6.25 6.25 0 0 0 0 12.5c.9 0 1.4-.6 1.4-1.3 0-.4-.2-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.6-1.3 1.4-1.3h1.3a2.9 2.9 0 0 0 2.95-2.9C14.25 4.3 11.45 1.75 8 1.75z"/><g fill="currentColor"><circle cx="4.9" cy="7.6" r=".95"/><circle cx="6.9" cy="4.75" r=".95"/><circle cx="10.2" cy="5.1" r=".95"/></g></symbol><!-- UI Design: Farbpalette -->
     <symbol id="o-tasks" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M5.25 5.25v5.5M8 5.25v2.75M10.75 5.25v4"/></g></symbol><!-- Aufgaben: kleines Board – drei Spalten unterschiedlich voll -->
     <symbol id="o-ui" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="2" width="12.5" height="4.5" rx="2.25"/><rect x="1.75" y="9" width="5.25" height="5.25" rx="1.75"/><rect x="9" y="9" width="5.25" height="5.25" rx="1.75"/></g></symbol><!-- UI: Bausteine – eine Leiste, zwei Kacheln -->
+    <symbol id="o-todo" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="m5.25 8.15 1.85 1.85 3.7-3.9"/></g></symbol>
     <symbol id="o-calendar" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1.75" y="1.75" width="12.5" height="12.5" rx="3.5"/><path d="M1.75 5.9h12.5"/></g><g fill="currentColor"><circle cx="5.3" cy="8.9" r=".85"/><circle cx="8" cy="8.9" r=".85"/><circle cx="10.7" cy="8.9" r=".85"/><circle cx="5.3" cy="11.4" r=".85"/><circle cx="8" cy="11.4" r=".85"/></g></symbol>
     <symbol id="o-inbox" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 9.25 3.9 3.9a1.6 1.6 0 0 1 1.53-1.15h5.14A1.6 1.6 0 0 1 12.1 3.9l1.65 5.35v2.5a2 2 0 0 1-2 2h-7.5a2 2 0 0 1-2-2z"/><path d="M2.25 9.25h3l.75 1.5h4l.75-1.5h3"/></g></symbol>
     <symbol id="o-trend" viewBox="0 0 16 16"><g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2.25 11.75 6 8l2.75 2.75 5-5"/><path d="M10.75 5.75h3v3"/></g></symbol>
@@ -131,6 +132,7 @@
           <a class="nav-item" href="#" data-nav="new"><svg width="16" height="16"><use href="#o-plus"/></svg>Erstellen</a>
           <a class="nav-item" href="#" data-nav="docs"><svg width="16" height="16"><use href="#o-home"/></svg>Home</a>
           <a class="nav-item" href="#" data-nav="calendar"><svg width="16" height="16"><use href="#o-calendar"/></svg>Kalender</a>
+          <a class="nav-item" href="#" data-nav="tasks"><svg width="16" height="16"><use href="#o-todo"/></svg>Aufgaben</a>
         </nav>
         <!-- darunter scrollt: Chats und Dokumente (einklappbar), Lesezeichen – per JavaScript -->
         <div class="sb-scroll" id="sbScroll">
@@ -271,7 +273,9 @@
     <script src="chat-visuals.js"></script>
     <script src="praesentation.js"></script><!-- Präsentationen des Lern-Agenten (```praesentation): Vorschau, PowerPoint, Keynote, PDF -->
     <script src="lernset.js"></script>
-    <script src="lernzettel.js"></script><!-- Lernzettel (````lernzettel): Papier-Blatt rechts neben dem Chat -->
+    <script src="lernzettel.js"></script>
+    <script src="aufgaben.js"></script><!-- Aufgaben / To-dos (18.11.) -->
+    <script src="widgets.js"></script><!-- Homescreen-Widgets (Scriptable) + Deep-Links --><!-- Lernzettel (````lernzettel): Papier-Blatt rechts neben dem Chat -->
     <script src="podcast.js"></script><!-- Podcasts im Chat (```podcast): Player, Transkript, Mitreden -->
     <script src="skills.js"></script><!-- Skills im Eingabefeld: „/“-Liste, automatische Erkennung, farbige Markierung -->
     <script src="thinking.js"></script><!-- Denk-Abläufe der Agenten: Hauptstatus und Unterpunkte der Zeitleiste -->

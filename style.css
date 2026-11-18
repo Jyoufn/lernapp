@@ -13511,3 +13511,42 @@ html body .fp-paper::before { content: ""; position: absolute; left: 4px; right:
 html body .fp-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 html body .fp-t b { overflow: hidden; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; white-space: nowrap; text-overflow: ellipsis; }
 html body .fp-t span { color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
+
+/* ===== 18.11.: Aufgaben (To-dos) – ruhige Liste wie die übrigen Ansichten, runde Haken ===== */
+html body .tk-view.au-view { gap: 0; padding-left: max(32px, calc((100% - 720px) / 2)); padding-right: max(32px, calc((100% - 720px) / 2)); padding-bottom: 40px; overflow-y: auto; }
+.au-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 18px; }
+.au-title { margin: 0; color: var(--text); font: 600 26px/1.2 var(--font-ui, Inter), sans-serif; letter-spacing: -0.02em; }
+.au-count { color: var(--text-4); font: 500 13px var(--font-ui, Inter), sans-serif; }
+.au-new { display: flex; align-items: center; gap: 10px; height: 44px; margin-bottom: 22px; padding: 0 8px 0 14px; border-radius: 12px; background: #181818; box-shadow: inset 0 0 0 1px var(--line); }
+.au-plus { flex: none; display: grid; place-items: center; color: var(--text-4); }
+.au-in { flex: 1; min-width: 0; height: 100%; border: 0; outline: 0; background: none; color: var(--text); font: 500 14px var(--font-ui, Inter), sans-serif; }
+.au-in::placeholder { color: var(--text-4); }
+.au-due-btn { position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border-radius: 9px; color: var(--text-4); font: 500 12.5px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+.au-due-btn.set { background: rgba(255, 255, 255, 0.06); color: var(--text-2); }
+@media (hover: hover) { .au-due-btn:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-2); } }
+.au-due-in { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.au-group { margin-bottom: 18px; }
+.au-gh { display: flex; align-items: center; gap: 6px; margin: 0 0 4px; padding: 0 4px; border: 0; background: none; color: var(--text-4); font: 600 12.5px var(--font-ui, Inter), sans-serif; }
+.au-toggle { cursor: pointer; } .au-toggle svg { transition: transform 200ms ease; } .au-donegrp.open .au-toggle svg { transform: rotate(90deg); }
+.au-toggle span { color: var(--text-4); font-weight: 500; }
+.au-donelist { display: none; } .au-donegrp.open .au-donelist { display: block; }
+.au-row { display: flex; align-items: center; gap: 12px; min-height: 42px; padding: 0 8px; border-radius: 10px; transition: opacity 200ms ease, transform 200ms ease; }
+@media (hover: hover) { .au-row:hover { background: rgba(255, 255, 255, 0.03); } .au-row:hover .au-x { opacity: 1; } }
+.au-row.out { opacity: 0; transform: translateX(8px); }
+.au-check { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 1.5px solid rgba(255, 255, 255, 0.28); border-radius: 50%; background: none; color: transparent; cursor: pointer; transition: background 180ms ease, border-color 180ms ease, color 180ms ease; }
+.au-row.done .au-check { border-color: #7db993; background: #7db993; color: #141414; }
+.au-t { flex: 1; min-width: 0; color: var(--text); font: 500 14px/1.45 var(--font-ui, Inter), sans-serif; cursor: text; overflow-wrap: anywhere; }
+.au-row.done .au-t { color: var(--text-4); text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.25); }
+.au-edit { flex: 1; min-width: 0; height: 30px; padding: 0 8px; border: 0; border-radius: 8px; outline: 0; background: rgba(255, 255, 255, 0.06); color: var(--text); font: 500 14px var(--font-ui, Inter), sans-serif; }
+.au-due { flex: none; padding: 2px 8px; border-radius: 7px; background: rgba(255, 255, 255, 0.05); color: var(--text-3); font: 500 12px var(--font-ui, Inter), sans-serif; }
+.au-due.over { background: rgba(240, 122, 110, 0.12); color: #f07a6e; }
+.au-x { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-4); opacity: 0; cursor: pointer; }
+@media (hover: none) { .au-x { opacity: 0.6; } }
+.au-empty { padding: 30px 0; color: var(--text-4); font: 500 13.5px var(--font-ui, Inter), sans-serif; text-align: center; }
+html body .tk-view.au-view:not(.tk-embed) { padding-top: 64px; }
+/* 18.11.: Einstellungen → Widgets */
+html body .st-widgets .st-sub { display: block; margin-top: 2px; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; font-style: normal; }
+html body .st-wg-help { padding: 4px 14px 14px; }
+html body .st-wg-steps { margin: 4px 0 12px; padding-left: 18px; color: var(--text-2); font: 500 13px/1.6 var(--font-ui, Inter), sans-serif; }
+html body .st-wg-steps b { color: var(--text); font-weight: 600; }
+html body .st-wg-code { width: 100%; height: 140px; margin-bottom: 10px; padding: 10px; border: 0; border-radius: 10px; background: rgba(255, 255, 255, 0.04); color: var(--text-3); font: 500 11px/1.5 ui-monospace, monospace; resize: vertical; }

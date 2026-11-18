@@ -9,7 +9,7 @@
   const lang = () => { try { return localStorage.getItem(KEY) === 'en' ? 'en' : 'de'; } catch { return 'de'; } };
   const D = {
     // Sidebar, Köpfe
-    'Erstellen': 'Create', 'Schriftart': 'Font', 'Home': 'Home', 'Aufgaben': 'Tasks', 'Kalender': 'Calendar', 'Angepinnt': 'Pinned', 'Chats': 'Chats', 'Dokumente': 'Documents',
+    'Erstellen': 'Create', 'Schriftart': 'Font', 'Home': 'Home', 'Aufgaben': 'To-dos', 'Neue Aufgabe …': 'New to-do …', 'Überfällig': 'Overdue', 'Demnächst': 'Upcoming', 'Ohne Datum': 'No date', 'Erledigt': 'Done', 'Keine offenen Aufgaben': 'No open to-dos', 'Fällig am': 'Due', 'Widgets': 'Widgets', 'Kalender': 'Calendar', 'Angepinnt': 'Pinned', 'Chats': 'Chats', 'Dokumente': 'Documents',
     'Agenten': 'Agents', 'Einstellungen': 'Settings', 'Zurück': 'Back', 'Allgemein': 'General', 'Aussehen': 'Appearance', 'Suchen': 'Search',
     'Workspace hinzufügen': 'Add workspace', 'Privat': 'Private', 'Neuer Chat': 'New chat', 'Neues Dokument': 'New document', 'Neue Aufgabe': 'New task',
     'Als Nächstes': 'Up next', 'Öffnen': 'Open', 'Alle Einträge': 'All items', 'Alle Chats': 'All chats', 'Gefiltert': 'Filtered',
