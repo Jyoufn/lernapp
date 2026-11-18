@@ -708,7 +708,12 @@ function showHint(text) {
 const dictWave = el('div', 'dict-wave');
 dictWave.setAttribute('aria-hidden', 'true');
 dictWave.innerHTML = Array.from({ length: 72 }, () => '<i></i>').join('');
-$('modelChip')?.after(dictWave);
+// 19.11.: links neben der Welle läuft die Aufnahmezeit mit (0:07)
+const dictTime = el('span', 'dict-time', '0:00');
+$('modelChip')?.after(dictTime);
+dictTime.after(dictWave);
+let dictT0 = 0, dictTimer = 0;
+const dictTick = () => { const s = Math.floor((Date.now() - dictT0) / 1000); dictTime.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 let waveRaf = 0, waveCtx = null, waveAn = null, waveSrcStream = null;
 function waveTick() {
   const bars = dictWave.children, n = bars.length;
@@ -731,6 +736,8 @@ function waveStart() {
 function waveStop() { clearTimeout(waveRaf); [...dictWave.children].forEach((b) => { b.style.transform = ''; }); }
 function setMicUI(active) {
   composer.classList.toggle('dictating', active);
+  clearInterval(dictTimer);
+  if (active) { dictT0 = Date.now(); dictTick(); dictTimer = setInterval(dictTick, 500); }
   if (active) { waveStart(); setTimeout(() => { if (composer.classList.contains('dictating')) waveStart(); }, 900); } else waveStop(); // Strom kommt erst nach der Freigabe
   micBtn.classList.toggle('active', active);
   micBtn.setAttribute('aria-pressed', String(active));

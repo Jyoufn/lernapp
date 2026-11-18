@@ -13900,3 +13900,18 @@ html body .ce-inline .ce-dur { display: none; }
 html body .ce-inline .tk-rv { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 html body .ce-inline .tk-pill { gap: 8px; }
 html body .ce-inline .tk-pill { font-size: 13px; }
+/* 19.11.: Aufnahmezeit links neben der Welle beim Diktieren */
+.dict-time { display: none; }
+html body .composer.dictating .dict-time { display: inline-flex; align-items: center; flex: none; margin-left: 6px; color: var(--text-3); font: 500 13px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; min-width: 34px; }
+html body .composer.dictating .dict-time::before { content: ""; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #e5534b; animation: dict-dot 1.2s ease-in-out infinite; }
+@keyframes dict-dot { 50% { opacity: 0.35; } }
+/* Aufgaben: Kartentitel fett, Stift kleiner und mittig; kein × auf dem Cover (Entfernen im Cover-Fenster) */
+.au-ct { font-weight: 600 !important; }
+.au-edit { top: 9px; right: 9px; width: 22px; height: 22px; border-radius: 6px; padding: 0; }
+.au-edit svg { width: 12px; height: 12px; display: block; }
+html body .ce-card .ce-cover-x { display: none !important; }
+.dc-cpop-head .dc-cpop-del { margin-left: auto; margin-right: 6px; }
+/* aufgeklappte Karte: Haupthintergrund, Kästen darin nur leicht aufgehellt (nicht grell) */
+.au-card2.editing, .au-card2.editing:hover { background: #141414; border-color: #242424; }
+html body .au-inl .ce-card :is(.ce-headbox, .tk-pill, .tk-pop, .ce-vrow) { --ce-box: rgba(255, 255, 255, 0.025); }
+html body .au-inl .ce-card .tk-pop.open { background: rgba(255, 255, 255, 0.03); }

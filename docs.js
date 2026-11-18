@@ -2489,7 +2489,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const modal = el('div', 'tk-modal dc-cmodal');
       const pop = el('div', 'tk-form dc-cpop');
       pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Cover');
-      pop.innerHTML = `<div class="dc-cpop-head"><span class="dc-cpop-title">Cover</span><button type="button" class="tk-x dc-cpop-x" aria-label="Schließen" title="Schließen">${fi('x', 12)}</button></div>
+      pop.innerHTML = `<div class="dc-cpop-head"><span class="dc-cpop-title">Cover</span>${curCover() ? `<button type="button" class="dc-ip2-del dc-cpop-del" data-cover-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}<button type="button" class="tk-x dc-cpop-x" aria-label="Schließen" title="Schließen">${fi('x', 12)}</button></div>
         <div class="dc-cpop-body"></div>
         <input type="file" accept="image/png,image/jpeg,image/webp" hidden />`;
       modal.append(pop);
@@ -2565,6 +2565,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       body.addEventListener('pointerover', (e) => { const sw = e.target.closest('[data-c]'); if (sw && step) showPreview(sw.dataset.c); });
       body.addEventListener('pointerout', (e) => { if (e.target.closest('[data-c]') && step && !e.relatedTarget?.closest?.('[data-c]')) showPreview(pick.c); });
       pop.addEventListener('click', async (e) => {
+        if (e.target.closest('[data-cover-del]')) { applyCover(null); close(); return; } // 19.11.: Cover hier entfernen (kein × mehr auf dem Cover)
         if (e.target.closest('.dc-cpop-x')) { close(); return; }
         if (e.target.closest('[data-back]')) { step = null; render(-1); return; }
         const sb = e.target.closest('[data-style]');
