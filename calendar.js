@@ -360,7 +360,7 @@ const Calendar = (() => {
     const timeHtml = ev.time ? `${esc(ev.time)}${ev.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${esc(ev.end)}` : ''}` : 'Ganztägig';
     const dur = DUR(ev.time, ev.end);
     emodal.innerHTML = `<div class="tk-form ce-card ce-view" style="--c:${esc(ev.color || COLORS[0])}">
-      ${ev.cover ? `<div class="ce-cover"><img alt="" src="${esc(ev.cover)}" /></div>` : ''}
+      ${coverBg(ev.cover) ? `<div class="ce-cover"><span class="ce-cover-bg" style="background:${esc(coverBg(ev.cover))}"></span></div>` : ''}
       <div class="ce-headbox ce-vhead">
         <div class="ce-vtitle">${esc(ev.title)}</div>
         ${ev.description ? `<div class="ce-vnote">${esc(ev.description).replace(/\n/g, '<br>')}</div>` : ''}
@@ -439,6 +439,8 @@ const Calendar = (() => {
       img.src = url;
     });
   }
+  // 18.11.: Cover eines Termins – eigenes Bild (alt: Text data:…) oder wie beim Dokument (Vorlage, Farbe, KI): { kind, … }
+  const coverBg = (c) => (!c ? '' : typeof c === 'string' ? `center / cover no-repeat url("${c.replace(/"/g, '%22')}")` : window.Docs?.editor?.coverCss?.(c) || '');
   function edit(ev, date, time = '', end = '', store = null, anchor = null) {
     close(); // ggf. Tagesliste schließen
     const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: EV_COLORS[6] || COLORS[0], icon: 'f-calendar' };
@@ -449,7 +451,7 @@ const Calendar = (() => {
     // der seinen Inhalt in sich aufklappt (rechts ein kleiner Pfeil-Knopf)
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
     emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet ce-card" autocomplete="off">
-      <div class="ce-cover"${e.cover ? '' : ' hidden'}><img alt="" src="${e.cover ? esc(e.cover) : ''}" /><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
+      <div class="ce-cover"${e.cover ? '' : ' hidden'}><span class="ce-cover-bg"></span><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
       <div class="tk-sheet-main ce-headbox">
         <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
@@ -482,7 +484,7 @@ const Calendar = (() => {
       form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
       set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
       form.querySelector('[data-act="cover"]').innerHTML = `<span class="tk-si">${icon('f-image')}</span><span class="tk-rv">${e.cover ? 'Cover ändern' : 'Cover hinzufügen'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
-      const cv = form.querySelector('.ce-cover'); cv.hidden = !e.cover; if (e.cover && cv.firstElementChild.getAttribute('src') !== e.cover) cv.firstElementChild.src = e.cover;
+      const cv = form.querySelector('.ce-cover'), bg = coverBg(e.cover); cv.hidden = !bg; if (bg) cv.firstElementChild.style.background = bg;
       form.querySelector('.ce-wheels').hidden = !e.time; // ganztägig: keine Uhrzeiten
       form.querySelectorAll('[data-color]').forEach((b) => b.classList.toggle('on', b.dataset.color === e.color));
       form.querySelector('.ce-own').hidden = !form.querySelector('.ce-own').firstElementChild;
@@ -547,7 +549,12 @@ const Calendar = (() => {
       if (co) { if (!co.dataset.color) return; e.color = co.dataset.color; const host = form.querySelector('.tk-picker-host'); host._before = e.color; host.replaceChildren(); draw(); co.closest('.tk-pop').classList.remove('open'); return; }
       if (!x.target.closest('.tk-pop')) form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
       const act = x.target.closest('[data-act]')?.dataset.act;
-      if (act === 'cover') { form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open')); form.querySelector('.ce-cover-in').click(); return; }
+      if (act === 'cover') { // gleiches Cover-Fenster wie beim Dokument (Vorlagen, Farben, eigenes Bild, KI)
+        form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
+        if (window.Docs?.editor?.pickCover) window.Docs.editor.pickCover({ get: () => (typeof e.cover === 'object' ? e.cover : null), set: (c) => { e.cover = c || ''; draw(); } });
+        else form.querySelector('.ce-cover-in').click();
+        return;
+      }
       if (act === 'cover-x') { e.cover = ''; draw(); return; }
       if (act === 'close') eclose();
       if (act === 'delete') { if (store) store.onDelete(e.id); else { events = events.filter((y) => y.id !== e.id); save(); render(); if (!dv.hidden) drawDay(); } eclose(); }
@@ -627,9 +634,6 @@ const Calendar = (() => {
   }
   function show() {
     mount();
-    // 18.11.: Banner (Wallpaper) oben wie bei den Aufgaben – Vorlagen, Farben, eigenes Bild, KI
-    if (!view._vb && window.ViewBanner) { view._vb = window.ViewBanner('calendar.banner', { kind: 'preset', id: 'd-dusk' }); view._vb.classList.add('vb-cal'); view.prepend(view._vb); }
-    view._vb?.draw();
     dv.hidden = true;
     dvWrap.hidden = true;
     open = true;

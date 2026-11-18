@@ -2180,6 +2180,18 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const flip = animate && page && page.classList.contains('with-cover') !== !!bg ? captureFlip() : null;
       box.classList.toggle('has', !!bg);
       box.querySelector('.dc-cover-img').style.background = bg;
+      // 18.11.: Cover (nicht eigenes Bild) geht über die ganze Breite der Ansicht bis ganz nach oben – Abstand zu den Rändern messen
+      const bleed = () => {
+        if (!box.classList.contains('has') || box.classList.contains('img')) return;
+        ['--bl', '--br', '--bt'].forEach((k) => box.style.setProperty(k, '0px'));
+        const v = view.getBoundingClientRect(), b0 = box.getBoundingClientRect(); if (!v.width || !b0.width) return;
+        const sc = box.closest('.dc-scroll') || view, top = sc.getBoundingClientRect().top;
+        box.style.setProperty('--bl', `${Math.max(0, b0.left - v.left)}px`); box.style.setProperty('--br', `${Math.max(0, v.right - b0.right)}px`);
+        box.style.setProperty('--bt', `${Math.max(0, b0.top - top + (sc.scrollTop || 0))}px`);
+      };
+      view.classList.toggle('cover-bleed', !!bg && !(doc.cover?.kind === 'image' && !doc.cover?.ai)); // Leiste oben liegt dann über dem Cover
+      bleed(); requestAnimationFrame(bleed);
+      if (!box._ro && window.ResizeObserver) { box._ro = new ResizeObserver(() => bleed()); box._ro.observe(view); }
       // eigenes Bild: Banner übernimmt das Seitenverhältnis → das ganze Bild ist zu sehen (sehr hohe Bilder: ganz, mit Rand)
       const cv = doc.cover;
       box.classList.toggle('img', cv?.kind === 'image' && !cv.ai); // KI-Cover: normales Banner (füllt die Fläche), kein eigenes Seitenverhältnis

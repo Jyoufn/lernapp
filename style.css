@@ -13586,21 +13586,9 @@ html body .lz-card.on { background: rgba(255, 255, 255, 0.06); }
 html body .sk-chip { padding: 0 9px; }
 html body .app.lz-open .panel { margin-right: 0; }
 
-/* ===== 18.11. spät: Banner (Wallpaper) oben in Aufgaben und Kalender ===== */
-.vb { position: relative; flex: none; height: 168px; margin: 0 -1px; overflow: hidden; }
-.vb-img { position: absolute; inset: 0; background-size: cover; background-position: center; transition: background 300ms ease; }
-.vb::after { content: ""; position: absolute; inset: auto 0 0; height: 56px; background: linear-gradient(to bottom, transparent, var(--main-bg, #141414)); pointer-events: none; }
-.vb.empty { height: 64px; }
-.vb.empty::after { display: none; }
-.vb-acts { position: absolute; z-index: 1; right: 14px; bottom: 14px; opacity: 0; transition: opacity 180ms ease; }
-.vb:hover .vb-acts, .vb.empty .vb-acts { opacity: 1; }
-@media (hover: none) { .vb-acts { opacity: 1; } }
-.vb-btn { height: 28px; padding: 0 11px; border: 0; border-radius: 8px; background: rgba(20, 20, 20, 0.62); color: #f2f2f2; font: 600 12px var(--font-ui, Inter), sans-serif; cursor: pointer; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
-.vb.empty .vb-btn { background: rgba(255, 255, 255, 0.05); color: var(--text-3); }
-html body .tk-view.au-view { padding: 0 0 40px !important; }
-html body .au-view > .vb { margin: 0; }
-html body .au-main { width: min(720px, calc(100% - 64px)); margin: -26px auto 0; position: relative; z-index: 1; }
-html body .vb.empty + .au-main { margin-top: 0; }
+/* ===== 18.11. spät: Aufgaben-Board (kein Banner in den Ansichten – Cover nur an einzelnen Terminen/Aufgaben) ===== */
+html body .tk-view.au-view { padding: 64px 0 40px !important; }
+html body .au-main { width: min(720px, calc(100% - 64px)); margin: 0 auto; }
 html body .au-head { margin-bottom: 14px; }
 html body .au-tabs { width: max-content; max-width: 100%; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
 html body .au-tabs button { display: inline-flex; align-items: center; gap: 6px; }
@@ -13622,7 +13610,43 @@ html body .au-a { display: grid; place-items: center; width: 26px; height: 26px;
 @media (hover: hover) { html body .au-a:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); } }
 html body .au-gap { overflow: hidden; }
 html body .au-row .au-x { display: none; }
-/* Kalender mit Banner */
-html body .cal-view > .vb.vb-cal { height: 96px; margin: -18px -30px 0; }
-html body .cal-view > .vb.vb-cal.empty { height: 0; margin-bottom: 0; }
-html body .cal-view > .vb.vb-cal.empty .vb-acts { display: none; }
+
+/* Cover an Terminen und Aufgaben (Hintergrund statt <img>, damit auch Vorlagen/Farben gehen) */
+html body .ce-cover .ce-cover-bg { display: block; width: 100%; height: 100%; background-size: cover !important; background-position: center !important; }
+html body .au-cov { flex: none; width: 26px; height: 18px; border-radius: 5px; background-size: cover !important; background-position: center !important; }
+html body .au-t { cursor: pointer; }
+/* Aufgabe geöffnet */
+html body .au-modal { position: fixed; inset: 0; z-index: 400; display: grid; place-items: center; background: rgba(0, 0, 0, 0.45); animation: au-fade 180ms ease both; }
+html body .au-modal[hidden] { display: none; }
+html body .au-modal.closing { animation: au-fade 180ms ease reverse forwards; }
+@keyframes au-fade { from { opacity: 0; } to { opacity: 1; } }
+html body .au-card { width: min(440px, calc(100vw - 32px)); display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 16px; background: #1b1b1b; box-shadow: 0 0 0 1px #262626; animation: au-pop 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes au-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+html body .au-card .ce-cover { margin: 0; }
+html body .au-dhead { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 11px; background: rgba(255, 255, 255, 0.03); }
+html body .au-dhead .tk-f-title { border: 0; outline: 0; background: none; color: var(--text); font: 600 16px var(--font-ui, Inter), sans-serif; }
+html body .au-dhead .tk-f-notes { border: 0; outline: 0; resize: none; background: none; color: var(--text-2); font: 500 13.5px/1.5 var(--font-ui, Inter), sans-serif; }
+html body .au-drows { display: flex; flex-direction: column; gap: 6px; }
+html body .au-drow { display: flex; align-items: center; gap: 10px; min-height: 42px; padding: 0 12px; border: 0; border-radius: 11px; background: rgba(255, 255, 255, 0.03); color: var(--text-2); font: 500 13.5px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; }
+html body .au-dl { flex: 1; display: inline-flex; align-items: center; gap: 9px; color: var(--text-2); }
+html body .au-dl svg { color: var(--text-4); }
+html body .au-drow input[type=date] { border: 0; outline: 0; background: none; color: var(--text); font: 500 13px var(--font-ui, Inter), sans-serif; color-scheme: dark; }
+html body .au-dst { display: inline-flex; gap: 2px; }
+html body .au-dst button { height: 26px; padding: 0 8px; border: 0; border-radius: 7px; background: none; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+html body .au-dst button.on { background: rgba(255, 255, 255, 0.08); color: var(--text); }
+html body .au-dcov svg:last-child { color: var(--text-4); }
+html body .au-dfoot { display: flex; align-items: center; gap: 6px; padding: 4px 4px 2px; }
+html body .au-done { height: 32px; padding: 0 16px; border: 0; border-radius: 10px; background: #f2f2f2; color: #141414; font: 600 13px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+/* 18.11.: Dokument-Cover über die ganze Fläche bis ganz oben (wie ein Banner), unten weich in den Hintergrund – eigene Bilder bleiben im Format */
+html body .dc-page.with-cover > .dc-cover.has:not(.img) { margin-left: calc(-1 * var(--bl, 0px)); margin-right: calc(-1 * var(--br, 0px)); margin-top: calc(-1 * var(--bt, 0px)); width: auto; height: 210px; aspect-ratio: auto; border-radius: 0; }
+html body .dc-page.with-cover > .dc-cover.has:not(.img) .dc-cover-img { border-radius: 0; }
+html body .dc-page.with-cover > .dc-cover.has:not(.img)::after { content: ""; position: absolute; inset: auto 0 0; height: 60px; background: linear-gradient(to bottom, transparent, var(--main-bg, #141414)); pointer-events: none; }
+html body .dc-view.cover-bleed > .dc-topbar { position: absolute; top: 0; left: 0; right: 0; z-index: 6; background: none; }
+html body .dc-view.cover-bleed > .dc-topbar :is(button, .icon-btn) { color: #fff; }
+html body .dc-view.cover-bleed > .dc-topbar :is(button, .icon-btn):hover { background: rgba(0, 0, 0, 0.25); }
+/* 18.11.: Dateien-Karte unter den Symbolen oben rechts – schwebende Karte mit Kopfzeile wie in der Vorlage */
+html body .files-menu { width: 260px; max-width: 260px; padding: 8px; border-radius: 14px; background: var(--main-bg, #141414); border: 1px solid #262626; }
+html body .files-menu .fm-head { display: flex; align-items: baseline; gap: 8px; padding: 4px 8px 8px; }
+html body .files-menu .fm-head b { color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
+html body .files-menu .fm-head span { margin-left: auto; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; }
+html body .files-menu .fm-row { height: 32px; font-size: 13px; color: var(--text-2); }

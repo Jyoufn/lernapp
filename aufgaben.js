@@ -1,40 +1,19 @@
 /* ===================================================================
    Aufgaben (Englisch „To-dos“) – 18.11. spät: als Board mit vier Reitern
-   Offen · In Arbeit · Erledigt · Archiviert. Oben ein Banner (Wallpaper) wie das Cover eines Dokuments: Vorlagen, eigene Farben,
-   eigenes Bild oder mit KI – dasselbe Fenster wie beim Dokument (Docs.editor.pickCover). Dasselbe Banner gibt es im Kalender (ViewBanner).
-   - Gespeichert im Browser (localStorage „tasks.items.v1“, Banner „tasks.banner“) – auth.js gleicht das mit dem Konto ab
+   Offen · In Arbeit · Erledigt · Archiviert. Jede Aufgabe lässt sich öffnen (Titel, Notiz, Datum, Status) und bekommt dort auf Wunsch ein
+   Cover wie ein Dokument (Vorlagen, Farben, eigenes Bild, KI – Docs.editor.pickCover); Kalendertermine ebenso.
+   - Gespeichert im Browser (localStorage „tasks.items.v1“) – auth.js gleicht das mit dem Konto ab
      (alle Geräte, Homescreen-Widgets über /api/widget).
    - Verschieben: Haken = erledigt, ▶ = in Arbeit, Archiv-Symbol = archivieren, oder die Zeile auf einen Reiter ziehen.
      Die Zeile gleitet zum Reiter, dessen Zahl springt kurz auf.
    =================================================================== */
-
-/* Banner oben in einer Ansicht (Aufgaben, Kalender): Fläche + beim Darüberfahren „Banner ändern“ */
-window.ViewBanner = (key, fallback = { kind: 'preset', id: 'w-ocean' }) => {
-  const box = document.createElement('div');
-  box.className = 'vb';
-  box.innerHTML = '<div class="vb-img"></div><div class="vb-acts"><button type="button" class="vb-btn" data-vb="pick">Banner ändern</button></div>';
-  const get = () => { try { const v = localStorage.getItem(key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } };
-  const draw = () => {
-    const cv = get(), css = cv ? window.Docs?.editor?.coverCss?.(cv) || '' : '';
-    box.classList.toggle('empty', !css);
-    box.querySelector('.vb-img').style.background = css;
-    box.querySelector('.vb-btn').textContent = css ? 'Banner ändern' : 'Banner hinzufügen';
-  };
-  box.addEventListener('click', (e) => {
-    if (!e.target.closest('[data-vb="pick"]')) return;
-    window.Docs?.editor?.pickCover?.({ get: () => get(), set: (cv) => { try { localStorage.setItem(key, JSON.stringify(cv || null)); } catch {} draw(); } });
-  });
-  window.addEventListener('storage', (e) => { if (e.key === key) draw(); });
-  box.draw = draw;
-  requestAnimationFrame(draw);
-  return box;
-};
 
 const Aufgaben = (() => {
   const KEY = 'tasks.items.v1';
   const TABS = [['open', 'Offen'], ['doing', 'In Arbeit'], ['done', 'Erledigt'], ['archived', 'Archiviert']];
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const icon = (id, s = 14) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#${id}"/></svg>`;
+  const coverBg = (c) => (!c ? '' : typeof c === 'string' ? `center / cover no-repeat url("${c.replace(/"/g, '%22')}")` : window.Docs?.editor?.coverCss?.(c) || '');
   const statusOf = (t) => t.status || (t.done ? 'done' : 'open'); // ältere Einträge kannten nur done: true/false
   const load = () => { try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a.map((t) => ({ ...t, status: statusOf(t) })) : []; } catch { return []; } };
   let items = load();
@@ -58,8 +37,6 @@ const Aufgaben = (() => {
   view.className = 'tk-view au-view';
   view.hidden = true;
   view.setAttribute('aria-label', 'Aufgaben');
-  const banner = window.ViewBanner('tasks.banner');
-  view.append(banner);
   const main = document.createElement('div');
   main.className = 'au-main';
   main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1></header>
@@ -80,7 +57,7 @@ const Aufgaben = (() => {
     const st = statusOf(t), over = (st === 'open' || st === 'doing') && t.due && t.due < today();
     return `<div class="au-row st-${st}" data-id="${esc(t.id)}" draggable="true">
       <button type="button" class="au-check" data-au="${st === 'done' ? 'open' : 'done'}" aria-label="${st === 'done' ? 'Nicht erledigt' : 'Erledigt'}">${icon('f-check', 11)}</button>
-      <span class="au-t" data-au="edit">${esc(t.title)}</span>
+      ${coverBg(t.cover) ? `<span class="au-cov" style="background:${esc(coverBg(t.cover))}"></span>` : ''}<span class="au-t" data-au="detail">${esc(t.title)}</span>
       ${t.due ? `<span class="au-due${over ? ' over' : ''}">${esc(dayLabel(t.due))}</span>` : ''}
       <span class="au-acts">${ACT[st].map(([to, ic, label]) => `<button type="button" class="au-a" data-au="${to}" aria-label="${label}" title="${label}">${icon(ic, 13)}</button>`).join('')}</span></div>`;
   }
@@ -164,6 +141,7 @@ const Aufgaben = (() => {
     const b = e.target.closest('[data-au]'); if (!b) return;
     const r = b.closest('.au-row'), t = r && items.find((x) => x.id === r.dataset.id); if (!t) return;
     const what = b.dataset.au;
+    if (what === 'detail') { detail(t); return; }
     if (what === 'edit') {
       if (statusOf(t) === 'archived') return;
       const inp = document.createElement('input');
@@ -177,6 +155,49 @@ const Aufgaben = (() => {
     if (what === 'done') r.classList.add('ticked'); // Haken kurz zeigen, dann gleitet die Zeile zu „Erledigt“
     setTimeout(() => move(t, what, r), what === 'done' ? 260 : 0);
   });
+  /* Aufgabe öffnen (18.11.): Fenster wie ein Kalendertermin – oben das Cover (wie beim Dokument: Vorlagen, Farben, Bild, KI),
+     Titel, Notiz, Fällig am, Status; unten Löschen und Fertig */
+  const modal = document.createElement('div');
+  modal.className = 'tk-modal au-modal'; modal.hidden = true;
+  document.body.append(modal);
+  modal.addEventListener('pointerdown', (e) => { if (e.target === modal) closeDetail(); });
+  let cur = null;
+  function closeDetail(save_ = true) {
+    if (!cur) return;
+    if (save_) { const f = modal.querySelector('form'); const ti = f.querySelector('[name=title]').value.trim(); if (ti) cur.title = ti; cur.note = f.querySelector('[name=note]').value.trim(); cur.due = f.querySelector('[name=due]').value || ''; save(); }
+    cur = null; modal.classList.add('closing');
+    setTimeout(() => { modal.hidden = true; modal.classList.remove('closing'); modal.innerHTML = ''; if (open) render(); }, 180);
+  }
+  function detail(t) {
+    cur = t;
+    const draw = () => {
+      const bg = coverBg(t.cover);
+      modal.innerHTML = `<form class="tk-form ce-card au-card" autocomplete="off">
+        <div class="ce-cover"${bg ? '' : ' hidden'}><span class="ce-cover-bg" style="background:${esc(bg)}"></span><button type="button" class="ce-cover-x" data-ad="cover-x" aria-label="Cover entfernen">${icon('f-x', 12)}</button></div>
+        <div class="ce-headbox au-dhead"><input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="200" aria-label="Titel" />
+          <textarea class="tk-f-notes" name="note" rows="2" placeholder="Notiz hinzufügen" maxlength="1000" aria-label="Notiz">${esc(t.note || '')}</textarea></div>
+        <div class="au-drows">
+          <label class="au-drow"><span class="au-dl">${icon('o-calendar', 14)}Fällig am</span><input type="date" name="due" value="${esc(t.due || '')}" /></label>
+          <div class="au-drow"><span class="au-dl">${icon('o-todo', 14)}Status</span><span class="au-dst">${TABS.map(([k, n]) => `<button type="button" class="${statusOf(t) === k ? 'on' : ''}" data-ad="st" data-st="${k}">${n}</button>`).join('')}</span></div>
+          <button type="button" class="au-drow au-dcov" data-ad="cover"><span class="au-dl">${icon('f-image', 14)}${bg ? 'Cover ändern' : 'Cover hinzufügen'}</span>${icon('f-plus', 13)}</button>
+        </div>
+        <div class="au-dfoot"><button type="button" class="tk-sheet-ib danger" data-ad="del" aria-label="Löschen">${icon('f-trash', 14)}</button><span class="grow"></span><button type="submit" class="au-done">Fertig</button></div>
+      </form>`;
+    };
+    draw();
+    modal.hidden = false;
+    modal.onclick = (e) => {
+      const b = e.target.closest('[data-ad]'); if (!b) return;
+      const keep = () => { const f = modal.querySelector('form'); t.title = f.querySelector('[name=title]').value.trim() || t.title; t.note = f.querySelector('[name=note]').value.trim(); t.due = f.querySelector('[name=due]').value || ''; };
+      if (b.dataset.ad === 'st') { keep(); t.status = b.dataset.st; t.movedAt = Date.now(); save(); draw(); }
+      else if (b.dataset.ad === 'cover') { keep(); window.Docs?.editor?.pickCover?.({ get: () => (t.cover && typeof t.cover === 'object' ? t.cover : null), set: (c) => { t.cover = c || null; if (!c) delete t.cover; save(); if (cur === t) draw(); } }); }
+      else if (b.dataset.ad === 'cover-x') { keep(); delete t.cover; save(); draw(); }
+      else if (b.dataset.ad === 'del') { items = items.filter((x) => x !== t); save(); closeDetail(false); }
+    };
+    modal.onsubmit = (e) => { e.preventDefault(); closeDetail(); };
+  }
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cur && !document.querySelector('.dc-cmodal')) closeDetail(); });
+
   // Ziehen auf einen Reiter
   let dragId = '';
   list.addEventListener('dragstart', (e) => { const r = e.target.closest('.au-row'); if (!r) return; dragId = r.dataset.id; r.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', dragId); } catch {} });
@@ -195,7 +216,7 @@ const Aufgaben = (() => {
     const panel = document.querySelector('.panel');
     if (panel && !view.isConnected) panel.append(view);
     items = load();
-    open = true; view.hidden = false; banner.draw(); render();
+    open = true; view.hidden = false; render();
     document.querySelector('.panel')?.classList.add('view-tasks');
     setTimeout(() => { if (open && !matchMedia('(hover: none)').matches && tab === 'open') input.focus({ preventScroll: true }); }, 60);
   }

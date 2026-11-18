@@ -6256,11 +6256,12 @@ const ChatFiles = (() => {
   function close() { pop.hidden = true; btn.classList.remove('on'); }
   function open() {
     refresh(); if (!list.length) return;
-    pop.innerHTML = list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
+    // 18.11.: als schwebende Karte unter den Symbolen (wie die Vorlage): oben „Dateien“ + Anzahl, darunter Icon + Titel
+    pop.innerHTML = `<div class="fm-head"><b>Dateien</b><span>${list.length}</span></div>` + list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
     pop.hidden = false; btn.classList.add('on');
     const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
     pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
-    pop.style.top = `${Math.round(r.bottom + 6)}px`;
+    pop.style.top = `${Math.round(r.bottom + 10)}px`;
   }
   btn.addEventListener('click', (e) => { e.stopPropagation(); if (pop.hidden) open(); else close(); });
   pop.addEventListener('click', (e) => {
