@@ -13371,3 +13371,83 @@ html body .dc-ppop .dc-pj-grid .dc-pj-ic { width: auto !important; min-width: 0;
 html body .cal-view.cal-enter .cm-cell { animation: cal-tile-in4 640ms cubic-bezier(0.33, 0, 0.2, 1) var(--td, 0ms) both; backface-visibility: visible; will-change: auto; transform: none; }
 html body .cal-view.cal-enter { animation-name: cal-view-fade4; }
 @keyframes cal-view-fade4 { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== 18.11.: Lernzettel – Karte im Chat, Fenster rechts neben dem Chat, Blatt im Papier-Stil (weiß) ===== */
+.lzwin { position: relative; flex: none; display: flex; flex-direction: column; width: 0; min-width: 0; margin: 8px 0; border: 0 solid #1d1d1d; border-radius: 12px; background: #141414; opacity: 0; overflow: hidden;
+  transition: width 360ms cubic-bezier(0.2, 0.8, 0.2, 1), margin 360ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 220ms ease; }
+.app.lz-open .lzwin { width: min(60vw, 920px); margin: 8px 8px 8px 0; border-width: 1px; opacity: 1; }
+.app.lz-open .lzwin ~ .codewin, .app.lz-open.cw-open .lzwin { }
+.lz-bar { flex: none; display: flex; align-items: center; gap: 6px; height: 50px; padding: 0 10px 0 18px; box-shadow: inset 0 -1px 0 var(--line); white-space: nowrap; }
+.lz-bt { color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
+.lz-chip { margin-left: 4px; padding: 2px 8px; border-radius: 6px; background: rgba(125, 185, 147, 0.14); color: #a9d6b8; font: 600 11.5px var(--font-ui, Inter), sans-serif; }
+.lz-grow { flex: 1; }
+.lz-btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 11px; border: 0; border-radius: 9px; background: rgba(255, 255, 255, 0.07); color: var(--text); font: 600 12.5px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+.lz-btn.g { background: none; color: var(--text-3); }
+@media (hover: hover) { .lz-btn.g:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); } }
+.lz-btn.lz-x { padding: 0 8px; }
+.lz-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 26px 0 48px; background: #1b1b1b; -webkit-overflow-scrolling: touch; }
+@keyframes lz-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.app.lz-open .lz-scroll > .lz-sheet { animation: lz-in 420ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Das Blatt */
+.lz-sheet { --p-t1: #16181d; --p-t2: #33363d; --p-t3: #6b6f78; --p-line: #e6e2d8; --p-box: #f3f0e8; --p-acc: #2f6f9a;
+  width: min(820px, calc(100% - 40px)); margin: 0 auto; padding: 44px 48px; border-radius: 6px; background: #fbfaf6; color: var(--p-t2);
+  font: 400 16px/1.7 Charter, "Bitstream Charter", Georgia, serif; letter-spacing: 0; -webkit-font-smoothing: antialiased; }
+.lz-sheet :is(.lz-kick, .lz-meta, .lz-toc, h1, h2, h3, h4, table, figcaption) { font-family: var(--font-ui, Inter), sans-serif; }
+.lz-kick { display: flex; align-items: center; gap: 8px; color: var(--p-t3); font-size: 12.5px; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+.lz-kick i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+.lz-sheet .lz-h1 { margin: 8px 0 6px; color: var(--p-t1); font-size: 38px; font-weight: 700; line-height: 1.12; letter-spacing: -0.025em; }
+.lz-meta { display: flex; flex-wrap: wrap; gap: 16px; color: var(--p-t3); font-size: 13px; font-weight: 500; }
+.lz-body { color: var(--p-t2); }
+.lz-body :is(p, li) { color: var(--p-t2); font-family: inherit; font-size: 16px; font-weight: 400; line-height: 1.7; }
+.lz-body p { margin: 6px 0; }
+.lz-body strong, .lz-body b { color: var(--p-t1); font-weight: 700; }
+.lz-body mark { padding: 0 3px; border-radius: 4px; background: #f8e7b8; color: inherit; }
+.lz-body h2 { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 10px; color: var(--p-t1); font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -0.015em; }
+.lz-body h2 .lz-n { color: var(--p-acc); font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.lz-body h3 { margin: 18px 0 6px; color: var(--p-t1); font-size: 16px; font-weight: 650; }
+.lz-body ul, .lz-body ol { margin: 6px 0; padding-left: 22px; }
+.lz-body li { margin: 3px 0; }
+.lz-body li::marker { color: var(--p-acc); }
+.lz-glance { margin: 22px 0 6px; padding: 18px 20px; border-radius: 14px; background: var(--p-box); box-shadow: inset 0 0 0 1px var(--p-line); }
+.lz-glance h4 { margin: 0 0 8px; color: var(--p-t1); font-size: 13px; font-weight: 700; }
+.lz-glance ul { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 22px; margin: 0; padding: 0; list-style: none; }
+.lz-glance li { position: relative; margin: 0; padding-left: 16px; font-size: 14.5px; line-height: 1.5; }
+.lz-glance li::before { content: ""; position: absolute; left: 0; top: 9px; width: 6px; height: 6px; border-radius: 2px; background: var(--p-acc); }
+.lz-toc { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 6px; }
+.lz-toc button { padding: 4px 10px; border: 0; border-radius: 8px; background: var(--p-box); color: var(--p-t3); font: 500 12.5px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+.lz-toc button b { margin-right: 4px; color: var(--p-t1); font-weight: 600; }
+.lz-body blockquote.lz-box { margin: 14px 0; padding: 14px 16px; border: 0; border-radius: 12px; background: #fbf1dc; color: var(--p-t2); }
+.lz-body blockquote.lz-box p { margin: 0; font-size: 15px; line-height: 1.6; }
+.lz-body blockquote.lz-box.def { background: #e9f1f7; }
+.lz-body blockquote.lz-box.warn { background: #f9e4e0; }
+.lz-body blockquote.lz-box.ex { background: var(--p-box); }
+.lz-body table { width: 100%; margin: 12px 0; border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: inset 0 0 0 1px var(--p-line); font-size: 13.5px; line-height: 1.5; color: var(--p-t2); background: none; }
+.lz-body :is(th, td) { padding: 9px 14px; border: 0; text-align: left; vertical-align: top; color: var(--p-t2); background: none; }
+.lz-body th { background: var(--p-box); color: var(--p-t1); font-weight: 650; }
+.lz-body td { border-top: 1px solid var(--p-line); }
+.lz-body :is(.table-wrap, .tbl-wrap) { border: 0; background: none; box-shadow: none; }
+.lz-body code { padding: 1px 5px; border-radius: 5px; background: var(--p-box); color: var(--p-t1); }
+.lz-body pre { border-radius: 12px; background: var(--p-box); color: var(--p-t1); }
+.lz-body .katex, .lz-body .math { color: var(--p-t1); }
+.lz-body figure, .lz-body .chat-illustration { margin: 12px 0; }
+.lz-body .chat-illustration > .ill-frame { border-color: var(--p-line); background: var(--p-box); }
+.lz-body .ill-fast .ill-band { background: linear-gradient(100deg, transparent 0%, rgba(0, 0, 0, 0.08) 50%, transparent 100%); }
+.lz-body ul.lz-checks { padding-left: 0; list-style: none; }
+.lz-body li.lz-check { display: flex; gap: 10px; align-items: flex-start; }
+.lz-body li.lz-check input { flex: none; width: 17px; height: 17px; margin: 5px 0 0; accent-color: var(--p-acc); }
+.lz-body hr { border: 0; border-top: 1px solid var(--p-line); }
+.lz-body a { color: var(--p-acc); }
+
+/* Karte im Chat */
+.lz-card { display: flex; align-items: center; gap: 12px; width: 100%; max-width: 440px; margin: 10px 0; padding: 12px 14px; border: 0; border-radius: 12px; background: rgba(255, 255, 255, 0.03); box-shadow: inset 0 0 0 1px var(--line); text-align: left; cursor: pointer; }
+@media (hover: hover) { .lz-card:hover { background: rgba(255, 255, 255, 0.05); } }
+.lz-ti { position: relative; flex: none; width: 30px; height: 36px; border-radius: 6px; background: #e9e6df; }
+.lz-ti::before { content: ""; position: absolute; left: 7px; right: 7px; top: 11px; height: 2px; border-radius: 2px; background: #b9b4a8; box-shadow: 0 6px 0 #c9c4b8, 0 12px 0 #c9c4b8; }
+.lz-tx { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lz-tx b { overflow: hidden; color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; white-space: nowrap; text-overflow: ellipsis; }
+.lz-tx span { color: var(--text-4); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+.lz-go { flex: none; padding: 5px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); color: var(--text-2); font: 600 12px var(--font-ui, Inter), sans-serif; }
+.lz-card.on .lz-go { color: var(--text); }
+@media (max-width: 900px) { .app.lz-open .lzwin { position: fixed; inset: 8px; z-index: 300; width: auto; margin: 0; } }
+@media print { .lz-print .lz-sheet { width: auto; padding: 0; border-radius: 0; } }

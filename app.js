@@ -1969,6 +1969,8 @@ function renderMarkdown(target, text, opts = {}) {
     }
     pre.replaceWith(keep.get(raw));
   });
+  // Lernzettel (````lernzettel, 18.11.): Karte im Chat, das Blatt öffnet sich rechts (lernzettel.js)
+  window.Lernzettel?.enhance(target, { live: !!opts.live });
   // Lernset (```lernset): Karteikarten, Quiz, Probeklausur – Vorschau im Chat, Antippen öffnet die Lernansicht im Vollbild (lernset.js)
   // live: die KI schreibt noch → EIN Lernset je Block, das neue Einträge im Hintergrund anhängt (ab 3 fertigen kann man schon lernen)
   const lsClosed = (text.match(/```lernset[^\n]*\n[\s\S]*?\n```/g) || []).length;

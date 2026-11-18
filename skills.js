@@ -31,7 +31,7 @@ const Skills = (() => {
     { id: 'humanizer', hidden: true, name: 'humanizer', title: 'Humanizer', desc: 'Text klingt natürlich und menschlich – nicht nach KI', c: '#34d399',
       strong: ['humanizer', 'humanize', 'vermenschlich', 'menschlicher', 'natürlicher klingen', 'nicht nach ki'], weak: ['umschreiben', 'umformulieren', 'natürlich', 'klingt', 'ki-text', 'menschlich', 'flüssiger'] },
     { id: 'lernzettel', name: 'lernzettel', title: 'Lernzettel', desc: 'Kompakte Zusammenfassung mit allem Klausurrelevanten', c: '#60a5fa',
-      strong: ['lernzettel', 'spickzettel', 'zusammenfassung'], weak: ['zusammenfassen', 'wichtigste', 'kompakt', 'klausurrelevant', 'stichpunkte'] },
+      strong: ['lernzettel', 'spickzettel'], weak: ['zusammenfassung', 'zusammenfassen', 'wichtigste', 'kompakt', 'klausurrelevant', 'stichpunkte'] },
     { id: 'hefteintrag', hidden: true, name: 'hefteintrag', title: 'Hefteintrag', desc: 'Lösung sauber so, wie sie ins Heft gehört', c: '#a3a3a3',
       strong: ['hefteintrag', 'ins heft', 'fürs heft'], weak: ['abschreiben', 'tafelbild', 'heft'] },
     { id: 'recherche', name: 'recherche', title: 'Recherche', desc: 'Gründlich mit mehreren Fachquellen und Belegen', c: '#22d3ee',
