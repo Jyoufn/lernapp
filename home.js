@@ -59,6 +59,22 @@ const Home = (() => {
     const when = ago < 3600000 ? 'Gerade eben' : h < 24 ? `Vor ${h} Std.` : `Vor ${Math.round(h / 24)} Tag${Math.round(h / 24) === 1 ? '' : 'en'}`;
     return { id: `doc:${d.id}:${new Date(d.updated).toDateString()}`, kind: 'doc', icon: 'f-file', svg: d.icon && window.DocIcons?.has(d.icon.name) ? DocIcons.of(d.icon, 16) : `<svg class="lb2-page hm-page" width="14" height="18" viewBox="0 0 16 20" aria-hidden="true">${D.PAGE_SHAPE}</svg>`, title: d.title || 'Unbenannt', when, desc: 'Weitermachen, wo du aufgehört hast', act: 'Öffnen', go: () => D.open(d.id) };
   }
+  // 18.11. spät: wichtigste offene Aufgabe – nach Priorität, dann Fälligkeit; Priorität steht sichtbar in der Karte
+  function taskCard(now) {
+    const A = window.Aufgaben; if (!A) return null;
+    const RANK = { urgent: 4, high: 3, medium: 2, low: 1 }, today = isoOf(now);
+    const list = A.items.filter((t) => (t.status || (t.done ? 'done' : 'open')) === 'open' || t.status === 'doing')
+      .filter((t) => RANK[t.priority] || (t.due && t.due <= today))
+      .sort((a, b) => (RANK[b.priority] || 0) - (RANK[a.priority] || 0) || (a.due || '9999').localeCompare(b.due || '9999'));
+    const t = list[0]; if (!t) return null;
+    const pr = (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority && p.id !== 'none');
+    const late = t.due && t.due < today;
+    const when = pr ? pr.name : late ? 'Überfällig' : 'Heute fällig';
+    const due = t.due ? (late ? 'überfällig' : t.due === today ? 'heute fällig' : `fällig ${new Date(`${t.due}T12:00`).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}`) : '';
+    const more = list.length - 1;
+    return { id: `task:${t.id}:${t.priority || ''}:${t.due || ''}`, kind: 'task', icon: 'o-todo', svg: pr ? `<span class="hm-prio p-${pr.id}">${window.UIKit.prioIcon(pr.id, 16)}</span>` : '', late, title: t.title, when,
+      desc: [pr ? due : '', more > 0 ? `noch ${more} weitere` : ''].filter(Boolean).join(' · '), act: 'Aufgaben', go: () => window.openViewTab?.('tasks') };
+  }
   // Börse entfernt (17.11.)
   const refreshBoerse = async () => false;
 
@@ -67,7 +83,7 @@ const Home = (() => {
   const dismissed = () => new Set(read(DISMISS_KEY, []));
   function cards() {
     const now = new Date(), gone = dismissed();
-    return [eventCard(now), docCard(now)].filter((c) => c && !gone.has(c.id));
+    return [eventCard(now), taskCard(now), docCard(now)].filter((c) => c && !gone.has(c.id));
   }
   function cardHtml(c, i) {
     const tone = c.alarm || c.late ? ' hm-warn' : c.soon ? ' hm-soon' : '';
@@ -136,3 +152,4 @@ const Home = (() => {
   };
 })();
 window.Home = Home;
+window.addEventListener('tasks-changed', () => { if (document.querySelector('.hm-card, .hm-head')) Home.redraw(); });

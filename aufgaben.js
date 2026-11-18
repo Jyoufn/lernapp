@@ -31,7 +31,6 @@ const Aufgaben = (() => {
     if (s === iso(tm)) return 'Morgen';
     return new Date(`${s}T12:00:00`).toLocaleDateString(window.I18n?.lang?.() === 'en' ? 'en-GB' : 'de-DE', { day: 'numeric', month: 'short' });
   };
-  let newDue = '';
 
   /* 18.11. (Vorlage „Kanban card drag“): Board mit vier Spalten nebeneinander – Kopf mit Status-Symbol, Name, Anzahl;
      Karten mit Cover oben, Titel, Notiz-Hinweis und Datum. Nur zum Anzeigen/Ordnen (keine KI-Aktionen).
@@ -43,13 +42,12 @@ const Aufgaben = (() => {
   view.setAttribute('aria-label', 'Aufgaben');
   const main = document.createElement('div');
   main.className = 'au-main';
-  const SI = { open: '<span class="au-si si-open"></span>', doing: '<span class="au-si si-doing"></span>', done: `<span class="au-si si-done">${icon('f-check', 9)}</span>`, archived: `<span class="au-si si-arch">${icon('f-archive', 13)}</span>` };
-  main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1>
-      <form class="au-new" autocomplete="off"><span class="au-plus">${icon('f-plus', 15)}</span><input class="au-in" placeholder="Neue Aufgabe …" maxlength="200" aria-label="Neue Aufgabe" />
-      <label class="au-due-btn" title="Fällig am">${icon('o-calendar', 14)}<span class="au-due-l"></span><input type="date" class="au-due-in" aria-label="Fällig am" /></label></form></header>
-    <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch">${SI[k]}<span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
+  const SI = { open: icon('f-st-open', 14), doing: icon('f-st-doing', 14), done: icon('f-st-done', 14), archived: icon('f-st-arch', 14) }; // grau, runde Linien
+  main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1><span class="grow"></span>
+      <button class="cal-new" type="button" data-au="new" aria-label="Neue Aufgabe">${icon('f-plus')}<span>Neue Aufgabe</span></button></header>
+    <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch"><span class="au-si">${SI[k]}</span><span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
   view.append(main);
-  const board = main.querySelector('.au-board'), input = main.querySelector('.au-in'), dueIn = main.querySelector('.au-due-in');
+  const board = main.querySelector('.au-board');
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function card(t) {
@@ -57,7 +55,12 @@ const Aufgaben = (() => {
     return `<article class="au-card2 st-${st}${bg ? ' has-cov' : ''}" data-id="${esc(t.id)}" tabindex="0">
       ${bg ? `<div class="au-ccov" style="background:${esc(bg)}"></div>` : ''}
       <div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${st === 'done' ? `<span class="au-ok">${icon('f-check', 9)}</span>` : ''}</div>
-      ${t.note || t.due ? `<div class="au-cm">${t.note ? `<span class="au-cnote">${icon('f-file', 12)}<span>Notiz</span></span>` : ''}<span class="grow"></span>${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${esc(dayLabel(t.due))}</span>` : ''}</div>` : ''}</div></article>`;
+      ${(() => {
+        const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
+        const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id)).slice(0, 2);
+        if (!t.note && !t.due && !pr && !tg.length && !t.time) return '';
+        return `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${t.note && !tg.length ? `<span class="au-cnote">${icon('f-file', 12)}<span>Notiz</span></span>` : ''}<span class="grow"></span>${t.time ? `<span class="au-ccal" title="Im Kalender">${icon('f-calendar', 12)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>`;
+      })()}</div></article>`;
   }
   function counts() {
     TABS.forEach(([k]) => { const n = items.filter((t) => statusOf(t) === k).length; const el = main.querySelector(`[data-n="${k}"]`); if (el) el.textContent = String(n); });
@@ -69,8 +72,6 @@ const Aufgaben = (() => {
       const mine = items.filter((t) => statusOf(t) === k).slice(0, 150);
       box.innerHTML = mine.map(card).join('');
     });
-    main.querySelector('.au-due-l').textContent = newDue ? dayLabel(newDue) : '';
-    main.querySelector('.au-due-btn').classList.toggle('set', !!newDue);
   }
   function add(a = {}) {
     const title = String(a.title || '').trim().slice(0, 200); if (!title) return null;
@@ -85,15 +86,6 @@ const Aufgaben = (() => {
     t.status = to; t.movedAt = Date.now(); if (to === 'done') t.doneAt = Date.now();
     save(); render();
   }
-  main.querySelector('.au-new').addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (add({ title: input.value, due: newDue })) {
-      input.value = ''; newDue = ''; dueIn.value = ''; render();
-      const c = board.querySelector('[data-cards="open"] .au-card2'); if (c && !reduced()) c.animate([{ opacity: 0, transform: 'translateY(-8px) scale(0.98)' }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
-    }
-  });
-  dueIn.addEventListener('change', () => { newDue = dueIn.value; render(); });
-
   /* ---------- Ziehen ---------- */
   // FLIP: Positionen merken, DOM ändern, dann jede verschobene Karte von der alten Stelle weich nachgleiten lassen
   const rectsOf = () => new Map([...board.querySelectorAll('.au-card2:not(.au-src), .au-ph')].map((el) => [el, el.getBoundingClientRect()]));
@@ -166,54 +158,35 @@ const Aufgaben = (() => {
   }
   board.addEventListener('pointerup', (e) => {
     if (!drag) return;
-    if (!drag.on) { const t = items.find((x) => x.id === drag.id); drag = null; if (t) detail(t); return; }
+    if (!drag.on) { const t = items.find((x) => x.id === drag.id), el = drag.el; drag = null; if (t) detail(t, el); return; }
     finish(false);
   });
   board.addEventListener('pointercancel', () => { if (drag?.on) finish(true); else drag = null; });
   board.addEventListener('keydown', (e) => { const c = e.target.closest?.('.au-card2'); if (c && e.key === 'Enter') { const t = items.find((x) => x.id === c.dataset.id); if (t) detail(t); } });
 
-  /* Aufgabe öffnen (18.11.): Fenster wie ein Kalendertermin – oben das Cover (wie beim Dokument: Vorlagen, Farben, Bild, KI),
-     Titel, Notiz, Fällig am, Status; unten Löschen und Fertig */
-  const modal = document.createElement('div');
-  modal.className = 'tk-modal au-modal'; modal.hidden = true;
-  document.body.append(modal);
-  modal.addEventListener('pointerdown', (e) => { if (e.target === modal) closeDetail(); });
-  let cur = null;
-  function closeDetail(save_ = true) {
-    if (!cur) return;
-    if (save_) { const f = modal.querySelector('form'); const ti = f.querySelector('[name=title]').value.trim(); if (ti) cur.title = ti; cur.note = f.querySelector('[name=note]').value.trim(); cur.due = f.querySelector('[name=due]').value || ''; save(); }
-    cur = null; modal.classList.add('closing');
-    setTimeout(() => { modal.hidden = true; modal.classList.remove('closing'); modal.innerHTML = ''; if (open) render(); }, 180);
+  /* Aufgabe anlegen/öffnen (18.11. spät): dasselbe Fenster wie ein Kalendertermin (Calendar.editTask) – Titel, Beschreibung,
+     Status, Priorität, Fällig am, „Im Kalender eintragen“ (legt einen verknüpften Termin an: calId), Tags, Cover */
+  function detail(t, anchor = null) {
+    const C = window.Calendar; if (!C?.editTask) return;
+    const ev = t ? { id: t.id, title: t.title, description: t.note || '', date: t.due || '', time: t.time || '', end: t.end || '', status: statusOf(t), priority: t.priority || 'none', tags: t.tags || [], cover: t.cover || '' } : null;
+    C.editTask(ev, anchor, {
+      onSave(item) {
+        let x = t ? items.find((y) => y.id === t.id) : null;
+        if (!x) { x = { id: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, created: Date.now(), movedAt: Date.now() }; items.unshift(x); }
+        if (x.status && x.status !== item.status) { x.movedAt = Date.now(); if (item.status === 'done') x.doneAt = Date.now(); }
+        Object.assign(x, { title: item.title, note: item.description || '', due: item.date || '', time: item.time || '', end: item.end || '', status: item.status || 'open', priority: item.priority || 'none', tags: item.tags || [] });
+        if (item.cover) x.cover = item.cover; else delete x.cover;
+        // verknüpfter Kalendereintrag: an = anlegen/aktualisieren, aus = entfernen
+        if (item.time && item.date) {
+          const evx = C.upsert({ ...(C.events.find((y) => y.id === x.calId) || {}), id: x.calId || '', title: x.title, description: x.note, date: x.due, time: x.time, end: x.end, tags: x.tags, cover: x.cover || '', color: (C.events.find((y) => y.id === x.calId) || {}).color || '#8e8e93', icon: 'f-calendar', task: x.id });
+          x.calId = evx.id;
+        } else if (x.calId) { C.removeEvent(x.calId); delete x.calId; }
+        save(); if (open) render();
+      },
+      onDelete(id) { const x = items.find((y) => y.id === id); if (x?.calId) C.removeEvent(x.calId); items = items.filter((y) => y.id !== id); save(); if (open) render(); },
+    });
   }
-  function detail(t) {
-    cur = t;
-    const draw = () => {
-      const bg = coverBg(t.cover);
-      modal.innerHTML = `<form class="tk-form ce-card au-card" autocomplete="off">
-        <div class="ce-cover"${bg ? '' : ' hidden'}><span class="ce-cover-bg" style="background:${esc(bg)}"></span><button type="button" class="ce-cover-x" data-ad="cover-x" aria-label="Cover entfernen">${icon('f-x', 12)}</button></div>
-        <div class="ce-headbox au-dhead"><input class="tk-f-title" name="title" value="${esc(t.title)}" placeholder="Titel" maxlength="200" aria-label="Titel" />
-          <textarea class="tk-f-notes" name="note" rows="2" placeholder="Notiz hinzufügen" maxlength="1000" aria-label="Notiz">${esc(t.note || '')}</textarea></div>
-        <div class="au-drows">
-          <label class="au-drow"><span class="au-dl">${icon('o-calendar', 14)}Fällig am</span><input type="date" name="due" value="${esc(t.due || '')}" /></label>
-          <div class="au-drow"><span class="au-dl">${icon('o-todo', 14)}Status</span><span class="au-dst">${TABS.map(([k, n]) => `<button type="button" class="${statusOf(t) === k ? 'on' : ''}" data-ad="st" data-st="${k}">${n}</button>`).join('')}</span></div>
-          <button type="button" class="au-drow au-dcov" data-ad="cover"><span class="au-dl">${icon('f-image', 14)}${bg ? 'Cover ändern' : 'Cover hinzufügen'}</span>${icon('f-plus', 13)}</button>
-        </div>
-        <div class="au-dfoot"><button type="button" class="tk-sheet-ib danger" data-ad="del" aria-label="Löschen">${icon('f-trash', 14)}</button><span class="grow"></span><button type="submit" class="au-done">Fertig</button></div>
-      </form>`;
-    };
-    draw();
-    modal.hidden = false;
-    modal.onclick = (e) => {
-      const b = e.target.closest('[data-ad]'); if (!b) return;
-      const keep = () => { const f = modal.querySelector('form'); t.title = f.querySelector('[name=title]').value.trim() || t.title; t.note = f.querySelector('[name=note]').value.trim(); t.due = f.querySelector('[name=due]').value || ''; };
-      if (b.dataset.ad === 'st') { keep(); t.status = b.dataset.st; t.movedAt = Date.now(); save(); draw(); }
-      else if (b.dataset.ad === 'cover') { keep(); window.Docs?.editor?.pickCover?.({ get: () => (t.cover && typeof t.cover === 'object' ? t.cover : null), set: (c) => { t.cover = c || null; if (!c) delete t.cover; save(); if (cur === t) draw(); } }); }
-      else if (b.dataset.ad === 'cover-x') { keep(); delete t.cover; save(); draw(); }
-      else if (b.dataset.ad === 'del') { items = items.filter((x) => x !== t); save(); closeDetail(false); }
-    };
-    modal.onsubmit = (e) => { e.preventDefault(); closeDetail(); };
-  }
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && cur && !document.querySelector('.dc-cmodal')) closeDetail(); });
+  main.querySelector('[data-au="new"]').addEventListener('click', (e) => detail(null, e.currentTarget));
 
   window.addEventListener('storage', (e) => { if (e.key === KEY) { items = load(); if (open) render(); } });
 

@@ -1603,8 +1603,10 @@ const DocBlocks = (() => {
     function paint() {
       let g = '', out = '';
       menu.list.forEach((it, i) => {
-        if (!menu.query && it.group !== g) { out += `${g ? '<div class="dcs-line"></div>' : ''}<div class="dcs-sec">${esc(it.group)}</div>`; g = it.group; } // beim Suchen ohne Gruppen, beste Treffer oben
-        out += `<div class="dcs-item${i === menu.idx ? ' on' : ''}" data-i="${i}" role="option"><span class="dcs-ic">${it.glyph ? `<span class="dcs-glyph">${it.glyph}</span>` : fi(it.icon, 16)}</span><span class="dcs-name">${esc(it.name)}</span>${it.hint ? `<kbd>${esc(it.hint)}</kbd>` : ''}</div>`;
+        // 18.11. spät: keine Gruppen-Überschriften mehr, nur eine feine Linie zwischen den Gruppen; Icons = runde Linien-Icons (#f-…) wie überall
+        if (!menu.query && it.group !== g) { if (g) out += '<div class="dcs-line"></div>'; g = it.group; }
+        const lic = it.id === 'todo' ? 'o-todo' : `f-${it.icon}`;
+        out += `<div class="dcs-item${i === menu.idx ? ' on' : ''}" data-i="${i}" role="option"><span class="dcs-ic">${it.glyph ? `<span class="dcs-glyph">${it.glyph}</span>` : `<svg width="15" height="15" aria-hidden="true"><use href="#${lic}"/></svg>`}</span><span class="dcs-name">${esc(it.name)}</span>${it.hint ? `<kbd>${esc(it.hint)}</kbd>` : ''}</div>`;
       });
       menu.el.innerHTML = `<div class="dcs-list">${out || '<div class="dcs-empty">Keine Treffer</div>'}</div>`;
     }

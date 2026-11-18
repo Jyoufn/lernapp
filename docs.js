@@ -702,7 +702,9 @@ const Docs = (() => {
       const ic = x.kind === 'chat' ? `<span class="cl-av">${CHAT_ICON}</span>` : `<span class="cl-av">${docIcon(x.d) ? DocIcons.of(x.d.icon, 16) : PAGE_ICON}</span>`;
       return `<div class="lb2-row${sel.has(k) ? ' picked' : ''}" data-k="${k}" data-key="${k}" tabindex="0" style="animation-delay:${Math.min(i, 10) * 20}ms">
         <button type="button" class="lb2-check" data-row="pick" role="checkbox" aria-checked="${sel.has(k)}" aria-label="Auswählen">${fi('check', 11)}</button>
-        ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>${tagChips(x.tags)}
+        ${ic}<span class="lb2-text"><span class="lb2-title">${esc(x.title)}</span>${x.desc ? `<span class="lb2-desc">${esc(x.desc)}</span>` : ''}</span>${(() => { // 18.11. spät: Priorität des Dokuments neben den Tags
+          const pid = ({ mid: 'medium' })[x.d?.priority] || x.d?.priority; const pr = pid && pid !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === pid) : null;
+          return pr ? `<span class="lb2-prio p-${esc(pr.id)}" title="Priorität: ${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 14)}<span>${esc(pr.name)}</span></span>` : ''; })()}${tagChips(x.tags)}
         <span class="lb2-time">${x.pinned ? `<i class="lb2-pinmark">${fi('pin', 12)}</i>` : ''}${when(x.updated)}</span>
         <span class="lb2-acts"><button type="button" class="lb-act lb2-tagbtn" data-row="tags" aria-label="Tags">${fi('tag', 14)}</button><button type="button" class="lb-act lb2-pin${x.pinned ? ' on' : ''}" data-row="pin" aria-label="${x.pinned ? 'Lösen' : 'Anheften'}">${fi('pin', 14)}</button><button type="button" class="lb-act lb-del" data-row="del" aria-label="Löschen">${fi('trash', 14)}</button></span></div>`;
     };

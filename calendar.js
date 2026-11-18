@@ -319,6 +319,7 @@ const Calendar = (() => {
   document.body.append(emodal);
   function eclose() {
     if (emodal.hidden) return;
+    if (window.TagMenu?.isOpen) window.TagMenu.close();
     document.querySelectorAll('.cw-ghost').forEach((g) => g.remove());
     emodal.classList.add('closing');
     setTimeout(() => { emodal.hidden = true; emodal.classList.remove('closing'); emodal.replaceChildren(); }, 220);
@@ -340,7 +341,7 @@ const Calendar = (() => {
     const fh = form.offsetHeight || 260;
     const room = form.classList.contains('ce-view') ? 0 : 290; // Bearbeiten: Platz nach unten zum Aufklappen
     let left, top;
-    if (anchor.closest('.cm-head')) { // „Neuer Termin“ oben rechts: klappt darunter auf, rechtsbündig
+    if (anchor.closest('.cm-head, .au-head')) { // „Neuer Termin“ / „Neue Aufgabe“ oben rechts: klappt darunter auf, rechtsbündig
       left = Math.max(8, Math.min(innerWidth - fw - 8, r.right - fw));
       top = r.bottom + gap;
     } else {
@@ -368,6 +369,7 @@ const Calendar = (() => {
       </div>
       <div class="ce-vrow"><span class="tk-si">${icon('f-calendar')}</span><span class="ce-vval">${dateText(ev.date)}${ev.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}</span></div>
       <div class="ce-vrow"><span class="tk-si">${icon('f-clock')}</span><span class="ce-vval">${timeHtml}</span>${dur ? `<span class="ce-dur">${dur}</span>` : ''}</div>
+      ${(() => { const tg = (window.TagMenu?.all?.() || []).filter((g) => (ev.tags || []).includes(g.id)); return tg.length ? `<div class="ce-vrow"><span class="tk-si">${icon('f-tag')}</span><span class="ce-vval ce-vtags">${tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}</span></div>` : ''; })()}
       <div class="ce-cbox"><div class="ce-clist"></div>
         <label class="ce-cnew"><span class="tk-si">${icon('f-chat')}</span><input class="ce-cin" maxlength="300" placeholder="Kommentar hinzufügen" aria-label="Kommentar hinzufügen" autocomplete="off" /></label></div>
     </div>`;
@@ -441,9 +443,15 @@ const Calendar = (() => {
   }
   // 18.11.: Cover eines Termins – eigenes Bild (alt: Text data:…) oder wie beim Dokument (Vorlage, Farbe, KI): { kind, … }
   const coverBg = (c) => (!c ? '' : typeof c === 'string' ? `center / cover no-repeat url("${c.replace(/"/g, '%22')}")` : window.Docs?.editor?.coverCss?.(c) || '');
-  function edit(ev, date, time = '', end = '', store = null, anchor = null) {
+  /* 18.11. spät: opts.task = dasselbe Fenster für Aufgaben (aufgaben.js): Status (runder Kasten), Priorität, Fällig am,
+     „Im Kalender eintragen“ (Schalter + Uhrzeit), Tags, Cover – keine Farbe. Termine haben jetzt ebenfalls Tags. */
+  function edit(ev, date, time = '', end = '', store = null, anchor = null, opts = {}) {
     close(); // ggf. Tagesliste schließen
-    const e = ev ? { ...ev } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: EV_COLORS[6] || COLORS[0], icon: 'f-calendar' };
+    const T = !!opts.task;
+    const e = ev ? { ...ev } : T ? { id: '', title: '', description: '', date: '', time: '', end: '', status: 'open', priority: 'none', tags: [] } : { id: '', title: '', description: '', date: date || todayIso(), time, end, color: EV_COLORS[6] || COLORS[0], icon: 'f-calendar' };
+    if (!Array.isArray(e.tags)) e.tags = [];
+    const STATI = [['open', 'Offen'], ['doing', 'In Arbeit'], ['done', 'Erledigt'], ['archived', 'Archiviert']];
+    const PRIOS = window.UIKit?.PRIOS || [{ id: 'none', name: 'Keine' }];
     let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
     // die ihren Inhalt in einem Kasten direkt unter sich aufklappen (UIKit.foldRows); unten Löschen + blauer Knopf
@@ -457,10 +465,13 @@ const Calendar = (() => {
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
       <input type="file" accept="image/*" class="ce-cover-in" hidden />
+      ${T ? `<div class="ce-stbox">${STATI.map(([k, n]) => `<button type="button" data-st="${k}">${n}</button>`).join('')}</div>` : ''}
       <div class="tk-sheet-rows ce-rows">
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
-        ${pill('color', evColorRow(e.color), 'color')}
+        ${T ? '' : pill('color', evColorRow(e.color), 'color')}
+        ${T ? pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${window.UIKit?.prioIcon?.(p.id, 15) || ''}<span>${esc(p.name)}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
+        <div class="tk-pop ce-tags-row"><button type="button" class="tk-pill" data-act="tags"></button></div>
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
       </div>
       <div class="tk-sheet-foot ce-foot">${ev ? `<button type="button" class="tk-sheet-ib danger" data-act="delete" aria-label="Löschen">${icon('f-trash')}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${ev ? 'Speichern' : 'Erstellen'}</button></div>
@@ -473,21 +484,30 @@ const Calendar = (() => {
     const toMin = (v) => { const m = /^(\d{2}):(\d{2})$/.exec(v || ''); return m ? +m[1] * 60 + +m[2] : null; };
     const fromMin = (n) => `${String(Math.floor(n / 60) % 24).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
     const draw = () => {
-      const d = new Date(`${e.date}T12:00:00`);
+      const d = new Date(`${e.date || todayIso()}T12:00:00`);
       const chev = `<span class="ce-chev">${icon('f-chevron-down')}</span>`; // nur ein leiser Pfeil, kein Kasten
       const set = (k, ic, text, extra = '') => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>${extra}${chev}`; };
-      set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`);
+      if (T && !e.date) set('date', icon('f-calendar'), '<span class="ce-off">Fällig am</span>');
+      else set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`, T ? `<span class="ce-x" data-act="date-x" role="button" aria-label="Datum entfernen">${icon('f-x')}</span>` : '');
+      if (T) {
+        const pr = PRIOS.find((p) => p.id === (e.priority || 'none')) || PRIOS[0];
+        set('prio', window.UIKit?.prioIcon?.(pr.id, 15) || icon('f-flag'), pr.id === 'none' ? '<span class="ce-off">Priorität</span>' : esc(pr.name));
+        form.querySelectorAll('[data-prio]').forEach((b) => b.classList.toggle('on', b.dataset.prio === (e.priority || 'none')));
+        form.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === (e.status || 'open')));
+      }
+      const tg = (window.TagMenu?.all?.() || []).filter((g) => e.tags.includes(g.id));
+      form.querySelector('[data-act="tags"]').innerHTML = `<span class="tk-si">${icon('f-tag')}</span><span class="tk-rv">${tg.length ? tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('') : '<span class="ce-off">Tags</span>'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
       // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
       const s = toMin(e.time), en = toMin(e.end), dur = s != null && en != null && en > s ? en - s : null;
       const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
       // Uhrzeit: Regler direkt in der Zeile (kein Aufklappen von Hand) – an = Uhrzeit festgelegt, die Räder fahren darunter aus; aus = ganztägig
-      form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
-      set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
+      form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : T ? 'Im Kalender eintragen' : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
+      if (!T) set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
       form.querySelector('[data-act="cover"]').innerHTML = `<span class="tk-si">${icon('f-image')}</span><span class="tk-rv">${e.cover ? 'Cover ändern' : 'Cover hinzufügen'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
       const cv = form.querySelector('.ce-cover'), bg = coverBg(e.cover); cv.hidden = !bg; if (bg) cv.firstElementChild.style.background = bg;
       form.querySelector('.ce-wheels').hidden = !e.time; // ganztägig: keine Uhrzeiten
       form.querySelectorAll('[data-color]').forEach((b) => b.classList.toggle('on', b.dataset.color === e.color));
-      form.querySelector('.ce-own').hidden = !form.querySelector('.ce-own').firstElementChild;
+      const own = form.querySelector('.ce-own'); if (own) own.hidden = !own.firstElementChild;
     };
     // Datum: kleiner Kalender
     const cal = UIKit.miniCalendar(form.querySelector('.tk-cal'), () => e.date, (iso) => { e.date = iso; draw(); setTimeout(() => form.querySelector('.tk-pop[data-k="date"]').classList.remove('open'), 140); });
@@ -523,13 +543,18 @@ const Calendar = (() => {
       if (op && op.dataset.open === 'time' && (x.target.closest('[data-allday]') || !e.time)) {
         const pop = op.closest('.tk-pop');
         if (e.time) { e.time = ''; e.end = ''; pop.classList.remove('open'); draw(); slideSwitch(false); return; }
-        e.time = '09:00'; e.end = '10:00'; draw(); slideSwitch(true);
+        e.time = '09:00'; e.end = '10:00'; if (!e.date) e.date = todayIso(); draw(); slideSwitch(true);
         form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open'));
         pop.classList.add('open');
         requestAnimationFrame(() => { wStart.setValue(e.time); wEnd.setValue(e.end); });
         return;
       }
+      if (x.target.closest('[data-act="date-x"]')) { e.date = ''; e.time = ''; e.end = ''; form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); draw(); return; }
       if (op) { openPop(op.dataset.open); return; }
+      const stb = x.target.closest('[data-st]'); if (stb) { e.status = stb.dataset.st; draw(); return; }
+      const prb = x.target.closest('[data-prio]'); if (prb) { e.priority = prb.dataset.prio; draw(); prb.closest('.tk-pop').classList.remove('open'); return; }
+      const tgb = x.target.closest('[data-act="tags"]');
+      if (tgb) { form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); window.TagMenu?.open?.(tgb, { key: `${T ? 'task' : 'event'}:${e.id || 'neu'}`, get: () => e.tags, set: (ids) => { e.tags = ids; draw(); } }); return; }
       const cu = x.target.closest('[data-custom]');
       if (cu) {
         // Eigene Farbe: der bunte Knopf bleibt, wie er ist; die Farbe erscheint oben in der Zeile (Vorschau) und kommt mit „Übernehmen“
@@ -677,7 +702,8 @@ const Calendar = (() => {
     events = events.filter((e) => e !== hit); save(); if (open) render();
     return hit;
   }
-  return { show, hide, add, remove, openEditor, get open() { return open; }, get events() { return events.slice(); } };
+  const editTask = (task, anchor, store) => edit(task || null, '', task?.time || '', task?.end || '', store, anchor, { task: true });
+  return { show, hide, add, remove, openEditor, editTask, upsert, removeEvent: (id) => { events = events.filter((y) => y.id !== id); save(); if (open) render(); }, get open() { return open; }, get events() { return events.slice(); } };
 })();
 window.Calendar = Calendar;
 if (window.AppActions) {
