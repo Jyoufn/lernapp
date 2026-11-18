@@ -56,12 +56,14 @@ const Aufgaben = (() => {
     const st = statusOf(t), over = (st === 'open' || st === 'doing') && t.due && t.due < today(), bg = coverBg(t.cover);
     return `<article class="au-card2 st-${st}${bg ? ' has-cov' : ''}" data-id="${esc(t.id)}" tabindex="0">
       ${bg ? `<div class="au-ccov" style="background:${esc(bg)}"></div>` : ''}
+      <button type="button" class="au-edit" data-au="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil', 13)}</button>
       <div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${st === 'done' ? `<span class="au-ok">${icon('f-check', 9)}</span>` : ''}</div>
-      ${(() => {
+      ${(() => { // 19.11.: Titel oben über die ganze Breite, darunter die Tags, darunter Priorität und direkt daneben das Datum (mit Kalender-Symbol)
         const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
-        const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id)).slice(0, 2);
-        if (!t.note && !t.due && !pr && !tg.length && !t.time) return '';
-        return `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${t.note && !tg.length ? `<span class="au-cnote">${icon('f-file', 12)}<span>Notiz</span></span>` : ''}<span class="grow"></span>${t.time ? `<span class="au-ccal" title="Im Kalender">${icon('f-calendar', 12)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>`;
+        const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
+        const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
+        const foot = pr || t.due || t.note ? `<div class="au-cm">${pr ? `<span class="au-cprio p-${esc(pr.id)}" title="${esc(pr.name)}">${window.UIKit.prioIcon(pr.id, 13)}</span>` : ''}${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}${t.note && !pr && !t.due ? `<span class="au-cnote">${icon('f-file', 12)}<span>Notiz</span></span>` : ''}</div>` : '';
+        return tags + foot;
       })()}</div></article>`;
   }
   function counts() {
@@ -104,7 +106,7 @@ const Aufgaben = (() => {
   };
   let drag = null;
   board.addEventListener('pointerdown', (e) => {
-    const c = e.target.closest('.au-card2'); if (!c || e.button > 0) return;
+    const c = e.target.closest('.au-card2'); if (!c || e.button > 0 || e.target.closest('.au-edit, .au-inl') || c.classList.contains('editing')) return;
     drag = { el: c, id: c.dataset.id, x0: e.clientX, y0: e.clientY, on: false, pid: e.pointerId };
   });
   function begin(e) {
@@ -167,18 +169,27 @@ const Aufgaben = (() => {
   }
   board.addEventListener('pointerup', (e) => {
     if (!drag) return;
-    if (!drag.on) { const t = items.find((x) => x.id === drag.id), el = drag.el; drag = null; if (t) detail(t, el); return; }
+    // einmal antippen: Karte nur auswählen (Stift erscheint) – bearbeitet wird erst über den Stift
+    if (!drag.on) { const el = drag.el; drag = null; board.querySelectorAll('.au-card2.sel').forEach((x) => x !== el && x.classList.remove('sel')); el.classList.toggle('sel'); return; }
     finish(false);
   });
   board.addEventListener('pointercancel', () => { if (drag?.on) finish(true); else drag = null; });
+  board.addEventListener('click', (e) => {
+    const b = e.target.closest('.au-edit'); if (!b) return;
+    const c = b.closest('.au-card2'), t = items.find((x) => x.id === c.dataset.id); if (!t || c.classList.contains('editing')) return;
+    board.querySelectorAll('.au-card2.editing').forEach((x) => x.classList.remove('editing'));
+    const host = document.createElement('div'); host.className = 'au-inl'; c.append(host); c.classList.add('editing');
+    detail(t, c, host);
+  });
+  document.addEventListener('pointerdown', (e) => { if (open && !e.target.closest('.au-card2')) board.querySelectorAll('.au-card2.sel').forEach((x) => x.classList.remove('sel')); });
   board.addEventListener('keydown', (e) => { const c = e.target.closest?.('.au-card2'); if (c && e.key === 'Enter') { const t = items.find((x) => x.id === c.dataset.id); if (t) detail(t); } });
 
   /* Aufgabe anlegen/öffnen (18.11. spät): dasselbe Fenster wie ein Kalendertermin (Calendar.editTask) – Titel, Beschreibung,
      Status, Priorität, Fällig am, „Im Kalender eintragen“ (legt einen verknüpften Termin an: calId), Tags, Cover */
-  function detail(t, anchor = null) {
+  function detail(t, anchor = null, inline = null) {
     const C = window.Calendar; if (!C?.editTask) return;
-    const ev = t ? { id: t.id, title: t.title, description: t.note || '', date: t.due || '', time: t.time || '', end: t.end || '', status: statusOf(t), priority: t.priority || 'none', tags: t.tags || [], cover: t.cover || '' } : null;
-    C.editTask(ev, anchor, {
+    const ev = t ? { id: t.id, title: t.title, description: t.note || '', date: t.due || '', time: t.time || '', end: t.end || '', status: statusOf(t), priority: t.priority || 'none', tags: t.tags || [], cover: t.cover || '', cal: !!t.calId } : null;
+    C.editTask(ev, inline ? null : anchor, {
       onSave(item) {
         let x = t ? items.find((y) => y.id === t.id) : null;
         if (!x) { x = { id: `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, created: Date.now(), movedAt: Date.now() }; items.unshift(x); }
@@ -186,14 +197,14 @@ const Aufgaben = (() => {
         Object.assign(x, { title: item.title, note: item.description || '', due: item.date || '', time: item.time || '', end: item.end || '', status: item.status || 'open', priority: item.priority || 'none', tags: item.tags || [] });
         if (item.cover) x.cover = item.cover; else delete x.cover;
         // verknüpfter Kalendereintrag: an = anlegen/aktualisieren, aus = entfernen
-        if (item.time && item.date) {
+        if (item.cal && item.date) {
           const evx = C.upsert({ ...(C.events.find((y) => y.id === x.calId) || {}), id: x.calId || '', title: x.title, description: x.note, date: x.due, time: x.time, end: x.end, tags: x.tags, cover: x.cover || '', color: (C.events.find((y) => y.id === x.calId) || {}).color || '#8e8e93', icon: 'f-calendar', task: x.id });
           x.calId = evx.id;
         } else if (x.calId) { C.removeEvent(x.calId); delete x.calId; }
         save(); if (open) render();
       },
       onDelete(id) { const x = items.find((y) => y.id === id); if (x?.calId) C.removeEvent(x.calId); items = items.filter((y) => y.id !== id); save(); if (open) render(); },
-    });
+    }, inline ? { inline, onClose: () => { if (open) render(); } } : {});
   }
   main.querySelector('[data-au="new"]').addEventListener('click', (e) => detail(null, e.currentTarget));
 

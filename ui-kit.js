@@ -58,8 +58,9 @@ const UIKit = (() => {
   };
 
   /* ---------- Kalender zum Anklicken ---------- */
-  const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  const MONTHS_LONG = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  const EN = window.I18n?.lang?.() === 'en'; // 19.11.: Monats-/Tagesnamen in der eingestellten Sprache
+  const WD = EN ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const MONTHS_LONG = EN ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] : ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
   // box: Element, get(): aktuelles ISO-Datum, pick(iso): Klick auf einen Tag
   function miniCalendar(box, get, pick) {
     let month = null;

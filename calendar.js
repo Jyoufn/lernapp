@@ -24,8 +24,11 @@ const Calendar = (() => {
     + `<div class="tk-picker-host"></div><div class="tk-colors ce-colors ce-own">${ownRow(cur)}</div>`;
 
   const ICONS = ['i-calendar', 'i-book', 'i-pencil', 'i-star', 'i-people', 'i-timer', 'i-music', 'i-heart', 'i-globe', 'i-bolt', 'i-file', 'i-check'];
-  const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
-  const DAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  // 19.11.: bei „English“ alle Datumsnamen englisch (Monat vor dem Tag, ohne Punkt)
+  const EN = window.I18n?.lang?.() === 'en';
+  const MONTHS = EN ? ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'] : ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+  const DAYS = EN ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] : ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+  const dm = (d, arr = MONTHS) => (EN ? `${arr[d.getMonth()]} ${d.getDate()}` : `${d.getDate()}. ${arr[d.getMonth()]}`);
 
   const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
   let events = load();
@@ -42,7 +45,7 @@ const Calendar = (() => {
   let cursor = monthOf(new Date());
   let open = false;
   const minsOf = (t) => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ''); return m ? +m[1] * 60 + +m[2] : null; };
-  const MONTHS_SHORT = ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
+  const MONTHS_SHORT = EN ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] : ['Jan.', 'Feb.', 'März', 'Apr.', 'Mai', 'Juni', 'Juli', 'Aug.', 'Sep.', 'Okt.', 'Nov.', 'Dez.'];
 
   /* ---------- Ansicht: Monat (Raster Mo–So, 5–6 Wochen), Termine als Chips im Tag ---------- */
   const view = document.createElement('section');
@@ -99,8 +102,8 @@ const Calendar = (() => {
       c.className = `cm-cell${other ? ' other' : ''}${k === today ? ' today' : ''}${i % 7 > 4 ? ' we' : ''}${i % 7 === 6 ? ' end' : ''}${i >= (weeks - 1) * 7 ? ' last' : ''}`;
       c.dataset.date = k;
       c.setAttribute('role', 'button');
-      c.setAttribute('aria-label', `${d.getDate()}. ${MONTHS[d.getMonth()]}`);
-      const label = d.getDate() === 1 ? `${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]}` : d.getDate();
+      c.setAttribute('aria-label', `${dm(d)}`);
+      const label = d.getDate() === 1 ? `${dm(d, MONTHS_SHORT)}` : d.getDate();
       c.innerHTML = `<div class="cm-cell-h"><span class="cm-dn">${label}</span></div><button type="button" class="cm-more" hidden></button><div class="cm-evs"></div>`;
       const list = c.querySelector('.cm-evs');
       dayEvents(k).forEach((e) => list.append(chip(e)));
@@ -184,7 +187,7 @@ const Calendar = (() => {
 
   /* ---------- Tagesansicht: Klick auf einen Tag → Tag wächst weich aus der Zelle, links die Uhrzeiten ---------- */
   const HOUR = 52; // Höhe einer Stunde in px
-  const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const WEEKDAYS = EN ? ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] : ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
   // Tagesansicht als eigenes großes Fenster über dem Kalender (wegklicken, Esc oder ×)
   const dvWrap = document.createElement('div');
   dvWrap.className = 'cal-dv-wrap';
@@ -204,7 +207,7 @@ const Calendar = (() => {
     const timed = list.filter((e) => mins(e.time) != null).sort((a, b) => mins(a.time) - mins(b.time));
     dv.innerHTML = `<header class="cal-dv-head">
 
-        <div class="cal-dv-title"><span>${WEEKDAYS[d.getDay()]},</span> ${d.getDate()}. ${MONTHS[d.getMonth()]}${dayDate === todayIso() ? '<em>Heute</em>' : ''}</div>
+        <div class="cal-dv-title"><span>${WEEKDAYS[d.getDay()]},</span> ${dm(d)}${dayDate === todayIso() ? '<em>Heute</em>' : ''}</div>
         <div class="cal-nav">
           <button class="cal-icon" type="button" data-dv="prev" aria-label="Vorheriger Tag" title="Vorheriger Tag">${icon('f-back')}</button>
           <button class="cal-icon" type="button" data-dv="next" aria-label="Nächster Tag" title="Nächster Tag">${icon('f-forward')}</button>
@@ -317,7 +320,18 @@ const Calendar = (() => {
   emodal.className = 'tk-modal cal-emodal';
   emodal.hidden = true;
   document.body.append(emodal);
+  // 19.11.: Fenster kann auch an Ort und Stelle aufgeklappt sein (Aufgaben-Karte): opts.inline = Behälter
+  let inlineForm = null, inlineDone = null;
   function eclose() {
+    if (inlineForm) {
+      const f = inlineForm, done = inlineDone; inlineForm = null; inlineDone = null;
+      if (window.TagMenu?.isOpen) window.TagMenu.close();
+      const h = f.offsetHeight;
+      const fin = () => { f.remove(); done?.(); };
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) fin();
+      else f.animate([{ height: `${h}px`, opacity: 1 }, { height: '0px', opacity: 0 }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }).finished.then(fin, fin);
+      return;
+    }
     if (emodal.hidden) return;
     if (window.TagMenu?.isOpen) window.TagMenu.close();
     document.querySelectorAll('.cw-ghost').forEach((g) => g.remove());
@@ -326,11 +340,12 @@ const Calendar = (() => {
   }
   emodal.addEventListener('pointerdown', (x) => { if (x.target === emodal) eclose(); });
   document.addEventListener('keydown', (x) => {
-    if (x.key !== 'Escape' || emodal.hidden) return;
+    if (x.key !== 'Escape' || (emodal.hidden && !inlineForm)) return;
+    if (inlineForm) { const pop = inlineForm.querySelector('.tk-pop.open'); if (pop) pop.classList.remove('open'); else eclose(); return; }
     const pop = emodal.querySelector('.tk-pop.open');
     if (pop) pop.classList.remove('open'); else eclose();
   });
-  const WD_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+  const WD_SHORT = EN ? ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] : ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
   // store: eigener Speicherort (z. B. Kalender in einem Dokument) – { onSave(item), onDelete(id) }; ohne: der Kalender der App
   // anchor = Termin/Zelle im Wochenraster: das Fenster erscheint wie in der Vorlage als Popover mit Spitze direkt daneben
   // Karte neben den Termin (bzw. unter „Neuer Termin“) setzen – ohne Spitze, ohne Schleier
@@ -352,7 +367,7 @@ const Calendar = (() => {
     Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px` });
   }
   const DUR = (a, b) => { const s0 = minsOf(a), e0 = minsOf(b); if (s0 == null || e0 == null || e0 <= s0) return ''; const d = e0 - s0; return d < 60 ? `${d} Min.` : `${Math.floor(d / 60)} Std.${d % 60 ? ` ${d % 60} Min.` : ''}`; };
-  const dateText = (k) => { const d = new Date(`${k}T12:00:00`); return `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}`; };
+  const dateText = (k) => { const d = new Date(`${k}T12:00:00`); return `${WEEKDAYS[d.getDay()]}, ${dm(d)}`; };
 
   /* Termin ansehen (Klick auf einen Termin): nur die Angaben, oben rechts Stift → bearbeiten */
   function showEvent(ev, anchor, store = null) {
@@ -361,8 +376,8 @@ const Calendar = (() => {
     const timeHtml = ev.time ? `${esc(ev.time)}${ev.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${esc(ev.end)}` : ''}` : 'Ganztägig';
     const dur = DUR(ev.time, ev.end);
     emodal.innerHTML = `<div class="tk-form ce-card ce-view" style="--c:${esc(ev.color || COLORS[0])}">
-      ${coverBg(ev.cover) ? `<div class="ce-cover"><span class="ce-cover-bg" style="background:${esc(coverBg(ev.cover))}"></span></div>` : ''}
-      <div class="ce-headbox ce-vhead">
+      <div class="ce-headbox ce-vhead${coverBg(ev.cover) ? ' has-cov' : ''}">
+        ${coverBg(ev.cover) ? `<div class="ce-cover"><span class="ce-cover-bg" style="background:${esc(coverBg(ev.cover))}"></span></div>` : ''}
         <div class="ce-vtitle">${esc(ev.title)}</div>
         ${ev.description ? `<div class="ce-vnote">${esc(ev.description).replace(/\n/g, '<br>')}</div>` : ''}
         <button type="button" class="ce-vbtn ce-vedit" data-act="edit" aria-label="Bearbeiten">${icon('f-pencil')}</button>
@@ -460,8 +475,8 @@ const Calendar = (() => {
     // der seinen Inhalt in sich aufklappt (rechts ein kleiner Pfeil-Knopf)
     const pill = (k, menu, cls = '') => `<div class="tk-pop" data-k="${k}"><button type="button" class="tk-pill" data-open="${k}"></button><div class="tk-menu ${cls}"><div class="tk-box">${menu}</div></div></div>`;
     emodal.innerHTML = `<form class="tk-form tk-sheet ce-sheet ce-card" autocomplete="off">
-      <div class="ce-cover"${e.cover ? '' : ' hidden'}><span class="ce-cover-bg"></span><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
       <div class="tk-sheet-main ce-headbox">
+        <div class="ce-cover"${e.cover ? '' : ' hidden'}><span class="ce-cover-bg"></span><button type="button" class="ce-cover-x" data-act="cover-x" aria-label="Cover entfernen">${icon('f-x')}</button></div>
         <input class="tk-f-title" name="title" value="${esc(e.title)}" placeholder="Titel" maxlength="80" aria-label="Titel" required />
         <textarea class="tk-f-notes" name="description" rows="1" placeholder="Beschreibung hinzufügen" maxlength="400" aria-label="Beschreibung">${esc(e.description)}</textarea>
       </div>
@@ -470,6 +485,7 @@ const Calendar = (() => {
         ${T ? pill('status', STATI.map(([k, n]) => `<button type="button" class="tk-mi" data-st="${k}">${icon(STI[k])}<span>${n}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
         ${pill('date', '<div class="tk-cal"></div>', 'date')}
         ${pill('time', `<div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
+        ${T ? '<div class="tk-pop ce-calrow"><button type="button" class="tk-pill" data-act="cal"></button></div>' : ''}
         ${T ? '' : pill('color', evColorRow(e.color), 'color')}
         ${T ? pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${window.UIKit?.prioIcon?.(p.id, 15) || ''}<span>${esc(p.name)}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
         <div class="tk-pop ce-tags-row" data-k="tags"><div class="tk-pill" data-open="tags" role="button" tabindex="0"><span class="tk-si">${icon('f-tag')}</span><span class="tk-rv"><span class="ce-tl">Tags</span><span class="ce-tchips"></span></span><span class="ce-tsearch"></span><span class="ce-chev">${icon('f-chevron-down')}</span></div><div class="tk-menu tags"><div class="tk-box ce-tagbox"></div></div></div>
@@ -489,7 +505,7 @@ const Calendar = (() => {
       const chev = `<span class="ce-chev">${icon('f-chevron-down')}</span>`; // nur ein leiser Pfeil, kein Kasten
       const set = (k, ic, text, extra = '') => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>${extra}${chev}`; };
       if (T && !e.date) set('date', icon('f-calendar'), '<span class="ce-off">Fällig am</span>');
-      else set('date', icon('f-calendar'), `${WEEKDAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`, T ? `<span class="ce-x" data-act="date-x" role="button" aria-label="Datum entfernen">${icon('f-x')}</span>` : '');
+      else set('date', icon('f-calendar'), `${T ? `${WD_SHORT[d.getDay()]}, ${dm(d, MONTHS_SHORT)}` : `${WEEKDAYS[d.getDay()]}, ${dm(d)}`}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`, T ? `<span class="ce-x" data-act="date-x" role="button" aria-label="Datum entfernen">${icon('f-x')}</span>` : '');
       if (T) {
         const pr = PRIOS.find((p) => p.id === (e.priority || 'none')) || PRIOS[0];
         set('prio', window.UIKit?.prioIcon?.(pr.id, 15) || icon('f-flag'), pr.id === 'none' ? '<span class="ce-off">Priorität</span>' : esc(pr.name));
@@ -499,12 +515,13 @@ const Calendar = (() => {
       const tg = (window.TagMenu?.all?.() || []).filter((g) => e.tags.includes(g.id));
       form.querySelector('.ce-tchips').innerHTML = tg.map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('');
       form.querySelector('.ce-tags-row').classList.toggle('has', !!tg.length);
+      if (T) form.querySelector('[data-act="cal"]').innerHTML = `<span class="tk-si">${icon('f-calendar')}</span><span class="tk-rv${e.cal ? '' : ' ce-off'}">Im Kalender eintragen</span><span class="ce-check${e.cal ? ' on' : ''}" role="checkbox" aria-checked="${!!e.cal}">${icon('f-check')}</span>`;
       if (T) { const st = e.status || 'open'; set('status', icon(STI[st]), esc((STATI.find(([k]) => k === st) || STATI[0])[1])); }
       // Zeit wie in der Vorlage: „16:30 → 17:30“, rechts die Dauer
       const s = toMin(e.time), en = toMin(e.end), dur = s != null && en != null && en > s ? en - s : null;
       const durTxt = dur == null ? '' : dur < 60 ? `${dur} Min.` : `${Math.floor(dur / 60)} Std.${dur % 60 ? ` ${dur % 60} Min.` : ''}`;
       // Uhrzeit: Regler direkt in der Zeile (kein Aufklappen von Hand) – an = Uhrzeit festgelegt, die Räder fahren darunter aus; aus = ganztägig
-      form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : T ? 'Im Kalender eintragen' : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
+      form.querySelector('[data-open="time"]').innerHTML = `<span class="tk-si">${icon('f-clock')}</span><span class="tk-rv${e.time ? '' : ' ce-off'}">${e.time ? `${e.time}${e.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${e.end}` : ''}` : 'Uhrzeit'}</span>${durTxt ? `<span class="ce-dur">${durTxt}</span>` : ''}<span class="ce-switch${e.time ? ' on' : ''}" data-allday role="switch" aria-checked="${!!e.time}" aria-label="Uhrzeit festlegen"><i></i></span>`;
       if (!T) set('color', `<i class="ce-dot" style="background:${e.color}"></i>`, 'Farbe');
       form.querySelector('[data-act="cover"]').innerHTML = `<span class="tk-si">${icon('f-image')}</span><span class="tk-rv">${e.cover ? 'Cover ändern' : 'Cover hinzufügen'}</span><span class="ce-chev">${icon('f-plus')}</span>`;
       const cv = form.querySelector('.ce-cover'), bg = coverBg(e.cover); cv.hidden = !bg; if (bg) cv.firstElementChild.style.background = bg;
@@ -556,7 +573,8 @@ const Calendar = (() => {
         requestAnimationFrame(() => { wStart.setValue(e.time); wEnd.setValue(e.end); });
         return;
       }
-      if (x.target.closest('[data-act="date-x"]')) { e.date = ''; e.time = ''; e.end = ''; form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); draw(); return; }
+      if (x.target.closest('[data-act="cal"]')) { e.cal = !e.cal; if (e.cal && !e.date) e.date = todayIso(); form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); draw(); return; }
+      if (x.target.closest('[data-act="date-x"]')) { e.date = ''; e.time = ''; e.end = ''; e.cal = false; form.querySelectorAll('.tk-pop.open').forEach((q) => q.classList.remove('open')); draw(); return; }
       if (op) { openPop(op.dataset.open); return; }
       if (x.target.closest('.ce-tsearch')) return; // Suchfeld in der Tags-Zeile
       const stb = x.target.closest('[data-st]'); if (stb) { e.status = stb.dataset.st; draw(); stb.closest('.tk-pop')?.classList.remove('open'); return; }
@@ -623,6 +641,14 @@ const Calendar = (() => {
       }, 260);
     });
     draw();
+    if (opts.inline) { // an Ort und Stelle aufklappen (kein Fenster daneben)
+      if (inlineForm) { inlineForm.remove(); inlineDone?.(); }
+      emodal.hidden = true; emodal.replaceChildren();
+      form.classList.add('ce-inline'); opts.inline.append(form); inlineForm = form; inlineDone = opts.onClose || null;
+      requestAnimationFrame(grow);
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) { const h = form.offsetHeight; form.animate([{ height: '0px', opacity: 0 }, { height: `${h}px`, opacity: 1 }], { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }); }
+      return;
+    }
     emodal.hidden = false;
     place(form, anchor);
     requestAnimationFrame(grow);
@@ -632,7 +658,7 @@ const Calendar = (() => {
   function dayList(date) {
     const list = events.filter((e) => e.date === date).sort((a, b) => (a.time || '99').localeCompare(b.time || '99'));
     const d = new Date(`${date}T12:00:00`);
-    modal.innerHTML = `<div class="cal-card cal-day-card"><div class="cal-day-title">${d.getDate()}. ${MONTHS[d.getMonth()]}</div><div class="cal-day-list"></div>
+    modal.innerHTML = `<div class="cal-card cal-day-card"><div class="cal-day-title">${dm(d)}</div><div class="cal-day-list"></div>
       <div class="cal-card-foot"><div class="flex-spacer"></div><button type="button" class="cal-btn primary" data-new>Neuer Termin</button></div></div>`;
     const box = modal.querySelector('.cal-day-list');
     list.forEach((e) => box.append(pill(e)));
@@ -709,7 +735,7 @@ const Calendar = (() => {
     events = events.filter((e) => e !== hit); save(); if (open) render();
     return hit;
   }
-  const editTask = (task, anchor, store) => edit(task || null, '', task?.time || '', task?.end || '', store, anchor, { task: true });
+  const editTask = (task, anchor, store, more = {}) => edit(task || null, '', task?.time || '', task?.end || '', store, anchor, { task: true, ...more });
   return { show, hide, add, remove, openEditor, editTask, upsert, removeEvent: (id) => { events = events.filter((y) => y.id !== id); save(); if (open) render(); }, get open() { return open; }, get events() { return events.slice(); } };
 })();
 window.Calendar = Calendar;

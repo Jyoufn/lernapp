@@ -233,6 +233,11 @@
     'Archiv ist leer': 'Archive is empty', 'Gerade ist nichts in Arbeit': 'Nothing in progress', 'Noch nichts erledigt': 'Nothing done yet', 'Keine offenen Aufgaben': 'No open to-dos',
     'Neue Aufgabe …': 'New to-do …', 'Neue Aufgabe': 'New to-do', 'Überfällig': 'Overdue', 'Heute': 'Today', 'Morgen': 'Tomorrow', 'Demnächst': 'Upcoming', 'Ohne Datum': 'No date',
     'Fällig am': 'Due date', 'Status': 'Status', 'Titel': 'Title', 'Notiz': 'Note', 'Notiz hinzufügen': 'Add a note', 'Cover hinzufügen': 'Add cover', 'Cover ändern': 'Change cover', 'Cover entfernen': 'Remove cover', 'Fertig': 'Done', 'Löschen': 'Delete', 'Dateien': 'Files',
+    'Im Kalender eintragen': 'Add to calendar', 'Datum entfernen': 'Remove date', 'Kalender abonnieren': 'Subscribe to calendar', 'Link kopieren': 'Copy link', 'Kopiert': 'Copied',
+    'Mein Tag': 'My day', 'Meine Termine': 'My events', 'Meine Aufgaben': 'My to-dos', 'Erneuern': 'Renew', 'Erneuert': 'Renewed', 'Abonnieren': 'Subscribe', 'Kurzbefehle': 'Shortcuts',
+    'Lern-App öffnen': 'Open the app', 'Kalender öffnen': 'Open calendar', 'Aufgaben öffnen': 'Open to-dos', 'Schlüssel erneuern': 'Renew key', 'Apple Kalender': 'Apple Calendar', 'Neuer Chat': 'New chat',
+    'Nur lesen – Änderungen machst du in der Lern-App': 'Read only – make changes in the app', 'Die nächsten 14 Tage': 'The next 14 days', 'Offene Aufgaben, wichtigste zuerst': 'Open to-dos, most important first',
+    'Heutige Termine und die wichtigsten Aufgaben': "Today's events and the most important to-dos", 'Alte Daten-Links funktionieren danach nicht mehr': 'Old data links stop working afterwards',
   };
   Object.assign(D, D2);
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten
@@ -299,7 +304,7 @@
     set(l) {
       const next = l === 'en' ? 'en' : 'de'; if (next === lang()) return;
       try { localStorage.setItem(KEY, next); } catch {}
-      if (next === 'en') start(); else location.reload();
+      location.reload(); // Datumsnamen usw. werden beim Laden festgelegt – deshalb in beide Richtungen neu laden
     },
   };
   if (lang() === 'en') { if (document.body) start(); else addEventListener('DOMContentLoaded', start); }

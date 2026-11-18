@@ -13856,3 +13856,47 @@ html body .ue-cancel:hover { background: rgba(255, 255, 255, 0.1); color: var(--
 html body .ue-send:hover { background: #ffffff; }
 /* Dateien-Karte liegt immer über dem Chat-Text */
 html body .files-menu { z-index: 1300 !important; }
+/* 19.11.: Aufgaben-Board – Spalten in der Sidebar-Farbe, Suche ohne hellen Rand beim Antippen, Karten-Aufbau Titel / Tags / Priorität + Datum */
+.au-col, .au-col:first-child, .au-col:last-child { background: #151515; border-color: #222; }
+.au-col.over { background: #181818; }
+.au-card2 { background: #1c1c1c; border-color: #262626; }
+.au-card2:hover { background: #202020; border-color: #2c2c2c; }
+html body .au-search:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-4); }
+.au-cb { gap: 8px; }
+.au-ctr .au-ct { text-align: left; }
+.au-ctags { display: flex; flex-wrap: wrap; gap: 4px; }
+.au-ctags .lb2-tag { font-size: 11px; max-width: 140px; }
+.au-cm { justify-content: flex-start; gap: 8px; }
+.au-cdue { display: inline-flex; align-items: center; gap: 5px; }
+.au-cdue svg { flex: none; opacity: 0.8; }
+/* Fenster: „Im Kalender eintragen“ als Häkchen */
+html body .ce-card .ce-check { flex: none; margin-left: auto; width: 18px; height: 18px; border-radius: 5px; display: grid; place-items: center; box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.22); color: transparent; transition: background-color 140ms ease, box-shadow 140ms ease; }
+html body .ce-card .ce-check svg { width: 11px; height: 11px; }
+html body .ce-card .ce-check.on { background: #f2f2f2; box-shadow: none; color: #141414; }
+/* Tags aufgeklappt: die Suche füllt die ganze Zeile, rechts bleibt der Pfeil */
+html body .ce-card .ce-tags-row.open > .tk-pill > .tk-si, html body .ce-card .ce-tags-row.open > .tk-pill > .tk-rv { display: none; }
+html body .ce-card .ce-tags-row.open .ce-tsearch .tk-tag-row { margin-left: 0; }
+/* 19.11.: Cover sitzt IM Titel-Kasten (ein Kasten, rundum abgerundet, keine Naht) – Ansicht und Bearbeiten */
+html body .ce-card .ce-headbox > .ce-cover:not([hidden]) { display: block; position: relative; height: 96px !important; margin: -4px -7px 10px !important; padding: 0 !important; border-radius: 8px !important; overflow: hidden; background: none !important; box-shadow: none !important; }
+html body .ce-card.ce-view .ce-headbox > .ce-cover { margin: -5px -39px 10px -7px !important; }
+html body .ce-card .ce-headbox > .ce-cover .ce-cover-bg { border-radius: 8px !important; }
+html body .ce-card .ce-headbox > .ce-cover .ce-cover-x { top: 6px; right: 6px; }
+html body .ce-card .ce-headbox { margin-top: 0 !important; border-radius: 11px !important; }
+html body .ce-card.ce-view .ce-vhead.has-cov .ce-vedit { top: 16px; right: 16px; }
+/* 19.11.: Karte – Titel etwas größer; Stift oben rechts (beim Drüberfahren oder nach einmal Antippen); Bearbeiten klappt in der Karte auf */
+.au-card2 { position: relative; }
+.au-ct { font-size: 14.5px !important; font-weight: 500; }
+.au-edit { position: absolute; top: 8px; right: 8px; z-index: 2; width: 26px; height: 26px; border: 0; border-radius: 7px; display: grid; place-items: center; background: rgba(28, 28, 28, 0.85); color: var(--text-4); opacity: 0; pointer-events: none; transition: opacity 140ms ease, color 140ms ease, background-color 140ms ease; cursor: pointer; }
+.au-edit:hover { color: var(--text); background: #2a2a2a; }
+@media (hover: hover) { .au-card2:hover .au-edit { opacity: 1; pointer-events: auto; } }
+.au-card2.sel .au-edit { opacity: 1; pointer-events: auto; }
+.au-card2.sel { border-color: #333; }
+.au-card2.has-cov .au-edit { background: rgba(0, 0, 0, 0.35); color: rgba(255, 255, 255, 0.85); }
+.au-card2.editing { cursor: default; border-color: #2c2c2c; }
+.au-card2.editing .au-edit, .au-card2.editing > .au-ccov, .au-card2.editing > .au-cb { display: none; }
+.au-inl { padding: 6px; }
+html body .au-inl .ce-card.ce-inline { position: static !important; width: auto !important; margin: 0; padding: 0; background: none; box-shadow: none; border: 0; overflow: hidden; animation: none; }
+html body .ce-inline .ce-dur { display: none; }
+html body .ce-inline .tk-rv { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .ce-inline .tk-pill { gap: 8px; }
+html body .ce-inline .tk-pill { font-size: 13px; }
