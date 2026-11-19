@@ -14318,3 +14318,4 @@ html body .lb2-acts .lb-act { border-radius: 7px; transition: background-color 1
 @media (hover: hover) { html body .lb2-acts .lb-act:hover { background: rgba(255, 255, 255, 0.08) !important; color: var(--text) !important; } }
 html body .lb2-acts .lb-act:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
 html body .dc-list.hm-new-head > .hm-head .hm-search { transform: translate(-50%, 1px); }
+html body .hm-head .au-search.hm-search { width: min(652px, calc(100% - 96px)); } /* 19.11.: genau so breit wie die Liste darunter (Inhalt der .cl-wrap) */
