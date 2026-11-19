@@ -14228,3 +14228,18 @@ html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill::before { content: 
   -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 3.5 5.5 8l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 3.5 5.5 8l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat; }
 html body .tk-modal.dc-cmodal.dc-cmodal-inline { align-items: center; }
+/* ===== 19.11. (spät): Kalender-Suche – breiter, Treffer klappen IM Suchkasten nach unten auf (gleiche Breite, Suchzeile bleibt unverändert) ===== */
+html body .cm-head .cm-sbox { position: relative; flex: 1 1 auto; max-width: 560px; min-width: 260px; height: 28px; margin: 0 auto; z-index: 20; }
+html body .cm-head .cm-sbox .au-search.cm-search { position: relative; left: auto; top: auto; transform: none; width: 100%; max-width: none; margin: 0; z-index: 2; }
+html body .cm-head .cm-sbox.open .au-search.cm-search { box-shadow: none !important; }
+html body .cm-head .cm-sbox .cm-results { position: absolute; top: 0; left: 0; right: 0; width: auto !important; transform: none; animation: none; box-sizing: border-box; max-height: 400px; padding: 32px 4px 4px; border: 0; border-radius: 10px; background: var(--app-main, #141414); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); overflow: hidden auto; }
+html body .cm-head .cm-sbox .cm-results::before { content: ''; position: sticky; top: 0; display: block; height: 1px; margin: -4px 6px 4px; background: rgba(255, 255, 255, 0.06); }
+html body .cm-sbox .cs-row { grid-template-columns: 10px minmax(0, 1fr) 76px 110px auto; column-gap: 8px; padding: 0 8px; }
+html body .cm-sbox .cs-tags .lb2-tag { max-width: 70px; }
+@media (max-width: 900px) { html body .cm-sbox .cs-row { grid-template-columns: 10px minmax(0, 1fr) 0 0 auto; } html body .cm-sbox .cs-row :is(.cs-prio, .cs-tags) { display: none; } }
+/* Sprung aus der Suche: Tag und Termin kurz leicht hervorheben */
+html body .cm-cell.cs-flash { animation: cs-flash-cell 2.6s ease-out both; }
+html body .cm-ev.cs-flash { animation: cs-flash-chip 2.6s ease-out both; }
+@keyframes cs-flash-cell { 0%, 55% { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35); background-color: rgba(255, 255, 255, 0.05); } 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0); } }
+@keyframes cs-flash-chip { 0%, 55% { filter: brightness(1.45); } 100% { filter: none; } }
+html body .cm-head .cm-sbox .cm-results { z-index: 1; }

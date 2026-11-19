@@ -55,8 +55,8 @@ const Calendar = (() => {
   view.innerHTML = `
     <header class="cal-head cm-head">
       <div class="cm-title"><span class="cm-m"></span> <span class="cm-y"></span></div>
-      <label class="au-search cm-search">${icon('f-search')}<input type="search" placeholder="Termine durchsuchen" aria-label="Termine durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn cm-fbtn" data-cs="filter" aria-label="Filter" title="Filter">${icon('f-filter')}</button></label>
-      <div class="cm-results" role="listbox" hidden></div>
+      <div class="cm-sbox"><div class="cm-results" role="listbox" hidden></div>
+        <label class="au-search cm-search">${icon('f-search')}<input type="search" placeholder="Termine durchsuchen" aria-label="Termine durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn cm-fbtn" data-cs="filter" aria-label="Filter" title="Filter">${icon('f-filter')}</button></label></div>
       <div class="cal-nav cm-nav">
         <div class="cm-switch">
           <button type="button" class="cm-arr" data-cal="prev" aria-label="Vorheriger Monat">${icon('f-back')}</button>
@@ -159,7 +159,8 @@ const Calendar = (() => {
   });
   /* 19.11.: Suche mit Filter (wie bei den Aufgaben). Darunter klappt eine Liste der Treffer auf:
      links Name, daneben Priorität, Tags, ganz rechts Datum + Uhrzeit. Antippen springt zum Termin und öffnet ihn. */
-  const sIn = view.querySelector('.cm-search input'), results = view.querySelector('.cm-results');
+  const sIn = view.querySelector('.cm-search input'), results = view.querySelector('.cm-results'), sbox = view.querySelector('.cm-sbox');
+  const closeResults = () => { if (results.hidden) return; results.hidden = true; sbox.classList.remove('open'); };
   const cf = { when: 'all', tags: new Set() };
   const cfOn = () => cf.when !== 'all' || cf.tags.size > 0;
   const prioOf = (e) => { const t = e.task && window.Aufgaben?.items?.find((x) => x.id === e.task); const id = e.priority || t?.priority; return id && id !== 'none' ? (window.UIKit?.PRIOS || []).find((q) => q.id === id) : null; };
@@ -182,7 +183,7 @@ const Calendar = (() => {
   function drawResults() {
     const want = document.activeElement === sIn && (sIn.value.trim() || cfOn());
     view.querySelector('.cm-fbtn').classList.toggle('set', cfOn());
-    if (!want) { results.hidden = true; return; }
+    if (!want) { closeResults(); return; }
     const list = matches(), all = window.TagMenu?.all?.() || [];
     results.innerHTML = list.length ? list.map((e) => {
       const pr = prioOf(e), tg = all.filter((g) => (e.tags || []).includes(g.id));
@@ -191,24 +192,28 @@ const Calendar = (() => {
         + `<span class="cs-tags">${tg.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 2 ? `<span class="lb2-tag more">+${tg.length - 2}</span>` : ''}</span>`
         + `<span class="cs-when">${esc(whenText(e))}</span></button>`;
     }).join('') : '<div class="cs-empty">Keine Termine gefunden</div>';
-    results.hidden = false;
-    // unter dem Suchfeld, mittig dazu ausgerichtet (mindestens 600 px breit, nie über den Kopf hinaus)
-    const sb = view.querySelector('.cm-search'), hd = view.querySelector('.cm-head');
-    const w = Math.min(hd.clientWidth, Math.max(sb.offsetWidth, 600));
-    results.style.width = `${w}px`; const sr = sb.getBoundingClientRect(), hr = hd.getBoundingClientRect(); results.style.left = `${Math.max(0, Math.min(hd.clientWidth - w, sr.left - hr.left + sr.width / 2 - w / 2))}px`; // 19.11.: mittig unter der Suche (gleich weit links und rechts überstehend)
+    // 19.11.: der Suchkasten selbst wird nach unten länger (gleiche Breite, Suchzeile bleibt, wie sie ist)
+    const was = !results.hidden;
+    results.hidden = false; sbox.classList.add('open');
+    if (!was && !reduced()) { const h = results.offsetHeight; results.animate([{ height: '28px' }, { height: `${h}px` }], { duration: 300, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }); }
   }
   sIn.addEventListener('input', drawResults);
   sIn.addEventListener('focus', drawResults);
-  sIn.addEventListener('keydown', (x) => { x.stopPropagation(); if (x.key === 'Escape') { sIn.value = ''; sIn.blur(); results.hidden = true; } });
-  sIn.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== sIn && !results.matches(':hover')) results.hidden = true; }, 150));
+  sIn.addEventListener('keydown', (x) => { x.stopPropagation(); if (x.key === 'Escape') { sIn.value = ''; sIn.blur(); closeResults(); } });
+  sIn.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== sIn && !results.matches(':hover') && cmenu.hidden) closeResults(); }, 150));
   results.addEventListener('pointerdown', (x) => x.preventDefault()); // Fokus bleibt im Suchfeld
   results.addEventListener('click', (x) => {
     const r = x.target.closest('[data-eid]'); if (!r) return;
     const e = events.find((y) => y.id === r.dataset.eid); if (!e) return;
-    results.hidden = true; sIn.blur();
+    closeResults(); sIn.blur();
     const m = monthOf(new Date(`${e.date}T12:00:00`));
     if (m.getTime() !== cursor.getTime()) { const dir = m > cursor ? 1 : -1; cursor = m; render(dir); }
-    requestAnimationFrame(() => { const chip = view.querySelector(`.cm-ev[data-id="${CSS.escape(e.id)}"]`); showEvent(e, chip || view.querySelector(`.cm-cell[data-date="${e.date}"]`)); });
+    // zum Monat springen, Tag + Termin ein paar Sekunden leicht hervorheben, dann öffnen
+    setTimeout(() => {
+      const chip = view.querySelector(`.cm-ev[data-id="${CSS.escape(e.id)}"]`), cell = view.querySelector(`.cm-cell[data-date="${e.date}"]`);
+      [cell, chip].forEach((n) => { if (!n) return; n.classList.remove('cs-flash'); void n.offsetWidth; n.classList.add('cs-flash'); setTimeout(() => n.classList.remove('cs-flash'), 2600); });
+      showEvent(e, chip || cell);
+    }, 280);
   });
   // Filter-Menü (Stil des Chat-Menüs, Haken rechts, Gruppen nur durch Striche getrennt)
   const cmenu = document.createElement('div'); cmenu.className = 'chat-pop chat-menu au-menu open'; cmenu.hidden = true; cmenu.setAttribute('role', 'menu');
