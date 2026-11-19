@@ -364,7 +364,7 @@ const Calendar = (() => {
       left = cr.right + gap + fw <= innerWidth - 8 ? cr.right + gap : cr.left - gap - fw >= 8 ? cr.left - gap - fw : Math.max(8, (innerWidth - fw) / 2);
       top = Math.max(12, Math.min(innerHeight - fh - room - 12, cr.top));
     }
-    Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px` });
+    Object.assign(form.style, { position: 'fixed', left: `${left}px`, top: `${Math.max(12, top)}px`, width: `${fw}px`, maxHeight: `${Math.max(240, innerHeight - Math.max(12, top) - 12)}px` }); // 19.11.: nie unten aus dem Bild – innen scrollen
   }
   const DUR = (a, b) => { const s0 = minsOf(a), e0 = minsOf(b); if (s0 == null || e0 == null || e0 <= s0) return ''; const d = e0 - s0; return d < 60 ? `${d} Min.` : `${Math.floor(d / 60)} Std.${d % 60 ? ` ${d % 60} Min.` : ''}`; };
   const dateText = (k) => { const d = new Date(`${k}T12:00:00`); return `${WEEKDAYS[d.getDay()]}, ${dm(d)}`; };
@@ -544,6 +544,7 @@ const Calendar = (() => {
     const openPop = (k) => {
       form.querySelectorAll('.tk-pop').forEach((p) => p.classList.toggle('open', p.dataset.k === k && !p.classList.contains('open')));
       const p = form.querySelector(`.tk-pop[data-k="${k}"].open`);
+      if (p) setTimeout(() => { if (p.classList.contains('open')) p.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }, 430); // aufgeklappter Inhalt rutscht sichtbar ins Fenster
       const tagsOpen = form.querySelector('.tk-pop[data-k="tags"].open');
       if (tagsOpen && k === 'tags') window.TagMenu?.embed?.(form.querySelector('.ce-tagbox'), form.querySelector('.ce-tsearch'), { key: 'embed', get: () => e.tags, set: (ids) => { e.tags = ids; draw(); } });
       else if (window.TagMenu?.isOpen) window.TagMenu.close();
