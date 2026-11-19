@@ -14144,3 +14144,10 @@ html body .chat-pop.au-menu { max-height: min(340px, calc(100vh - 120px)) !impor
 html body .chat-pop.au-menu::-webkit-scrollbar { width: 8px; }
 html body .chat-pop.au-menu::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: rgba(255, 255, 255, 0.14) padding-box; }
 html body .chat-pop.au-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
+/* 19.11.: Termin-Fenster – Kommentar-Kasten mit demselben Abstand wie die anderen Kästen (klebte an „Cover hinzufügen“);
+   Tags: genau 6 sichtbar, dann scrollen; eigene Farbe: Farbwähler über die ganze Breite des Kastens */
+html body .ce-card .ce-cbox-edit { margin-top: 6px; }
+html body .ce-card .ce-tags-row .tk-tag-list { max-height: 180px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+html body .ce-card [data-k="color"] .tk-picker-host .tk-picker { box-sizing: border-box; width: 100%; }
+html body .ce-card [data-k="color"] .tk-picker-host :is(.tk-sv, .tk-hue, .tk-picker-foot) { width: 100%; box-sizing: border-box; }
+html body .ce-card [data-k="color"] .tk-picker-host { width: auto; box-sizing: border-box; margin-right: 16px; }
