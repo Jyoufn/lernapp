@@ -14,7 +14,13 @@ const Aufgaben = (() => {
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const icon = (id, s = 14) => `<svg width="${s}" height="${s}" aria-hidden="true"><use href="#${id}"/></svg>`;
   const coverBg = (c) => (!c ? '' : typeof c === 'string' ? `center / cover no-repeat url("${c.replace(/"/g, '%22')}")` : window.Docs?.editor?.coverCss?.(c) || '');
-  const statusOf = (t) => t.status || (t.done ? 'done' : 'open'); // ältere Einträge kannten nur done: true/false
+  // 19.11.: eigene Kategorien (weitere Spalten mit eigenem Icon) – gespeichert in „tasks.cats.v1“ (wird mit dem Konto abgeglichen)
+  const CKEY = 'tasks.cats.v1';
+  let cats = (() => { try { const a = JSON.parse(localStorage.getItem(CKEY)); return Array.isArray(a) ? a.filter((c) => c && c.id && c.name) : []; } catch { return []; } })();
+  const saveCats = () => { try { localStorage.setItem(CKEY, JSON.stringify(cats)); } catch {} };
+  const cols = () => [...TABS, ...cats.map((c) => [c.id, c.name])];
+  const known = (st) => TABS.some(([k]) => k === st) || cats.some((c) => c.id === st);
+  const statusOf = (t) => { const st = t.status || (t.done ? 'done' : 'open'); return known(st) ? st : 'open'; }; // ältere Einträge kannten nur done: true/false; gelöschte Kategorie → Offen
   const load = () => { try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a.map((t) => ({ ...t, status: statusOf(t) })) : []; } catch { return []; } };
   let items = load();
   const save = () => {
@@ -48,10 +54,18 @@ const Aufgaben = (() => {
   main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1>
       <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn" data-au="filter" aria-label="Filter" title="Filter">${icon('f-filter', 14)}</button></label><span class="grow"></span>
       <button type="button" class="lb2-filter au-sbtn" data-au="sort" aria-label="Sortieren" title="Sortieren"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13V3M2.5 5.5 5 3l2.5 2.5"/><path d="M11 3v10M8.5 10.5 11 13l2.5-2.5"/></svg></button>
+      <button type="button" class="lb2-filter au-sbtn au-catbtn" data-au="cat" aria-label="Neue Kategorie" title="Neue Kategorie"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="2.5" width="4.5" height="11" rx="1.5"/><path d="M9.5 2.5h3a1.5 1.5 0 0 1 1.5 1.5v2.5M11.75 10v4M9.75 12h4"/></svg></button>
       <button class="cal-new" type="button" data-au="new" aria-label="Neue Aufgabe">${icon('f-plus')}<span>Neue Aufgabe</span></button></header>
-    <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch"><span class="au-si">${SI[k]}</span><span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
+    <div class="au-board"></div>`;
   view.append(main);
   const board = main.querySelector('.au-board');
+  function buildBoard() {
+    board.innerHTML = cols().map(([k, n]) => { const c = cats.find((x) => x.id === k);
+      return `<section class="au-col${c ? ' au-ccat' : ''}" data-col="${esc(k)}"><div class="au-ch"${c ? ` data-cat="${esc(k)}" role="button" tabindex="0" title="Kategorie bearbeiten"` : ''}><span class="au-si">${c ? icon(`f-${c.icon}`, 14) : SI[k]}</span><span class="au-cn">${esc(n)}</span><span class="au-n" data-n="${esc(k)}"></span></div><div class="au-cards" data-cards="${esc(k)}"></div></section>`; }).join('');
+    board.style.setProperty('--au-cols', cols().length);
+    board.classList.toggle('au-many', cols().length > 4);
+  }
+  buildBoard();
   main.querySelector('.au-search input').addEventListener('input', (e) => { query = e.target.value.trim().toLowerCase(); render(); });
   const reduced = () => false; // 19.11.: Ziehen zeigt seine Bewegung immer (auf dem iPad mit „Bewegung reduzieren“ war sie sonst weg)
 
@@ -69,7 +83,7 @@ const Aufgaben = (() => {
       })()}`;
   }
   function counts() {
-    TABS.forEach(([k]) => { const n = items.filter((t) => statusOf(t) === k).length; const el = main.querySelector(`[data-n="${k}"]`); if (el) el.textContent = String(n); });
+    cols().forEach(([k]) => { const n = items.filter((t) => statusOf(t) === k).length; const el = main.querySelector(`[data-n="${k}"]`); if (el) el.textContent = String(n); });
   }
   // Suche oben in der Mitte: Titel, Notiz und Tag-Namen
   let query = '';
@@ -115,7 +129,7 @@ const Aufgaben = (() => {
     amenu.innerHTML = html(); amenu.style.maxHeight = ''; amenu.hidden = false;
     const r = btn.getBoundingClientRect(), w = amenu.offsetWidth, h = amenu.offsetHeight, room = Math.max(160, innerHeight - r.bottom - 14);
     amenu.style.maxHeight = `${Math.min(h, room, 340)}px`;
-    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, btn.matches('.au-sbtn') ? r.left : r.right - w - 6))}px`; // Sortieren öffnet nach rechts (unter „Neue Aufgabe“)
+    const nb = main.querySelector('.au-head .cal-new')?.getBoundingClientRect(); amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, btn.matches('.au-sbtn') && nb ? nb.right - w : r.right - w - 6))}px`; // Sortieren: rechtsbündig mit „Neue Aufgabe“ // Sortieren öffnet nach rechts (unter „Neue Aufgabe“)
     amenu.style.top = `${r.bottom + 6}px`;
     amenu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; e.stopPropagation(); onPick(b.dataset.v); const st = amenu.scrollTop; amenu.innerHTML = html(); amenu.scrollTop = st; };
   }
@@ -147,6 +161,48 @@ const Aufgaben = (() => {
       openAMenu(sb, () => SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join(''), (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
     }
   });
+  /* Neue Kategorie / Kategorie bearbeiten: Fenster mittig (wie „Neue Aufgabe“) – Name + Icon im Linien-Stil */
+  const CAT_ICONS = ['book', 'book-open', 'cap', 'bulb', 'sparkle', 'bolt', 'star', 'heart', 'flag', 'target', 'folder', 'briefcase', 'bookmark', 'pin', 'tag', 'calendar', 'clock', 'bell', 'home', 'people', 'user', 'chat', 'file', 'list', 'check-circle', 'alert', 'chart', 'trend', 'mindmap', 'palette', 'music', 'mic', 'camera', 'video', 'image', 'globe', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'plane', 'car', 'cart', 'archive'];
+  function catDialog(cat = null) {
+    const icons = CAT_ICONS.filter((n) => !window.LineIcons || window.LineIcons.f?.[n] || document.getElementById(`f-${n}`));
+    let pick = cat?.icon || icons[0];
+    const modal = document.createElement('div'); modal.className = 'tk-modal cal-emodal au-catmodal';
+    modal.innerHTML = `<form class="tk-form tk-sheet ce-card au-catform" autocomplete="off">
+      <div class="tk-sheet-main ce-headbox"><input class="tk-f-title" name="name" value="${esc(cat?.name || '')}" placeholder="Name der Kategorie" maxlength="30" aria-label="Name der Kategorie" required /></div>
+      <div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}">${icon(`f-${n}`, 16)}</button>`).join('')}</div>
+      <div class="tk-sheet-foot ce-foot">${cat ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>
+    </form>`;
+    document.body.append(modal);
+    const form = modal.querySelector('form'), name = form.querySelector('input');
+    const close = () => { modal.classList.add('closing'); setTimeout(() => modal.remove(), 200); document.removeEventListener('keydown', onKey, true); };
+    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    document.addEventListener('keydown', onKey, true);
+    modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
+    form.addEventListener('keydown', (e) => e.stopPropagation());
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-ic]');
+      if (b) { pick = b.dataset.ic; form.querySelectorAll('.au-ic').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }); return; }
+      const d = e.target.closest('[data-act="del"]');
+      if (d && cat) {
+        if (!d.classList.contains('confirm')) { d.classList.add('confirm'); d.title = 'Nochmal tippen zum Löschen'; return; }
+        items.forEach((t) => { if (t.status === cat.id) t.status = 'open'; }); // Aufgaben der Kategorie landen wieder in „Offen“
+        cats = cats.filter((c) => c.id !== cat.id); saveCats(); save(); buildBoard(); render(); close();
+      }
+    });
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const n = name.value.trim().slice(0, 30); if (!n) { name.focus(); return; }
+      if (cat) { cat.name = n; cat.icon = pick; }
+      else cats.push({ id: `c${Date.now().toString(36)}`, name: n, icon: pick });
+      saveCats(); buildBoard(); render(); close();
+      if (!cat) requestAnimationFrame(() => board.scrollTo({ left: board.scrollWidth, behavior: 'smooth' })); // neue Spalte zeigen
+    });
+    requestAnimationFrame(() => name.focus({ preventScroll: true }));
+  }
+  main.addEventListener('click', (e) => {
+    if (e.target.closest('[data-au="cat"]')) { catDialog(); return; }
+    const h = e.target.closest('[data-cat]'); if (h) { const c = cats.find((x) => x.id === h.dataset.cat); if (c) catDialog(c); }
+  });
   const hit = (t) => {
     if (!passFilter(t)) return false;
     if (!query) return true;
@@ -155,7 +211,8 @@ const Aufgaben = (() => {
   };
   function render() {
     counts(); syncHead();
-    TABS.forEach(([k]) => {
+    if (board.querySelectorAll('.au-col').length !== cols().length) buildBoard();
+    cols().forEach(([k]) => {
       const box = board.querySelector(`[data-cards="${k}"]`);
       const mine = sorted(items.filter((t) => statusOf(t) === k && hit(t))).slice(0, 150);
       box.innerHTML = mine.map(card).join('');
@@ -203,6 +260,7 @@ const Aufgaben = (() => {
     if (!drag.on) { if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 6) return; begin(e); }
     e.preventDefault();
     drag.ghost.style.left = `${e.clientX - drag.dx}px`; drag.ghost.style.top = `${e.clientY - drag.dy}px`;
+    { const br = board.getBoundingClientRect(); if (e.clientX < br.left + 48) board.scrollLeft -= 14; else if (e.clientX > br.right - 48) board.scrollLeft += 14; } // 19.11.: am Rand mitscrollen (viele Spalten)
     // Zielspalte und Lücke bestimmen
     const col = [...board.querySelectorAll('.au-col')].find((cl) => { const r = cl.getBoundingClientRect(); return e.clientX >= r.left && e.clientX <= r.right; });
     if (!col) return;
@@ -310,6 +368,6 @@ const Aufgaben = (() => {
   function hide() { if (!open) return; open = false; view.hidden = true; document.querySelector('.panel')?.classList.remove('view-tasks'); }
   window.AppActions = window.AppActions || {};
   window.AppActions.add_task = (a) => { add(a); window.openViewTab?.('tasks'); };
-  return { show, hide, add, get items() { return items.slice(); }, get open() { return open; } };
+  return { show, hide, add, get items() { return items.slice(); }, get cats() { return cats.slice(); }, get open() { return open; } };
 })();
 window.Aufgaben = Aufgaben;

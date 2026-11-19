@@ -244,6 +244,8 @@
     "Sortieren": "Sort", "Sortieren nach": "Sort by", "Eigene Reihenfolge": "Custom order", "Fälligkeit (nächste zuerst)": "Due date (soonest first)", "Titel (A–Z)": "Title (A–Z)", "Zuletzt erstellt": "Recently created", "Heute fällig": "Due today", "Überfällig": "Overdue",
     // 19.11.: Kalender-Suche
     "Termine durchsuchen": "Search events", "Keine Termine gefunden": "No events found", "Alle Termine": "All events", "Kommende": "Upcoming", "Nächste 7 Tage": "Next 7 days", "Dieser Monat": "This month", "Vergangene": "Past",
+    // 19.11.: Kategorien
+    "Neue Kategorie": "New category", "Name der Kategorie": "Category name", "Kategorie bearbeiten": "Edit category", "Kategorie löschen": "Delete category", "Nochmal tippen zum Löschen": "Tap again to delete",
   };
   Object.assign(D, D2);
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten
