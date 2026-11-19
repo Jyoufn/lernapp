@@ -479,10 +479,10 @@ const Calendar = (() => {
     const el = document.createElement('div');
     el.className = 'chat-pop chat-menu open ce-peek';
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', ev.title);
-    el.innerHTML = `<div class="cpk-head"><i class="cpk-dot" style="background:${esc(ev.color || COLORS[0])}"></i><span class="cpk-title">${esc(ev.title)}</span><button type="button" class="cpk-edit" data-pk="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil')}</button></div>
-      <div class="cm-sep" role="separator"></div>
+    el.innerHTML = `<div class="cpk-head"><span class="cpk-title">${esc(ev.title)}</span><button type="button" class="cpk-edit" data-pk="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil')}</button></div>
       <div class="cpk-row">${icon('f-calendar')}<span>${esc(dateT)}</span></div>
       <div class="cpk-row">${icon('f-clock')}<span>${esc(timeT)}</span></div>
+      ${(() => { const pr = prioOf(ev); return pr ? `<div class="cpk-row">${window.UIKit.prioIcon(pr.id, 14)}<span>${esc(pr.name)}</span></div>` : ''; })()}
       ${tg.length ? `<div class="cpk-row cpk-tags">${icon('f-tag')}<span>${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</span></div>` : ''}
       ${nC ? `<div class="cpk-row">${icon('f-chat')}<span>${nC === 1 ? '1 Kommentar' : `${nC} Kommentare`}</span></div>` : ''}
       ${ev.description ? `<div class="cm-sep" role="separator"></div><div class="cpk-note">${esc(ev.description)}</div>` : ''}`;
@@ -490,7 +490,12 @@ const Calendar = (() => {
     peek = el;
     // Lage: unter dem Termin, wenn Platz ist – sonst darüber; linksbündig, am Rand eingefangen
     const r = (anchor && anchor.isConnected ? anchor : view).getBoundingClientRect(), w = el.offsetWidth, h = el.offsetHeight, gap = 6;
-    const below = r.bottom + gap + h <= innerHeight - 8;
+    // untere zwei Kalenderzeilen → Karte nach oben, sonst nach unten (passt es nicht, die andere Richtung)
+    const cell = anchor?.closest?.('.cm-cell'), cells = cell ? [...cell.parentElement.querySelectorAll(':scope > .cm-cell')] : [];
+    const rowI = cell ? Math.floor(cells.indexOf(cell) / 7) : 0, rows = Math.ceil(cells.length / 7) || 1;
+    let below = cell ? rowI < rows - 2 : true;
+    if (below && r.bottom + gap + h > innerHeight - 8) below = false;
+    if (!below && r.top - gap - h < 8) below = true;
     el.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`;
     el.style.top = `${Math.round(below ? r.bottom + gap : Math.max(8, r.top - gap - h))}px`;
     el.style.transformOrigin = below ? 'top left' : 'bottom left';
@@ -594,7 +599,7 @@ const Calendar = (() => {
         ${pill('time', `<div class="ce-wheels"><div><span class="tk-ml">Beginn</span><div data-wheel="time"></div></div><div><span class="tk-ml">Ende</span><div data-wheel="end"></div></div></div>`, 'time')}
         ${T ? '<div class="tk-pop ce-calrow"><button type="button" class="tk-pill" data-act="cal"></button></div>' : ''}
         ${T ? '' : pill('color', evColorRow(e.color), 'color')}
-        ${T ? pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${window.UIKit?.prioIcon?.(p.id, 15) || ''}<span>${esc(p.name)}</span>${icon('f-check')}</button>`).join(''), 'prio') : ''}
+        ${pill('prio', PRIOS.map((p) => `<button type="button" class="tk-mi" data-prio="${p.id}">${window.UIKit?.prioIcon?.(p.id, 15) || ''}<span>${esc(p.name)}</span>${icon('f-check')}</button>`).join(''), 'prio')}
         <div class="tk-pop ce-tags-row" data-k="tags"><div class="tk-pill" data-open="tags" role="button" tabindex="0"><span class="tk-si">${icon('f-tag')}</span><span class="tk-rv"><span class="ce-tl">Tags</span><span class="ce-tchips"></span></span><span class="ce-tsearch"></span><span class="ce-chev">${icon('f-chevron-down')}</span></div><div class="tk-menu tags"><div class="tk-box ce-tagbox"></div></div></div>
         <div class="tk-pop ce-cover-row"><button type="button" class="tk-pill" data-act="cover"></button></div>
       </div>
@@ -635,10 +640,12 @@ const Calendar = (() => {
       const set = (k, ic, text, extra = '') => { form.querySelector(`[data-open="${k}"]`).innerHTML = `<span class="tk-si">${ic}</span><span class="tk-rv">${text}</span>${extra}${chev}`; };
       if (T && !e.date) set('date', icon('f-calendar'), '<span class="ce-off">Fällig am</span>');
       else set('date', icon('f-calendar'), `${T ? `${WD_SHORT[d.getDay()]}, ${dm(d, MONTHS_SHORT)}` : `${WEEKDAYS[d.getDay()]}, ${dm(d)}`}${e.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}`, T ? `<span class="ce-x" data-act="date-x" role="button" aria-label="Datum entfernen">${icon('f-x')}</span>` : '');
-      if (T) {
+      { // 20.11.: Priorität auch bei Terminen
         const pr = PRIOS.find((p) => p.id === (e.priority || 'none')) || PRIOS[0];
         set('prio', window.UIKit?.prioIcon?.(pr.id, 15) || icon('f-flag'), pr.id === 'none' ? '<span class="ce-off">Priorität</span>' : esc(pr.name));
         form.querySelectorAll('[data-prio]').forEach((b) => b.classList.toggle('on', b.dataset.prio === (e.priority || 'none')));
+      }
+      if (T) {
         form.querySelectorAll('[data-st]').forEach((b) => b.classList.toggle('on', b.dataset.st === (e.status || 'open')));
       }
       const tg = (window.TagMenu?.all?.() || []).filter((g) => e.tags.includes(g.id));

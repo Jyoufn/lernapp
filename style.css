@@ -14478,3 +14478,5 @@ html body .ce-peek .cpk-tags > span { display: flex; gap: 4px; }
 html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 80px; }
 html body .ce-peek .cpk-note { padding: 4px 8px 6px; color: var(--text-3); font: 500 12px/1.45 var(--font-ui, Inter), sans-serif; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
 html body .ce-peek .cm-sep { height: 1px; margin: 3px 5px; background: #212121; }
+html body .ce-peek .cpk-head { padding-left: 8px; }
+html body .ce-peek .cpk-row > .tk-pi, html body .ce-peek .cpk-row > svg { flex: none; width: 14px; height: 14px; }
