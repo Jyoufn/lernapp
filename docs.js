@@ -652,7 +652,9 @@ const Docs = (() => {
     { // 19.11.: Kopf wie bei Aufgaben/Kalender – mittig die Suche mit dem Filter darin (ohne Titel); gilt für Home und die Chats-Liste
       const hb = el('header', 'au-head hm-head');
       const ph = CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen';
-      hb.innerHTML = `${CH ? '' : `<h1 class="au-title">Home</h1><span class="grow"></span><button type="button" class="lb2-filter au-sbtn hm-plus2" data-act="go-create" aria-label="Erstellen" title="Erstellen">${fi('plus', 14)}</button>`}<label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="${ph}" aria-label="${ph}" autocomplete="off" /></label>`;
+      const sHtml = `<label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="${ph}" aria-label="${ph}" autocomplete="off" /></label>`;
+      // Home: Titel links + Plus rechts direkt ÜBER der Suche, genau so breit wie sie
+      hb.innerHTML = CH ? sHtml : `<div class="hm-col"><div class="hm-trow"><h1 class="au-title">Home</h1><button type="button" class="lb2-filter au-sbtn hm-plus2" data-act="go-create" aria-label="Erstellen" title="Erstellen">${fi('plus', 14)}</button></div>${sHtml}</div>`;
       if (!CH) hb.classList.add('hm-head-home'); // 19.11.: Home oben links, Plus oben rechts (→ Erstellen), Suche eine Zeile tiefer
       const lab = hb.querySelector('.hm-search'), hin = lab.querySelector('input');
       lab.append(bar.querySelector('.lb2-filter'));

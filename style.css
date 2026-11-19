@@ -14337,3 +14337,11 @@ html body .hm-head.hm-head-home > .grow { display: none; }
 html body .hm-head.hm-head-home .au-title { grid-column: 1; grid-row: 1; }
 html body .hm-head.hm-head-home .hm-plus2 { grid-column: 2; grid-row: 1; margin: 0; }
 html body .dc-list.hm-new-head > .hm-head.hm-head-home .hm-search { grid-column: 1 / -1; grid-row: 2; justify-self: center; }
+/* 19.11. (2): Home – „Home“ links und Plus rechts direkt über der Suche, gleiche Breite wie die Suche */
+html body .dc-list.hm-new-head > .hm-head.hm-head-home { display: block; height: auto; padding: 0; }
+html body .hm-head-home .hm-col { width: min(636px, calc(100% - 112px)); margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+html body .hm-head-home .hm-trow { display: flex; align-items: center; justify-content: space-between; height: 28px; }
+html body .hm-head-home .hm-trow .au-title { margin: 0; color: var(--text); font: 600 17px/28px var(--font-ui, Inter), sans-serif; letter-spacing: -0.01em; }
+html body .hm-head-home .hm-plus2 { width: 28px; height: 28px; margin: 0; padding: 0; display: grid; place-items: center; color: var(--text-2); }
+html body .dc-list.hm-new-head > .hm-head.hm-head-home .hm-search { position: relative; left: auto; transform: none; width: 100%; margin: 0; }
+html body .dc-list.hm-new-head:has(.hm-head-home) > .hm-head { margin-top: 44px; }
