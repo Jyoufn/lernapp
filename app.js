@@ -498,48 +498,9 @@ if (window.visualViewport) {
   vv.addEventListener('resize', fitKeyboard); vv.addEventListener('scroll', fitKeyboard); fitKeyboard();
 }
 /* Fotos hinzufügen (+), oder Einfügen mit Strg/⌘+V */
-/* Plus: öffnet direkt die normale Dateiauswahl (Lernsets entstehen im Chat per Wunsch – „mach mir Karteikarten …“) */
-/* 19.11. (Vorlage Claude „Zur Sitzung hinzufügen“): Plus öffnet ein Fenster direkt über dem Eingabefeld –
-   oben Kamera, Fotos und die zuletzt benutzten Bilder dieser Sitzung (die Galerie selbst darf eine Web-App nicht lesen),
-   darunter „Dateien hinzufügen“ und Schalter für Recherche und Lernzettel, „Skills“ öffnet die /-Liste */
-const ComposerPlus = (() => {
-  const recent = []; // { file, url } – nur im Speicher, solange die Seite offen ist
-  const pickIn = (accept, capture) => { const i = document.createElement('input'); i.type = 'file'; i.accept = accept; i.multiple = !capture; if (capture) i.setAttribute('capture', 'environment'); i.hidden = true; document.body.append(i); i.addEventListener('change', () => { addFiles(i.files); i.value = ''; }); return i; };
-  const camIn = pickIn('image/*', true), photoIn = pickIn('image/*');
-  const box = el('div', 'cplus'); box.hidden = true; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', 'Hinzufügen');
-  $('composer')?.parentElement?.append(box);
-  const ic = (id, s = 16) => icon(id, s);
-  const on = (id) => (window.Skills?.picked?.() || []).includes(id);
-  const row = (k, i, label, right = '') => `<button type="button" class="cp-row" data-cp="${k}"><span class="cp-ic">${ic(i)}</span><span class="cp-l">${label}</span>${right}</button>`;
-  const sw = (id) => `<span class="ce-switch${on(id) ? ' on' : ''}" aria-hidden="true"><i></i></span>`;
-  function draw() {
-    box.innerHTML = `<div class="cp-strip"><button type="button" class="cp-tile" data-cp="camera">${ic('f-camera', 20)}<span>Kamera</span></button><button type="button" class="cp-tile" data-cp="photos">${ic('f-image', 20)}<span>Fotos</span></button>${recent.slice(0, 8).map((r, i) => `<button type="button" class="cp-thumb" data-cp="re" data-i="${i}" aria-label="Bild erneut anhängen"><img src="${r.url}" alt="" draggable="false" /></button>`).join('')}</div>
-      <div class="cp-group">${row('files', 'f-upload', 'Dateien hinzufügen')}</div>
-      <div class="cp-group">${row('sk-recherche', 'f-globe', 'Recherche', sw('recherche'))}${row('sk-lernzettel', 'f-file', 'Lernzettel', sw('lernzettel'))}${row('skills', 'f-bolt', 'Skills', `<span class="cp-chev">${ic('f-chevron-right', 12)}</span>`)}</div>`;
-  }
-  const isOpen = () => !box.hidden;
-  const fit = () => { const f = $('composer'), a = box.parentElement; if (!f || !a) return; const fr = f.getBoundingClientRect(), ar = a.getBoundingClientRect(); box.style.left = `${fr.left - ar.left}px`; box.style.right = 'auto'; box.style.width = `${fr.width}px`; box.style.bottom = `${ar.bottom - fr.top + 8}px`; };
-  addEventListener('resize', () => { if (isOpen()) fit(); });
-  function open() { draw(); box.hidden = false; fit(); box.classList.remove('out'); $('attachBtn')?.classList.add('on'); }
-  function close() { if (!isOpen()) return; box.classList.add('out'); $('attachBtn')?.classList.remove('on'); setTimeout(() => { if (box.classList.contains('out')) { box.hidden = true; box.classList.remove('out'); } }, 160); }
-  $('attachBtn')?.addEventListener('click', (e) => { e.stopPropagation(); if (isOpen()) close(); else open(); });
-  box.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const b = e.target.closest('[data-cp]'); if (!b) return;
-    const k = b.dataset.cp;
-    if (k === 'camera') { close(); camIn.click(); }
-    else if (k === 'photos') { close(); photoIn.click(); }
-    else if (k === 'files') { close(); fileInput.click(); }
-    else if (k === 're') { const r = recent[+b.dataset.i]; if (r) addFiles([r.file]); close(); }
-    else if (k.startsWith('sk-')) { window.Skills?.toggle?.(k.slice(3)); draw(); }
-    else if (k === 'skills') { close(); input.focus(); const v = input.value; input.value = (v && !/\s$/.test(v) ? `${v} /` : `${v}/`); input.dispatchEvent(new Event('input', { bubbles: true })); }
-  });
-  document.addEventListener('pointerdown', (e) => { if (isOpen() && !box.contains(e.target) && !e.target.closest('#attachBtn')) close(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) close(); });
-  const api = { remember(file, url) { if (!url || recent.some((r) => r.file === file)) return; recent.unshift({ file, url }); recent.length = Math.min(recent.length, 12); }, open, close };
-  window.ComposerPlusRef = api;
-  return api;
-})();
+/* Plus: öffnet direkt die Auswahl des Systems – KEIN eigenes Menü (Wunsch 20.11.). Auf dem iPad/iPhone zeigt Safari dann selbst
+   „Fotomediathek“, „Foto aufnehmen“ und „Datei auswählen“, am Mac/PC den normalen Datei-Dialog (Bilder, PDF, GoodNotes). */
+$('attachBtn')?.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
 // Lernset aus dem Chat: das Fenster sammelt Art, Thema, Quellen und Einstellungen → normale Chat-Nachricht (mit Zeitleiste und Gedanken)
 function openLernsetDialog(kind) {
   Lernset.dialog({
@@ -566,7 +527,6 @@ function addFiles(files) {
   for (const file of files) {
     let a = null;
     if (file.type.startsWith('image/') || /\.(heic|heif)$/i.test(file.name || '')) a = { file, url: URL.createObjectURL(file) };
-    if (a?.url) setTimeout(() => window.ComposerPlusRef?.remember(a.file, a.url), 0);
     else if (isPdf(file)) { if (file.size > PDF_MAX_BYTES) { showHint(`„${file.name}“ ist zu groß (höchstens ${fmtSize(PDF_MAX_BYTES)})`); continue; } a = { file, url: null, pdf: true }; }
     else if (isGoodnotes(file)) { if (file.size > 80 * 1024 * 1024) { showHint(`„${file.name}“ ist zu groß (höchstens 80 MB)`); continue; } a = { file, url: null, pdf: true }; } // GoodNotes: Karte wie ein PDF
     else { showHint('Anhängen geht mit Fotos, PDFs und GoodNotes-Dateien'); continue; }
