@@ -14151,3 +14151,4 @@ html body .ce-card .ce-tags-row .tk-tag-list { max-height: 180px; overflow-y: au
 html body .ce-card [data-k="color"] .tk-picker-host .tk-picker { box-sizing: border-box; width: 100%; }
 html body .ce-card [data-k="color"] .tk-picker-host :is(.tk-sv, .tk-hue, .tk-picker-foot) { width: 100%; box-sizing: border-box; }
 html body .ce-card [data-k="color"] .tk-picker-host { width: auto; box-sizing: border-box; margin-right: 16px; }
+html body .au-head .au-sbtn { margin-right: -4px; } /* 19.11.: Sortieren näher an „Neue Aufgabe“ */

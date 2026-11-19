@@ -7108,6 +7108,7 @@ function renderSavedItem(h, i) {
       r.append(text);
       r.flush();
       void hydrateIllustrations(answer); // Bilder der gespeicherten Antwort nachladen (kommen aus dem Speicher des Servers)
+      window.Graph?.auto?.(answer, text); // 19.11.: automatische Graphen auch nach Neuladen/Chatwechsel wieder zeichnen
       const footer = messageFooter(msgEl, text);
       const used = new Set([...text.matchAll(/\[(\d{1,2})\]/g)].map((m) => +m[1]));
       const saved = (h.sources || []).filter(Boolean);

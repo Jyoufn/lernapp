@@ -229,7 +229,7 @@ const Aufgaben = (() => {
         const changed = statusOf(t) !== to;
         if (vs.sort !== 'manual') { // 19.11.: sortierte Ansicht – eigene Reihenfolge bleibt erhalten, nur der Status ändert sich
           if (changed) { t.status = to; t.movedAt = Date.now(); if (to === 'done') t.doneAt = Date.now(); }
-          save(); render(); return;
+          save(); d.ph.remove(); d.ghost.remove(); render(); return; // Lücke und schwebende Kopie immer entfernen (blieben sonst stehen)
         }
         items = items.filter((x) => x !== t);
         if (changed) { t.status = to; t.movedAt = Date.now(); if (to === 'done') t.doneAt = Date.now(); }
