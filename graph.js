@@ -76,6 +76,9 @@ const Graph = (() => {
     const list = (Array.isArray(o?.functions) ? o.functions : o?.expr ? [o] : []).slice(0, 6)
       .map((f, i) => { const expr = String(typeof f === 'string' ? f : f?.expr || '').slice(0, 120); const fn = compile(expr); return fn ? { expr, fn, label: String(f?.label || '').slice(0, 40), color: COLORS[i % COLORS.length] } : null; })
       .filter(Boolean);
+    // 19.11.: gleiche Namen (zweimal „f(x)“) → g(x), h(x) …
+    const used = new Set();
+    list.forEach((f) => { const m = /^([a-z])\(x\)$/.exec(f.label); if (!m) return; let c = m[1]; while (used.has(c)) c = String.fromCharCode(c.charCodeAt(0) + 1); used.add(c); f.label = `${c}(x)`; });
     const pts = (Array.isArray(o?.points) ? o.points : []).slice(0, 12).filter((q) => Number.isFinite(+q?.x) && Number.isFinite(+q?.y)).map((q) => ({ x: +q.x, y: +q.y, label: String(q.label || '').slice(0, 30) }));
     if (!list.length && !pts.length) return null;
     const rng = (a) => (Array.isArray(a) && a.length === 2 && a.every((v) => Number.isFinite(+v)) && +a[1] > +a[0] ? [+a[0], +a[1]] : null);
@@ -125,21 +128,33 @@ const Graph = (() => {
       if (!fx.length) { lo = -5; hi = 5; }
       const span = hi - lo, pad = Math.max(1.5, span * 0.3);
       lo -= pad; hi += pad;
-      if (hi - lo < 6) { const c = (lo + hi) / 2; lo = c - 3; hi = c + 3; }
+      if (hi - lo < 10) { const c = (lo + hi) / 2; lo = c - 5; hi = c + 5; } // 19.11.: mindestens 10 Einheiten breit (vorher 6 – zu wenig x-Achse)
       x = [lo, hi];
     }
     if (g.y && feats.every((q) => q.x < x[0] || q.x > x[1] || (q.y > g.y[0] && q.y < g.y[1]))) return { x, y: g.y };
     // Werte im Bereich (Ausreißer bei Polstellen abschneiden)
-    const vals = [];
-    g.fns.forEach((f) => { for (let i = 0; i <= 300; i++) { const v = f.fn(x[0] + (x[1] - x[0]) * i / 300); if (Number.isFinite(v)) vals.push(v); } });
-    g.points.forEach((q) => vals.push(q.y));
-    vals.sort((a, b) => a - b);
-    let lo = vals[Math.floor(vals.length * 0.03)] ?? -5, hi = vals[Math.ceil(vals.length * 0.97) - 1] ?? 5;
+    // 19.11.: je Funktion eigener Wertebereich; bei sehr unterschiedlichen Funktionen (z. B. 2x² und 5x³) bestimmt die FLACHERE den Ausschnitt,
+    // damit ihre Form sichtbar bleibt – die steilere läuft oben/unten aus dem Bild (vorher wurde die Parabel zur flachen Linie gedrückt)
+    const q = (arr) => { arr.sort((a, b) => a - b); return [arr[Math.floor(arr.length * 0.03)], arr[Math.ceil(arr.length * 0.97) - 1]]; };
+    const ranges = g.fns.map((f) => { const v = []; for (let i = 0; i <= 300; i++) { const y = f.fn(x[0] + (x[1] - x[0]) * i / 300); if (Number.isFinite(y)) v.push(y); } return v.length ? q(v) : null; })
+      .filter((r) => r && r[1] - r[0] > 1e-6);
+    let lo, hi;
+    if (ranges.length) {
+      const tight = ranges.reduce((a, b) => (b[1] - b[0] < a[1] - a[0] ? b : a));
+      const wide = ranges.reduce((a, b) => (b[1] - b[0] > a[1] - a[0] ? b : a));
+      // ähnliche Größenordnung → alle ganz zeigen; sonst die flachste (mindestens ein Drittel der Höhe für die anderen nicht erzwingen)
+      [lo, hi] = (wide[1] - wide[0]) <= 2 * (tight[1] - tight[0]) ? [Math.min(...ranges.map((r) => r[0])), Math.max(...ranges.map((r) => r[1]))] : tight;
+      // die steilere Funktion läuft auch ins Negative/Positive → dort etwas Platz lassen, damit ihr Verlauf erkennbar bleibt
+      const sp = hi - lo;
+      if (lo >= -1e-9 && ranges.some((r) => r[0] < -sp * 0.1)) lo = -sp * 0.5;
+      if (hi <= 1e-9 && ranges.some((r) => r[1] > sp * 0.1)) hi = sp * 0.5;
+    } else { const v = g.fns.map((f) => f.fn((x[0] + x[1]) / 2)).filter(Number.isFinite); lo = (v[0] ?? 0) - 5; hi = (v[0] ?? 0) + 5; }
+    g.points.forEach((p) => { lo = Math.min(lo, p.y); hi = Math.max(hi, p.y); });
     // markante Stellen sollen nicht zusammengedrückt werden: sie nehmen mindestens ~55 % der Höhe ein
     const fy = feats.filter((q) => q.x >= x[0] && q.x <= x[1]).map((q) => q.y);
     if (fy.length) {
       const flo = Math.min(...fy), fhi = Math.max(...fy), fs = fhi - flo;
-      if (fs > 1e-9 && fs < (hi - lo) * 0.55) { const ext = fs * 0.45; lo = Math.max(lo, flo - ext); hi = Math.min(hi, fhi + ext); }
+      if (fs > 1e-9 && fs < (hi - lo) * 0.4) { const ext = fs; /* Äste sichtbar lassen (vorher abgeschnitten) */ lo = Math.max(lo, flo - ext); hi = Math.min(hi, fhi + ext); }
       lo = Math.min(lo, flo); hi = Math.max(hi, fhi);
     }
     if (hi - lo < 1e-9) { lo -= 2; hi += 2; }
