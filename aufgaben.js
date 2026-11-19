@@ -102,12 +102,13 @@ const Aufgaben = (() => {
     }[vs.sort];
     return by ? list.slice().sort(by) : list;
   }
-  const amenu = document.createElement('div'); amenu.className = 'lb2-menu au-menu'; amenu.hidden = true; amenu.setAttribute('role', 'menu');
+  const amenu = document.createElement('div'); amenu.className = 'chat-pop chat-menu au-menu open'; amenu.hidden = true; amenu.setAttribute('role', 'menu');
   document.body.append(amenu);
   let amenuFor = null;
   const closeAMenu = () => { amenu.hidden = true; amenuFor?.classList.remove('on'); amenuFor = null; };
-  const mi = (v, label, on, ic = '', cls = '') => `<button type="button" role="menuitem" class="lb2-mi${cls}" data-v="${esc(v)}">${ic}<span>${esc(label)}</span>${on ? `<i class="lb2-tick">${icon('f-check', 13)}</i>` : ''}</button>`;
-  const mic = (n) => `<span class="lb2-mic">${icon(`f-${n}`, 14)}</span>`;
+  const mi = (v, label, on, ic = '', cls = '') => `<button type="button" role="menuitem" class="au-mi${cls}" data-v="${esc(v)}">${ic}<span>${esc(label)}</span>${on ? `<i class="au-tick">${icon('f-check', 13)}</i>` : ''}</button>`;
+  const mic = (n) => icon(`f-${n}`, 14);
+  const SEP = '<div class="cm-sep" role="separator"></div>';
   function openAMenu(btn, html, onPick) {
     if (amenuFor === btn) { closeAMenu(); return; }
     closeAMenu(); amenuFor = btn; btn.classList.add('on');
@@ -127,10 +128,10 @@ const Aufgaben = (() => {
       const prios = window.UIKit?.PRIOS || [];
       openAMenu(fb, () => {
         const tags = window.TagMenu?.all?.() || [];
-        return `<div class="lb2-ml">Fällig</div>${DUE.map(([v, l, ic]) => mi(`d:${v}`, l, vs.due === v, mic(ic))).join('')}`
-          + (prios.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Priorität</div>${prios.map((p) => mi(`p:${p.id}`, p.name, vs.prio.has(p.id), `<span class="lb2-mic">${window.UIKit.prioIcon(p.id, 14)}</span>`)).join('')}` : '')
-          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => mi(`g:${g.id}`, g.name, vs.tags.has(g.id), `<span class="lb2-mic"><i class="lb2-mdot" style="background:${esc(g.c)}"></i></span>`)).join('')}` : '')
-          + (filtered() ? `<div class="lb2-msep"></div>${mi('reset', 'Filter zurücksetzen', false, mic('x'), ' muted')}` : '');
+        return DUE.map(([v, l, ic]) => mi(`d:${v}`, l, vs.due === v, mic(ic))).join('')
+          + (prios.length ? SEP + prios.map((p) => mi(`p:${p.id}`, p.name, vs.prio.has(p.id), window.UIKit.prioIcon(p.id, 14))).join('') : '')
+          + (tags.length ? SEP + tags.map((g) => mi(`g:${g.id}`, g.name, vs.tags.has(g.id), `<span class="au-mdot"><i style="background:${esc(g.c)}"></i></span>`)).join('') : '')
+          + (filtered() ? SEP + mi('reset', 'Filter zurücksetzen', false, mic('x')) : '');
       }, (v) => {
         if (v.startsWith('d:')) vs.due = v.slice(2);
         else if (v.startsWith('p:')) { const id = v.slice(2); vs.prio.has(id) ? vs.prio.delete(id) : vs.prio.add(id); }
@@ -142,8 +143,8 @@ const Aufgaben = (() => {
     }
     const sb = e.target.closest('[data-au="sort"]');
     if (sb) {
-      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'plus-circle']];
-      openAMenu(sb, () => `<div class="lb2-ml">Sortieren nach</div>${SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join('')}`, (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
+      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'sparkle']];
+      openAMenu(sb, () => SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join(''), (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
     }
   });
   const hit = (t) => {
@@ -226,6 +227,10 @@ const Aufgaben = (() => {
         // Reihenfolge übernehmen: vor die Karte, die nach der Lücke steht – sonst ans Ende der Spalte
         const nextId = d.ph.nextElementSibling?.classList.contains('au-src') ? d.ph.nextElementSibling.nextElementSibling?.dataset.id : d.ph.nextElementSibling?.dataset.id;
         const changed = statusOf(t) !== to;
+        if (vs.sort !== 'manual') { // 19.11.: sortierte Ansicht – eigene Reihenfolge bleibt erhalten, nur der Status ändert sich
+          if (changed) { t.status = to; t.movedAt = Date.now(); if (to === 'done') t.doneAt = Date.now(); }
+          save(); render(); return;
+        }
         items = items.filter((x) => x !== t);
         if (changed) { t.status = to; t.movedAt = Date.now(); if (to === 'done') t.doneAt = Date.now(); }
         const i = nextId ? items.findIndex((x) => x.id === nextId) : -1;

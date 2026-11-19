@@ -14126,3 +14126,12 @@ html body .au-sbtn { flex: none; width: 28px; height: 28px; margin-right: 6px; b
 @media (hover: hover) { html body :is(.au-fbtn, .au-sbtn):hover { color: var(--text); background: rgba(255, 255, 255, 0.05); } }
 html body :is(.au-fbtn, .au-sbtn).on, html body :is(.au-fbtn, .au-sbtn).set { color: var(--text); }
 html body .au-sbtn.set { border-color: rgba(255, 255, 255, 0.14); }
+/* 19.11.: Aufgaben-Menüs (Filter, Sortieren) = Stil des Chat-Menüs (.chat-pop.chat-menu), ohne Überschriften; Haken rechts */
+html body .chat-pop.au-menu { position: fixed; z-index: 400; opacity: 1; visibility: visible; pointer-events: auto; width: auto; min-width: 200px; max-width: 260px; overflow-y: auto; display: flex; flex-direction: column; }
+html body .chat-pop.au-menu[hidden] { display: none; }
+html body .au-menu .au-mi { flex: none; display: flex; align-items: center; width: 100%; border: 0; background: none; text-align: left; font-family: var(--font-ui, Inter), sans-serif; cursor: pointer; }
+html body .au-menu .au-mi > span:not(.au-mdot) { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .au-menu .au-tick { display: grid; place-items: center; margin-left: auto; font-style: normal; }
+html body .au-menu .au-tick svg { width: 13px; height: 13px; color: var(--text); }
+html body .au-menu .au-mdot { flex: none; display: grid; place-items: center; width: 14px; height: 14px; }
+html body .au-menu .au-mdot i { width: 8px; height: 8px; border-radius: 50%; }
