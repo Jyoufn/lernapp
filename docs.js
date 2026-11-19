@@ -2371,12 +2371,13 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const pop = el('div', 'dc-ipop2');
       pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Icon');
       const pick = { c: iconOf(doc)?.c || '#bbbbbb', fill: !!iconOf(doc)?.fill, name: iconOf(doc)?.name || '' };
-      let step = 'icons';
+      let step = 'icons', iq = ''; // 20.11.: Suche über Namen (deutsch + englisch)
+      const ICON_DE = { book: 'buch', notebook: 'heft notizbuch', cap: 'schule abschluss hut', pencil: 'stift bleistift', eraser: 'radiergummi', ruler: 'lineal', paperclip: 'büroklammer anhang', bookmark: 'lesezeichen', list: 'liste', folder: 'ordner', calendar: 'kalender', clock: 'uhr zeit', sigma: 'summe mathe', pi: 'mathe', calc: 'taschenrechner rechnen', atom: 'physik', flask: 'chemie labor', dna: 'biologie', sprout: 'pflanze bio', plant: 'pflanze', chart: 'diagramm', trend: 'kurve', pie: 'kreisdiagramm', coins: 'geld münzen wirtschaft', globe: 'welt erde geografie', map: 'karte', pin: 'ort', landmark: 'gebäude geschichte', language: 'sprache', scale: 'waage recht', music: 'musik', headphones: 'kopfhörer', mic: 'mikrofon', palette: 'kunst farbe', camera: 'kamera foto', image: 'bild', video: 'video film', code: 'informatik programmieren', laptop: 'computer', layers: 'ebenen', cube: 'würfel', bulb: 'idee', target: 'ziel', trophy: 'pokal', flag: 'fahne', bolt: 'blitz energie', flame: 'feuer', heart: 'herz', leaf: 'blatt natur', sun: 'sonne', moon: 'mond', cloud: 'wolke wetter', drop: 'tropfen wasser', umbrella: 'schirm', mountain: 'berg', paw: 'tier pfote', home: 'haus', chat: 'nachricht', mail: 'mail brief', users: 'leute gruppe', briefcase: 'koffer arbeit', rocket: 'rakete', puzzle: 'puzzle', gamepad: 'spiel', dumbbell: 'sport hantel', coffee: 'kaffee', gift: 'geschenk', key: 'schlüssel', lock: 'schloss', bell: 'glocke', shield: 'schild', eye: 'auge' };
       const draw = (dir = 0) => {
         const cur = iconOf(doc)?.name;
         if (step === 'icons') {
-          pop.innerHTML = `<div class="dc-ip2-head top"><span class="st-seg dc-ip2-kind" role="radiogroup" aria-label="Stil"><button type="button" data-kind="line" class="${pick.fill ? '' : 'on'}">Linie</button><button type="button" data-kind="fill" class="${pick.fill ? 'on' : ''}">Gefüllt</button></span><span class="grow"></span>${cur ? `<button type="button" class="dc-ip2-del" data-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}</div>
-            <div class="dc-ip2-grid">${DocIcons.pickList(cur).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 20, '', pick.fill)}</button>`).join('')}</div>`;
+          pop.innerHTML = `<label class="tk-tag-row dc-ip2-search"><input class="tk-tag-in" placeholder="Icon suchen" aria-label="Icon suchen" autocomplete="off" value="${esc(iq)}" /></label><div class="dc-ip2-head top"><span class="st-seg dc-ip2-kind" role="radiogroup" aria-label="Stil"><button type="button" data-kind="line" class="${pick.fill ? '' : 'on'}">Linie</button><button type="button" data-kind="fill" class="${pick.fill ? 'on' : ''}">Gefüllt</button></span><span class="grow"></span>${cur ? `<button type="button" class="dc-ip2-del" data-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}</div>
+            <div class="dc-ip2-grid">${DocIcons.pickList(cur).filter((n) => !iq || `${n} ${ICON_DE[n] || ''}`.toLowerCase().includes(iq.toLowerCase())).map((n) => `<button type="button" class="dc-ip2-ic${n === cur ? ' on' : ''}" data-icon="${n}" aria-label="Icon wählen">${DocIcons.svg(n, 20, '', pick.fill)}</button>`).join('')}</div>`;
         } else {
           pop.innerHTML = `<div class="dc-ip2-head"><button type="button" class="dc-ip2-back" data-back aria-label="Zurück">${fi('back', 12)}<span>Farbe</span></button><span class="grow"></span><span class="dc-ip2-cur" style="color:${esc(pick.c)}">${DocIcons.svg(pick.name, 20, '', pick.fill)}</span></div>${UIKit.colorRow(iconOf(doc)?.c || '', 'data-c')}`;
         }
@@ -2388,14 +2389,16 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         const a = (anchor && anchor.isConnected ? anchor : null) || view.querySelector('.dc-icon:not([hidden])') || view.querySelector('[data-add="icon"]');
         const r = a.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
         // linksbündig mit dem Text des Dokuments (nicht nach rechts versetzt unter „Icon hinzufügen“)
-        const left = (view.querySelector('.dc-page')?.querySelector('.dc-adds, .dc-title-in') || a).getBoundingClientRect().left;
-        pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, Math.min(left, r.left))))}px`;
+        pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left)))}px`; // 20.11.: direkt unter dem Icon (vorher zu weit links)
         pop.style.top = `${Math.round(r.bottom + 8 + h > innerHeight - 8 ? Math.max(8, r.top - h - 8) : r.bottom + 8)}px`;
       };
       place();
       pop.addEventListener('pointerdown', (e) => e.stopPropagation());
+      pop.addEventListener('input', (e) => { if (!e.target.matches('.dc-ip2-search input')) return; iq = e.target.value; const at = e.target.selectionStart; draw(); const n = pop.querySelector('.dc-ip2-search input'); n.focus(); n.setSelectionRange(at, at); });
+      pop.addEventListener('keydown', (e) => { if (e.target.matches('.dc-ip2-search input')) e.stopPropagation(); });
       pop.addEventListener('click', (e) => {
         e.stopPropagation();
+        if (e.target.closest('.dc-ip2-search')) return;
         if (e.target.closest('[data-del]')) { setIcon(null); close(); return; }
         const k = e.target.closest('[data-kind]');
         if (k) { pick.fill = k.dataset.kind === 'fill'; const cur = iconOf(doc); if (cur) setIcon({ ...cur, fill: pick.fill || undefined }); draw(); return; }

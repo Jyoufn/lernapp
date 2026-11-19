@@ -6545,7 +6545,10 @@ const TagMenu = (() => {
     pop.classList.remove('tagm-inline');
     pop.classList.toggle('tagm-chat', anchor.id === 'chatTags');
     if (anchor.id === 'chatTags') {
-      const edge = (document.getElementById('chatsBtn') || anchor).getBoundingClientRect().right, mw = menu.offsetWidth || 240;
+      // ganz rechts: rechte Kante des äußersten Knopfs in derselben Kopfzeile (auch wenn Code-/Datei-/Lernzettel-Knöpfe dazukommen)
+      const mid = r.top + r.height / 2;
+      const edge = Math.max(r.right, ...[...document.querySelectorAll('button, [role="button"]')].filter((b) => { const q = b.getBoundingClientRect(); if (!(q.width && q.height && q.height < 48 && Math.abs(q.top + q.height / 2 - mid) < 8 && q.left >= r.left && q.right <= innerWidth - 2)) return false; const hit = document.elementFromPoint(q.left + q.width / 2, q.top + q.height / 2); return !!hit && (hit === b || b.contains(hit)); }).map((b) => b.getBoundingClientRect().right));
+      const mw = menu.offsetWidth || 240;
       pop.style.left = `${Math.round(Math.max(8, edge - mw))}px`;
       pop.style.top = `${Math.round(r.bottom + 6)}px`;
       setTimeout(() => input.focus({ preventScroll: true }), 40);
@@ -6789,7 +6792,8 @@ let sideChatsFrame = 0;
 /* Chat in der Sidebar: beim Darüberfahren rechts Anheften und „⋯“ (Umbenennen · Anheften · Löschen); zu lange Namen enden mit … */
 const sbChatMenu = el('div', 'chat-pop chat-menu sb-chat-menu', `<button type="button" role="menuitem" data-sbm="rename">${icon('f-pencil', 14)}<span>Umbenennen</span></button>`
   + `<button type="button" role="menuitem" data-sbm="pin">${icon('f-pin', 14)}<span>Anheften</span></button>`
-  + `<button type="button" role="menuitem" data-sbm="tags">${icon('f-tag', 14)}<span>Tags</span></button><div class="cm-sep" role="separator"></div>`
+  + `<button type="button" role="menuitem" data-sbm="tags">${icon('f-tag', 14)}<span>Tags</span></button>`
+  + `<button type="button" role="menuitem" data-sbm="dup">${icon('f-copy', 14)}<span>Duplizieren</span></button><div class="cm-sep" role="separator"></div>`
   + `<button type="button" role="menuitem" data-sbm="delete" class="danger">${icon('f-trash', 14)}<span>Löschen</span></button>`);
 sbChatMenu.setAttribute('role', 'menu');
 document.body.append(sbChatMenu);
@@ -6849,6 +6853,13 @@ sbChatMenu.addEventListener('click', (e) => {
   if (b.dataset.sbm === 'tags') { ChatTags.open(tab, row || b); return; }
   if (b.dataset.sbm === 'pin') togglePin(tab);
   else if (b.dataset.sbm === 'rename' && row) renameSideChat(tab, row);
+  else if (b.dataset.sbm === 'dup') { // 20.11.: Chat duplizieren – Kopie mit ganzem Verlauf und Tags, öffnet sich
+    const src = chatOf(tab), hist = historyOf(tab).map((h) => ({ ...h }));
+    const nt = createTab(`${src.title || 'Chat'} (Kopie)`);
+    history.push(...hist); renderSavedHistory(hist);
+    Object.assign(chatOf(nt), { title: `${src.title || 'Chat'} (Kopie)`, tags: [...(src.tags || [])], projectId: src.projectId || '', ws: src.ws, updated: Date.now() });
+    saveChats(); renderChatBar?.(); window.renderSideChats?.();
+  }
 });
 document.addEventListener('click', (e) => { if (sbChatMenu.classList.contains('open') && !e.target.closest('.sb-chat-menu, [data-sbc="more"]')) closeSbChatMenu(); });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && sbChatMenu.classList.contains('open')) closeSbChatMenu(); });
