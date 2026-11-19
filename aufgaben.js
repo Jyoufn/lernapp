@@ -114,8 +114,8 @@ const Aufgaben = (() => {
     closeAMenu(); amenuFor = btn; btn.classList.add('on');
     amenu.innerHTML = html(); amenu.style.maxHeight = ''; amenu.hidden = false;
     const r = btn.getBoundingClientRect(), w = amenu.offsetWidth, h = amenu.offsetHeight, room = Math.max(160, innerHeight - r.bottom - 14);
-    amenu.style.maxHeight = `${Math.min(h, room)}px`;
-    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, btn.matches('.au-sbtn') ? r.left : r.right - w))}px`; // Sortieren öffnet nach rechts (unter „Neue Aufgabe“)
+    amenu.style.maxHeight = `${Math.min(h, room, 340)}px`;
+    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, btn.matches('.au-sbtn') ? r.left : r.right - w - 6))}px`; // Sortieren öffnet nach rechts (unter „Neue Aufgabe“)
     amenu.style.top = `${r.bottom + 6}px`;
     amenu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; e.stopPropagation(); onPick(b.dataset.v); const st = amenu.scrollTop; amenu.innerHTML = html(); amenu.scrollTop = st; };
   }

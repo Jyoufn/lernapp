@@ -14136,3 +14136,11 @@ html body .au-menu .au-tick svg { width: 13px; height: 13px; color: var(--text);
 html body .au-menu .au-mdot { flex: none; display: grid; place-items: center; width: 14px; height: 14px; }
 html body .au-menu .au-mdot i { width: 8px; height: 8px; border-radius: 50%; }
 html body .au-search .au-fbtn { margin-right: -9px; } /* 19.11.: optisch gleich weit vom Rand wie die Lupe links */
+/* 19.11.: Sortieren-Knopf als Kästchen wie „Neue Aufgabe“ (ohne Fläche, feiner Innenrand, Radius 10) */
+html body .au-head .au-sbtn { width: 28px; height: 28px; border: 0; border-radius: 10px; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-2); }
+@media (hover: hover) { html body .au-head .au-sbtn:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); } }
+/* Filter-Menü: begrenzte Höhe, innen scrollen; schmale, ruhige Scrollleiste mit etwas Luft rechts */
+html body .chat-pop.au-menu { max-height: min(340px, calc(100vh - 120px)) !important; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+html body .chat-pop.au-menu::-webkit-scrollbar { width: 8px; }
+html body .chat-pop.au-menu::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 8px; background: rgba(255, 255, 255, 0.14) padding-box; }
+html body .chat-pop.au-menu::-webkit-scrollbar-track { background: transparent; margin: 6px 0; }
