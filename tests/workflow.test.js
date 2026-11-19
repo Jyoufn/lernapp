@@ -854,11 +854,11 @@ test('Gemini-nativ (Allgemein): Einschätzung statt Plan, Auto = eingeschätzte 
   assert.equal(r.result.status, 'completed');
   assert.equal(fx.calls.filter(M.is.analyze).length, 0, 'keine Planung');
   assert.equal(fx.calls.filter(M.is.route).length, 1, 'eine Einschätzung');
-  assert.equal(r.result.effort.applied, 'high', 'Auto übernimmt die eingeschätzte Stufe');
+  assert.equal(r.result.effort.applied, 'medium', '19.11. Tempo: kurze Frage ohne Dateien/Recherche – höchstens Medium, auch wenn die Einschätzung „high“ sagt');
   let gen = fx.calls.filter(M.is.geminiStream).pop();
   const tc = gen.body.generationConfig.thinkingConfig;
   assert.equal(tc.includeThoughts, true);
-  assert.ok(tc.thinkingLevel === undefined && (tc.thinkingBudget === undefined || tc.thinkingBudget === -1), 'Gemini entscheidet selbst, wie lange es denkt');
+  assert.ok(['low', 'medium'].includes(tc.thinkingLevel) || (tc.thinkingBudget > 0 && tc.thinkingBudget <= 8192), 'kurze Frage: begrenzt denken (schnelle Antwort)');
   const sys = M.systemOf(gen);
   assert.doesNotMatch(sys, /PLAN – DIE ANTWORT MUSS/);
   assert.match(sys, /GENAU DAS, WAS GEFRAGT IST/, 'schlanker Prompt');
