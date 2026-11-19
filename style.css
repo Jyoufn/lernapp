@@ -14152,3 +14152,8 @@ html body .ce-card [data-k="color"] .tk-picker-host .tk-picker { box-sizing: bor
 html body .ce-card [data-k="color"] .tk-picker-host :is(.tk-sv, .tk-hue, .tk-picker-foot) { width: 100%; box-sizing: border-box; }
 html body .ce-card [data-k="color"] .tk-picker-host { width: auto; box-sizing: border-box; margin-right: 16px; }
 html body .au-head .au-sbtn { margin-right: -4px; } /* 19.11.: Sortieren näher an „Neue Aufgabe“ */
+/* 19.11.: Neuer Termin / Neue Aufgabe – mittig, Hintergrund leicht unscharf (wie Aufgabe bearbeiten) */
+html body .tk-modal.cal-emodal:not(.anchored):has(.ce-card) { background: rgba(0, 0, 0, 0.32) !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+html body .cal-emodal:not(.anchored) .ce-card { width: min(340px, calc(100vw - 24px)) !important; }
+html body .tk-modal.cal-emodal:not(.anchored):has(.ce-card) { display: flex; align-items: center; justify-content: center; }
+html body .cal-emodal:not(.anchored) .ce-card { margin: auto !important; position: relative !important; top: auto !important; left: auto !important; }

@@ -350,6 +350,7 @@ const Calendar = (() => {
   // anchor = Termin/Zelle im Wochenraster: das Fenster erscheint wie in der Vorlage als Popover mit Spitze direkt daneben
   // Karte neben den Termin (bzw. unter „Neuer Termin“) setzen – ohne Spitze, ohne Schleier
   function place(form, anchor) {
+    if (anchor?.closest?.('.cm-head, .au-head')) anchor = null; // 19.11.: „Neuer Termin“ / „Neue Aufgabe“ → Fenster mittig, Rest unscharf
     emodal.classList.toggle('anchored', !!anchor);
     if (!anchor || !anchor.isConnected) { emodal.classList.remove('anchored'); form.removeAttribute('style'); return; }
     const r = anchor.getBoundingClientRect(), fw = Math.min(340, innerWidth - 24), gap = 8;
