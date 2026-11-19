@@ -14064,3 +14064,24 @@ html body .cal-emodal:not(.anchored) .tk-form.ce-card { max-height: calc(100dvh 
 /* aufgeklappte Zeile: der Rahmen läuft um Kopf UND Liste – die Liste malt keinen eigenen Hintergrund mehr darüber */
 html body .ce-card.ce-task .tk-pop :is(.tk-menu, .tk-box), html body .au-inl .ce-card .tk-pop :is(.tk-menu, .tk-box) { background: transparent !important; }
 html body .ce-card .tk-pop.open { box-shadow: inset 0 0 0 1px #2a2a2a !important; }
+/* 19.11.: Funktionsgraphen (graph.js) – Kasten wie die Diagramme, feines Gitter, Achsen mit Pfeilen, farbige Kurven */
+.chat-graph { position: relative; max-width: 640px; margin: 14px 0; padding: 12px 12px 10px; border: 1px solid #242424; border-radius: 14px; background: #181818; }
+.chat-graph .g-head { display: flex; align-items: center; gap: 8px; margin: 0 0 6px 2px; color: var(--text); font: 600 13.5px var(--font-ui, Inter), sans-serif; }
+.chat-graph .g-head svg { color: var(--text-3); }
+.chat-graph .g-wrap { position: relative; }
+.chat-graph .g-svg { display: block; width: 100%; height: auto; touch-action: pan-y; }
+.chat-graph .g-grid line { stroke: rgba(255, 255, 255, 0.055); stroke-width: 1; }
+.chat-graph .g-axes line { stroke: rgba(255, 255, 255, 0.45); stroke-width: 1.3; }
+.chat-graph .g-arr { fill: rgba(255, 255, 255, 0.45); }
+.chat-graph .g-ax { fill: var(--text-2); font: italic 600 12px var(--font-ui, Inter), sans-serif; }
+.chat-graph .g-lab text { fill: var(--text-4); font: 500 10.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }
+.chat-graph .g-fn { fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.chat-graph .g-pt circle { fill: #fff; stroke: #181818; stroke-width: 2; }
+.chat-graph .g-pt text { fill: var(--text-2); font: 500 11px var(--font-ui, Inter), sans-serif; }
+.chat-graph .g-hl { stroke: rgba(255, 255, 255, 0.18); stroke-dasharray: 3 3; }
+.chat-graph .g-hover circle { stroke: #181818; stroke-width: 2; }
+.chat-graph .g-tip { position: absolute; top: 8px; display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; border-radius: 9px; background: #212121; box-shadow: inset 0 0 0 1px #2a2a2a; color: var(--text-2); font: 500 11.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; white-space: nowrap; }
+.chat-graph .g-tip b { color: var(--text); font-weight: 600; }
+.chat-graph .g-tip span, .chat-graph .g-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.chat-graph .g-tip i, .chat-graph .g-legend i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.chat-graph .g-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 4px 0; color: var(--text-2); font: 500 12px ui-monospace, SFMono-Regular, Menlo, monospace; }

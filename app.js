@@ -2184,6 +2184,13 @@ function renderMarkdown(target, text, opts = {}) {
     pre.replaceWith(keep.get(raw));
   });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
+  // 19.11.: Funktionsgraphen (```graph / ```funktion): Koordinatensystem, Kurven automatisch gezeichnet (graph.js)
+  target.querySelectorAll('pre:has(code.language-graph), pre:has(code.language-funktion)').forEach((pre) => {
+    const raw = pre.querySelector('code').textContent;
+    if (opts.live && !/\}\s*$/.test(raw.trim())) return; // noch nicht fertig geschrieben
+    const f = reuse('graph', raw, () => { const g = window.Graph?.figure(raw); return g ? tagViz(g, 'graph', raw) : null; });
+    pre.replaceWith(f || el('div', 'chart-error', 'Graph konnte nicht gezeichnet werden.'));
+  });
   target.querySelectorAll('pre:has(code.language-chart)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent, data = ChatVisuals.chart(raw);
     if (data && drawn.has(ChatVisuals.chartKey(data))) { pre.remove(); return; }
