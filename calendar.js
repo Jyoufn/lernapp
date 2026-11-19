@@ -54,7 +54,9 @@ const Calendar = (() => {
   view.setAttribute('aria-label', 'Kalender');
   view.innerHTML = `
     <header class="cal-head cm-head">
-      <div class="cm-title"><span class="cm-m"></span><span class="cm-y"></span></div>
+      <div class="cm-title"><span class="cm-m"></span> <span class="cm-y"></span></div>
+      <label class="au-search cm-search">${icon('f-search')}<input type="search" placeholder="Termine durchsuchen" aria-label="Termine durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn cm-fbtn" data-cs="filter" aria-label="Filter" title="Filter">${icon('f-filter')}</button></label>
+      <div class="cm-results" role="listbox" hidden></div>
       <div class="cal-nav cm-nav">
         <div class="cm-switch">
           <button type="button" class="cm-arr" data-cal="prev" aria-label="Vorheriger Monat">${icon('f-back')}</button>
@@ -85,6 +87,7 @@ const Calendar = (() => {
     return b;
   }
   function render(dir = 0) {
+    if (dir && !reduced()) [pickLabel, view.querySelector('.cm-title')].forEach((n) => n.animate([{ opacity: 0, transform: `translateX(${dir > 0 ? 10 : -10}px)` }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
     view.querySelector('.cm-m').textContent = MONTHS[cursor.getMonth()];
     view.querySelector('.cm-y').textContent = cursor.getFullYear();
     pickLabel.textContent = `${MONTHS[cursor.getMonth()]} ${cursor.getFullYear()}`;
@@ -154,6 +157,87 @@ const Calendar = (() => {
     // „+N weitere“ (bzw. schmal: Tag mit Terminen) → alle Termine des Tages; ein leerer Tag macht nichts
     if (cell && (ev.target.closest('.cm-more') || (compact && cell.querySelector('.cm-ev')))) showDayList(cell.dataset.date, cell);
   });
+  /* 19.11.: Suche mit Filter (wie bei den Aufgaben). Darunter klappt eine Liste der Treffer auf:
+     links Name, daneben Priorität, Tags, ganz rechts Datum + Uhrzeit. Antippen springt zum Termin und öffnet ihn. */
+  const sIn = view.querySelector('.cm-search input'), results = view.querySelector('.cm-results');
+  const cf = { when: 'all', tags: new Set() };
+  const cfOn = () => cf.when !== 'all' || cf.tags.size > 0;
+  const prioOf = (e) => { const t = e.task && window.Aufgaben?.items?.find((x) => x.id === e.task); const id = e.priority || t?.priority; return id && id !== 'none' ? (window.UIKit?.PRIOS || []).find((q) => q.id === id) : null; };
+  const whenText = (e) => { const d = new Date(`${e.date}T12:00:00`); const dt = `${d.getDate()}. ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear() !== new Date().getFullYear() ? d.getFullYear() : ''}`.trim(); return e.time ? `${dt} · ${e.time}${e.end ? `–${e.end}` : ''} Uhr` : `${dt} · Ganztägig`; };
+  function matches() {
+    const q = sIn.value.trim().toLowerCase(), td = todayIso();
+    const wk = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return iso(d); })();
+    const all = window.TagMenu?.all?.() || [];
+    return events.filter((e) => {
+      if (cf.when === 'up' && e.date < td) return false;
+      if (cf.when === 'past' && e.date >= td) return false;
+      if (cf.when === 'week' && (e.date < td || e.date > wk)) return false;
+      if (cf.when === 'month' && e.date.slice(0, 7) !== td.slice(0, 7)) return false;
+      if (cf.tags.size && !(e.tags || []).some((id) => cf.tags.has(id))) return false;
+      if (!q) return true;
+      const tn = all.filter((g) => (e.tags || []).includes(g.id)).map((g) => g.name).join(' ');
+      return `${e.title} ${e.description || ''} ${tn}`.toLowerCase().includes(q);
+    }).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || ''))).slice(0, 60);
+  }
+  function drawResults() {
+    const want = document.activeElement === sIn && (sIn.value.trim() || cfOn());
+    view.querySelector('.cm-fbtn').classList.toggle('set', cfOn());
+    if (!want) { results.hidden = true; return; }
+    const list = matches(), all = window.TagMenu?.all?.() || [];
+    results.innerHTML = list.length ? list.map((e) => {
+      const pr = prioOf(e), tg = all.filter((g) => (e.tags || []).includes(g.id));
+      return `<button type="button" class="cs-row" data-eid="${esc(e.id)}" role="option"><i class="cs-dot" style="background:${esc(e.color || COLORS[0])}"></i><span class="cs-name">${esc(e.title)}</span>`
+        + `<span class="cs-prio">${pr ? `${window.UIKit.prioIcon(pr.id, 12)}<span>${esc(pr.name)}</span>` : ''}</span>`
+        + `<span class="cs-tags">${tg.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 2 ? `<span class="lb2-tag more">+${tg.length - 2}</span>` : ''}</span>`
+        + `<span class="cs-when">${esc(whenText(e))}</span></button>`;
+    }).join('') : '<div class="cs-empty">Keine Termine gefunden</div>';
+    results.hidden = false;
+    // genau unter dem Suchfeld (links bündig, mindestens 600 px breit, nie über den Kopf hinaus)
+    const sb = view.querySelector('.cm-search'), hd = view.querySelector('.cm-head');
+    const w = Math.min(hd.clientWidth, Math.max(sb.offsetWidth, 600));
+    results.style.width = `${w}px`; results.style.left = `${Math.max(0, Math.min(hd.clientWidth - w, sb.offsetLeft))}px`;
+  }
+  sIn.addEventListener('input', drawResults);
+  sIn.addEventListener('focus', drawResults);
+  sIn.addEventListener('keydown', (x) => { x.stopPropagation(); if (x.key === 'Escape') { sIn.value = ''; sIn.blur(); results.hidden = true; } });
+  sIn.addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== sIn && !results.matches(':hover')) results.hidden = true; }, 150));
+  results.addEventListener('pointerdown', (x) => x.preventDefault()); // Fokus bleibt im Suchfeld
+  results.addEventListener('click', (x) => {
+    const r = x.target.closest('[data-eid]'); if (!r) return;
+    const e = events.find((y) => y.id === r.dataset.eid); if (!e) return;
+    results.hidden = true; sIn.blur();
+    const m = monthOf(new Date(`${e.date}T12:00:00`));
+    if (m.getTime() !== cursor.getTime()) { const dir = m > cursor ? 1 : -1; cursor = m; render(dir); }
+    requestAnimationFrame(() => { const chip = view.querySelector(`.cm-ev[data-id="${CSS.escape(e.id)}"]`); showEvent(e, chip || view.querySelector(`.cm-cell[data-date="${e.date}"]`)); });
+  });
+  // Filter-Menü (Stil des Chat-Menüs, Haken rechts, Gruppen nur durch Striche getrennt)
+  const cmenu = document.createElement('div'); cmenu.className = 'chat-pop chat-menu au-menu open'; cmenu.hidden = true; cmenu.setAttribute('role', 'menu');
+  document.body.append(cmenu);
+  const cmi = (v, label, on, ic) => `<button type="button" role="menuitem" class="au-mi" data-v="${esc(v)}">${ic}<span>${esc(label)}</span>${on ? `<i class="au-tick">${icon('f-check')}</i>` : ''}</button>`;
+  const cmHtml = () => {
+    const W = [['all', 'Alle Termine', 'f-calendar'], ['up', 'Kommende', 'f-forward'], ['week', 'Nächste 7 Tage', 'f-clock'], ['month', 'Dieser Monat', 'f-calendar'], ['past', 'Vergangene', 'f-back']];
+    const tags = window.TagMenu?.all?.() || [];
+    return W.map(([v, l, ic]) => cmi(`w:${v}`, l, cf.when === v, icon(ic))).join('')
+      + (tags.length ? '<div class="cm-sep" role="separator"></div>' + tags.map((g) => cmi(`g:${g.id}`, g.name, cf.tags.has(g.id), `<span class="au-mdot"><i style="background:${esc(g.c)}"></i></span>`)).join('') : '')
+      + (cfOn() ? `<div class="cm-sep" role="separator"></div>${cmi('reset', 'Filter zurücksetzen', false, icon('f-x'))}` : '');
+  };
+  view.querySelector('.cm-fbtn').addEventListener('click', (x) => {
+    x.preventDefault(); x.stopPropagation();
+    if (!cmenu.hidden) { cmenu.hidden = true; return; }
+    const b = x.currentTarget, r = b.getBoundingClientRect();
+    cmenu.innerHTML = cmHtml(); cmenu.hidden = false;
+    cmenu.style.left = `${Math.max(8, Math.min(innerWidth - cmenu.offsetWidth - 8, r.right - cmenu.offsetWidth - 6))}px`; cmenu.style.top = `${r.bottom + 6}px`;
+  });
+  cmenu.addEventListener('click', (x) => {
+    const b = x.target.closest('[data-v]'); if (!b) return; x.stopPropagation();
+    const v = b.dataset.v;
+    if (v.startsWith('w:')) cf.when = v.slice(2);
+    else if (v.startsWith('g:')) { const id = v.slice(2); cf.tags.has(id) ? cf.tags.delete(id) : cf.tags.add(id); }
+    else if (v === 'reset') { cf.when = 'all'; cf.tags.clear(); }
+    const st = cmenu.scrollTop; cmenu.innerHTML = cmHtml(); cmenu.scrollTop = st;
+    sIn.focus({ preventScroll: true }); drawResults();
+  });
+  document.addEventListener('pointerdown', (x) => { if (!cmenu.hidden && !cmenu.contains(x.target) && !x.target.closest('.cm-fbtn')) cmenu.hidden = true; });
   // Wischen auf dem iPad: links/rechts = Monat vor/zurück
   let swipe = null;
   box.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; swipe = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null; }, { passive: true });
@@ -699,7 +783,7 @@ const Calendar = (() => {
   function add(a = {}) {
     const date = /^\d{4}-\d{2}-\d{2}$/.test(String(a.date || '')) ? a.date : todayIso();
     const time = /^\d{1,2}:\d{2}$/.test(String(a.time || '')) ? String(a.time).padStart(5, '0') : '';
-    const item = upsert({ id: '', title: String(a.title || 'Termin').slice(0, 80), description: String(a.description || '').slice(0, 400), date, time, end: '',
+    const item = upsert({ id: '', title: String(a.title || 'Termin').slice(0, 80), description: String(a.description || '').slice(0, 400), date, time, end: time && /^\d{1,2}:\d{2}$/.test(String(a.end || '')) ? String(a.end).padStart(5, '0') : '', tags: Array.isArray(a.tags) ? a.tags.slice(0, 12).map(String) : [], // 19.11.: Ende + Tags wurden verworfen
       color: COLORS.includes(a.color) ? a.color : COLORS[0], icon: ICONS.includes(`i-${a.icon}`) ? `i-${a.icon}` : ICONS.includes(a.icon) ? a.icon : 'i-calendar' });
     return item;
   }
