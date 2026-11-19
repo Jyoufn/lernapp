@@ -14210,3 +14210,4 @@ html body .dc-list.hm-new-head .cl-wrap { padding-top: 24px; }
 html body .hm-head .hm-search .lb2-filter.au-fbtn { flex: none; width: 24px; height: 24px; margin: 0 -9px 0 auto; padding: 0; border: 0 !important; border-radius: 7px; background: none !important; box-shadow: none !important; color: var(--text-4); }
 html body .hm-head .hm-search .lb2-filter.au-fbtn.set, html body .hm-head .hm-search .lb2-filter.au-fbtn.on { color: var(--text); }
 html body .hm-head .hm-search .lb2-filter svg { width: 14px; height: 14px; }
+html body .cm-results { top: 34px; border-radius: 10px; }

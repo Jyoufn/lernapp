@@ -192,10 +192,10 @@ const Calendar = (() => {
         + `<span class="cs-when">${esc(whenText(e))}</span></button>`;
     }).join('') : '<div class="cs-empty">Keine Termine gefunden</div>';
     results.hidden = false;
-    // genau unter dem Suchfeld (links bündig, mindestens 600 px breit, nie über den Kopf hinaus)
+    // unter dem Suchfeld, mittig dazu ausgerichtet (mindestens 600 px breit, nie über den Kopf hinaus)
     const sb = view.querySelector('.cm-search'), hd = view.querySelector('.cm-head');
     const w = Math.min(hd.clientWidth, Math.max(sb.offsetWidth, 600));
-    results.style.width = `${w}px`; results.style.left = `${Math.max(0, Math.min(hd.clientWidth - w, sb.offsetLeft))}px`;
+    results.style.width = `${w}px`; const sr = sb.getBoundingClientRect(), hr = hd.getBoundingClientRect(); results.style.left = `${Math.max(0, Math.min(hd.clientWidth - w, sr.left - hr.left + sr.width / 2 - w / 2))}px`; // 19.11.: mittig unter der Suche (gleich weit links und rechts überstehend)
   }
   sIn.addEventListener('input', drawResults);
   sIn.addEventListener('focus', drawResults);
