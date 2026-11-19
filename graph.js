@@ -153,7 +153,48 @@ const Graph = (() => {
   // Formel lesbar: x^2 → x², x^(n+1) → hochgestellt, * → ·
   const pretty = (t) => esc(t).replace(/\*/g, '·').replace(/\^\(([^)]{1,20})\)/g, '<sup>$1</sup>').replace(/\^(-?[\w.,]+)/g, '<sup>$1</sup>');
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  return { compile, parse, figure };
+  /* 19.11.: von selbst – steht in einer Antwort eine Funktionsgleichung (f(x) = …, y = … mit x; auch in LaTeX), wird der Graph
+     darunter gezeichnet, ohne dass jemand „Graph“ sagen muss. Nur, wenn noch kein Graph da ist. */
+  function fromLatex(t) {
+    let s = String(t);
+    for (let k = 0; k < 4; k++) s = s.replace(/\\[dt]?frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '(($1)/($2))');
+    return s.replace(/\\sqrt\s*\{([^{}]*)\}/g, 'sqrt($1)').replace(/\\(cdot|times)/g, '*').replace(/\\left|\\right|\\,|\;|\\!|\\ /g, '')
+      .replace(/\^\{([^{}]*)\}/g, '^($1)').replace(/\\(sin|cos|tan|ln|log|exp|pi)/g, '$1').replace(/\{|\}/g, '').replace(/\(\(([\w.]+)\)\/\(([\w.]+)\)\)/g, '($1/$2)');
+  }
+  function find(text) {
+    const src = String(text || '').replace(/```[\s\S]*?```/g, ' '), out = [], seen = new Set();
+    const re = /(?:\b([a-zA-Z])\s*\(\s*x\s*\)|\by)\s*=\s*([^\n=;$€]{1,70})/g;
+    let m;
+    while ((m = re.exec(src)) && out.length < 3) {
+      // bis zum ersten gewöhnlichen Wort (mit, und, schneidet …) – Funktionsnamen wie sin/sqrt bleiben drin
+      let e = fromLatex(m[2]);
+      const w = /(?:^|[\s,;])([a-zäöüß]{2,})/gi; let mw, cut = e.length;
+      while ((mw = w.exec(e))) { if (!/^(sin|cos|tan|asin|acos|atan|sqrt|abs|ln|log|lg|exp|pi|sinh|cosh|tanh)$/i.test(mw[1]) && !/^x+$/i.test(mw[1])) { cut = mw.index; break; } }
+      e = e.slice(0, cut).replace(/[\s.,:;!?]+$/, '');
+      while ((e.match(/\)/g) || []).length > (e.match(/\(/g) || []).length && e.endsWith(')')) e = e.slice(0, -1);
+      e = e.trim();
+      e = e.replace(/\*\*/g, '').replace(/[“”"]/g, '').trim();
+      if (!/x/.test(e) || e.length > 60) continue;
+      const f = compile(e); if (!f) continue;
+      const a = f(0), b = f(1.37); if (!Number.isFinite(a) && !Number.isFinite(b)) continue;
+      if (a === b && f(-2.1) === a) continue; // hängt nicht von x ab
+      const key = e.replace(/\s/g, ''); if (seen.has(key)) continue; seen.add(key);
+      out.push({ expr: e, label: m[1] ? `${m[1]}(x)` : 'y' });
+    }
+    return out;
+  }
+  function auto(container, text) {
+    if (!container || container.querySelector('.chat-graph')) return null;
+    const fns = find(text); if (!fns.length) return null;
+    const fig = figure(JSON.stringify({ title: fns.length > 1 ? 'Graphen' : `Graph von ${fns[0].label}`, functions: fns, x: [-6, 6] }));
+    if (!fig) return null;
+    fig.classList.add('g-auto');
+    // hinter den Absatz mit der ersten Gleichung, sonst ans Ende
+    const hit = [...container.querySelectorAll(':scope > p, :scope > ul, :scope > ol, :scope > .katex-display, :scope > div')].find((n) => /\(x\)|y\s*=/.test(n.textContent));
+    if (hit) hit.after(fig); else container.append(fig);
+    return fig;
+  }
+  return { compile, parse, figure, find, auto };
 })();
 if (typeof window !== 'undefined') window.Graph = Graph;
 if (typeof module !== 'undefined') module.exports = Graph;

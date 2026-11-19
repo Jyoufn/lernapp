@@ -4559,6 +4559,7 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     let main = mainSources(allSrc, citations);
     // 19.11.: nur wirklich benutzte (belegte) Quellen – kein Rückfall mehr auf alle gelesenen
     if (!main.length && groundSrc.length) main = groundSrc; // Antwort mit Google-Suche: deren benutzte Quellen
+    window.Graph?.auto?.(answer, answerR.text); // 19.11.: Funktionsgleichung in der Antwort → Graph von selbst
     const loose = placeSourceStack(answer, main);
     const footer = messageFooter(msgEl, answerR.text);
     if (loose) footer.append(loose);
