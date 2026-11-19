@@ -14412,3 +14412,22 @@ html body .ce-card.ce-sub .ce-tags-row.open > .tk-pill { padding-right: 4px !imp
 html body .ce-card.ce-card.ce-card .ce-headbox { display: block !important; gap: 0 !important; padding: 8px 8px 8px !important; min-height: 0 !important; } html body .ce-card.ce-card.ce-card .ce-headbox > :not(.tk-f-title):not(.tk-f-notes):not(.ce-cover) { display: none; } html body .ce-card.ce-card.ce-card .ce-headbox .tk-f-title { display: block; width: 100%; }
 html body .ce-card.ce-card.ce-card .ce-headbox .tk-f-notes { display: block; width: 100%; margin: 3px 0 0 !important; vertical-align: top; }
 html body .ce-card.ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv { color: var(--text-2); font-weight: 500 !important; } html body .ce-card.ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv.ce-off, html body .ce-card.ce-card.ce-card .ce-rows .ce-tl { color: var(--text-3); } html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill .tk-rv { color: var(--text); font-weight: 600 !important; }
+/* ===== 20.11.: Fenster dunkler (Richtung Haupt-Hintergrund), Beschreibung max. 3 Zeilen dann scrollen, Datum-Seite sauber, kein Cover ===== */
+html body .ce-card.ce-card.ce-card { background: var(--app-main, #141414) !important; }
+html body .ce-card.ce-card.ce-card .ce-headbox .tk-f-notes { max-height: 52px !important; overflow-y: auto !important; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+html body .ce-card :is(.ce-cover-row, .ce-cover) { display: none !important; }
+/* Datum-Seite: ruhiges Raster ohne Kästchen – Monat mittig mit Pfeilen, Wochentage leise, Tage als runde Flächen nur beim Darüberfahren/Auswählen */
+html body .ce-card.ce-card .tk-cal { padding: 2px 4px 4px; }
+html body .ce-card.ce-card .tk-cal-head { display: flex; align-items: center; justify-content: space-between; height: 30px; margin: 0 0 4px; padding: 0 2px; }
+html body .ce-card.ce-card .tk-cal-head > span { color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
+html body .ce-card.ce-card .tk-cal-head button { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: none !important; box-shadow: none !important; color: var(--text-3); cursor: pointer; }
+@media (hover: hover) { html body .ce-card.ce-card .tk-cal-head button:hover { background: rgba(255, 255, 255, 0.07) !important; color: var(--text); } }
+html body .ce-card.ce-card .tk-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+html body .ce-card.ce-card .tk-cal-grid > span { display: grid; place-items: center; height: 22px; padding: 0; border: 0; border-radius: 0; background: none !important; color: var(--text-4); font: 500 11px var(--font-ui, Inter), sans-serif; }
+html body .ce-card.ce-card .tk-cal-grid > button { display: grid; place-items: center; height: 32px; min-height: 0; padding: 0; border: 0 !important; border-radius: 9px !important; background: none !important; box-shadow: none !important; color: var(--text-2); font: 500 12.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; cursor: pointer; transition: background-color 110ms ease, color 110ms ease; }
+@media (hover: hover) { html body .ce-card.ce-card .tk-cal-grid > button:hover { background: rgba(255, 255, 255, 0.07) !important; color: var(--text); } }
+html body .ce-card.ce-card .tk-cal-grid > button.other { color: var(--text-4); }
+html body .ce-card.ce-card .tk-cal-grid > button.today { color: var(--accent, #4b8dff); font-weight: 600; }
+html body .ce-card.ce-card .tk-cal-grid > button.on, html body .ce-card.ce-card .tk-cal-grid > button.on:hover { background: #ededed !important; color: #141414 !important; font-weight: 600; }
+html body .ce-card.ce-card .tk-cal-grid { row-gap: 2px; column-gap: 0; justify-items: center; }
+html body .ce-card.ce-card .tk-cal-grid > button { display: flex !important; align-items: center !important; justify-content: center !important; width: 32px !important; height: 32px !important; min-width: 0 !important; padding: 0 !important; margin: 0 !important; text-align: center !important; line-height: 1 !important; aspect-ratio: auto !important; }
