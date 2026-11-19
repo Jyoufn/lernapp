@@ -652,7 +652,8 @@ const Docs = (() => {
     { // 19.11.: Kopf wie bei Aufgaben/Kalender – mittig die Suche mit dem Filter darin (ohne Titel); gilt für Home und die Chats-Liste
       const hb = el('header', 'au-head hm-head');
       const ph = CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen';
-      hb.innerHTML = `<label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="${ph}" aria-label="${ph}" autocomplete="off" /></label>`;
+      hb.innerHTML = `${CH ? '' : `<h1 class="au-title">Home</h1><span class="grow"></span><button type="button" class="lb2-filter au-sbtn hm-plus2" data-act="go-create" aria-label="Erstellen" title="Erstellen">${fi('plus', 14)}</button>`}<label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="${ph}" aria-label="${ph}" autocomplete="off" /></label>`;
+      if (!CH) hb.classList.add('hm-head-home'); // 19.11.: Home oben links, Plus oben rechts (→ Erstellen), Suche eine Zeile tiefer
       const lab = hb.querySelector('.hm-search'), hin = lab.querySelector('input');
       lab.append(bar.querySelector('.lb2-filter'));
       lab.querySelector('.lb2-filter').classList.add('au-fbtn');
@@ -810,6 +811,7 @@ const Docs = (() => {
     document.addEventListener('click', (e) => { if (!menu.hidden && !menu.contains(e.target) && !e.target.closest('.lb2-filter, .hm-plus')) closeMenu(); });
     view.addEventListener('scroll', closeMenu, true);
     view.addEventListener('click', (e) => {
+      if (e.target.closest('[data-act="go-create"]')) { document.querySelector('.sidebar .sb-main [data-nav="new"]')?.click(); return; }
       if (e.target.closest('[data-act="new"]')) { create(''); return; }
       // Plus oben rechts neben „Home“ (09.11.): Menü Neuer Chat | Neues Dokument
       const pb = e.target.closest('[data-act="plus"]');
