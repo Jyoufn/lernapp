@@ -14024,3 +14024,15 @@ html body .sk-chips { margin-left: -4px; }
 .lz-sheet .tl-static .tl4-rail::before { background: var(--p-line); }
 .lz-sheet .tl-static .tl4-date { color: var(--p-t3) !important; }
 .lz-sheet .tl-static .tl4-dot, .lz-sheet .tl-static .tl4-row.open .tl4-dot { top: 19px !important; }
+/* 19.11.: Aufgabe bearbeiten = mittiges Fenster, Hintergrund unscharf; Breite wie „Neue Aufgabe“; kein dicker Rand */
+html body .tk-modal.cal-emodal:not(.anchored):has(.ce-task) { background: rgba(0, 0, 0, 0.32) !important; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+html body .cal-emodal:not(.anchored) .ce-card.ce-task { width: min(340px, calc(100vw - 24px)) !important; }
+html body .cal-emodal .ce-card.ce-task { box-shadow: none !important; border: 1px solid #242424 !important; }
+html body .ce-card.ce-task :is(button, input, textarea, [role="button"]):focus, html body .ce-card.ce-task :is(button, [role="button"]):focus-visible { outline: none !important; }
+html body .ce-card.ce-task .tk-f-title, html body .ce-card.ce-task .tk-f-notes { box-shadow: none !important; border: 0 !important; }
+/* Suche oben: Text genau mittig, Feld zurückhaltender */
+html body .au-search { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); color: var(--text-4); }
+html body .au-search:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05); }
+html body .au-search input { height: 26px; line-height: 26px; padding: 0; margin: 0; color: var(--text-2); }
+html body .au-search input::placeholder { color: var(--text-4); opacity: 1; }
+html body .au-search svg { flex: none; display: block; }

@@ -178,9 +178,9 @@ const Aufgaben = (() => {
   board.addEventListener('click', (e) => {
     const b = e.target.closest('.au-edit'); if (!b) return;
     const c = b.closest('.au-card2'), t = items.find((x) => x.id === c.dataset.id); if (!t || c.classList.contains('editing')) return;
-    board.querySelectorAll('.au-card2.editing').forEach((x) => x.classList.remove('editing'));
-    const host = document.createElement('div'); host.className = 'au-inl'; c.append(host); c.classList.add('editing');
-    detail(t, c, host);
+    // 19.11.: Bearbeiten wieder als Fenster – mittig, Hintergrund unscharf (wie „Neue Aufgabe“, gleiche Breite)
+    c.classList.remove('sel');
+    detail(t, null);
   });
   document.addEventListener('pointerdown', (e) => { if (open && !e.target.closest('.au-card2')) board.querySelectorAll('.au-card2.sel').forEach((x) => x.classList.remove('sel')); });
   board.addEventListener('keydown', (e) => { const c = e.target.closest?.('.au-card2'); if (c && e.key === 'Enter') { const t = items.find((x) => x.id === c.dataset.id); if (t) detail(t); } });
