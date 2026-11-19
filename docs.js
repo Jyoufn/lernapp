@@ -649,6 +649,17 @@ const Docs = (() => {
     const rows = view.querySelector('.cl-list'), search = find.field;
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
     view.querySelector('.cl-head').append(bar); // „Alle Einträge“ + Filter oben rechts neben dem Titel (Wunsch 15.11., in beiden Sprachen)
+    if (!CH) { // 19.11.: Home-Kopf wie bei Aufgaben/Kalender – „Home“ oben links, mittig die Suche mit dem Filter darin
+      const hb = el('header', 'au-head hm-head');
+      hb.innerHTML = `<h1 class="au-title">Home</h1><label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" autocomplete="off" /></label>`;
+      const lab = hb.querySelector('.hm-search'), hin = lab.querySelector('input');
+      lab.append(bar.querySelector('.lb2-filter'));
+      lab.querySelector('.lb2-filter').classList.add('au-fbtn');
+      hin.addEventListener('input', () => { search.value = hin.value; search.dispatchEvent(new Event('input')); });
+      hin.addEventListener('keydown', (e) => e.stopPropagation());
+      view.prepend(hb);
+      view.classList.add('hm-new-head');
+    }
     // Auswahl-Leiste unten mittig (Wunsch 06.11.): Pille wie „Agenten · Dokumente“ – Anheften | Löschen | Abbrechen, mit Trennstrichen.
     // Löschen: 1. Tipp schiebt „Wirklich“ davor und färbt rot, 2. Tipp löscht. Alle gewählten schon angeheftet → „Lösen“ in Akzentfarbe.
     // Hängt am Panel, weil die Ansicht selbst scrollt.
@@ -717,7 +728,7 @@ const Docs = (() => {
       const allPinned = sel.size > 0 && [...sel].every((k) => all.find((x) => `${x.kind}:${x.id}` === k)?.pinned);
       const pb = dock.querySelector('[data-bulk="pin"]'); pb.classList.toggle('set', allPinned); pb.querySelector('.lb2-dk-l').textContent = allPinned ? 'Lösen' : 'Anheften';
       dock.querySelector('[data-bulk="del"]').classList.remove('confirm');
-      bar.querySelector('.lb2-filter').classList.toggle('set', filtered()); // gefiltert → Icon hell
+      view.querySelector('.lb2-filter')?.classList.toggle('set', filtered()); // gefiltert → Icon hell (Knopf sitzt bei Home im Suchfeld)
       bar.querySelector('.lb2-all').textContent = filtered() ? 'Gefiltert' : CH ? 'Alle Chats' : 'Alle Einträge';
     };
     const api = {
@@ -743,7 +754,7 @@ const Docs = (() => {
         // „Als Nächstes“ entfernt (16.11.)
       },
       hide() { if (!api.open) return; api.open = false; view.hidden = true; dock.classList.remove('on'); if (!CH) window.Home?.leave(); closeMenu(); window.TagMenu?.close(); if (!CH && !editor.open) panel()?.classList.remove('view-docs'); },
-      focusSearch() { setTimeout(() => { if (api.open) search.focus({ preventScroll: true }); }, 60); },
+      focusSearch() { setTimeout(() => { if (api.open) (view.querySelector('.hm-search input') || search).focus({ preventScroll: true }); }, 60); },
     };
     // Menüs (Ordner, Tag, ⋯, Filter): Kasten wie .tk-box unter dem Knopf, Auswahl = blauer Haken
     let menuFor = null;

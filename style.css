@@ -14197,3 +14197,16 @@ html body .cm-head .au-search.cm-search { position: static; transform: none; fle
 @media (max-width: 760px) { html body .cm-head .cm-title { font-size: 15px; } html body .cm-head .cm-switch.cm-switch.cm-switch.cm-switch { width: 150px; } }
 html body .cm-results { transform: none; animation-name: cs-in2; }
 @keyframes cs-in2 { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+/* 19.11.: Suchfelder sehen beim Antippen NICHT ausgewählt aus (kein hellerer Rand) */
+html body :is(.au-head, .cm-head) .au-search:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important; }
+/* Kalender: Suche genau mittig im Kopf (Breite so, dass sie Monat links und Knöpfe rechts nicht berührt) */
+html body .cm-head .au-search.cm-search { position: absolute; left: 50%; top: 0; transform: translateX(-50%); margin: 0; max-width: none; width: clamp(200px, calc(100% - 660px), 520px); }
+/* 19.11.: Home-Kopf wie Aufgaben/Kalender: „Home“ oben links neben dem Sidebar-Knopf, Suche mittig mit Filter darin */
+html body .dc-list.hm-new-head > .hm-head { position: sticky; top: 0; z-index: 6; display: flex; align-items: center; height: 28px; margin: 10px 16px 0; padding: 0 0 0 38px; }
+html body .dc-list.hm-new-head > .hm-head .au-title { margin: 0; flex: none; color: var(--text); font: 600 15px var(--font-ui, Inter), sans-serif; letter-spacing: 0; }
+html body .app.collapsed .dc-list.hm-new-head > .hm-head { padding-left: 84px; }
+html body .dc-list.hm-new-head .cl-head, html body .dc-list.hm-new-head .cl-find { display: none !important; }
+html body .dc-list.hm-new-head .cl-wrap { padding-top: 24px; }
+html body .hm-head .hm-search .lb2-filter.au-fbtn { flex: none; width: 24px; height: 24px; margin: 0 -9px 0 auto; padding: 0; border: 0 !important; border-radius: 7px; background: none !important; box-shadow: none !important; color: var(--text-4); }
+html body .hm-head .hm-search .lb2-filter.au-fbtn.set, html body .hm-head .hm-search .lb2-filter.au-fbtn.on { color: var(--text); }
+html body .hm-head .hm-search .lb2-filter svg { width: 14px; height: 14px; }
