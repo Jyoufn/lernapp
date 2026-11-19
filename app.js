@@ -1080,7 +1080,16 @@ const chat = $('chat');
 const chatScroll = $('chatScroll');
 // Das Eingabefeld schwebt über dem Chat → unten so viel Platz lassen, wie es hoch ist
 const composerArea = document.querySelector('.composer-area');
-new ResizeObserver(() => chatScroll.style.setProperty('--composer-space', composerArea.offsetHeight + 'px')).observe(composerArea);
+// 20.11.: Platz unter der letzten Nachricht = nur so viel, wie das Eingabefeld den Chat wirklich verdeckt (+ kleiner Rand) –
+// vorher die ganze Höhe des Eingabebereichs, dadurch konnte man (v. a. auf dem iPad) weit über das Ende hinaus scrollen
+const fitComposerSpace = () => {
+  const sr = chatScroll.getBoundingClientRect(), cr = (document.getElementById('composer') || composerArea).getBoundingClientRect();
+  const covered = cr.height && cr.top < sr.bottom && cr.bottom > sr.top ? sr.bottom - cr.top : 0;
+  chatScroll.style.setProperty('--composer-space', `${Math.max(0, Math.round(covered))}px`);
+};
+new ResizeObserver(fitComposerSpace).observe(composerArea);
+new ResizeObserver(fitComposerSpace).observe(chatScroll);
+window.visualViewport?.addEventListener('resize', fitComposerSpace);
 const sendBtn = $('sendBtn');
 const MAX_VISIBLE_IMAGES = 4;   // ab 5 Bildern: 3 zeigen + Kachel „+N“
 // Material (Fotos, PDFs) bleibt im ganzen Chat verfügbar – mitgeschickt werden die neuesten Anhänge, höchstens 8 Dateien / ~12 MB

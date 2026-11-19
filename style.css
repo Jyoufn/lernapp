@@ -14493,3 +14493,25 @@ html body .files-pop .fm-sub { flex: none; color: var(--text-4); font-size: 11px
 html body .files-pop .fm-none { display: block; padding: 6px 8px; color: var(--text-4); font-size: 12.5px; }
 html body .files-pop > .tk-menu.fm-box { display: block !important; position: relative !important; inset: auto !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; margin: 0 !important; transform: none; }
 html body .files-pop.files-pop { padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; border-radius: 0 !important; width: auto !important; min-width: 0 !important; max-height: none !important; overflow: visible !important; }
+/* 20.11.: Chat-Ende – nur ein kleiner Rand über dem Eingabefeld (vorher deutlich mehr Leerraum) */
+html body .chat-scroll { padding-bottom: calc(var(--composer-space, 140px) + 20px) !important; }
+/* 20.11.: iPad – unten nichts mehr unter dem Home-Balken (Homescreen-App mit viewport-fit=cover); kein Gummiband-Scrollen der ganzen Seite;
+   obere/untere Linie der Spalten liegt nicht mehr genau auf der Schnittkante (wurde auf dem iPad abgeschnitten) */
+.app { box-sizing: border-box; padding-bottom: env(safe-area-inset-bottom, 0px); }
+html, body { overscroll-behavior: none; }
+html body .au-board { padding-top: 1px !important; padding-bottom: 2px; box-sizing: border-box; }
+html body .au-board.au-many { padding-bottom: 10px; }
+html body .cal-month-view .cm { padding-bottom: 2px; box-sizing: border-box; }
+/* ===== 20.11.: Allgemeine Suche (Lupe / ⌘K) im neuen Such-Design: Suchleiste oben mit eigenem Rand, Kasten bündig darunter,
+   Hintergrund wie der Hauptteil, deckende Linien (#272727), Zeilen wie Menü-Einträge ===== */
+html body .cmdk-box.cmdk-box { position: relative; width: min(560px, calc(100vw - 24px)); padding: 42px 4px 4px !important; border: 0 !important; border-radius: 12px !important; background: var(--app-main, #141414) !important; box-shadow: inset 0 0 0 1px #272727 !important; overflow: hidden; }
+html body .cmdk-box .cmdk-in { position: absolute !important; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 9px; height: 36px; margin: 0 !important; padding: 0 12px !important; border: 0 !important; border-radius: 12px !important; background: transparent !important; box-shadow: inset 0 0 0 1px #272727 !important; color: var(--text-4); }
+html body .cmdk-box .cmdk-in svg { width: 14px; height: 14px; }
+html body .cmdk-box .cmdk-in input { flex: 1; min-width: 0; height: 36px; padding: 0; border: 0; outline: 0; background: none; color: var(--text); font: 500 13.5px var(--font-ui, Inter), sans-serif; }
+html body .cmdk-box .cmdk-in input::placeholder { color: var(--text-4); }
+html body .cmdk-box .cmdk-list { padding: 0 !important; max-height: min(420px, calc(100dvh - 220px)); overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+html body .cmdk-box .cmdk-g { padding: 8px 8px 3px !important; color: var(--text-4); font: 500 11px var(--font-ui, Inter), sans-serif !important; }
+html body .cmdk-box .cmdk-row { min-height: 30px !important; height: 30px; padding: 0 8px !important; gap: 9px; border-radius: 8px !important; font: 500 13px var(--font-ui, Inter), sans-serif !important; }
+html body .cmdk-box .cmdk-row :is(.cmdk-ic, .cmdk-dog) svg, html body .cmdk-box .cmdk-row > svg { width: 14px; height: 14px; }
+html body .cmdk-box .cmdk-row .cmdk-m, html body .cmdk-box .cmdk-row .cmdk-s { font-size: 11.5px; }
+html body .cmdk-box .cmdk-foot { border-top: 1px solid #212121; }
