@@ -425,6 +425,8 @@ const Calendar = (() => {
   emodal.addEventListener('pointerdown', (x) => { if (x.target === emodal) eclose(); });
   document.addEventListener('keydown', (x) => {
     if (x.key !== 'Escape' || (emodal.hidden && !inlineForm)) return;
+    if (document.querySelector('.dc-cmodal-inline')) return; // Esc schließt erst den Cover-Wähler
+    if (emodal.querySelector('.ce-sub')) { emodal.querySelectorAll('.ce-rows > .tk-pop.open').forEach((q) => q.classList.remove('open')); return; } // Esc = zurück zur Übersicht
     if (inlineForm) { const pop = inlineForm.querySelector('.tk-pop.open'); if (pop) pop.classList.remove('open'); else eclose(); return; }
     const pop = emodal.querySelector('.tk-pop.open');
     if (pop) pop.classList.remove('open'); else eclose();
@@ -558,6 +560,13 @@ const Calendar = (() => {
     </form>`;
     const form = emodal.querySelector('form');
     UIKit.foldRows(form);
+    // 19.11.: Zeile antippen = das Fenster zeigt nur noch diese Seite (Zurück-Pfeil links), statt darunter aufzuklappen
+    new MutationObserver(() => {
+      const on = !!form.querySelector('.ce-rows > .tk-pop.open');
+      if (on === form.classList.contains('ce-sub')) return;
+      form.classList.toggle('ce-sub', on);
+      if (!reduced()) form.animate([{ opacity: 0.4, transform: `translateX(${on ? 10 : -10}px)` }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    }).observe(form.querySelector('.ce-rows'), { subtree: true, attributes: true, attributeFilter: ['class'] });
     const notes = form.querySelector('.tk-f-notes');
     const grow = UIKit.autoGrow(notes); // wächst nur mit dem Text, höchstens 4 Zeilen
 
@@ -665,7 +674,7 @@ const Calendar = (() => {
       const act = x.target.closest('[data-act]')?.dataset.act;
       if (act === 'cover') { // gleiches Cover-Fenster wie beim Dokument (Vorlagen, Farben, eigenes Bild, KI)
         form.querySelectorAll('.tk-pop.open').forEach((p) => p.classList.remove('open'));
-        if (window.Docs?.editor?.pickCover) window.Docs.editor.pickCover({ get: () => (typeof e.cover === 'object' ? e.cover : null), set: (c) => { e.cover = c || ''; draw(); } });
+        if (window.Docs?.editor?.pickCover) { form.classList.add('ce-away'); window.Docs.editor.pickCover({ inline: true, onClose: () => form.classList.remove('ce-away'), get: () => (typeof e.cover === 'object' ? e.cover : null), set: (c) => { e.cover = c || ''; draw(); } }); } // 19.11.: Cover-Wähler erscheint an derselben Stelle (gleiches Fenster)
         else form.querySelector('.ce-cover-in').click();
         return;
       }

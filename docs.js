@@ -2505,10 +2505,11 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
     function openCoverPop(editAi = false) {
       if (coverPop) { coverPop.close(); return; }
       // gleiches Fenster wie bei Kalender und Aufgaben: mittig über einer leicht abgedunkelten Fläche
-      const modal = el('div', 'tk-modal dc-cmodal');
+      const inline = !!coverTarget?.inline, onClose = coverTarget?.onClose; // 19.11.: aus Termin/Aufgabe – erscheint an derselben Stelle, Zurück statt Schließen
+      const modal = el('div', `tk-modal dc-cmodal${inline ? ' dc-cmodal-inline' : ''}`);
       const pop = el('div', 'tk-form dc-cpop');
       pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-label', 'Cover');
-      pop.innerHTML = `<div class="dc-cpop-head"><span class="dc-cpop-title">Cover</span>${curCover() ? `<button type="button" class="dc-ip2-del dc-cpop-del" data-cover-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}<button type="button" class="tk-x dc-cpop-x" aria-label="Schließen" title="Schließen">${fi('x', 12)}</button></div>
+      pop.innerHTML = `<div class="dc-cpop-head">${inline ? `<button type="button" class="dc-cback dc-cover-back" data-cover-back aria-label="Zurück" title="Zurück">${fi('back', 13)}</button>` : ''}<span class="dc-cpop-title">Cover</span>${curCover() ? `<button type="button" class="dc-ip2-del dc-cpop-del" data-cover-del>${fi('trash', 12)}<span>Entfernen</span></button>` : ''}<button type="button" class="tk-x dc-cpop-x" aria-label="Schließen" title="Schließen">${fi('x', 12)}</button></div>
         <div class="dc-cpop-body"></div>
         <input type="file" accept="image/png,image/jpeg,image/webp" hidden />`;
       modal.append(pop);
@@ -2652,7 +2653,9 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         modal.classList.add('closing');
         setTimeout(() => modal.remove(), 220);
         coverPop = null; coverTarget = null;
+        onClose?.();
       }
+      pop.querySelector('[data-cover-back]')?.addEventListener('click', (e) => { e.stopPropagation(); close(); });
       document.addEventListener('keydown', esc_);
       coverPop = { close, refresh: render };
       if (editAi) { ai.open = true; ai.edit = true; } // „Mit KI bearbeiten“: gleich das Eingabefeld, der Wunsch ändert das aktuelle Cover

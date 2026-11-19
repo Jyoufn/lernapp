@@ -14211,3 +14211,20 @@ html body .hm-head .hm-search .lb2-filter.au-fbtn { flex: none; width: 24px; hei
 html body .hm-head .hm-search .lb2-filter.au-fbtn.set, html body .hm-head .hm-search .lb2-filter.au-fbtn.on { color: var(--text); }
 html body .hm-head .hm-search .lb2-filter svg { width: 14px; height: 14px; }
 html body .cm-results { top: 34px; border-radius: 10px; }
+/* ===== 19.11.: Termin-/Aufgaben-Fenster als Seiten – eine Zeile antippen zeigt nur diese Seite (Zurück-Pfeil links), kein Aufklappen darunter ===== */
+html body .ce-card .ce-back { display: none; flex: none; place-items: center; width: 15px; color: var(--text-2); }
+html body .ce-card .ce-back svg { width: 14px; height: 14px; }
+html body .ce-card.ce-sub :is(.ce-headbox, .ce-foot, .ce-cbox-edit, .ce-rows > .tk-pop:not(.open)) { display: none !important; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill .ce-back { display: grid; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill > .tk-si { display: none; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill :is(.ce-chev, .ce-switch) { display: none; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill .tk-rv { font-weight: 600; color: var(--text); }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open .tk-tag-list { max-height: 216px; }
+/* Cover-Wähler aus Termin/Aufgabe: an derselben Stelle, das Fenster darunter blendet aus (kein zweiter Schleier) */
+html body .ce-card.ce-away { visibility: hidden; }
+html body .tk-modal.dc-cmodal.dc-cmodal-inline { background: transparent !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html body .dc-cpop-head .dc-cover-back { margin-right: 6px; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill::before { content: ''; flex: none; width: 15px; height: 15px; background: currentColor; color: var(--text-2);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 3.5 5.5 8l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10 3.5 5.5 8l4.5 4.5'/%3E%3C/svg%3E") center / contain no-repeat; }
+html body .tk-modal.dc-cmodal.dc-cmodal-inline { align-items: center; }
