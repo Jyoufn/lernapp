@@ -6310,7 +6310,8 @@ const ChatFiles = (() => {
   const btn = el('button', 'icon-btn files-btn', icon('f-folder-full', 17));
   btn.type = 'button'; btn.id = 'filesBtn'; btn.hidden = true;
   btn.setAttribute('aria-label', 'Dateien dieses Chats'); btn.title = 'Dateien';
-  const pop = el('div', 'lb2-menu files-menu'); pop.hidden = true; pop.setAttribute('role', 'menu'); // 18.11.: wie das Aufwand-Menü (nur Rand, Titel mit kleinem Icon)
+  const pop = el('div', 'files-pop'); pop.hidden = true; pop.setAttribute('role', 'menu'); // 20.11.: wie das Tag-Menü – Suchleiste oben, Liste darunter, rechtsbündig unter dem Symbol
+  let fq = '';
   document.body.append(pop);
   const items = () => {
     const out = [];
@@ -6332,13 +6333,24 @@ const ChatFiles = (() => {
   function open() {
     refresh(); if (!list.length) return;
     // 18.11.: als schwebende Karte unter den Symbolen (wie die Vorlage): oben „Dateien“ + Anzahl, darunter Icon + Titel
-    pop.innerHTML = list.map((it, i) => `<button type="button" class="lb2-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span></button>`).join('');
+    fq = '';
+    pop.innerHTML = `<div class="tk-menu tags fm-box"><span class="tk-tag-row"><input class="tk-tag-in" placeholder="Dateien suchen" aria-label="Dateien suchen" autocomplete="off" /></span><span class="tk-tag-list"></span></div>`;
+    drawRows();
     pop.hidden = false; btn.classList.add('on');
-    const r = btn.getBoundingClientRect(), w = pop.offsetWidth;
-    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 12, r.right - w)))}px`;
+    const r = btn.getBoundingClientRect(), w = pop.firstElementChild.offsetWidth;
+    pop.style.left = `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`;
+    pop.style.top = `${Math.round(r.bottom + 6)}px`;
     pop.classList.remove('fm-anim'); void pop.offsetWidth; pop.classList.add('fm-anim');
-    pop.style.top = `${Math.round(r.bottom + 10)}px`;
+    setTimeout(() => pop.querySelector('input')?.focus({ preventScroll: true }), 40);
   }
+  function drawRows() {
+    const box = pop.querySelector('.tk-tag-list'); if (!box) return;
+    const q = fq.trim().toLowerCase();
+    const rows = list.map((it, i) => [it, i]).filter(([it]) => !q || `${it.title} ${it.sub}`.toLowerCase().includes(q));
+    box.innerHTML = rows.length ? rows.map(([it, i]) => `<button type="button" class="tk-mi fm-row" data-i="${i}" role="menuitem"><span class="fm-ic">${icoOf(it)}</span><span class="fm-t">${escapeHtml(it.title)}</span><span class="fm-sub">${escapeHtml(it.sub)}</span></button>`).join('') : '<span class="tk-ml fm-none">Nichts gefunden</span>';
+  }
+  pop.addEventListener('input', (e) => { if (e.target.matches('.tk-tag-in')) { fq = e.target.value; drawRows(); } });
+  pop.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Escape') close(); });
   btn.addEventListener('click', (e) => { e.stopPropagation(); if (pop.hidden) open(); else close(); });
   pop.addEventListener('click', (e) => {
     e.stopPropagation();

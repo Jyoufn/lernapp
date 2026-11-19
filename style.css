@@ -14480,3 +14480,16 @@ html body .ce-peek .cpk-note { padding: 4px 8px 6px; color: var(--text-3); font:
 html body .ce-peek .cm-sep { height: 1px; margin: 3px 5px; background: #212121; }
 html body .ce-peek .cpk-head { padding-left: 8px; }
 html body .ce-peek .cpk-row > .tk-pi, html body .ce-peek .cpk-row > svg { flex: none; width: 14px; height: 14px; }
+/* 20.11.: Dateien-Menü im Chat (Ordner-Symbol) – genau wie das Tag-Menü: unter dem Symbol, rechtsbündig, Suchleiste oben */
+html body .files-pop { position: fixed; z-index: 450; }
+html body .files-pop[hidden] { display: none; }
+html body .files-pop.fm-anim > .tk-menu { animation: fm-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; transform-origin: top right; }
+@keyframes fm-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
+html body .files-pop .fm-row { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; color: var(--text-2); text-align: left; cursor: pointer; }
+html body .files-pop .fm-ic { flex: none; display: grid; place-items: center; width: 15px; color: var(--text-3); }
+html body .files-pop .fm-ic svg { width: 14px; height: 14px; }
+html body .files-pop .fm-t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+html body .files-pop .fm-sub { flex: none; color: var(--text-4); font-size: 11px; }
+html body .files-pop .fm-none { display: block; padding: 6px 8px; color: var(--text-4); font-size: 12.5px; }
+html body .files-pop > .tk-menu.fm-box { display: block !important; position: relative !important; inset: auto !important; opacity: 1 !important; visibility: visible !important; pointer-events: auto !important; margin: 0 !important; transform: none; }
+html body .files-pop.files-pop { padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; border-radius: 0 !important; width: auto !important; min-width: 0 !important; max-height: none !important; overflow: visible !important; }
