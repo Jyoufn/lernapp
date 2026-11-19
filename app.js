@@ -7447,7 +7447,106 @@ chatMenu.addEventListener('click', async (e) => {
     label.textContent = text ? 'Kopiert' : 'Noch leer';
     setTimeout(() => { label.textContent = 'Als Text kopieren'; closeChatPops(); }, 700);
   }
+  else if (b.dataset.cm === 'pdf') { // 19.11.: ganzer Verlauf als PDF mit echtem Text – lesbar und an andere KIs anhängbar
+    const label = b.querySelector('span');
+    if (!history.length) { label.textContent = 'Noch leer'; setTimeout(() => { label.textContent = 'Als PDF herunterladen'; }, 900); return; }
+    const title = chatOf(activeTab())?.title || 'Chat';
+    const blob = chatPdf(title, history);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 80) || 'Chat'}.pdf`;
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    closeChatPops();
+  }
+  else if (b.dataset.cm === 'fork') { // 19.11.: Verlauf in einen neuen Chat übernehmen und dort weiterschreiben
+    if (!history.length) return;
+    const hist = history.map((h) => ({ ...h }));
+    const title = chatOf(activeTab())?.title || 'Chat';
+    closeChatPops();
+    const tab = createTab(title);
+    history.push(...hist);
+    renderSavedHistory(hist);
+    chatOf(tab).title = title;
+    saveChats(); renderChatBar?.();
+    input.focus();
+  }
 });
+
+/* ---------- Chat als PDF (ohne Bibliothek): A4, Helvetica, echter Text (WinAnsi), Zeilenumbruch nach Zeichenbreiten ---------- */
+const PDF_W = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+const PDF_MAP = { '€': 128, '‚': 130, '„': 132, '…': 133, '‘': 145, '’': 146, '“': 147, '”': 148, '•': 149, '–': 150, '—': 151, '™': 153 };
+const PDF_SUB = { '−': '-', '≤': '<=', '≥': '>=', '≠': '!=', '≈': '~', '→': '->', '←': '<-', '⇒': '=>', '∞': 'unendlich', 'π': 'pi', '√': 'sqrt', '∙': '·', '⋅': '·', '\t': '    ', ' ': ' ' };
+function pdfText(s) { // Zeichen → WinAnsi (1 Byte); Unbekanntes → „?“
+  let o = '';
+  for (const ch of String(s).normalize('NFC')) {
+    if (PDF_SUB[ch]) { o += PDF_SUB[ch]; continue; }
+    const c = ch.codePointAt(0);
+    if (c >= 32 && c < 127) o += ch;
+    else if (c >= 160 && c < 256) o += ch;
+    else if (PDF_MAP[ch]) o += String.fromCharCode(PDF_MAP[ch]);
+    else if (c > 0xffff || /\p{Extended_Pictographic}/u.test(ch)) continue; // Emojis weglassen
+    else o += '?';
+  }
+  return o;
+}
+function chatPdf(title, msgs) {
+  const en = window.I18n?.lang?.() === 'en';
+  const W = 595, H = 842, M = 56, FS = 10.5, LH = 15, maxW = W - 2 * M;
+  const wOf = (str, size) => [...str].reduce((n, ch) => { const c = ch.charCodeAt(0); return n + (c >= 32 && c < 127 ? PDF_W[c - 32] : 556); }, 0) * size / 1000;
+  const wrap = (line, size, w) => { // nach Wörtern umbrechen, überlange Wörter hart teilen; Einrückung bleibt
+    const ind = line.match(/^ */)[0], out = []; let cur = '';
+    for (const word of line.slice(ind.length).split(/(?<= )/)) {
+      if (wOf(ind + cur + word, size) <= w) { cur += word; continue; }
+      if (cur) { out.push(ind + cur.trimEnd()); cur = ''; }
+      let rest = word;
+      while (wOf(ind + rest, size) > w) { let k = rest.length; while (k > 1 && wOf(ind + rest.slice(0, k), size) > w) k--; out.push(ind + rest.slice(0, k)); rest = rest.slice(k); }
+      cur = rest;
+    }
+    out.push(ind + cur.trimEnd());
+    return out;
+  };
+  const items = []; // { t, f: 'F1'|'F2', s, gap }
+  const date = new Date().toLocaleString(en ? 'en-GB' : 'de-DE', { dateStyle: 'long', timeStyle: 'short' });
+  wrap(pdfText(title), 16, maxW).forEach((l) => items.push({ t: l, f: 'F2', s: 16, lh: 21 }));
+  items.push({ t: pdfText(`${en ? 'Exported' : 'Exportiert'}: ${date} · ${msgs.length} ${en ? 'messages' : 'Nachrichten'}`), f: 'F1', s: 9, lh: 13, gray: true });
+  msgs.forEach((h) => {
+    items.push({ gap: 12 });
+    items.push({ t: h.role === 'user' ? (en ? 'You' : 'Du') : (en ? 'AI' : 'KI'), f: 'F2', s: 11, lh: 17 });
+    const text = String(h.text || '').replace(/```ask[\s\S]*?```/g, '').replace(/\n{3,}/g, '\n\n').trim();
+    text.split('\n').forEach((ln) => wrap(pdfText(ln), FS, maxW).forEach((l) => items.push({ t: l, f: 'F1', s: FS, lh: LH })));
+    (h.sources || []).slice(0, 12).forEach((q, i) => { const u = q?.url || q?.uri || ''; if (u) wrap(pdfText(`[${i + 1}] ${q.title ? `${q.title} – ` : ''}${u}`), 8.5, maxW).forEach((l) => items.push({ t: l, f: 'F1', s: 8.5, lh: 12, gray: true })); });
+  });
+  // auf Seiten verteilen
+  const pages = []; let ops = [], y = H - M;
+  const esc = (t) => t.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  const flush = () => { pages.push(ops.join('\n')); ops = []; y = H - M; };
+  items.forEach((it) => {
+    if (it.gap) { y -= it.gap; return; }
+    if (y - it.lh < M) flush();
+    y -= it.lh;
+    ops.push(`BT /${it.f} ${it.s} Tf ${it.gray ? '0.45 g' : '0 g'} ${M} ${y.toFixed(1)} Td (${esc(it.t)}) Tj ET`);
+  });
+  flush();
+  pages.forEach((p, i) => { pages[i] = `${p}\nBT /F1 8 Tf 0.6 g ${W / 2 - 8} 30 Td (${i + 1} / ${pages.length}) Tj ET`; });
+  // PDF-Objekte
+  const objs = [];
+  const add = (s) => { objs.push(s); return objs.length; };
+  const cat = add(''), pagesId = add('');
+  const f1 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
+  const f2 = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
+  const kids = pages.map((c) => { const cs = add(`<< /Length ${c.length} >>\nstream\n${c}\nendstream`); return add(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 ${f1} 0 R /F2 ${f2} 0 R >> >> /Contents ${cs} 0 R >>`); });
+  objs[cat - 1] = `<< /Type /Catalog /Pages ${pagesId} 0 R >>`;
+  objs[pagesId - 1] = `<< /Type /Pages /Kids [${kids.map((k) => `${k} 0 R`).join(' ')}] /Count ${kids.length} >>`;
+  const info = add(`<< /Title (${esc(pdfText(title))}) /Producer (LernApp) >>`);
+  let out = '%PDF-1.4\n%\xe2\xe3\xcf\xd3\n'; const offs = [];
+  objs.forEach((o, i) => { offs.push(out.length); out += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const x = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}trailer\n<< /Size ${objs.length + 1} /Root ${cat} 0 R /Info ${info} 0 R >>\nstartxref\n${x}\n%%EOF`;
+  const bytes = new Uint8Array(out.length);
+  for (let i = 0; i < out.length; i++) bytes[i] = out.charCodeAt(i) & 255;
+  return new Blob([bytes], { type: 'application/pdf' });
+}
 
 
 /* Agent-Fenster ohne offene Aufgabe: schlichter Hinweis */
