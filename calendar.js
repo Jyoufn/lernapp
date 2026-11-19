@@ -369,62 +369,40 @@ const Calendar = (() => {
   const DUR = (a, b) => { const s0 = minsOf(a), e0 = minsOf(b); if (s0 == null || e0 == null || e0 <= s0) return ''; const d = e0 - s0; return d < 60 ? `${d} Min.` : `${Math.floor(d / 60)} Std.${d % 60 ? ` ${d % 60} Min.` : ''}`; };
   const dateText = (k) => { const d = new Date(`${k}T12:00:00`); return `${WEEKDAYS[d.getDay()]}, ${dm(d)}`; };
 
-  /* Termin ansehen (Klick auf einen Termin): nur die Angaben, oben rechts Stift → bearbeiten */
+  /* Termin antippen (19.11.): öffnet direkt das Bearbeiten-Fenster am Termin (kein Ansehen + Stift mehr);
+     die Kommentare stehen unten im Fenster (Enter fügt hinzu, gespeichert am Termin: comments: [{ t, at }]) */
   function showEvent(ev, anchor, store = null) {
     if (!ev) return;
-    close();
-    const timeHtml = ev.time ? `${esc(ev.time)}${ev.end ? `<span class="ce-arrow">${icon('f-arrow-right')}</span>${esc(ev.end)}` : ''}` : 'Ganztägig';
-    const dur = DUR(ev.time, ev.end);
-    emodal.innerHTML = `<div class="tk-form ce-card ce-view" style="--c:${esc(ev.color || COLORS[0])}">
-      <div class="ce-headbox ce-vhead${coverBg(ev.cover) ? ' has-cov' : ''}">
-        ${coverBg(ev.cover) ? `<div class="ce-cover"><span class="ce-cover-bg" style="background:${esc(coverBg(ev.cover))}"></span></div>` : ''}
-        <div class="ce-vtitle">${esc(ev.title)}</div>
-        ${ev.description ? `<div class="ce-vnote">${esc(ev.description).replace(/\n/g, '<br>')}</div>` : ''}
-        <button type="button" class="ce-vbtn ce-vedit" data-act="edit" aria-label="Bearbeiten">${icon('f-pencil')}</button>
-      </div>
-      <div class="ce-vrow"><span class="tk-si">${icon('f-calendar')}</span><span class="ce-vval">${dateText(ev.date)}${ev.date === todayIso() ? '<b class="ce-today">Heute</b>' : ''}</span></div>
-      <div class="ce-vrow"><span class="tk-si">${icon('f-clock')}</span><span class="ce-vval">${timeHtml}</span>${dur ? `<span class="ce-dur">${dur}</span>` : ''}</div>
-      ${(() => { const tg = (window.TagMenu?.all?.() || []).filter((g) => (ev.tags || []).includes(g.id)); return tg.length ? `<div class="ce-vrow"><span class="tk-si">${icon('f-tag')}</span><span class="ce-vval ce-vtags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</span></div>` : ''; })()}
-      <div class="ce-cbox"><div class="ce-clist"></div>
-        <label class="ce-cnew"><span class="tk-si">${icon('f-chat')}</span><input class="ce-cin" maxlength="300" placeholder="Kommentar hinzufügen" aria-label="Kommentar hinzufügen" autocomplete="off" /></label></div>
-    </div>`;
-    // Kommentare: unten im eigenen Kasten, Enter fügt hinzu; gespeichert am Termin (comments: [{ t, at }])
-    const cbox = emodal.querySelector('.ce-clist');
+    if (!Array.isArray(ev.comments)) ev.comments = []; // dieselbe Liste wie in der Kopie des Formulars → Speichern behält neue Kommentare
+    edit(ev, null, ev.time || '', ev.end || '', store, anchor);
+    const form = emodal.querySelector('form');
+    if (!form) return;
+    const box = document.createElement('div');
+    box.className = 'ce-cbox ce-cbox-edit';
+    box.innerHTML = `<div class="ce-clist"></div>
+      <label class="ce-cnew"><span class="tk-si">${icon('f-chat')}</span><input class="ce-cin" maxlength="300" placeholder="Kommentar hinzufügen" aria-label="Kommentar hinzufügen" autocomplete="off" /></label>`;
+    form.querySelector('.ce-foot')?.before(box);
+    const cbox = box.querySelector('.ce-clist');
     const persist = () => { if (store) store.onSave({ ...ev }); else save(); };
-    const drawComments = () => {
-      const list = Array.isArray(ev.comments) ? ev.comments : [];
-      cbox.hidden = !list.length;
-      cbox.innerHTML = list.map((c, i) => `<div class="ce-cm"><span class="ce-cm-t">${esc(c.t)}</span><button type="button" class="ce-cm-x" data-cdel="${i}" aria-label="Kommentar löschen">${icon('f-x')}</button></div>`).join('');
+    const draw = () => {
+      cbox.hidden = !ev.comments.length;
+      cbox.innerHTML = ev.comments.map((c, i) => `<div class="ce-cm"><span class="ce-cm-t">${esc(c.t)}</span><button type="button" class="ce-cm-x" data-cdel="${i}" aria-label="Kommentar löschen">${icon('f-x')}</button></div>`).join('');
     };
-    drawComments();
-    emodal.querySelector('.ce-cin').addEventListener('keydown', (x) => {
+    draw();
+    const cin = box.querySelector('.ce-cin');
+    cin.addEventListener('keydown', (x) => {
       x.stopPropagation();
       if (x.key === 'Escape') { x.target.blur(); eclose(); return; }
       if (x.key !== 'Enter') return;
-      x.preventDefault();
+      x.preventDefault(); // kein Absenden des Formulars
       const t = x.target.value.trim(); if (!t) return;
-      ev.comments = [...(Array.isArray(ev.comments) ? ev.comments : []), { t: t.slice(0, 300), at: Date.now() }].slice(-30);
-      x.target.value = ''; persist(); drawComments();
+      ev.comments.push({ t: t.slice(0, 300), at: Date.now() });
+      if (ev.comments.length > 30) ev.comments.splice(0, ev.comments.length - 30);
+      x.target.value = ''; persist(); draw();
     });
-    emodal.querySelector('.ce-cin').addEventListener('keypress', (x) => x.stopPropagation());
-    cbox.addEventListener('click', (x) => { const d = x.target.closest('[data-cdel]'); if (!d) return; x.stopPropagation(); ev.comments.splice(+d.dataset.cdel, 1); persist(); drawComments(); });
-    const card = emodal.firstElementChild;
-    card.addEventListener('click', (x) => {
-      if (!x.target.closest('[data-act="edit"]')) return;
-      // Ansicht → Bearbeiten: Karte bleibt an ihrem Platz und wächst weich nach unten auf (nur clip-path/transform/opacity – flüssig auf dem iPad)
-      const r = card.getBoundingClientRect();
-      edit(ev, null, ev.time || '', ev.end || '', store, anchor);
-      const f = emodal.querySelector('form');
-      if (!f) return;
-      const h = f.offsetHeight;
-      Object.assign(f.style, { left: `${r.left}px`, top: `${Math.max(12, Math.min(r.top, innerHeight - h - 290))}px` }); // Platz nach unten für die aufklappende Farbauswahl
-      if (reduced()) return;
-      const cut = Math.max(0, h - r.height);
-      f.animate([{ clipPath: `inset(0 0 ${cut}px 0 round 16px)` }, { clipPath: 'inset(0 0 0 0 round 16px)' }], { duration: 380, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
-      [...f.children].forEach((c, i) => c.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 340, delay: 30 + i * 35, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' }));
-    });
-    emodal.hidden = false;
-    place(card, anchor);
+    cin.addEventListener('keypress', (x) => x.stopPropagation());
+    cbox.addEventListener('click', (x) => { const d = x.target.closest('[data-cdel]'); if (!d) return; x.stopPropagation(); ev.comments.splice(+d.dataset.cdel, 1); persist(); draw(); });
+    place(form, anchor); // nach dem Einfügen neu messen
   }
   /* „+N weitere“: alle Termine des Tages in einer kleinen Karte */
   function showDayList(date, anchor) {
