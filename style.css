@@ -14346,3 +14346,49 @@ html body .hm-head-home .hm-plus2 { width: 28px; height: 28px; margin: 0; paddin
 html body .dc-list.hm-new-head > .hm-head.hm-head-home .hm-search { position: relative; left: auto; transform: none; width: 100%; margin: 0; }
 html body .dc-list.hm-new-head:has(.hm-head-home) > .hm-head { margin-top: 44px; }
 html body .hm-head-home .hm-trow .au-title { font-size: 21px; letter-spacing: -0.015em; } /* 19.11.: „Home“ etwas größer */
+/* ===== 19.11. (nachts): Home-Liste – keine Trennlinien, flachere Zeilen/Hover, kleinere Gruppen-Überschrift, kleineres Auswahl-Kästchen ===== */
+html body .lb2-row + .lb2-row::before, html body .lb2-row.picked::before, html body .lb2-row.picked + .lb2-row::before { display: none !important; }
+html body .cl-list .lb2-row { min-height: 34px; padding-top: 3px; padding-bottom: 3px; border-radius: 8px; }
+html body .cl-list .cl-label { font-size: 11px; }
+html body .cl-list .lb2-check { width: 15px; height: 15px; min-width: 15px; border-radius: 5px; }
+html body .cl-list .lb2-row.picked .lb2-check svg { width: 10px; height: 10px; }
+/* =====================================================================================================
+   19.11. (nachts): Termin-/Aufgaben-Fenster im Stil der Dropdown-Menüs (Chat-Menü „Umbenennen · Anheften …“)
+   – Rahmen 1 px 8 % Weiß, Radius 12, Fläche wie Menüs, Innenabstand 4
+   – oben Titel + Beschreibung frei (kein Kasten), darunter feiner Strich
+   – Eigenschaften als Menü-Zeilen (30 px, Icon grau links, Text, Wert/Pfeil rechts), Hover wie im Menü
+   – Kommentare + Fuß durch feinen Strich getrennt; Seiten-Wechsel (Unterseite) bleibt
+   ===================================================================================================== */
+html body .ce-card.ce-card.ce-card { box-sizing: border-box; padding: 4px !important; border: 1px solid rgba(255, 255, 255, 0.08) !important; border-radius: 12px !important; background: var(--menu-bg, #181818) !important; box-shadow: none !important; gap: 0 !important; }
+html body .cal-emodal:not(.anchored) .ce-card.ce-card.ce-card { width: min(300px, calc(100vw - 24px)) !important; }
+html body .ce-card.ce-card .ce-headbox { margin: 0 !important; padding: 8px 8px 9px !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; }
+html body .ce-card.ce-card .ce-headbox .tk-f-title { height: auto; padding: 0 !important; color: var(--text); font: 600 14px/1.35 var(--font-ui, Inter), sans-serif !important; }
+html body .ce-card.ce-card .ce-headbox .tk-f-title::placeholder { color: var(--text-4); }
+html body .ce-card.ce-card .ce-headbox .tk-f-notes { margin-top: 3px !important; padding: 0 !important; color: var(--text-3); font: 500 12.5px/1.4 var(--font-ui, Inter), sans-serif !important; }
+html body .ce-card.ce-card .ce-rows { display: flex; flex-direction: column; gap: 0 !important; margin: 0 !important; padding: 4px 0 0 !important; border-top: 1px solid #212121; }
+html body .ce-card.ce-card .ce-rows > .tk-pop { margin: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill { display: flex; align-items: center; gap: 8px !important; width: 100%; height: 30px !important; min-height: 30px !important; padding: 0 8px !important; border: 0 !important; border-radius: 8px !important; background: transparent !important; box-shadow: none !important; color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif !important; }
+@media (hover: hover) { html body .ce-card.ce-card .ce-rows > .tk-pop:not(.open) > .tk-pill:hover { background: rgba(255, 255, 255, 0.07) !important; color: var(--text); } }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-si { width: 14px; color: var(--text-3); }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-si svg { width: 14px; height: 14px; }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv { font-size: 13px !important; font-weight: 500 !important; }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .ce-chev { margin-left: auto; color: var(--text-4); }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .ce-chev svg { width: 12px; height: 12px; transform: rotate(-90deg); } /* Pfeil nach rechts = „führt zu einer Seite“ */
+html body .ce-card.ce-card .ce-rows > .ce-cover-row > .tk-pill .ce-chev svg { transform: none; }
+html body .ce-card.ce-card .ce-switch { transform: scale(0.85); transform-origin: right center; }
+/* Inhalt einer Unterseite: ohne eigenen Kasten, direkt im Fenster */
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-menu, html body .ce-card.ce-card .ce-rows > .tk-pop .tk-box { margin: 0 !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+html body .ce-card.ce-sub .ce-rows { border-top: 0; padding-top: 0 !important; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill { border-bottom: 1px solid #212121 !important; border-radius: 8px 8px 0 0 !important; margin-bottom: 4px; color: var(--text); }
+html body .ce-card.ce-card .ce-rows .tk-mi { height: 30px !important; min-height: 30px !important; padding: 0 8px !important; border-radius: 8px !important; font: 500 13px var(--font-ui, Inter), sans-serif !important; }
+@media (hover: hover) { html body .ce-card.ce-card .ce-rows .tk-mi:hover { background: rgba(255, 255, 255, 0.07) !important; } }
+/* Kommentare + Fuß */
+html body .ce-card.ce-card .ce-cbox, html body .ce-card.ce-card .ce-cbox-edit { margin: 4px 0 0 !important; padding: 4px 0 0 !important; border: 0 !important; border-top: 1px solid #212121 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; }
+html body .ce-card.ce-card .ce-cnew { min-height: 30px; padding: 0 8px; border-radius: 8px; }
+html body .ce-card.ce-card .ce-cnew .tk-si { width: 14px; color: var(--text-3); }
+html body .ce-card.ce-card .ce-cnew input { font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .ce-card.ce-card .ce-clist { padding: 2px 8px 0 30px; }
+html body .ce-card.ce-card .ce-foot { margin: 4px 0 0 !important; padding: 6px 2px 2px 4px !important; border-top: 1px solid #212121; gap: 6px; }
+html body .ce-card.ce-card .ce-foot .tk-make { height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; font: 600 12.5px var(--font-ui, Inter), sans-serif !important; }
+html body .ce-card.ce-card .ce-foot .tk-sheet-ib { width: 28px; height: 28px; border-radius: 8px; }
+html body .ce-card.ce-card .ce-cover:not([hidden]) { margin: 0 0 6px !important; border-radius: 8px !important; overflow: hidden; }
