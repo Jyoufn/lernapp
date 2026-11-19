@@ -24,6 +24,8 @@ const Aufgaben = (() => {
   };
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const today = () => iso(new Date());
+  // kurz wie in der Vorlage: „7. Okt.“ (Englisch: „Oct 7“)
+  const shortDay = (s) => new Date(`${s}T12:00:00`).toLocaleDateString(window.I18n?.lang?.() === 'en' ? 'en-US' : 'de-DE', { day: 'numeric', month: 'short' });
   const dayLabel = (s) => {
     if (!s) return '';
     const tm = new Date(); tm.setDate(tm.getDate() + 1);
@@ -57,15 +59,14 @@ const Aufgaben = (() => {
     return `<article class="au-card2 st-${st}${bg ? ' has-cov' : ''}" data-id="${esc(t.id)}" tabindex="0">
       ${bg ? `<div class="au-ccov" style="background:${esc(bg)}"></div>` : ''}
       <button type="button" class="au-edit" data-au="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil', 13)}</button>
-      <div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${t.priority && t.priority !== 'none' && window.UIKit?.prioIcon ? `<span class="au-cprio p-${esc(t.priority)}">${window.UIKit.prioIcon(t.priority, 13)}</span>` : ''}${st === 'done' ? `<span class="au-ok">${icon('f-check', 9)}</span>` : ''}</div>
-      ${(() => { // 19.11.: Titel oben über die ganze Breite, darunter die Tags, darunter Priorität und direkt daneben das Datum (mit Kalender-Symbol)
+      ${(() => { // 19.11. (Vorlage): oben rechts die Priorität (Symbol + Name), dann der Titel, darunter die Tags, unten links Datum und Uhrzeit
         const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
         const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
+        const top = pr ? `<div class="au-ctop"><span class="au-cprio p-${esc(pr.id)}">${window.UIKit.prioIcon(pr.id, 12)}<span>${esc(pr.name)}</span></span></div>` : '';
         const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
-        const foot = t.due ? `<div class="au-cm">${t.due ? `<span class="au-cdue${over ? ' over' : ''}">${icon(t.calId ? 'f-calendar' : 'o-calendar', 12)}${esc(dayLabel(t.due))}${t.time ? ` · ${esc(t.time)}` : ''}</span>` : ''}</div>` : '';
-        const desc = t.note ? `<div class="au-cdesc">${esc(t.note)}</div>` : '';
-        return desc + tags + foot;
-      })()}</div></article>`;
+        const foot = t.due || t.time ? `<div class="au-cm${over ? ' over' : ''}">${t.due ? `<span class="au-cdue">${icon('o-calendar', 13)}${esc(shortDay(t.due))}</span>` : ''}${t.time ? `<span class="au-ctime">${icon('f-clock', 13)}${esc(t.time)}</span>` : ''}</div>` : '';
+        return `<div class="au-cb">${top}<div class="au-ctr"><span class="au-ct">${esc(t.title)}</span></div>${tags}${foot}</div></article>`;
+      })()}`;
   }
   function counts() {
     TABS.forEach(([k]) => { const n = items.filter((t) => statusOf(t) === k).length; const el = main.querySelector(`[data-n="${k}"]`); if (el) el.textContent = String(n); });
@@ -158,15 +159,21 @@ const Aufgaben = (() => {
         else { const last = items.map((x) => statusOf(x)).lastIndexOf(to); items.splice(last + 1, 0, t); }
         save();
       }
-      d.ghost.remove(); render();
-      const nc = board.querySelector(`.au-card2[data-id="${CSS.escape(d.id)}"]`);
-      if (nc && !cancel && to === 'done' && !reduced()) nc.querySelector('.au-ok')?.animate([{ transform: 'scale(0)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 320, easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)' });
+      // 19.11.: nicht alles neu zeichnen (ruckelt) – nur die eine Karte an die Stelle der Lücke setzen, Zähler aktualisieren
+      let nc = null;
+      if (!cancel && t && d.ph.isConnected) {
+        const tmp = document.createElement('div'); tmp.innerHTML = card(t).trim(); nc = tmp.firstElementChild;
+        d.ph.replaceWith(nc); d.el.remove();
+      } else { d.ph.remove(); d.el.classList.remove('au-src'); nc = d.el; }
+      d.ghost.remove(); counts();
+
     };
     const target = (cancel ? d.el : d.ph).getBoundingClientRect();
     if (reduced()) return end();
-    const g = d.ghost.getBoundingClientRect();
+    // Startpunkt = die ungedrehte Lage (left/top), nicht der schräge Rahmen – sonst springt die Karte am Ende
+    const gl = parseFloat(d.ghost.style.left) || 0, gt = parseFloat(d.ghost.style.top) || 0;
     d.ghost.getAnimations().forEach((a) => a.cancel());
-    d.ghost.animate([{ transform: `translate(0, 0) rotate(-2.5deg) scale(1.02)` }, { transform: `translate(${target.left - g.left}px, ${target.top - g.top}px)` }], { duration: 200, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)', fill: 'forwards' }).finished.then(end, end);
+    d.ghost.animate([{ transform: 'translate(0, 0) rotate(-2.5deg) scale(1.02)' }, { transform: `translate(${target.left - gl}px, ${target.top - gt}px) rotate(0) scale(1)` }], { duration: 260, easing: 'cubic-bezier(0.2, 0.9, 0.25, 1)', fill: 'forwards' }).finished.then(end, end);
   }
   board.addEventListener('pointerup', (e) => {
     if (!drag) return;

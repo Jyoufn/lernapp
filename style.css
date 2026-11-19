@@ -14085,3 +14085,13 @@ html body .ce-card .tk-pop.open { box-shadow: inset 0 0 0 1px #2a2a2a !important
 .chat-graph .g-tip span, .chat-graph .g-legend span { display: inline-flex; align-items: center; gap: 6px; }
 .chat-graph .g-tip i, .chat-graph .g-legend i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .chat-graph .g-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 8px 4px 0; color: var(--text-2); font: 500 12px ui-monospace, SFMono-Regular, Menlo, monospace; }
+/* 19.11. (Vorlage): Karte – Priorität oben rechts mit Namen, Titel, Tags, unten links Datum + Uhrzeit in normaler Schrift */
+.au-ctop { display: flex; justify-content: flex-end; margin-bottom: -4px; }
+.au-ctop .au-cprio { display: inline-flex; align-items: center; gap: 5px; margin: 0; color: var(--text-3); font: 500 12px var(--font-ui, Inter), sans-serif; }
+.au-cm { gap: 12px; color: var(--text-3); font: 500 12.5px var(--font-ui, Inter), sans-serif !important; }
+.au-cm .au-cdue, .au-cm .au-ctime { display: inline-flex; align-items: center; gap: 5px; font: inherit !important; letter-spacing: 0; }
+.au-cm svg { flex: none; opacity: 0.85; }
+.au-cm.over { color: #e5534b; }
+/* beim Ziehen keine Scrollleiste (dünner Strich unten) */
+.au-board, .au-cards { scrollbar-width: none; }
+.au-board::-webkit-scrollbar, .au-cards::-webkit-scrollbar { display: none; }
