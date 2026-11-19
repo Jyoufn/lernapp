@@ -46,8 +46,8 @@ const Aufgaben = (() => {
   main.className = 'au-main';
   const SI = { open: icon('f-st-open', 14), doing: icon('f-st-doing', 14), done: icon('f-st-done', 14), archived: icon('f-st-arch', 14) }; // grau, runde Linien
   main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1>
-      <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn" data-au="filter" aria-label="Filter" title="Filter">${icon('f-filter', 13)}</button></label><span class="grow"></span>
-      <button type="button" class="lb2-filter au-sbtn" data-au="sort" aria-label="Sortieren" title="Sortieren">${icon('f-list', 14)}</button>
+      <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn" data-au="filter" aria-label="Filter" title="Filter">${icon('f-filter', 14)}</button></label><span class="grow"></span>
+      <button type="button" class="lb2-filter au-sbtn" data-au="sort" aria-label="Sortieren" title="Sortieren"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13V3M2.5 5.5 5 3l2.5 2.5"/><path d="M11 3v10M8.5 10.5 11 13l2.5-2.5"/></svg></button>
       <button class="cal-new" type="button" data-au="new" aria-label="Neue Aufgabe">${icon('f-plus')}<span>Neue Aufgabe</span></button></header>
     <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch"><span class="au-si">${SI[k]}</span><span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
   view.append(main);
@@ -115,7 +115,7 @@ const Aufgaben = (() => {
     amenu.innerHTML = html(); amenu.style.maxHeight = ''; amenu.hidden = false;
     const r = btn.getBoundingClientRect(), w = amenu.offsetWidth, h = amenu.offsetHeight, room = Math.max(160, innerHeight - r.bottom - 14);
     amenu.style.maxHeight = `${Math.min(h, room)}px`;
-    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right - w))}px`;
+    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, btn.matches('.au-sbtn') ? r.left : r.right - w))}px`; // Sortieren öffnet nach rechts (unter „Neue Aufgabe“)
     amenu.style.top = `${r.bottom + 6}px`;
     amenu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; e.stopPropagation(); onPick(b.dataset.v); const st = amenu.scrollTop; amenu.innerHTML = html(); amenu.scrollTop = st; };
   }
@@ -143,7 +143,7 @@ const Aufgaben = (() => {
     }
     const sb = e.target.closest('[data-au="sort"]');
     if (sb) {
-      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'sparkle']];
+      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'plus']];
       openAMenu(sb, () => SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join(''), (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
     }
   });

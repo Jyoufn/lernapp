@@ -14135,3 +14135,4 @@ html body .au-menu .au-tick { display: grid; place-items: center; margin-left: a
 html body .au-menu .au-tick svg { width: 13px; height: 13px; color: var(--text); }
 html body .au-menu .au-mdot { flex: none; display: grid; place-items: center; width: 14px; height: 14px; }
 html body .au-menu .au-mdot i { width: 8px; height: 8px; border-radius: 50%; }
+html body .au-search .au-fbtn { margin-right: -9px; } /* 19.11.: optisch gleich weit vom Rand wie die Lupe links */
