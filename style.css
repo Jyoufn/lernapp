@@ -14515,3 +14515,6 @@ html body .cmdk-box .cmdk-row { min-height: 30px !important; height: 30px; paddi
 html body .cmdk-box .cmdk-row :is(.cmdk-ic, .cmdk-dog) svg, html body .cmdk-box .cmdk-row > svg { width: 14px; height: 14px; }
 html body .cmdk-box .cmdk-row .cmdk-m, html body .cmdk-box .cmdk-row .cmdk-s { font-size: 11.5px; }
 html body .cmdk-box .cmdk-foot { border-top: 1px solid #212121; }
+/* 20.11.: unten weniger Platz – Home-Balken-Abstand teilt sich den normalen Rand (8 px) statt ihn zu verdoppeln; Chat-Ende knapper */
+.app { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 10px)); }
+html body .chat-scroll { padding-bottom: calc(var(--composer-space, 140px) + 8px) !important; }
