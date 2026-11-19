@@ -162,3 +162,5 @@ Umsetzung: Block „DREI FLÄCHEN“ und folgende Blöcke am Ende von `style.css
 
 - **Termin-/Aufgaben-Fenster (Stand 19.11. nachts)**: Stil der Dropdown-Menüs – Rahmen 1 px 8 % Weiß, Radius 12, Menü-Fläche, Innenabstand 4; Titel/Beschreibung frei oben, darunter Menü-Zeilen (30 px, Icon grau, Pfeil rechts = Unterseite), Gruppen durch Striche #212121 getrennt; Zeile antippen = Unterseite mit „‹ Name“ (kein Aufklappen); neu = mittig 300 px, Hintergrund unscharf.
 - **Home-Liste**: keine Trennlinien, Zeilen 34 px, Auswahl-Kästchen 15 px, Gruppen-Überschrift 11 px.
+
+- **Geräte (verbindlich, 20.11.)**: Mac/PC-Darstellung ist die Vorlage und wird für iPad-Wünsche NICHT geändert. iPad wird beim Laden erkannt (`index.html` setzt `html.is-ipad`, auch für „Desktop-Safari“ = MacIntel + Touch); iPad-Anpassungen nur unter `html.is-ipad …` am Ende von `style.css` (Hauptteil weiter unten, Kalender-Wochen `minmax(0,1fr)` ohne Scrollen, Aufgaben 3 Spalten sichtbar + Wischen randlos, Suche im Kopf im Fluss).
