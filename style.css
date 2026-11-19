@@ -14101,3 +14101,17 @@ html body .ce-card .tk-pop.open { box-shadow: inset 0 0 0 1px #2a2a2a !important
 /* 19.11.: kein Hunde-Bild neben den KI-Antworten / „Gearbeitet für“ (Sidebar bleibt) */
 html body #chat .msg-ai::before, html body .dcc-a::before { display: none !important; content: none !important; }
 .chat-graph .g-legend sup { font-size: 0.72em; line-height: 0; vertical-align: 0.55em; margin-left: 1px; }
+/* 19.11.: Legende – Formel als normaler Text, Hochzahl sitzt direkt am x, kleiner und hochgestellt */
+.chat-graph .g-legend .g-eq { display: inline; white-space: nowrap; }
+.chat-graph .g-legend .g-eq sup { position: relative; top: -0.5em; margin-left: 0.5px; font-size: 0.7em; line-height: 0; vertical-align: baseline; }
+/* 19.11.: Rückfrage – Antworten ohne Kasten und ohne Auswahl-Fläche (auch beim Drüberfahren); gewählt = nur der Buchstabe weiß.
+   Unten links „Abbrechen“, rechts „Senden“ – bleibt weiß und nur leicht abgerundet, auch beim Drüberfahren */
+html body #composer .ask-panel .ask-opt, html body #composer .ask-panel .ask-opt.ask-own-row,
+html body #composer .ask-panel .ask-opt.selected, html body #composer .ask-panel .ask-opt:hover,
+html body #composer .ask-panel .ask-opt:focus-visible, html body #composer .ask-panel .ask-opt.selected:hover { background: transparent !important; box-shadow: none !important; border: 0 !important; outline: none; }
+html body #composer .ask-panel .ask-opt.selected { color: var(--text); }
+html body #composer .ask-panel .ask-btn.primary, html body #composer .ask-panel .ask-btn.primary:hover, html body #composer .ask-panel .ask-btn.primary:focus-visible { height: 30px; padding: 0 14px; border-radius: 9px; background: #f2f2f2; color: #141414; }
+@media (hover: hover) { html body #composer .ask-panel .ask-btn.primary:not(:disabled):hover { background: #ffffff; } }
+html body #composer .ask-panel .ask-btn.primary:disabled { background: rgba(255, 255, 255, 0.12); color: var(--text-4); }
+html body #composer .ask-panel .ask-btn.ghost { height: 30px; padding: 0 10px; border-radius: 9px; color: var(--text-3); }
+@media (hover: hover) { html body #composer .ask-panel .ask-btn.ghost:hover { background: rgba(255, 255, 255, 0.05); color: var(--text); } }

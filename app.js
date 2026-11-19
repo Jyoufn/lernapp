@@ -462,7 +462,7 @@ window.Skills?.setMentions(mentionItems, (m) => { if (!attachments.some((a) => a
    der Klick landet dann manchmal daneben (Auswahl/Senden „geht nicht“). Bei Touch löst deshalb schon das Loslassen auf dem Knopf aus
    (pointerup bleibt beim angetippten Element), der nachfolgende Klick wird verworfen. */
 {
-  const TAP = '#sendBtn, #askNext, .ask-opt:not(.ask-own-row), .ask-skip, .ask-back, .ask-mic, .as-go, .ah-go';
+  const TAP = '#sendBtn, #askNext, .ask-cancel, .ask-opt:not(.ask-own-row), .ask-skip, .ask-back, .ask-mic, .as-go, .ah-go';
   let down = null, fired = null;
   document.addEventListener('pointerdown', (e) => {
     if (e.pointerType !== 'touch') return;
@@ -4780,6 +4780,13 @@ function renderAsk(dir = 0) {
   skip.title = 'Die KI entscheidet diesen Punkt selbst';
   skip.addEventListener('click', skipOne);
   // „Überspringen“ unten entfällt (16.11.) – das × oben reicht
+  // 19.11.: unten links „Abbrechen“ (= wie × oben)
+  if (!ask.noSkip) {
+    const cancel = el('button', 'ask-btn ghost ask-cancel', 'Abbrechen');
+    cancel.type = 'button';
+    cancel.addEventListener('click', () => (ask.onDone ? skipAll() : skipAsk()));
+    foot.append(cancel);
+  }
   if (ask.index > 0) {
     const back = el('button', 'ask-btn ghost ask-back', `${icon('i-back', 14)}Zurück`);
     back.type = 'button';

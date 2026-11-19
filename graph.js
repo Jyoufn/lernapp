@@ -79,28 +79,85 @@ const Graph = (() => {
     const pts = (Array.isArray(o?.points) ? o.points : []).slice(0, 12).filter((q) => Number.isFinite(+q?.x) && Number.isFinite(+q?.y)).map((q) => ({ x: +q.x, y: +q.y, label: String(q.label || '').slice(0, 30) }));
     if (!list.length && !pts.length) return null;
     const rng = (a) => (Array.isArray(a) && a.length === 2 && a.every((v) => Number.isFinite(+v)) && +a[1] > +a[0] ? [+a[0], +a[1]] : null);
-    return { title: String(o.title || '').slice(0, 80), fns: list, points: pts, x: rng(o.x) || [-10, 10], y: rng(o.y) };
+    return { title: String(o.title || '').slice(0, 80), fns: list, points: pts, x: rng(o.x), y: rng(o.y) };
   }
   // „schöne“ Abstände für die Achsen (1, 2, 5 · 10^n)
   const nice = (span, want = 8) => { const raw = span / want, m = 10 ** Math.floor(Math.log10(raw)), f = raw / m; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * m; };
   const fmt = (v) => { const r = Math.round(v * 1000) / 1000; return String(r).replace('.', ',').replace('-', '−'); };
 
+  /* ---------- Ausschnitt ----------
+     Markante Stellen (Nullstellen, Extrema, Wendepunkte) werden numerisch gesucht; x-Bereich umfasst sie (nächstliegende zuerst),
+     y-Bereich so, dass sie gut erkennbar sind – statt starr [-6, 6] und Werte, die eine Kurve zur flachen Linie drücken.
+     Bereiche der KI bleiben, wenn sie alle markanten Stellen enthalten. */
+  function features(fn) {
+    const out = [], A = -30, B = 30, N = 6000, h = 1e-4;
+    const d1 = (x) => (fn(x + h) - fn(x - h)) / (2 * h), d2 = (x) => (fn(x + 1e-3) - 2 * fn(x) + fn(x - 1e-3)) / 1e-6;
+    [fn, d1, d2].forEach((g) => {
+      let xa = A, ga = g(xa);
+      for (let i = 1; i <= N; i++) {
+        const xb = A + (B - A) * i / N, gb = g(xb);
+        if (Number.isFinite(ga) && Number.isFinite(gb) && (ga === 0 || ga * gb < 0)) {
+          let lo = xa, hi = xb, glo = ga;
+          for (let k = 0; k < 40 && ga !== 0; k++) { const m = (lo + hi) / 2, gm = g(m); if (!Number.isFinite(gm)) break; if (glo * gm <= 0) hi = m; else { lo = m; glo = gm; } }
+          const x = ga === 0 ? xa : (lo + hi) / 2, y = fn(x);
+          const jump = Math.abs(fn(x + 1e-3) - fn(x - 1e-3));
+          if (Number.isFinite(y) && Math.abs(y) < 1e6 && jump < 1 + Math.abs(y) * 0.1) out.push({ x: Math.abs(x) < 1e-7 ? 0 : x, y }); // Polstellen fallen raus
+        }
+        xa = xb; ga = gb;
+      }
+    });
+    const y0 = fn(0); if (Number.isFinite(y0) && Math.abs(y0) < 1e6) out.push({ x: 0, y: y0 }); // Schnitt mit der y-Achse
+    return out;
+  }
+  function view(g) {
+    let feats = [];
+    g.fns.forEach((f) => { feats.push(...features(f.fn)); });
+    feats.push(...g.points);
+    // bei vielen Stellen (z. B. sin) nur die nächstliegenden
+    feats.sort((a, b) => Math.abs(a.x) - Math.abs(b.x));
+    feats = feats.filter((q) => Math.abs(q.x) <= 25);
+    if (feats.length > 10) { const cut = Math.abs(feats[9].x) + 1e-6; feats = feats.filter((q) => Math.abs(q.x) <= cut); }
+    let x;
+    const fx = feats.map((q) => q.x);
+    if (g.x && fx.every((q) => q > g.x[0] && q < g.x[1])) x = g.x;
+    else {
+      let lo = Math.min(0, ...fx), hi = Math.max(0, ...fx);
+      if (!fx.length) { lo = -5; hi = 5; }
+      const span = hi - lo, pad = Math.max(1.5, span * 0.3);
+      lo -= pad; hi += pad;
+      if (hi - lo < 6) { const c = (lo + hi) / 2; lo = c - 3; hi = c + 3; }
+      x = [lo, hi];
+    }
+    if (g.y && feats.every((q) => q.x < x[0] || q.x > x[1] || (q.y > g.y[0] && q.y < g.y[1]))) return { x, y: g.y };
+    // Werte im Bereich (Ausreißer bei Polstellen abschneiden)
+    const vals = [];
+    g.fns.forEach((f) => { for (let i = 0; i <= 300; i++) { const v = f.fn(x[0] + (x[1] - x[0]) * i / 300); if (Number.isFinite(v)) vals.push(v); } });
+    g.points.forEach((q) => vals.push(q.y));
+    vals.sort((a, b) => a - b);
+    let lo = vals[Math.floor(vals.length * 0.03)] ?? -5, hi = vals[Math.ceil(vals.length * 0.97) - 1] ?? 5;
+    // markante Stellen sollen nicht zusammengedrückt werden: sie nehmen mindestens ~55 % der Höhe ein
+    const fy = feats.filter((q) => q.x >= x[0] && q.x <= x[1]).map((q) => q.y);
+    if (fy.length) {
+      const flo = Math.min(...fy), fhi = Math.max(...fy), fs = fhi - flo;
+      if (fs > 1e-9 && fs < (hi - lo) * 0.55) { const ext = fs * 0.45; lo = Math.max(lo, flo - ext); hi = Math.min(hi, fhi + ext); }
+      lo = Math.min(lo, flo); hi = Math.max(hi, fhi);
+    }
+    if (hi - lo < 1e-9) { lo -= 2; hi += 2; }
+    const pad = (hi - lo) * 0.12;
+    lo -= pad; hi += pad;
+    // x-Achse mit ins Bild, wenn sie nah dran ist
+    if (lo > 0 && lo < (hi - lo) * 0.5) lo = -pad / 2;
+    if (hi < 0 && -hi < (hi - lo) * 0.5) hi = pad / 2;
+    return { x, y: [lo, hi] };
+  }
+
   /* ---------- Zeichnen ---------- */
   function figure(raw) {
     const g = parse(raw); if (!g) return null;
     const W = 640, H = 400, PAD = 34;
-    const [x0, x1] = g.x;
-    let [y0, y1] = g.y || [NaN, NaN];
-    if (!g.y) { // y-Bereich aus den Werten (Ausreißer bei Polstellen abschneiden)
-      const vals = [];
-      g.fns.forEach((f) => { for (let i = 0; i <= 200; i++) { const v = f.fn(x0 + (x1 - x0) * i / 200); if (Number.isFinite(v)) vals.push(v); } });
-      g.points.forEach((q) => vals.push(q.y));
-      vals.sort((a, b) => a - b);
-      const lo = vals[Math.floor(vals.length * 0.04)] ?? -10, hi = vals[Math.ceil(vals.length * 0.96) - 1] ?? 10;
-      const pad = Math.max(1, (hi - lo) * 0.12);
-      y0 = Math.min(lo - pad, 0 < lo ? -pad / 2 : lo - pad); y1 = Math.max(hi + pad, 0 > hi ? pad / 2 : hi + pad);
-      if (y1 - y0 > 400) { y0 = Math.max(y0, -200); y1 = Math.min(y1, 200); }
-    }
+    // 19.11.: Ausschnitt automatisch so wählen, dass die Grundform gut zu sehen ist (Nullstellen, Hoch-/Tiefpunkte, Wendepunkte)
+    const vw = view(g);
+    const [x0, x1] = vw.x, [y0, y1] = vw.y;
     const sx = (x) => PAD + (x - x0) / (x1 - x0) * (W - 2 * PAD), sy = (y) => H - PAD - (y - y0) / (y1 - y0) * (H - 2 * PAD);
     const dx = nice(x1 - x0), dy = nice(y1 - y0, 6);
     let grid = '', labels = '';
@@ -132,7 +189,7 @@ const Graph = (() => {
         <g class="g-curves">${curves}</g><g class="g-pts">${pts}</g>
         <g class="g-hover" visibility="hidden"><line class="g-hl" y1="${PAD}" y2="${H - PAD}"/>${g.fns.map((f) => `<circle r="4" fill="${f.color}"/>`).join('')}</g>
       </svg><div class="g-tip" hidden></div></div>
-      <div class="g-legend">${g.fns.map((f, i) => `<span><i style="background:${f.color}"></i>${pretty(f.label ? `${f.label} = ${f.expr}` : `${String.fromCharCode(102 + i)}(x) = ${f.expr}`)}</span>`).join('')}</div>`;
+      <div class="g-legend">${g.fns.map((f, i) => `<span><i style="background:${f.color}"></i><span class="g-eq">${pretty(f.label ? `${f.label} = ${f.expr}` : `${String.fromCharCode(102 + i)}(x) = ${f.expr}`)}</span></span>`).join('')}</div>`;
     const clip = fig.querySelector('clipPath'); fig.querySelector('.g-curves').setAttribute('clip-path', `url(#${clip.id})`);
     // Fahren über den Graphen: senkrechte Linie, Punkte auf den Kurven, Werte daneben
     const svg = fig.querySelector('.g-svg'), hov = fig.querySelector('.g-hover'), tip = fig.querySelector('.g-tip');
@@ -151,7 +208,7 @@ const Graph = (() => {
     return fig;
   }
   // Formel lesbar: x^2 → x², x^(n+1) → hochgestellt, * → ·
-  const pretty = (t) => esc(t).replace(/\*/g, '·').replace(/\^\(([^)]{1,20})\)/g, '<sup>$1</sup>').replace(/\^(-?[\w.,]+)/g, '<sup>$1</sup>');
+  const pretty = (t) => esc(t).replace(/\*/g, '·').replace(/\^\(([^)]{1,20})\)/g, '<sup>$1</sup>').replace(/\^(-?(?:[\d.,]+|[a-zπ]))/g, '<sup>$1</sup>');
   const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   /* 19.11.: von selbst – steht in einer Antwort eine Funktionsgleichung (f(x) = …, y = … mit x; auch in LaTeX), wird der Graph
      darunter gezeichnet, ohne dass jemand „Graph“ sagen muss. Nur, wenn noch kein Graph da ist. */
@@ -186,7 +243,7 @@ const Graph = (() => {
   function auto(container, text) {
     if (!container || container.querySelector('.chat-graph')) return null;
     const fns = find(text); if (!fns.length) return null;
-    const fig = figure(JSON.stringify({ title: fns.length > 1 ? 'Graphen' : `Graph von ${fns[0].label}`, functions: fns, x: [-6, 6] }));
+    const fig = figure(JSON.stringify({ title: fns.length > 1 ? 'Graphen' : `Graph von ${fns[0].label}`, functions: fns }));
     if (!fig) return null;
     fig.classList.add('g-auto');
     // hinter den Absatz mit der ersten Gleichung, sonst ans Ende
