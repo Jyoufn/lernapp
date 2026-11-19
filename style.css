@@ -14345,3 +14345,4 @@ html body .hm-head-home .hm-trow .au-title { margin: 0; color: var(--text); font
 html body .hm-head-home .hm-plus2 { width: 28px; height: 28px; margin: 0; padding: 0; display: grid; place-items: center; color: var(--text-2); }
 html body .dc-list.hm-new-head > .hm-head.hm-head-home .hm-search { position: relative; left: auto; transform: none; width: 100%; margin: 0; }
 html body .dc-list.hm-new-head:has(.hm-head-home) > .hm-head { margin-top: 44px; }
+html body .hm-head-home .hm-trow .au-title { font-size: 21px; letter-spacing: -0.015em; } /* 19.11.: „Home“ etwas größer */
