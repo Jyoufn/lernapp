@@ -65,7 +65,7 @@ const Aufgaben = (() => {
         const top = pr ? `<div class="au-ctop"><span class="au-cprio p-${esc(pr.id)}">${window.UIKit.prioIcon(pr.id, 12)}<span>${esc(pr.name)}</span></span></div>` : '';
         const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
         const foot = t.due || t.time ? `<div class="au-cm${over ? ' over' : ''}">${t.due ? `<span class="au-cdue">${icon('o-calendar', 13)}${esc(shortDay(t.due))}</span>` : ''}${t.time ? `<span class="au-ctime">${icon('f-clock', 13)}${esc(t.time)}</span>` : ''}</div>` : '';
-        return `<div class="au-cb">${top}<div class="au-ctr"><span class="au-ct">${esc(t.title)}</span></div>${tags}${foot}</div></article>`;
+        return `<div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${top}</div>${tags}${foot}</div></article>`; // Priorität in derselben Zeile rechts neben dem Titel
       })()}`;
   }
   function counts() {
