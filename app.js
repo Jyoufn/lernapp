@@ -6541,11 +6541,13 @@ const TagMenu = (() => {
     pop.classList.add('open');
     const r = anchor.getBoundingClientRect(), menu = pop.firstElementChild, w = menu.offsetWidth || 230, h = Math.max(menu.offsetHeight, 120);
     // 18.11.: Tag-Knopf oben rechts im Chat → die Suche steht in derselben Zeile LINKS neben dem Knopf, die Liste darunter
-    pop.classList.toggle('tagm-inline', anchor.id === 'chatTags');
+    // 19.11.: im Chat unter dem Tag-Knopf, rechtsbündig mit dem Chats-Symbol ganz rechts (überdeckt nichts mehr, auch nicht die eigenen Tag-Namen)
+    pop.classList.remove('tagm-inline');
+    pop.classList.toggle('tagm-chat', anchor.id === 'chatTags');
     if (anchor.id === 'chatTags') {
-      const row = menu.querySelector('.tk-tag-row'), mr = menu.getBoundingClientRect(), rr = row.getBoundingClientRect();
-      pop.style.left = `${Math.round(Math.max(8, r.left - 6 - w))}px`;
-      pop.style.top = `${Math.round(r.top + r.height / 2 - (rr.top - mr.top + rr.height / 2))}px`;
+      const edge = (document.getElementById('chatsBtn') || anchor).getBoundingClientRect().right, mw = menu.offsetWidth || 240;
+      pop.style.left = `${Math.round(Math.max(8, edge - mw))}px`;
+      pop.style.top = `${Math.round(r.bottom + 6)}px`;
       setTimeout(() => input.focus({ preventScroll: true }), 40);
       return;
     }

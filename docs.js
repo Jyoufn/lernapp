@@ -649,9 +649,10 @@ const Docs = (() => {
     const rows = view.querySelector('.cl-list'), search = find.field;
     const bar = view.querySelector('.lb2-bar'), selBox = bar.querySelector('.lb2-sel');
     view.querySelector('.cl-head').append(bar); // „Alle Einträge“ + Filter oben rechts neben dem Titel (Wunsch 15.11., in beiden Sprachen)
-    if (!CH) { // 19.11.: Home-Kopf wie bei Aufgaben/Kalender – „Home“ oben links, mittig die Suche mit dem Filter darin
+    { // 19.11.: Kopf wie bei Aufgaben/Kalender – mittig die Suche mit dem Filter darin (ohne Titel); gilt für Home und die Chats-Liste
       const hb = el('header', 'au-head hm-head');
-      hb.innerHTML = `<h1 class="au-title">Home</h1><label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="Chats und Dokumente durchsuchen" aria-label="Chats und Dokumente durchsuchen" autocomplete="off" /></label>`;
+      const ph = CH ? 'Chats durchsuchen' : 'Chats und Dokumente durchsuchen';
+      hb.innerHTML = `<label class="au-search hm-search">${fi('search', 14)}<input type="search" placeholder="${ph}" aria-label="${ph}" autocomplete="off" /></label>`;
       const lab = hb.querySelector('.hm-search'), hin = lab.querySelector('input');
       lab.append(bar.querySelector('.lb2-filter'));
       lab.querySelector('.lb2-filter').classList.add('au-fbtn');
