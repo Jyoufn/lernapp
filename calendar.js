@@ -195,7 +195,7 @@ const Calendar = (() => {
     // 19.11.: der Suchkasten selbst wird nach unten länger (gleiche Breite, Suchzeile bleibt, wie sie ist)
     const was = !results.hidden;
     results.hidden = false; sbox.classList.add('open');
-    if (!was && !reduced()) { const h = results.offsetHeight; results.animate([{ height: '28px' }, { height: `${h}px` }], { duration: 300, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }); }
+    if (!was && !reduced()) { const h = results.offsetHeight; results.animate([{ height: '40px', opacity: 0.6 }, { height: `${h}px`, opacity: 1 }], { duration: 300, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }); }
   }
   sIn.addEventListener('input', drawResults);
   sIn.addEventListener('focus', drawResults);
