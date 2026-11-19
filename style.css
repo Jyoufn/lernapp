@@ -14462,3 +14462,19 @@ html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label]:not([da
 html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label]:not([data-open="tags"])::after { content: attr(data-label); order: 1; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
 html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label] > :is(.ce-switch, .ce-x, [data-act$="-x"], .ce-clear) { order: 3; margin-left: auto; }
 html body .ce-card .tagm-embed .tk-tag-list, html body .ce-card.ce-card .ce-rows .tk-tag-list { max-height: 262px !important; } /* genau 10 Tags (26 px), dann scrollen */
+/* 20.11.: Info-Karte zu einem Termin – Stil und Größe wie das Sidebar-Menü (Umbenennen · Anheften …), Stift oben rechts */
+html body .chat-pop.ce-peek { position: fixed; z-index: 420; display: block; width: 236px !important; min-width: 236px; max-width: 236px; box-sizing: border-box; padding: 4px; border: 1px solid #272727 !important; border-radius: 12px; background: var(--menu-bg, #181818) !important; opacity: 1; visibility: visible; pointer-events: auto; transform: none; }
+html body .chat-pop.ce-peek.closing { opacity: 0; transition: opacity 150ms ease; }
+html body .ce-peek .cpk-head { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 2px 2px 8px; }
+html body .ce-peek .cpk-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+html body .ce-peek .cpk-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
+html body .ce-peek .cpk-edit { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--text-3); cursor: pointer; }
+html body .ce-peek .cpk-edit svg { width: 13px; height: 13px; }
+@media (hover: hover) { html body .ce-peek .cpk-edit:hover { background: rgba(255, 255, 255, 0.07); color: var(--text); } }
+html body .ce-peek .cpk-row { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 8px; color: var(--text-2); font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .ce-peek .cpk-row > svg { flex: none; width: 14px; height: 14px; color: var(--text-3); }
+html body .ce-peek .cpk-row > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .ce-peek .cpk-tags > span { display: flex; gap: 4px; }
+html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 80px; }
+html body .ce-peek .cpk-note { padding: 4px 8px 6px; color: var(--text-3); font: 500 12px/1.45 var(--font-ui, Inter), sans-serif; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+html body .ce-peek .cm-sep { height: 1px; margin: 3px 5px; background: #212121; }

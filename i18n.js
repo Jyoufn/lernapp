@@ -246,7 +246,7 @@
     "Termine durchsuchen": "Search events", "Keine Termine gefunden": "No events found", "Alle Termine": "All events", "Kommende": "Upcoming", "Nächste 7 Tage": "Next 7 days", "Dieser Monat": "This month", "Vergangene": "Past",
     // 19.11.: Kategorien
     "Neue Kategorie": "New category", "Name der Kategorie": "Category name", "Kategorie bearbeiten": "Edit category", "Kategorie löschen": "Delete category", "Nochmal tippen zum Löschen": "Tap again to delete",
-    'Duplizieren': 'Duplicate', '(Kopie)': '(copy)',
+    'Duplizieren': 'Duplicate', '1 Kommentar': '1 comment', '(Kopie)': '(copy)',
   };
   Object.assign(D, D2);
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten
