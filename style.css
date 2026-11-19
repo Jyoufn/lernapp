@@ -14325,3 +14325,4 @@ html body .lb2-menu .lb2-mi { min-height: 28px; height: 28px; padding-top: 0; pa
 html body .ce-card .tk-menu .tk-mi, html body .ce-card .tk-tag-list .tk-mi { min-height: 28px; height: 28px; }
 html body .tk-modal.cal-emodal:not(.anchored):has(.ce-card), html body .tk-modal.au-catmodal { padding-bottom: 8vh; box-sizing: border-box; }
 html body .ce-card :is(.ce-headbox, .ce-rows > .tk-pop, .tk-pill, .ce-cbox, .au-icgrid, .tk-box) { box-shadow: none !important; border: 0 !important; outline: 0 !important; }
+html body .hm-head .au-search.hm-search { width: min(636px, calc(100% - 112px)); } /* 19.11.: minimal schmaler – ragt nicht über die Zeilen hinaus */
