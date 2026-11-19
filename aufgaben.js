@@ -46,7 +46,8 @@ const Aufgaben = (() => {
   main.className = 'au-main';
   const SI = { open: icon('f-st-open', 14), doing: icon('f-st-doing', 14), done: icon('f-st-done', 14), archived: icon('f-st-arch', 14) }; // grau, runde Linien
   main.innerHTML = `<header class="au-head"><h1 class="au-title">Aufgaben</h1>
-      <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /></label><span class="grow"></span>
+      <label class="au-search">${icon('f-search', 14)}<input type="search" placeholder="Aufgaben durchsuchen" aria-label="Aufgaben durchsuchen" autocomplete="off" /><button type="button" class="lb2-filter au-fbtn" data-au="filter" aria-label="Filter" title="Filter">${icon('f-filter', 13)}</button></label><span class="grow"></span>
+      <button type="button" class="lb2-filter au-sbtn" data-au="sort" aria-label="Sortieren" title="Sortieren">${icon('f-list', 14)}</button>
       <button class="cal-new" type="button" data-au="new" aria-label="Neue Aufgabe">${icon('f-plus')}<span>Neue Aufgabe</span></button></header>
     <div class="au-board">${TABS.map(([k, n]) => `<section class="au-col" data-col="${k}"><div class="au-ch"><span class="au-si">${SI[k]}</span><span class="au-cn">${n}</span><span class="au-n" data-n="${k}"></span></div><div class="au-cards" data-cards="${k}"></div></section>`).join('')}</div>`;
   view.append(main);
@@ -63,7 +64,7 @@ const Aufgaben = (() => {
         const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
         const top = pr ? `<div class="au-ctop"><span class="au-cprio p-${esc(pr.id)}">${window.UIKit.prioIcon(pr.id, 12)}<span>${esc(pr.name)}</span></span></div>` : '';
         const tags = tg.length ? `<div class="au-ctags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</div>` : '';
-        const foot = t.due || t.time ? `<div class="au-cm${over ? ' over' : ''}">${t.due ? `<span class="au-cdue">${icon('o-calendar', 13)}${esc(shortDay(t.due))}</span>` : ''}${t.time ? `<span class="au-ctime">${icon('f-clock', 13)}${esc(t.time)}</span>` : ''}</div>` : '';
+        const foot = t.due || t.time ? `<div class="au-cm${over ? ' over' : ''}">${t.due ? `<span class="au-cdue">${icon('o-calendar', 13)}${esc(shortDay(t.due))}</span>` : ''}${t.time ? `<span class="au-ctime">${icon('f-clock', 13)}${esc(t.time)}${t.end ? ` bis ${esc(t.end)}` : ''} Uhr</span>` : ''}</div>` : '';
         return `<div class="au-cb"><div class="au-ctr"><span class="au-ct">${esc(t.title)}</span>${top}</div>${tags}${foot}</div></article>`; // Priorität in derselben Zeile rechts neben dem Titel
       })()}`;
   }
@@ -72,16 +73,90 @@ const Aufgaben = (() => {
   }
   // Suche oben in der Mitte: Titel, Notiz und Tag-Namen
   let query = '';
+  /* 19.11.: Filter (wie bei Home: Menü .lb2-menu mit Haken) und Sortierung je Spalte – gemerkt im Browser */
+  const VKEY = 'tasks.view.v1';
+  const vs = (() => { try { const o = JSON.parse(localStorage.getItem(VKEY)) || {}; return { sort: o.sort || 'manual', due: o.due || 'any', prio: new Set(o.prio || []), tags: new Set(o.tags || []) }; } catch { return { sort: 'manual', due: 'any', prio: new Set(), tags: new Set() }; } })();
+  const saveVs = () => { try { localStorage.setItem(VKEY, JSON.stringify({ sort: vs.sort, due: vs.due, prio: [...vs.prio], tags: [...vs.tags] })); } catch {} };
+  const filtered = () => vs.due !== 'any' || vs.prio.size > 0 || vs.tags.size > 0;
+  const weekEnd = () => { const d = new Date(); d.setDate(d.getDate() + 7); return iso(d); };
+  const passFilter = (t) => {
+    const td = today();
+    if (vs.due === 'over' && !(t.due && t.due < td)) return false;
+    if (vs.due === 'today' && !(t.due && t.due <= td)) return false;
+    if (vs.due === 'week' && !(t.due && t.due <= weekEnd())) return false;
+    if (vs.due === 'none' && t.due) return false;
+    if (vs.prio.size && !vs.prio.has(t.priority || 'none')) return false;
+    if (vs.tags.size && !(t.tags || []).some((id) => vs.tags.has(id))) return false;
+    return true;
+  };
+  const PRANK = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 };
+  const tagName = (t) => { const all = window.TagMenu?.all?.() || []; const n = (t.tags || []).map((id) => all.find((g) => g.id === id)?.name).filter(Boolean).sort((a, b) => a.localeCompare(b, 'de')); return n[0] || ''; };
+  const dueKey = (t) => (t.due ? `${t.due} ${t.time || '99:99'}` : '9999');
+  function sorted(list) {
+    const by = {
+      due: (a, b) => dueKey(a).localeCompare(dueKey(b)) || (PRANK[a.priority || 'none'] - PRANK[b.priority || 'none']), // was am nächsten fällig ist, oben
+      prio: (a, b) => (PRANK[a.priority || 'none'] - PRANK[b.priority || 'none']) || dueKey(a).localeCompare(dueKey(b)),
+      tags: (a, b) => { const x = tagName(a), y = tagName(b); return (!x - !y) || x.localeCompare(y, 'de') || dueKey(a).localeCompare(dueKey(b)); }, // ohne Tag ans Ende
+      title: (a, b) => a.title.localeCompare(b.title, 'de'),
+      created: (a, b) => (b.created || 0) - (a.created || 0),
+    }[vs.sort];
+    return by ? list.slice().sort(by) : list;
+  }
+  const amenu = document.createElement('div'); amenu.className = 'lb2-menu au-menu'; amenu.hidden = true; amenu.setAttribute('role', 'menu');
+  document.body.append(amenu);
+  let amenuFor = null;
+  const closeAMenu = () => { amenu.hidden = true; amenuFor?.classList.remove('on'); amenuFor = null; };
+  const mi = (v, label, on, ic = '', cls = '') => `<button type="button" role="menuitem" class="lb2-mi${cls}" data-v="${esc(v)}">${ic}<span>${esc(label)}</span>${on ? `<i class="lb2-tick">${icon('f-check', 13)}</i>` : ''}</button>`;
+  const mic = (n) => `<span class="lb2-mic">${icon(`f-${n}`, 14)}</span>`;
+  function openAMenu(btn, html, onPick) {
+    if (amenuFor === btn) { closeAMenu(); return; }
+    closeAMenu(); amenuFor = btn; btn.classList.add('on');
+    amenu.innerHTML = html(); amenu.style.maxHeight = ''; amenu.hidden = false;
+    const r = btn.getBoundingClientRect(), w = amenu.offsetWidth, h = amenu.offsetHeight, room = Math.max(160, innerHeight - r.bottom - 14);
+    amenu.style.maxHeight = `${Math.min(h, room)}px`;
+    amenu.style.left = `${Math.max(8, Math.min(innerWidth - w - 8, r.right - w))}px`;
+    amenu.style.top = `${r.bottom + 6}px`;
+    amenu.onclick = (e) => { const b = e.target.closest('[data-v]'); if (!b) return; e.stopPropagation(); onPick(b.dataset.v); const st = amenu.scrollTop; amenu.innerHTML = html(); amenu.scrollTop = st; };
+  }
+  document.addEventListener('pointerdown', (e) => { if (!amenu.hidden && !amenu.contains(e.target) && !e.target.closest('.au-fbtn, .au-sbtn')) closeAMenu(); });
+  const syncHead = () => { main.querySelector('.au-fbtn')?.classList.toggle('set', filtered()); main.querySelector('.au-sbtn')?.classList.toggle('set', vs.sort !== 'manual'); };
+  main.addEventListener('click', (e) => {
+    const fb = e.target.closest('[data-au="filter"]');
+    if (fb) {
+      const DUE = [['any', 'Jederzeit', 'clock'], ['over', 'Überfällig', 'alert'], ['today', 'Heute fällig', 'sun'], ['week', 'In den nächsten 7 Tagen', 'calendar'], ['none', 'Ohne Datum', 'minus']];
+      const prios = window.UIKit?.PRIOS || [];
+      openAMenu(fb, () => {
+        const tags = window.TagMenu?.all?.() || [];
+        return `<div class="lb2-ml">Fällig</div>${DUE.map(([v, l, ic]) => mi(`d:${v}`, l, vs.due === v, mic(ic))).join('')}`
+          + (prios.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Priorität</div>${prios.map((p) => mi(`p:${p.id}`, p.name, vs.prio.has(p.id), `<span class="lb2-mic">${window.UIKit.prioIcon(p.id, 14)}</span>`)).join('')}` : '')
+          + (tags.length ? `<div class="lb2-msep"></div><div class="lb2-ml">Tags</div>${tags.map((g) => mi(`g:${g.id}`, g.name, vs.tags.has(g.id), `<span class="lb2-mic"><i class="lb2-mdot" style="background:${esc(g.c)}"></i></span>`)).join('')}` : '')
+          + (filtered() ? `<div class="lb2-msep"></div>${mi('reset', 'Filter zurücksetzen', false, mic('x'), ' muted')}` : '');
+      }, (v) => {
+        if (v.startsWith('d:')) vs.due = v.slice(2);
+        else if (v.startsWith('p:')) { const id = v.slice(2); vs.prio.has(id) ? vs.prio.delete(id) : vs.prio.add(id); }
+        else if (v.startsWith('g:')) { const id = v.slice(2); vs.tags.has(id) ? vs.tags.delete(id) : vs.tags.add(id); }
+        else if (v === 'reset') { vs.due = 'any'; vs.prio.clear(); vs.tags.clear(); }
+        saveVs(); syncHead(); render();
+      });
+      return;
+    }
+    const sb = e.target.closest('[data-au="sort"]');
+    if (sb) {
+      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'plus-circle']];
+      openAMenu(sb, () => `<div class="lb2-ml">Sortieren nach</div>${SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join('')}`, (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
+    }
+  });
   const hit = (t) => {
+    if (!passFilter(t)) return false;
     if (!query) return true;
     const tags = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id)).map((g) => g.name).join(' ');
     return `${t.title} ${t.note || ''} ${tags}`.toLowerCase().includes(query);
   };
   function render() {
-    counts();
+    counts(); syncHead();
     TABS.forEach(([k]) => {
       const box = board.querySelector(`[data-cards="${k}"]`);
-      const mine = items.filter((t) => statusOf(t) === k && hit(t)).slice(0, 150);
+      const mine = sorted(items.filter((t) => statusOf(t) === k && hit(t))).slice(0, 150);
       box.innerHTML = mine.map(card).join('');
     });
   }

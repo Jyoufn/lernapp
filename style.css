@@ -14120,3 +14120,9 @@ html body #composer .ask-panel .ask-btn.ghost { height: 30px; padding: 0 10px; b
 .au-cm { gap: 10px; font-size: 11.5px !important; }
 .au-cm svg { width: 11px; height: 11px; }
 .au-cm .au-cdue, .au-cm .au-ctime { gap: 4px; }
+/* 19.11.: Aufgaben – Filter rechts im Suchfeld, Sortieren links neben „Neue Aufgabe“ (Menüs wie bei Home: .lb2-menu) */
+html body .au-search .au-fbtn { flex: none; width: 24px; height: 24px; margin: 0 -6px 0 auto; border: 0; border-radius: 7px; background: none; color: var(--text-4); }
+html body .au-sbtn { flex: none; width: 28px; height: 28px; margin-right: 6px; border: 1px solid #242424; border-radius: 8px; background: none; color: var(--text-3); }
+@media (hover: hover) { html body :is(.au-fbtn, .au-sbtn):hover { color: var(--text); background: rgba(255, 255, 255, 0.05); } }
+html body :is(.au-fbtn, .au-sbtn).on, html body :is(.au-fbtn, .au-sbtn).set { color: var(--text); }
+html body .au-sbtn.set { border-color: rgba(255, 255, 255, 0.14); }
