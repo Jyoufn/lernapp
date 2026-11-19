@@ -14518,3 +14518,23 @@ html body .cmdk-box .cmdk-foot { border-top: 1px solid #212121; }
 /* 20.11.: unten weniger Platz – Home-Balken-Abstand teilt sich den normalen Rand (8 px) statt ihn zu verdoppeln; Chat-Ende knapper */
 .app { padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - 10px)); }
 html body .chat-scroll { padding-bottom: calc(var(--composer-space, 140px) + 8px) !important; }
+/* =====================================================================================================
+   20.11.: NUR iPad (html.is-ipad – Mac/PC bleiben unverändert)
+   – Hauptteil reicht weiter nach unten
+   – Kalender passt ohne Scrollen (Wochen teilen sich die Höhe statt mind. 92 px)
+   – Aufgaben: 3 Spalten sichtbar (Offen, In Arbeit, Erledigt), der Rest per Wischen; Board läuft bis an den linken/rechten Rand
+   ===================================================================================================== */
+html.is-ipad .app { padding-bottom: 0 !important; }
+html.is-ipad .panel { margin-bottom: 4px; }
+html.is-ipad .cm-grid { grid-template-rows: repeat(var(--weeks), minmax(0, 1fr)) !important; overflow: hidden !important; }
+html.is-ipad .cal-month-view .cm { min-height: 0; }
+html.is-ipad .au-view .au-main { padding-left: 0 !important; padding-right: 0 !important; }
+html.is-ipad .au-view .au-head { margin-left: 28px; margin-right: 28px; }
+html.is-ipad .au-board, html.is-ipad .au-board.au-many { grid-template-columns: repeat(var(--au-cols, 4), calc((100% - 20px) / 3)) !important; column-gap: 10px; overflow-x: auto !important; overflow-y: hidden; padding: 1px 28px 10px !important; scroll-padding-inline: 28px; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+html.is-ipad .au-board > .au-col { scroll-snap-align: start; }
+html.is-ipad .tk-view.au-view { padding-left: 0 !important; padding-right: 0 !important; }
+html.is-ipad .au-view .au-head { margin: 0 16px 14px !important; }
+html.is-ipad .au-board, html.is-ipad .au-board.au-many { padding: 1px 16px 10px !important; scroll-padding-inline: 16px; }
+html.is-ipad .au-view .au-head .au-search { width: clamp(180px, calc(100% - 520px), 460px) !important; }
+html.is-ipad .au-view .au-head .au-search { position: static !important; transform: none !important; flex: 1 1 auto; width: auto !important; max-width: 460px; min-width: 0; margin: 0 auto !important; }
+html.is-ipad .au-view .au-head .grow { display: none; }
