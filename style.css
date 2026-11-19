@@ -14263,3 +14263,8 @@ html body .cm-sbox .cs-when { justify-self: stretch; text-align: right; overflow
 html body .cm-head .cm-sbox { margin: 0 4px 0 8px; }
 html body .cm-sbox .cs-row { grid-template-columns: 10px minmax(0, 1fr) 62px 88px 142px; column-gap: 8px; }
 html body .cm-sbox .cs-tags .lb2-tag { max-width: 86px; }
+/* 19.11. (4): nirgends doppelte Linie – der Rand des Kastens beginnt erst unterhalb der geraden Seiten der Suchleiste (sonst oben/seitlich heller) */
+html body .cm-head .cm-sbox .cm-results { box-shadow: none !important; overflow: hidden; padding: 32px 4px 4px; }
+html body .cm-head .cm-sbox .cm-results::after { content: ''; display: block; position: absolute; inset: 0; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); pointer-events: none;
+  -webkit-mask: linear-gradient(to bottom, transparent 0, transparent 18px, #000 18px); mask: linear-gradient(to bottom, transparent 0, transparent 18px, #000 18px); }
+html body .cm-sbox .cs-scroll { max-height: 360px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }

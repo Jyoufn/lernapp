@@ -185,13 +185,13 @@ const Calendar = (() => {
     view.querySelector('.cm-fbtn').classList.toggle('set', cfOn());
     if (!want) { closeResults(); return; }
     const list = matches(), all = window.TagMenu?.all?.() || [];
-    results.innerHTML = list.length ? list.map((e) => {
+    results.innerHTML = `<div class="cs-scroll">${list.length ? list.map((e) => {
       const pr = prioOf(e), tg = all.filter((g) => (e.tags || []).includes(g.id));
       return `<button type="button" class="cs-row" data-eid="${esc(e.id)}" role="option"><i class="cs-dot" style="background:${esc(e.color || COLORS[0])}"></i><span class="cs-name">${esc(e.title)}</span>`
         + `<span class="cs-prio">${pr ? `${window.UIKit.prioIcon(pr.id, 12)}<span>${esc(pr.name)}</span>` : ''}</span>`
         + `<span class="cs-tags">${tg.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 2 ? `<span class="lb2-tag more">+${tg.length - 2}</span>` : ''}</span>`
         + `<span class="cs-when">${esc(whenText(e))}</span></button>`;
-    }).join('') : '<div class="cs-empty">Keine Termine gefunden</div>';
+    }).join('') : '<div class="cs-empty">Keine Termine gefunden</div>'}</div>`;
     // 19.11.: der Suchkasten selbst wird nach unten länger (gleiche Breite, Suchzeile bleibt, wie sie ist)
     const was = !results.hidden;
     results.hidden = false; sbox.classList.add('open');
