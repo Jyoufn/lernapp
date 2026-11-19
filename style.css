@@ -14048,3 +14048,12 @@ html body .dc-editor.focus .dc-focus-exit i { display: none; }
 /* Cover ganz oben: Rahmen der Fläche oben weg, damit keine dünne dunkle Linie bleibt */
 html body .panel.pn-cover { border-top-color: transparent !important; }
 html body .dc-view.cover-bleed .dc-page.with-cover > .dc-cover.has:not(.img) { margin-top: calc(-1 * var(--bt, 0px) - 1px); }
+/* 19.11.: Hund am Eingabefeld und beim Arbeiten entfernt; Arbeiten = kleine Sprechblase mit Punkten über dem Feld */
+html body .dog-peek, html body .msg-ai > .pa-actor, html body .pd-actor { display: none !important; }
+.work-bubble { position: absolute; right: 22px; bottom: calc(100% + 8px); z-index: 3; display: flex; align-items: center; gap: 4px; height: 26px; padding: 0 11px; border-radius: 13px 13px 4px 13px; background: #212121; box-shadow: inset 0 0 0 1px #2a2a2a; opacity: 0; transform: translateY(6px) scale(0.92); transform-origin: 100% 100%; transition: opacity 200ms ease, transform 260ms cubic-bezier(0.34, 1.4, 0.64, 1); pointer-events: none; }
+.composer.ai-working .work-bubble { opacity: 1; transform: none; }
+.work-bubble i { width: 5px; height: 5px; border-radius: 50%; background: var(--text-3); animation: wb-dot 1.2s ease-in-out infinite; }
+.work-bubble i:nth-child(2) { animation-delay: 0.15s; }
+.work-bubble i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes wb-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-3px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .work-bubble i { animation: none; } }

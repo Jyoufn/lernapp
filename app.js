@@ -3086,8 +3086,13 @@ function thoughtIcon(title) {
 }
 window.thoughtIcon = thoughtIcon;
 
+// 19.11.: kein Hund mehr beim Arbeiten – stattdessen eine kleine Sprechblase mit Punkten über dem Eingabefeld (rechts)
+const workBubble = el('div', 'work-bubble', '<i></i><i></i><i></i>');
+workBubble.setAttribute('aria-hidden', 'true');
+composer.append(workBubble);
 function setRunning(running) {
   sendBtn.classList.toggle('running', running);
+  composer.classList.toggle('ai-working', running);
   const label = running ? 'Antwort stoppen' : 'Senden';
   sendBtn.setAttribute('aria-label', label);
   sendBtn.title = label;
@@ -3686,7 +3691,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
   // Hund neben dem Hauptstatus (PixelDogs.actor): tut je Zustand etwas anderes; Wechsel weich und nie zu hektisch
   let actor = null;
   const ensureActor = () => {
-    if (actor || !window.PixelDogs?.actor) return;
+    return; // 19.11.: Arbeits-Hund entfernt (rutschte auf dem iPad ins Bild) – die Sprechblase über dem Eingabefeld zeigt das Arbeiten
+    if (actor || !window.PixelDogs?.actor) return; // eslint-disable-line no-unreachable
     if (msgEl._askActor) { actor = msgEl._askActor; msgEl._askActor = null; return; } // nach einer Rückfrage: derselbe Hund arbeitet weiter
     actor = PixelDogs.actor(agentId);
     msgEl.prepend(actor.el);
