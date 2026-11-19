@@ -14319,3 +14319,9 @@ html body .lb2-acts .lb-act { border-radius: 7px; transition: background-color 1
 html body .lb2-acts .lb-act:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
 html body .dc-list.hm-new-head > .hm-head .hm-search { transform: translate(-50%, 1px); }
 html body .hm-head .au-search.hm-search { width: min(652px, calc(100% - 96px)); } /* 19.11.: genau so breit wie die Liste darunter (Inhalt der .cl-wrap) */
+/* ===== 19.11. (nachts): Auswahl-/Hover-Flächen in Listen-Menüs flacher; Fenster etwas höher; Kästen im Termin-/Aufgaben-Fenster ohne Ränder ===== */
+html body .cm-sbox .cs-row { height: 28px; border-radius: 7px; }
+html body .lb2-menu .lb2-mi { min-height: 28px; height: 28px; padding-top: 0; padding-bottom: 0; }
+html body .ce-card .tk-menu .tk-mi, html body .ce-card .tk-tag-list .tk-mi { min-height: 28px; height: 28px; }
+html body .tk-modal.cal-emodal:not(.anchored):has(.ce-card), html body .tk-modal.au-catmodal { padding-bottom: 8vh; box-sizing: border-box; }
+html body .ce-card :is(.ce-headbox, .ce-rows > .tk-pop, .tk-pill, .ce-cbox, .au-icgrid, .tk-box) { box-shadow: none !important; border: 0 !important; outline: 0 !important; }
