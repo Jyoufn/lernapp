@@ -58,7 +58,6 @@ const Aufgaben = (() => {
     const st = statusOf(t), over = (st === 'open' || st === 'doing') && t.due && t.due < today(), bg = coverBg(t.cover);
     return `<article class="au-card2 st-${st}${bg ? ' has-cov' : ''}" data-id="${esc(t.id)}" tabindex="0">
       ${bg ? `<div class="au-ccov" style="background:${esc(bg)}"></div>` : ''}
-      <button type="button" class="au-edit" data-au="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil', 13)}</button>
       ${(() => { // 19.11. (Vorlage): oben rechts die Priorität (Symbol + Name), dann der Titel, darunter die Tags, unten links Datum und Uhrzeit
         const pr = t.priority && t.priority !== 'none' ? (window.UIKit?.PRIOS || []).find((p) => p.id === t.priority) : null;
         const tg = (window.TagMenu?.all?.() || []).filter((g) => (t.tags || []).includes(g.id));
@@ -178,7 +177,8 @@ const Aufgaben = (() => {
   board.addEventListener('pointerup', (e) => {
     if (!drag) return;
     // einmal antippen: Karte nur auswählen (Stift erscheint) – bearbeitet wird erst über den Stift
-    if (!drag.on) { const el = drag.el; drag = null; board.querySelectorAll('.au-card2.sel').forEach((x) => x !== el && x.classList.remove('sel')); el.classList.toggle('sel'); return; }
+    // 19.11.: einmal antippen öffnet die Aufgabe direkt zum Bearbeiten (kein Stift mehr über der Priorität)
+    if (!drag.on) { const el = drag.el; drag = null; const t = items.find((x) => x.id === el.dataset.id); if (t && !el.classList.contains('editing')) detail(t, null); return; }
     finish(false);
   });
   board.addEventListener('pointercancel', () => { if (drag?.on) finish(true); else drag = null; });

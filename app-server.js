@@ -217,25 +217,29 @@ const labelSvg = (x, y, w, h, text, font, size, color, anchor = 'middle') => {
    Rohbild, Auftrag, Startwert und Teile werden gespeichert (`.meta`) → Folgewünsche („Beschriftung fehlt“, „mach … rot“) passen DIESES Bild an. */
 const IMAGE_MODELS = [
   { name: 'flux3-klein', url: 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux-3-image-klein', params: { width: 1344, height: 768 } },
-  { name: 'flux1-schnell', url: 'https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/105fe02c-924b-4dfa-9797-92d89c3936ad', params: { width: 1344, height: 768, steps: 4 } },
+  // 19.11.: FLUX.1-schnell über die heutige Adresse von build.nvidia.com (die alte pexec-Funktion bleibt nur als letzter Versuch)
+  { name: 'flux1-schnell', url: 'https://ai.api.nvidia.com/v1/genai/black-forest-labs/flux.1-schnell', params: { width: 1344, height: 768, steps: 4 } },
+  { name: 'flux1-schnell-alt', url: 'https://api.nvcf.nvidia.com/v2/nvcf/pexec/functions/105fe02c-924b-4dfa-9797-92d89c3936ad', params: { width: 1344, height: 768, steps: 4 } },
 ];
 // Keys: FLUX3_API_KEY zuerst, danach die übrigen NVIDIA-Keys – lehnt NVIDIA einen Key ab (401/403), wird automatisch der nächste probiert
 // derselbe NVIDIA-Zugang (build.nvidia.com) malt auch Bilder → auch der MiniMax-Schlüssel zählt
 const imageKeys = (env) => [...new Set([env.FLUX3_API_KEY, env.FLUX_API_KEY, env.QWEN_API_KEY, env.NVIDIA_API_KEY, env.MINIMAX_API_KEY, env.DEEPSEEK_API_KEY, env.KIMI_API_KEY, env.MISTRAL_API_KEY].flatMap((k) => String(k || '').split(/[\s,;]+/)).map((k) => k.trim()).filter(Boolean))];
 const badImageKeys = new Set(); // abgelehnte Keys bis zum Neustart überspringen
 let lastImageFiltered = false; // letzter Versuch scheiterte nur am Inhaltsfilter
+let lastImageError = ''; // 19.11.: Grund des letzten Fehlschlags (fürs Cover-Fenster)
 const imageModelDownUntil = new Map(); // Bildmodell → übersprungen bis (nach HTTP 5xx/Zeitüberschreitung; spart das Warten auf den Fehler)
 // prefer: Name des Bildmodells, das zuerst probiert wird; das Ergebnis enthält den benutzten Startwert (für spätere Anpassungen)
 // Wörter, an denen der Inhaltsfilter von FLUX.3 grundlos hängen bleibt (gefunden über chats/bilder/_gefiltert.log) → gleichbedeutend ersetzen
 const FILTER_SWAPS = [[/\bviolett?\b/gi, 'purple']];
 async function nvcfImage(env, prompt, seed, prefer, size = null) {
-  lastImageFiltered = false;
+  lastImageFiltered = false; lastImageError = '';
+  if (!imageKeys(env).length) { lastImageError = 'Kein FLUX-Schlüssel – trag ihn unter Einstellungen → Agenten → Verbindung → FLUX (Bilder) ein.'; return null; }
   prompt = FILTER_SWAPS.reduce((t, [re, to]) => t.replace(re, to), String(prompt));
   const models = prefer ? [...IMAGE_MODELS].sort((a, b) => (b.name === prefer) - (a.name === prefer)) : IMAGE_MODELS;
   const ready = models.filter((m) => !(imageModelDownUntil.get(m.name) > Date.now()));
   for (const { name, url, params } of ready.length ? ready : models) {
     let modelFailed = false; // Fehler des Modells (nicht des Keys) → nächstes Modell
-    for (const key of imageKeys(env).filter((k) => !badImageKeys.has(k))) {
+    for (const key of imageKeys(env).filter((k) => !badImageKeys.has(`${name}|${k}`))) { // 19.11.: Sperre gilt nur für dieses Modell
       const H = { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Accept: 'application/json', 'NVCF-POLL-SECONDS': '60' };
       let rejected = false;
       // der Inhaltsfilter schlägt manchmal grundlos an (hängt am Startwert) → bis zu 3 Startwerte
@@ -244,8 +248,8 @@ async function nvcfImage(env, prompt, seed, prefer, size = null) {
           const used = (seed + attempt * 7919) % 1e6;
           let r = await fetch(url, { method: 'POST', headers: H, body: JSON.stringify({ prompt, ...params, ...(size || {}), seed: used }), signal: AbortSignal.timeout(90000) });
           for (let i = 0; r.status === 202 && i < 4; i++) r = await fetch(`https://api.nvcf.nvidia.com/v2/nvcf/pexec/status/${r.headers.get('nvcf-reqid')}`, { headers: H, signal: AbortSignal.timeout(90000) });
-          if (r.status === 401 || r.status === 403) { badImageKeys.add(key); rejected = true; console.warn(`[Bild] ${name}: Key abgelehnt (HTTP ${r.status}) – nehme den nächsten`); break; }
-          if (!r.ok) { console.warn(`[Bild] ${name}: HTTP ${r.status}`); modelFailed = true; break; }
+          if (r.status === 401 || r.status === 403) { badImageKeys.add(`${name}|${key}`); rejected = true; lastImageError = `FLUX-Schlüssel abgelehnt (HTTP ${r.status}) – bitte den Schlüssel von build.nvidia.com prüfen.`; console.warn(`[Bild] ${name}: Key abgelehnt (HTTP ${r.status}) – nehme den nächsten`); break; }
+          if (!r.ok) { console.warn(`[Bild] ${name}: HTTP ${r.status}`); lastImageError = `Bild-KI nicht erreichbar (${name}, HTTP ${r.status}).`; modelFailed = true; break; }
           const j = await r.json();
           const b64 = j?.artifacts?.[0]?.base64;
           if (j?.artifacts?.[0]?.finishReason === 'CONTENT_FILTERED') { lastImageFiltered = true; console.warn(`[Bild] ${name}: Filter angeschlagen – neuer Versuch`); continue; }
@@ -256,7 +260,9 @@ async function nvcfImage(env, prompt, seed, prefer, size = null) {
       }
       if (!rejected) break; // nur bei abgelehntem Key den nächsten Key probieren
     }
-    if (!modelFailed) break; // nur gefiltert/kein Key → kein anderes Modell (der Auftrag wird umformuliert)
+    // 19.11.: alle Schlüssel für DIESES Modell abgelehnt (z. B. kein Zugang zu FLUX 3) → nächstes Modell, ohne es 10 min zu sperren
+    if (!modelFailed && !lastImageFiltered && imageKeys(env).every((k) => badImageKeys.has(`${name}|${k}`))) continue;
+    if (!modelFailed) break; // nur gefiltert → kein anderes Modell (der Auftrag wird umformuliert)
     imageModelDownUntil.set(name, Date.now() + 10 * 60 * 1000);
     console.warn(`[Bild] ${name} nicht verfügbar – nächstes Bildmodell (10 min übersprungen)`);
   }
@@ -843,7 +849,7 @@ async function handleCoverImage(req, res) {
   if (prompt.length < 30) prompt = `${w}. ${COVER_STYLE}`;
   if (!/flat vector-style/i.test(prompt)) prompt = `${prompt}. ${COVER_STYLE}`;
   const out = await nvcfImage(env, prompt.slice(0, 2000), Math.floor(Math.random() * 1e6));
-  if (!out) return sendJson(res, 502, { error: 'Das Cover konnte gerade nicht erstellt werden.' });
+  if (!out) return sendJson(res, 502, { error: lastImageFiltered ? 'Der Bildfilter hat angeschlagen – formuliere den Wunsch etwas anders.' : lastImageError || 'Das Cover konnte gerade nicht erstellt werden.' });
   sendJson(res, 200, { src: `data:${out.mime};base64,${out.data}` });
 }
 
