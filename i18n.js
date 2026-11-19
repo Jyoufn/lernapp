@@ -247,7 +247,7 @@
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten
   const PHRASES = Object.keys(D).filter((k) => k.length >= 6 && /\s/.test(k)).sort((a, b) => b.length - a.length);
   const RULES = [
-    [/^(\d{1,2}:\d{2}) bis (\d{1,2}:\d{2}) Uhr$/, '$1 – $2'], [/^(\d{1,2}:\d{2}) Uhr$/, '$1'],
+    [/^(\d{1,2}:\d{2}) bis (\d{1,2}:\d{2}) Uhr$/, '$1 – $2'], [/^(\d{1,2}:\d{2}) Uhr$/, '$1'], [/^(\d{1,2}:\d{2}) Uhr – (\d{1,2}:\d{2}) Uhr$/, '$1 – $2'],
     [/^Vor (\d+) Min\.$/, '$1 min ago'], [/^Vor (\d+) Std\.$/, '$1 h ago'], [/^Vor (\d+) Tagen$/, '$1 days ago'], [/^(\d+) ausgewählt$/, '$1 selected'],
     [/^(\d+) Seiten? gelesen$/, '$1 pages read'], [/^· (\d+)\/(\d+) Seiten?$/, '· $1/$2 pages'], [/^· (\d+) Seiten?$/, '· $1 pages'], [/^(\d+) Seiten?$/, '$1 pages'],
     [/^Frage (\d+) von (\d+)$/, 'Question $1 of $2'], [/^(\d+) Fragen? gestellt$/, '$1 questions asked'], [/^Eine Frage gestellt$/, 'Asked one question'], [/^(\d+) Fragen$/, '$1 questions'],
