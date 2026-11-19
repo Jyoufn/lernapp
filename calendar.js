@@ -567,11 +567,23 @@ const Calendar = (() => {
     const form = emodal.querySelector('form');
     UIKit.foldRows(form);
     // 19.11.: Zeile antippen = das Fenster zeigt nur noch diese Seite (Zurück-Pfeil links), statt darunter aufzuklappen
+    // Übergang: Fensterhöhe gleitet von alt nach neu, der Inhalt gleitet leicht seitlich ein (kein Springen, kein Aufklappen innen)
+    let h0 = 0;
+    form.addEventListener('pointerdown', () => { h0 = form.offsetHeight; }, true);
+    form.addEventListener('keydown', () => { h0 = form.offsetHeight; }, true);
     new MutationObserver(() => {
       const on = !!form.querySelector('.ce-rows > .tk-pop.open');
       if (on === form.classList.contains('ce-sub')) return;
+      const from = h0 || form.offsetHeight;
       form.classList.toggle('ce-sub', on);
-      if (!reduced()) form.animate([{ opacity: 0.4, transform: `translateX(${on ? 10 : -10}px)` }, { opacity: 1, transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+      form.querySelectorAll('.ce-rows > .tk-pop > .tk-menu, .ce-rows > .tk-pop .tk-box').forEach((m) => m.getAnimations().forEach((a) => a.cancel())); // kein Aufklapp-Effekt innen
+      form.querySelectorAll('.ce-rows > .tk-pop.folding').forEach((q) => q.classList.remove('folding'));
+      if (reduced()) return;
+      const to = form.offsetHeight, ease = 'cubic-bezier(0.32, 0.72, 0, 1)';
+      form.getAnimations().forEach((a) => a.cancel());
+      form.animate([{ height: `${from}px`, overflow: 'hidden' }, { height: `${to}px`, overflow: 'hidden' }], { duration: 340, easing: ease });
+      [...form.children].forEach((c) => c.getClientRects().length && c.animate([{ opacity: 0, transform: `translateX(${on ? 14 : -14}px)` }, { opacity: 1, transform: 'none' }], { duration: 300, delay: 40, easing: 'cubic-bezier(0.16, 1, 0.3, 1)', fill: 'backwards' }));
+      h0 = 0;
     }).observe(form.querySelector('.ce-rows'), { subtree: true, attributes: true, attributeFilter: ['class'] });
     const notes = form.querySelector('.tk-f-notes');
     const grow = UIKit.autoGrow(notes); // wächst nur mit dem Text, höchstens 4 Zeilen

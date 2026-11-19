@@ -14392,3 +14392,23 @@ html body .ce-card.ce-card .ce-foot { margin: 4px 0 0 !important; padding: 6px 2
 html body .ce-card.ce-card .ce-foot .tk-make { height: 28px !important; padding: 0 12px !important; border-radius: 8px !important; font: 600 12.5px var(--font-ui, Inter), sans-serif !important; }
 html body .ce-card.ce-card .ce-foot .tk-sheet-ib { width: 28px; height: 28px; border-radius: 8px; }
 html body .ce-card.ce-card .ce-cover:not([hidden]) { margin: 0 0 6px !important; border-radius: 8px !important; overflow: hidden; }
+/* ===== 19.11. (nachts, 2): Fenster sauberer – oben keine dunklere Fläche, keine Pfeile rechts, Kästchen statt Kreis, Tag-Suche als eigene Leiste ===== */
+html body .ce-card.ce-card.ce-card.ce-card :is(.ce-headbox, .tk-pop, .tk-pop.open, .tk-menu, .tk-box) { background: transparent !important; box-shadow: none !important; }
+html body .ce-card.ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .ce-chev:not(:has(use[href="#f-plus"])) { display: none !important; }
+html body .ce-card.ce-card .ce-rows > .ce-cover-row > .tk-pill .ce-chev { color: var(--text-4); }
+html body .ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv.ce-off, html body .ce-card.ce-card .ce-rows .ce-tl { color: var(--text-3); }
+/* „Im Kalender eintragen“: abgerundetes Kästchen wie das Auswahl-Kästchen in Home */
+html body .ce-card.ce-card .ce-check { display: grid; place-items: center; flex: none; width: 15px; height: 15px; margin-left: auto; border: 0 !important; border-radius: 5px !important; background: transparent !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28) !important; color: transparent; transition: background-color 140ms ease, box-shadow 140ms ease; }
+html body .ce-card.ce-card .ce-check svg { width: 10px; height: 10px; opacity: 0; transition: opacity 140ms ease; }
+html body .ce-card.ce-card .ce-check.on { background: #ededed !important; box-shadow: none !important; color: #141414; }
+html body .ce-card.ce-card .ce-check.on svg { opacity: 1; }
+/* Unterseiten-Kopf ohne Trennstrich; Tag-Suche als ruhige Leiste mit feinem Rand (wie die Suchleisten) */
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill { border-bottom: 0 !important; margin-bottom: 2px; }
+html body .ce-card.ce-card .ce-tags-row.open .ce-tsearch { flex: 1 1 auto; display: flex; align-items: center; min-width: 0; margin: 0 0 0 2px !important; }
+html body .ce-card.ce-card .ce-tags-row.open .ce-tsearch :is(.tk-tag-row, label, div) { flex: 1; min-width: 0; margin: 0 !important; padding: 0 !important; background: transparent !important; box-shadow: none !important; border: 0 !important; }
+html body .ce-card.ce-card .ce-tags-row.open .ce-tsearch input { box-sizing: border-box; width: 100%; height: 24px; padding: 0 9px !important; border: 0 !important; border-radius: 7px !important; background: transparent !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08) !important; color: var(--text); font: 500 12.5px var(--font-ui, Inter), sans-serif !important; outline: 0; }
+html body .ce-card.ce-card .ce-tags-row.open .ce-tsearch input::placeholder { color: var(--text-4); }
+html body .ce-card.ce-sub .ce-tags-row.open > .tk-pill { padding-right: 4px !important; }
+html body .ce-card.ce-card.ce-card .ce-headbox { display: block !important; gap: 0 !important; padding: 8px 8px 8px !important; min-height: 0 !important; } html body .ce-card.ce-card.ce-card .ce-headbox > :not(.tk-f-title):not(.tk-f-notes):not(.ce-cover) { display: none; } html body .ce-card.ce-card.ce-card .ce-headbox .tk-f-title { display: block; width: 100%; }
+html body .ce-card.ce-card.ce-card .ce-headbox .tk-f-notes { display: block; width: 100%; margin: 3px 0 0 !important; vertical-align: top; }
+html body .ce-card.ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv { color: var(--text-2); font-weight: 500 !important; } html body .ce-card.ce-card.ce-card .ce-rows > .tk-pop > .tk-pill .tk-rv.ce-off, html body .ce-card.ce-card.ce-card .ce-rows .ce-tl { color: var(--text-3); } html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill .tk-rv { color: var(--text); font-weight: 600 !important; }
