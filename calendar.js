@@ -567,6 +567,9 @@ const Calendar = (() => {
     const form = emodal.querySelector('form');
     UIKit.foldRows(form);
     // 19.11.: Zeile antippen = das Fenster zeigt nur noch diese Seite (Zurück-Pfeil links), statt darunter aufzuklappen
+    // 20.11.: Unterseiten-Kopf zeigt den Namen der Zeile („Status“, „Priorität“ …), nicht den gewählten Wert
+    const LBL = { status: 'Status', date: T ? 'Fällig am' : 'Datum', time: 'Uhrzeit', color: 'Farbe', prio: 'Priorität', tags: 'Tags' };
+    form.querySelectorAll('.ce-rows > .tk-pop[data-k] > .tk-pill').forEach((pl) => { const k = pl.closest('.tk-pop').dataset.k; if (LBL[k]) pl.dataset.label = LBL[k]; });
     // Übergang: Fensterhöhe gleitet von alt nach neu, der Inhalt gleitet leicht seitlich ein (kein Springen, kein Aufklappen innen)
     let h0 = 0;
     form.addEventListener('pointerdown', () => { h0 = form.offsetHeight; }, true);

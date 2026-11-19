@@ -14453,3 +14453,12 @@ html body .dc-ipop2 > .dc-ip2-search input { flex: 1; min-width: 0; height: 28px
 html body .dc-ipop2 > .dc-ip2-search input::placeholder { color: var(--text-4); }
 html body .dc-ipop2 .dc-ip2-grid { grid-template-columns: repeat(7, 1fr) !important; gap: 2px !important; max-height: 220px; overflow-y: auto; scrollbar-width: thin; }
 html body .dc-ipop2 .dc-ip2-ic { aspect-ratio: 1; border-radius: 8px; }
+/* 20.11.: Fenster – eingebettete Tag-Liste ohne reservierten Platz oben; höchstens 10 Tags, dann scrollen;
+   Unterseiten-Kopf: Zurück-Pfeil grau, daneben der Name der Zeile statt des Werts */
+html body .ce-card .tagm-embed > .tk-menu, html body .ce-card .tagm-embed .tk-menu.tagm { width: auto !important; min-width: 0 !important; max-width: none !important; padding: 0 !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; overflow: visible; }
+html body .ce-card .tagm-embed .tk-tag-list, html body .ce-card.ce-card .ce-rows .tk-tag-list { max-height: 300px !important; overflow-y: auto; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill::before { color: var(--text-4) !important; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label]:not([data-open="tags"]) > :is(.tk-rv, .ce-dur) { display: none !important; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label]:not([data-open="tags"])::after { content: attr(data-label); order: 1; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; }
+html body .ce-card.ce-sub .ce-rows > .tk-pop.open > .tk-pill[data-label] > :is(.ce-switch, .ce-x, [data-act$="-x"], .ce-clear) { order: 3; margin-left: auto; }
+html body .ce-card .tagm-embed .tk-tag-list, html body .ce-card.ce-card .ce-rows .tk-tag-list { max-height: 262px !important; } /* genau 10 Tags (26 px), dann scrollen */
