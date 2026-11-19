@@ -25,7 +25,7 @@ const Lernzettel = (() => {
     out.body = lines.slice(i).join('\n');
     return out;
   }
-  const chapters = (body) => (String(body).match(/^##\s+(.+)$/gm) || []).map((h) => h.replace(/^##\s+/, '').trim()).filter((h) => !/^auf einen blick/i.test(h));
+  const chapters = (body) => (String(body).match(/^##\s+(.+)$/gm) || []).map((h) => h.replace(/^##\s+/, '').trim()).filter((h) => !/^auf einen blick/i.test(h) && !/^klausur[- ]?check/i.test(h));
   const minutes = (body) => Math.max(1, Math.round((String(body).match(/\S+/g) || []).length / 160));
 
   /* ---------- das Blatt ---------- */
@@ -49,6 +49,19 @@ const Lernzettel = (() => {
   // Nachbearbeitung: „Auf einen Blick“ als Kasten, Kapitel nummerieren, Kästen nach Art, Klausur-Check als Häkchen
   function shape(body, caps) {
     let n = 0;
+    // 19.11.: kein Klausur-Check mehr am Ende (auch nicht in älteren Zetteln)
+    body.querySelectorAll(':scope > h2').forEach((h) => {
+      if (!/^klausur[- ]?check/i.test(h.textContent.trim())) return;
+      let x = h.nextElementSibling; while (x && x.tagName !== 'H2') { const nx = x.nextElementSibling; x.remove(); x = nx; }
+      h.remove();
+    });
+    // Zeitstrahl auf dem Blatt: ruhig und vollständig – alles aufgeklappt, nichts zum Anklicken, schlichte graue Punkte
+    body.querySelectorAll('.chat-timeline').forEach((f) => {
+      f.classList.add('tl-static');
+      f.querySelectorAll('.tl4-row').forEach((r) => r.classList.add('open'));
+      f.querySelectorAll('.tl4-chev').forEach((x) => x.remove());
+      f.querySelectorAll('button.tl4-h').forEach((b) => { const d = document.createElement('div'); d.className = 'tl4-h'; d.innerHTML = b.innerHTML; b.replaceWith(d); });
+    });
     body.querySelectorAll(':scope > h2').forEach((h) => {
       if (/^auf einen blick/i.test(h.textContent.trim())) {
         const g = document.createElement('section'); g.className = 'lz-glance';
@@ -91,7 +104,7 @@ const Lernzettel = (() => {
     win.className = 'lzwin';
     win.setAttribute('aria-label', 'Lernzettel');
     win.innerHTML = `<div class="lz-bar"><span class="lz-bt">Lernzettel</span><span class="lz-chip" hidden></span><span class="lz-grow"></span>
-        <button type="button" class="icon-btn lz-ib" data-lz="share" aria-label="Teilen und Speichern" title="Teilen">${icon('share-up', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="close" aria-label="Schließen" title="Schließen">${icon('x', 14)}</button></div>
+        <button type="button" class="icon-btn lz-ib" data-lz="full" aria-label="Vollbild" title="Vollbild">${icon('expand', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="share" aria-label="Teilen und Speichern" title="Teilen">${icon('share-up', 15)}</button><button type="button" class="icon-btn lz-ib" data-lz="close" aria-label="Schließen" title="Schließen">${icon('x', 14)}</button></div>
       <div class="lz-scroll"></div>`;
     appEl()?.insertBefore(win, document.getElementById('rpane'));
     win.addEventListener('click', (e) => {
@@ -99,7 +112,11 @@ const Lernzettel = (() => {
       if (go) { const h = win.querySelector(`.lz-body h2[data-lzn="${+go.dataset.lzgo + 1}"]`); h?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
       const b = e.target.closest('[data-lz]'); if (!b || !cur) return;
       const z = parse(cur.raw);
-      if (b.dataset.lz === 'close') { close(true); return; }
+      if (b.dataset.lz === 'full') { // 19.11.: Vollbild – das Blatt füllt die ganze App, nochmal tippen = zurück
+        const on = !appEl()?.classList.contains('lz-full'); appEl()?.classList.toggle('lz-full', on);
+        b.innerHTML = icon(on ? 'shrink' : 'expand', 15); b.title = on ? 'Vollbild beenden' : 'Vollbild'; b.setAttribute('aria-label', b.title); return;
+      }
+      if (b.dataset.lz === 'close') { appEl()?.classList.remove('lz-full'); close(true); return; }
       if (b.dataset.lz === 'share') { shareMenu(b); return; }
 
       if (b.dataset.lz === 'doc') {
@@ -173,7 +190,7 @@ const Lernzettel = (() => {
   }
   function close(user = false) {
     if (!win) return;
-    appEl()?.classList.remove('lz-open');
+    appEl()?.classList.remove('lz-open', 'lz-full');
     if (win._sb) { window.setCollapsed?.(false); win._sb = false; }
     if (user && cur) dismissed.add(cur.key);
     cur = null; lastRaw = '';

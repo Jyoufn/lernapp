@@ -2105,13 +2105,19 @@ function renderMarkdown(target, text, opts = {}) {
     const keep = (target._pz ||= new Map());
     if (!keep.has(raw)) {
       // noch nicht fertig geschrieben: DIESELBE Warte-Karte weiterverwenden (sonst startet die Wellen-Animation bei jedem Textstück neu)
-      if (!Praesentation.parse(raw)) {
+      const fin = !opts.live; // fertige Antwort: abgeschnittenen Text reparieren statt ewig zu warten
+      if (!Praesentation.parse(raw, { fix: fin })) {
+        if (fin) { // 19.11.: nichts zu retten → klare Meldung statt endloser Warte-Welle
+          const bad = el('div', 'pz-fail', `<span>Die Präsentation wurde nicht vollständig geschrieben.</span><button type="button" class="pz-retry">Nochmal versuchen</button>`);
+          bad.querySelector('.pz-retry').addEventListener('click', () => { const m = bad.closest('.msg'); if (m) regenerate(m); });
+          target._pzWait = null; pre.replaceWith(bad); return;
+        }
         target._pzWait ||= Praesentation.figure(raw);
         Praesentation.progress?.(target._pzWait, raw);
         pre.replaceWith(target._pzWait);
         return;
       }
-      const f = Praesentation.figure(raw);
+      const f = Praesentation.figure(raw, { fix: fin });
       if (target._pzWait) { f.classList.add('pz-reveal'); target._pzWait = null; } // fertig → weich einblenden statt hart umspringen
       keep.set(raw, f);
     }

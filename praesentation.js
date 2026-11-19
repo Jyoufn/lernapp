@@ -41,7 +41,19 @@ const Praesentation = (() => {
   const hex = (c) => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? String(c).toUpperCase() : null);
 
   /* ---------- Daten prüfen ---------- */
-  function parse(raw) {
+  /* 19.11.: abgeschnittener Text (Antwort am Längen-Limit) → alle vollständigen Folien retten: am letzten „}“ einer Folie
+     abschneiden und Liste/Objekt schließen. Nur für die fertige Antwort (beim Schreiben würde sonst zu früh eine halbe Präsentation erscheinen). */
+  function repair(raw) {
+    const src = String(raw || ''); const at = src.indexOf('"slides"'); if (at < 0) return null;
+    let end = src.length;
+    for (let k = 0; k < 40; k++) {
+      end = src.lastIndexOf('}', end - 1); if (end <= at) return null;
+      const d = parse(`${src.slice(0, end + 1)}]}`); if (d) return d;
+    }
+    return null;
+  }
+  function parse(raw, { fix = false } = {}) {
+    if (fix) { const d = parse(raw); return d || repair(raw); }
     let o = null;
     // tolerant lesen: Modelle setzen manchmal Kommas zu viel, typografische Anführungszeichen oder Text um das JSON herum
     const src = String(raw || '').trim();
@@ -750,8 +762,8 @@ const Praesentation = (() => {
   const TYPE_NAMES = { titel: 'Titel', gliederung: 'Gliederung', punkte: 'Stichpunkte', bild: 'Großes Bild', zahlen: 'Zahlen', zwei: 'Vergleich', zitat: 'Merksatz / Zitat', abschnitt: 'Abschnitt', schritte: 'Ablauf / Schritte', definition: 'Definition', frage: 'Einstiegsfrage', fazit: 'Fazit', quellen: 'Quellen', ende: 'Schluss' };
   const ACCENTS = ['#2F6BFF', '#5EA2FF', '#14B8A6', '#22A55B', '#F59E0B', '#FF5A36', '#E11D74', '#8B5CF6', '#B5532A', '#0A0A0A'];
   // gemeinsamer Zustand einer Präsentation (Karte und Bearbeiten-Fenster): Folien, geladene Bilder, Layout
-  function makeState(raw) {
-    let deck = parse(raw);
+  function makeState(raw, fix = false) {
+    let deck = parse(raw, { fix });
     if (!deck) return null;
     const key = editKey(raw);
     try { const saved = localStorage.getItem(key); if (saved) { const d = parse(saved); if (d) deck = d; } } catch {}
@@ -784,11 +796,11 @@ const Praesentation = (() => {
     if (el) el.textContent = n ? ` · Folie ${n}` : '';
   }
   /* ---------- Karte im Chat: nur die Präsentation (ohne Kopf), Designs, Bearbeiten, Ausgabe als drei Kacheln ---------- */
-  function figure(raw) {
+  function figure(raw, { fix = false } = {}) {
     const fig = document.createElement('figure');
     fig.className = 'pz';
     window.enterOnce?.(fig);
-    const st = makeState(raw);
+    const st = makeState(raw, fix);
     // solange der Block noch geschrieben wird: dieselbe Wellen-Animation wie bei der Bilderstellung (16:9 wie eine Folie)
     if (!st) {
       fig.classList.add('pz-waiting');

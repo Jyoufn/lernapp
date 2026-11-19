@@ -13998,3 +13998,29 @@ html body .ce-card.ce-task .ce-headbox > .ce-cover:not([hidden]) { margin: -4px 
 /* Warte-Welle (Präsentation/Bild): wieder wellenartig – Kachel-Raster leicht sichtbar, schmales helles Band läuft schräg darüber */
 html body .ill-fast .ill-mask { background: rgba(255, 255, 255, 0.035); }
 html body .ill-fast .ill-band { width: 34%; background: linear-gradient(105deg, transparent 0%, rgba(255, 255, 255, 0.05) 30%, rgba(255, 255, 255, 0.22) 50%, rgba(255, 255, 255, 0.05) 70%, transparent 100%); animation-duration: 2.4s; animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1); }
+.pz-fail { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid #242424; background: rgba(255, 255, 255, 0.025); color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; }
+.pz-retry { height: 28px; padding: 0 12px; border: 0; border-radius: 8px; background: #f2f2f2; color: #141414; font: 600 12.5px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+/* 19.11.: Zeitstrahl auf dem Lernzettel – statisch, alles offen, feine Linie, kleine graue Punkte (nicht blau, nicht schwarz) */
+.lz-sheet .tl-static .tl4-h { cursor: default; pointer-events: none; }
+.lz-sheet .tl-static .tl4-more { height: auto !important; display: block !important; opacity: 1 !important; grid-template-rows: 1fr !important; }
+.lz-sheet .tl-static .tl4-rail::before { width: 1px; margin-left: -0.5px; background: var(--p-line, rgba(0, 0, 0, 0.14)); }
+.lz-sheet .tl-static .tl4-dot, .lz-sheet .tl-static .tl4-row.open .tl4-dot { width: 8px; height: 8px; margin-left: -4px; top: 16px; border: 0; background: var(--p-muted, #8a8a8a); }
+.lz-sheet .tl-static .tl4-row { animation: none; }
+/* 19.11.: Lernzettel im Vollbild – Blatt über die ganze App, weich aufgezogen */
+html body .app.lz-open.lz-full .lzwin { position: fixed; inset: 8px; z-index: 320; width: auto !important; margin: 0; border-width: 1px; border-radius: 14px; animation: lz-full-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes lz-full-in { from { opacity: 0.6; transform: scale(0.985); } to { opacity: 1; transform: none; } }
+html body .app.lz-full .lzwin .lz-sheet { max-width: 860px; margin-left: auto; margin-right: auto; }
+/* 19.11.: Skill-Marke im Eingabefeld – links gleicher Abstand wie oben */
+html body .sk-chips { margin-left: -4px; }
+/* Zeitstrahl auf dem Papier: ohne Kästen, Farben des Blatts */
+.lz-sheet .tl-static .tl4-head { color: var(--p-t1); font: 600 14px var(--font-ui, Inter), sans-serif; }
+.lz-sheet .tl-static .tl4-box { border: 0 !important; background: none !important; box-shadow: none !important; padding: 8px 0 10px 4px; }
+.lz-sheet .tl-static .tl4-h { padding: 0; background: none; gap: 12px; }
+.lz-sheet .tl-static .tl4-date { color: var(--p-t3); font: 600 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.lz-sheet .tl-static .tl4-t { color: var(--p-t1); font: 600 14.5px var(--font-ui, Inter), sans-serif; }
+.lz-sheet .tl-static .tl4-mi { padding: 4px 0 0; color: var(--p-t2); }
+.lz-sheet .tl-static .tl4-mi p, .lz-sheet .tl-static .tl4-mi li { color: var(--p-t2); margin: 0; }
+.lz-sheet .tl-static .tl4-dot, .lz-sheet .tl-static .tl4-row.open .tl4-dot { background: var(--p-t3); top: 14px; }
+.lz-sheet .tl-static .tl4-rail::before { background: var(--p-line); }
+.lz-sheet .tl-static .tl4-date { color: var(--p-t3) !important; }
+.lz-sheet .tl-static .tl4-dot, .lz-sheet .tl-static .tl4-row.open .tl4-dot { top: 19px !important; }
