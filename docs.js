@@ -1635,7 +1635,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
             <span class="tk-menu tags dc-mmenu"><span class="tk-tag-row"><input class="tk-tag-in dc-proj-in" placeholder="Suchen" maxlength="40" aria-label="Projekt suchen oder anlegen" /></span><span class="tk-tag-list dc-proj-list"></span></span></span>
             <button type="button" class="dc-add" data-act="icon" data-add="icon">${fi('smile', 13)}Icon hinzufügen</button><button type="button" class="dc-add" data-act="cover" data-add="cover">${fi('image', 13)}Cover hinzufügen</button></div>
           <div class="dc-cover"><div class="dc-cover-img"></div><div class="dc-cover-acts">
-            <button type="button" data-act="cover">${fi('image', 12)}Cover ändern</button><button type="button" data-act="cover-ai">${fi('sparkle', 12)}Mit KI bearbeiten</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
+            <button type="button" data-act="cover">Cover ändern</button><button type="button" data-act="cover-ai">Mit KI bearbeiten</button><button type="button" data-act="cover-del">Entfernen</button></div></div>
           <button type="button" class="dc-icon" data-act="icon" aria-label="Icon ändern" title="Icon ändern" hidden><span class="dc-icon-g"></span></button>
           <textarea class="dc-title-in" rows="1" placeholder="Titel" maxlength="160" aria-label="Titel">${esc(doc.title)}</textarea>
           <textarea class="dc-sub-in" rows="1" placeholder="Beschreibung hinzufügen …" maxlength="400" aria-label="Beschreibung">${esc(doc.subtitle || '')}</textarea>
@@ -1646,7 +1646,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         </div></div>
         <nav class="prompt-nav dc-nav" aria-label="Überschriften in diesem Dokument"></nav>
         <div class="pn-card dc-nav-card"><div class="pn-q"></div><div class="pn-a"></div></div></div>
-        <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><i></i><span>Fokus-Modus</span></button></div>`;
+        <div class="dc-focus-bar"><button type="button" class="dc-focus-exit" data-act="focus" aria-label="Fokusmodus beenden" title="Fokusmodus beenden"><span>Fokus-Modus</span></button></div>`;
       wireMeta(); wireProj(); fixHeadings(content()); wrapTables(content()); renderViz(content()); renderBlocks(); wire(); drawHist(); drawPane(); drawCover(); applyFolds(); buildNav();
       grow(view.querySelector('.dc-title-in')); grow(view.querySelector('.dc-sub-in'));
       if (writing.has(doc.id)) busy('KI schreibt …');
@@ -2185,7 +2185,10 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
       const page = view.querySelector('.dc-page');
       const flip = animate && page && page.classList.contains('with-cover') !== !!bg ? captureFlip() : null;
       box.classList.toggle('has', !!bg);
-      box.querySelector('.dc-cover-img').style.background = bg;
+      const ci = box.querySelector('.dc-cover-img'), prevBg = ci.style.background;
+      ci.style.background = bg;
+      // 19.11.: neues Cover blendet weich ein (kurz unscharf und minimal größer → klar), statt hart umzuspringen
+      if (bg && prevBg && prevBg !== ci.style.background && !matchMedia('(prefers-reduced-motion: reduce)').matches) ci.animate([{ opacity: 0.35, filter: 'blur(6px)', transform: 'scale(1.03)' }, { opacity: 1, filter: 'blur(0)', transform: 'none' }], { duration: 520, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' });
       // 18.11.: Cover (nicht eigenes Bild) geht über die ganze Breite der Ansicht bis ganz nach oben – Abstand zu den Rändern messen
       const bleed = () => {
         if (!box.classList.contains('has') || box.classList.contains('img')) return;
@@ -2196,6 +2199,7 @@ Fehlt eine wichtige Angabe, die du nicht sinnvoll selbst festlegen kannst (z. B.
         box.style.setProperty('--bt', `${Math.max(0, b0.top - top + (sc.scrollTop || 0))}px`);
       };
       view.classList.toggle('cover-bleed', !!bg && !(doc.cover?.kind === 'image' && !doc.cover?.ai)); // Leiste oben liegt dann über dem Cover
+      view.closest('.panel')?.classList.toggle('pn-cover', view.classList.contains('cover-bleed') && !view.hidden); // Rahmen oben ausblenden (sonst dünne dunkle Linie über dem Cover)
       box._bleed = bleed;
       bleed(); requestAnimationFrame(bleed);
       if (!box._ro && window.ResizeObserver) { box._ro = new ResizeObserver(() => bleed()); box._ro.observe(view); }

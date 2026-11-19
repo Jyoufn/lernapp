@@ -14036,3 +14036,15 @@ html body .au-search:focus-within { box-shadow: inset 0 0 0 1px rgba(255, 255, 2
 html body .au-search input { height: 26px; line-height: 26px; padding: 0; margin: 0; color: var(--text-2); }
 html body .au-search input::placeholder { color: var(--text-4); opacity: 1; }
 html body .au-search svg { flex: none; display: block; }
+/* 19.11.: Cover-Knöpfe und Fokus-Leiste wie der Agenten/Dokumente-Umschalter über dem Cover: dunkles, durchsichtiges Glas,
+   drei EINZELNE Kästchen ohne Icons; kein heller Schleier */
+html body .dc-cover-acts { gap: 6px; padding: 0; border-radius: 0; background: none !important; box-shadow: none !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+html body .dc-cover-acts button, html body .dc-editor.focus .dc-focus-bar { height: 28px; padding: 0 12px; border-radius: 10px; background: rgba(12, 12, 16, 0.28) !important; color: rgba(255, 255, 255, 0.92); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12) !important; -webkit-backdrop-filter: blur(14px) saturate(1.3); backdrop-filter: blur(14px) saturate(1.3); text-shadow: none; font: 500 12.5px var(--font-ui, Inter), sans-serif; }
+html body .dc-cover-acts button:hover { background: rgba(12, 12, 16, 0.42) !important; }
+html body .dc-editor.focus .dc-focus-bar { padding: 0; display: inline-flex; align-items: center; }
+html body .dc-editor.focus .dc-focus-exit { height: 28px; padding: 0 14px; background: transparent !important; color: rgba(255, 255, 255, 0.92); }
+html body .dc-editor.focus .dc-focus-exit:hover { background: rgba(255, 255, 255, 0.06) !important; }
+html body .dc-editor.focus .dc-focus-exit i { display: none; }
+/* Cover ganz oben: Rahmen der Fläche oben weg, damit keine dünne dunkle Linie bleibt */
+html body .panel.pn-cover { border-top-color: transparent !important; }
+html body .dc-view.cover-bleed .dc-page.with-cover > .dc-cover.has:not(.img) { margin-top: calc(-1 * var(--bt, 0px) - 1px); }
