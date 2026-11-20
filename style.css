@@ -14620,28 +14620,3 @@ html body .au-cat2 .au-ordb:disabled { opacity: 0.25; cursor: default; }
 html body :is(.sidebar, .au-view, .cal-view, .au-head, .cm-head, .hm-head, .chat-bar, .chat-pop, .lb2-menu, .tk-menu, .ce-card, .ce-peek, .au-catform, .tagm-pop, .files-pop, .cmdk-box, .cl-list, .tabs, button, [role="button"], [role="menuitem"], [role="tab"]) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 html body :is(input, textarea, [contenteditable="true"], .md, .msg, .out-bubble, .dc-content, .lz-sheet, .answer, .thought-text, code, pre, .ce-card .tk-f-title, .ce-card .tk-f-notes, .ce-peek .cpk-note) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html body.au-dragging, html body.au-dragging * { -webkit-user-select: none !important; user-select: none !important; }
-/* ===== 20.11.: Tagesansicht im Kalender (24 Stunden senkrecht, ohne Scrollen) ===== */
-html body #sidebarToggle, html body .titlebar-controls { z-index: 60; } /* über der Tagesansicht */
-html body .panel > .cdl { position: absolute; inset: 0; z-index: 50; display: flex; flex-direction: column; gap: 10px; padding: 10px 16px 14px; box-sizing: border-box; background: var(--app-main, #141414); }
-html body .cdl.closing { opacity: 0; transition: opacity 180ms ease; }
-html body .cdl-top { flex: none; display: flex; align-items: center; gap: 8px; min-height: 28px; padding-left: 38px; }
-html body .cdl-title { color: var(--text); font: 600 17px var(--font-ui, Inter), sans-serif; white-space: nowrap; }
-html body .cdl-btn { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-3); cursor: pointer; }
-html body .cdl-btn svg { width: 14px; height: 14px; }
-@media (hover: hover) { html body .cdl-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); } }
-html body .cdl-all { flex: none; display: flex; flex-wrap: wrap; gap: 6px; padding-left: 58px; }
-html body .cdl-chip { display: flex; align-items: center; height: 24px; max-width: 260px; padding: 0 10px; border: 0; border-radius: 7px; background: color-mix(in srgb, var(--c) 16%, #181818); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, #242424); color: var(--text); font: 500 12px var(--font-ui, Inter), sans-serif; cursor: pointer; }
-html body .cdl-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html body .cdl-day { position: relative; flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(24, minmax(0, 1fr)); border-radius: 12px; box-shadow: inset 0 0 0 1px #242424; overflow: hidden; }
-html body .cdl-h { position: relative; border-top: 1px solid #1f1f1f; }
-html body .cdl-h:first-child { border-top: 0; }
-html body .cdl-h span { position: absolute; top: 50%; left: 12px; transform: translateY(-50%); color: var(--text-4); font: 500 10.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; line-height: 1; }
-html body .cdl-evs { position: absolute; inset: 0 8px 0 58px; }
-html body .cdl-ev { position: absolute; box-sizing: border-box; display: flex; align-items: center; gap: 8px; min-height: 14px; padding: 0 9px; overflow: hidden; border: 1px solid transparent; border-width: 1px 2px; border-color: var(--app-main, #141414); border-radius: 7px; background: color-mix(in srgb, var(--c) 22%, #181818); color: var(--text); font: 500 12px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; }
-html body .cdl-ev::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--c); }
-html body .cdl-et { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-html body .cdl-ez { flex: none; color: var(--text-3); font-size: 11px; font-variant-numeric: tabular-nums; }
-html body .cdl-ev.short .cdl-ez { display: none; }
-@media (hover: hover) { html body .cdl-ev:hover { background: color-mix(in srgb, var(--c) 30%, #181818); } }
-html body .cdl-now { position: absolute; left: -46px; right: -8px; height: 0; border-top: 1px solid rgba(255, 255, 255, 0.75); pointer-events: none; z-index: 2; }
-html body .cdl-now span { position: absolute; left: 0; top: 0; transform: translateY(-50%); padding: 1px 5px; border-radius: 5px; background: #2a2a2a; color: var(--text); font: 600 10px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }

@@ -156,7 +156,6 @@ const Calendar = (() => {
     if (p && !compact) { showEvent(events.find((e) => e.id === p.dataset.id), p); return; }
     // „+N weitere“ (bzw. schmal: Tag mit Terminen) → alle Termine des Tages; ein leerer Tag macht nichts
     if (cell && (ev.target.closest('.cm-more') || (compact && cell.querySelector('.cm-ev')))) showDayList(cell.dataset.date, cell);
-    else if (cell && !p) openDayLine(cell.dataset.date); // 20.11.: Tag antippen → Tages-Zeitleiste
   });
   /* 19.11.: Suche mit Filter (wie bei den Aufgaben). Darunter klappt eine Liste der Treffer auf:
      links Name, daneben Priorität, Tags, ganz rechts Datum + Uhrzeit. Antippen springt zum Termin und öffnet ihn. */
@@ -244,61 +243,6 @@ const Calendar = (() => {
     sIn.focus({ preventScroll: true }); drawResults();
   });
   document.addEventListener('pointerdown', (x) => { if (!cmenu.hidden && !cmenu.contains(x.target) && !x.target.closest('.cm-fbtn')) cmenu.hidden = true; });
-  /* ===== 20.11.: Tages-Zeitleiste (Vorlage: Zeitplan mit Balken) – Stunden von links nach rechts zum Wischen, links die Namen,
-     jeder Termin ein Balken von Beginn bis Ende (ganztägig = gestrichelter Balken über den ganzen Tag), Linie „jetzt“,
-     unten Details zum gewählten Termin; leere Stelle antippen = neuer Termin zu dieser Uhrzeit ===== */
-  let dayLine = null;
-  const fmtM = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-  window.addEventListener('nav-view', () => closeDayLine()); // Ansicht gewechselt
-  function closeDayLine() { if (!dayLine) return; const d = dayLine; dayLine = null; d.classList.add('closing'); setTimeout(() => d.remove(), 200); document.removeEventListener('keydown', dlKey, true); }
-  const dlKey = (x) => { if (x.key === 'Escape' && dayLine && !document.querySelector('.ce-card, .ce-peek')) { x.stopPropagation(); closeDayLine(); } };
-  function openDayLine(date) {
-    const host = view.closest('.panel') || view; // direkt im Hauptteil
-    if (dayLine) { dayLine.remove(); dayLine = null; }
-    const d = new Date(`${date}T12:00:00`), today = todayIso();
-    const list = dayEvents(date);
-    const span = (e) => { const s0 = minsOf(e.time); if (s0 == null) return null; let e0 = minsOf(e.end); if (e0 == null || e0 <= s0) e0 = Math.min(1440, s0 + 60); return { s: s0, e: e0 }; };
-    const all = list.filter((e) => !span(e));
-    // Termine mit Uhrzeit: überlappende nebeneinander (Spuren)
-    const timed = list.map((e) => ({ e, sp: span(e) })).filter((r) => r.sp).sort((a, b) => a.sp.s - b.sp.s || b.sp.e - a.sp.e);
-    let group = [], lanes = [];
-    const flush = () => { group.forEach((r) => { r.n = lanes.length; }); group = []; lanes = []; };
-    timed.forEach((r) => {
-      if (group.length && Math.max(...group.map((g) => g.sp.e)) <= r.sp.s) flush();
-      let l = lanes.findIndex((end) => end <= r.sp.s); if (l < 0) { l = lanes.length; lanes.push(0); }
-      lanes[l] = r.sp.e; r.l = l; group.push(r);
-    });
-    flush();
-    const pct = (m) => `${(m / 1440 * 100).toFixed(4)}%`;
-    const el = document.createElement('div');
-    el.className = 'cdl';
-    el.innerHTML = `<div class="cdl-top"><button type="button" class="cdl-btn" data-dl="close" aria-label="Zurück zum Monat" title="Zurück">${icon('f-back')}</button>
-        <span class="cdl-title">${esc(`${WEEKDAYS[d.getDay()]}, ${dm(d)}`)}</span>
-        <span class="grow"></span><button type="button" class="cdl-btn" data-dl="-1" aria-label="Vorheriger Tag">${icon('f-back')}</button><button type="button" class="cdl-btn" data-dl="1" aria-label="Nächster Tag">${icon('f-forward')}</button></div>
-      ${all.length ? `<div class="cdl-all">${all.map((e) => `<button type="button" class="cdl-chip" data-id="${esc(e.id)}" style="--c:${esc(e.color || COLORS[0])}"><span>${esc(e.title)}</span></button>`).join('')}</div>` : ''}
-      <div class="cdl-day">
-        ${Array.from({ length: 24 }, (_, h) => `<div class="cdl-h"><span>${String(h).padStart(2, '0')}:00</span></div>`).join('')}
-        <div class="cdl-evs">${timed.map((r) => `<button type="button" class="cdl-ev${r.sp.e - r.sp.s <= 45 ? ' short' : ''}" data-id="${esc(r.e.id)}" style="--c:${esc(r.e.color || COLORS[0])};top:${pct(r.sp.s)};height:${pct(r.sp.e - r.sp.s)};left:${(r.l / r.n * 100).toFixed(3)}%;width:${(100 / r.n).toFixed(3)}%"><span class="cdl-et">${esc(r.e.title)}</span><span class="cdl-ez">${fmtM(r.sp.s)} – ${fmtM(r.sp.e)}</span></button>`).join('')}
-        ${date === today ? (() => { const m = new Date().getHours() * 60 + new Date().getMinutes(); return `<div class="cdl-now" style="top:${pct(m)}"><span>${fmtM(m)}</span></div>`; })() : ''}</div>
-      </div>`;
-    host.append(el);
-    dayLine = el; el._date = date;
-    if (!reduced()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
-    el.addEventListener('click', (x) => {
-      const b = x.target.closest('[data-dl]');
-      if (b) {
-        const a = b.dataset.dl;
-        if (a === 'close') { closeDayLine(); return; }
-        const nd = new Date(`${date}T12:00:00`); nd.setDate(nd.getDate() + +a); openDayLine(iso(nd)); return;
-      }
-      const ev = x.target.closest('[data-id]'); if (!ev) return;
-      const e = list.find((v) => String(v.id) === ev.dataset.id); if (e) editEvent(e);
-    });
-    setTimeout(() => document.addEventListener('keydown', dlKey, true), 0);
-  }
-  // nach dem Speichern/Löschen neu zeichnen, wenn die Zeitleiste offen ist
-  const refreshDayLine = () => { if (dayLine) openDayLine(dayLine._date); };
-  window.addEventListener('calendar-changed', () => setTimeout(refreshDayLine, 0));
   // Wischen auf dem iPad: links/rechts = Monat vor/zurück
   let swipe = null;
   box.addEventListener('touchstart', (ev) => { const t = ev.touches[0]; swipe = ev.touches.length === 1 ? { x: t.clientX, y: t.clientY, at: Date.now() } : null; }, { passive: true });
@@ -904,7 +848,6 @@ const Calendar = (() => {
     document.querySelector('.panel')?.classList.add('view-calendar');
   }
   function hide() {
-    closeDayLine(); // Tages-Zeitleiste gehört zum Kalender
     if (!open) return;
     open = false;
     view.hidden = true;
