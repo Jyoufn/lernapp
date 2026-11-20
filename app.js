@@ -2995,13 +2995,19 @@ function markerIcon(step, name, cls = '') {
 const THOUGHT_MAKE = /(erstell|aufstell|anleg|konstru|\bbau|ausfüll|construct|build|creat|generat|fill|set(ting)? up|draft)/i;
 const THOUGHT_ICONS = [
   [/(such|recherch|nachschlag|nachseh|\bsearch|research|look(ing)? up|brows)/i, 'search'],
-  [/(vergleich|gegenüberstell|abgleich|compar|contrast)/i, 'table'],
+  [/(rechtschreib|orthogra|tippfehler|spelling|typo)/i, 'th-spelling'],
+  [/(grammatik|grammar|zeichensetzung|punctuation|syntax)/i, 'th-grammar'],
+  [/(hypothes|experiment|versuchsaufbau|\bversuchs?\b|vermutung)/i, 'th-experiment'],
+  [/(markier|hervorheb|unterstreich|highlight|\bmark(ing)?\b)/i, 'th-highlight'],
+  [/(vergleich|gegenüberstell|abgleich|compar|contrast)/i, 'th-table'],
   [/(rechn|umform|ableit|gleichung lös|calculat|comput|\bsolv|\bderiv)/i, 'hash'],
+  [/(formel|formula|equation|gleichung aufstell|ansatz aufstell|term aufstell)/i, 'th-formula'],
   [/(übersetz|translat)/i, 'globe'],
   [/(prüf|kontroll|korrigier|verifiz|\bcheck|verif|validat|correct|confirm|bestätig)/i, 'check-circle'],
   [/(bild|foto|abbild|skizz|zeichn|\bimage|picture|illustrat|visuali)/i, 'image'],
   [/(diagramm|\bchart|\bgraph|statist|\bplot)/i, 'chart'],
   [/(präsentation|folie|\bslide|presentation)/i, 'slides'],
+  [/(vokabel|karteikart|wortschatz|flashcard|vocab)/i, 'th-vocab'],
   [/(quiz|karteikarte|lernset|flashcard|probeklausur|\bexams?\b|lernzettel|study sheet|cheat sheet)/i, 'cap'],
   [/(zeitstrahl|chronolog|timeline)/i, 'clock'],
   [/(programmier|implementier|debug|\bcode|coding|implement|\bscript)/i, 'terminal'],
@@ -3010,12 +3016,13 @@ const THOUGHT_ICONS = [
   [/(aufzähl|auflist|sammel|zusammenstell|zusammentrag|\blisting|\blist\b|gather|collect|compil|enumerat)/i, 'list-num'],
   [/(\bplan|glieder|strukturier|ordnen|aufbau|outlin|structur|organi[sz])/i, 'list'],
   [/(überarbeit|verfeiner|verbesser|anpass|aktualisier|refin|improv|revis|polish|adjust|updat)/i, 'refresh'],
-  [/(erweiter|ergänz|hinzufüg|expand|extend|supplement|adding)/i, 'plus-circle'],
-  [/(kürz|vereinfach|reduzier|zusammenfass|shorten|simplif|condens|summar)/i, 'shrink'],
-  [/(verwerf|ausschließ|streich|discard|reject|exclud|rule out)/i, 'x-circle'],
+  [/(erweiter|ergänz|hinzufüg|expand|extend|supplement|adding)/i, 'th-extend'],
+  [/(kürz|vereinfach|reduzier|zusammenfass|shorten|simplif|condens|summar)/i, 'th-shorten'],
+  [/(verwerf|ausschließ|streich|discard|reject|exclud|rule out)/i, 'th-discard'],
   [/(fokus|schwerpunkt|priorisier|eingrenz|\bfocus|priorit|narrow)/i, 'filter'],
-  [/(verknüpf|verbind|zusammenhang|connect|\blink|relat)/i, 'link'],
+  [/(verknüpf|verbind|zusammenhang|connect|\blink|relat)/i, 'th-connect'],
   [/(zitat|belegstell|\bquot|\bcit(e|ing|ation))/i, 'callout'],
+  [/(fragestellung|rückfrage|\bfrage\b|\bfragen\b|question|\bask(ing)?\b)/i, 'th-question'],
   [/(merkregel|merksatz|eselsbrück|mnemonic)/i, 'bookmark'],
   [/(warn|risiko|vorsicht|ausnahme|exception|caveat|pitfall|edge case)/i, 'alert'],
   [/(\blies\b|\blesen|durchgeh|sicht(e|en)\b|\bread|\bscan)/i, 'file'],
@@ -3024,7 +3031,7 @@ const THOUGHT_ICONS = [
   [/(abschließ|fertigstell|finali[sz]|wrap(ping)? up|conclud)/i, 'flag'],
   [/(versteh|erfass|klären|anliegen|understand|grasp|request)/i, 'target'],
   [/(überleg|abwäg|nachdenk|brainstorm|consider|weigh|reflect|ponder)/i, 'bulb'],
-  [THOUGHT_MAKE, 'sparkle'],
+  [THOUGHT_MAKE, 'th-create'],
 ];
 /* Feste Schritte der Zeitleiste (Dokumente analysieren, Informationen auswerten, Antwort vorbereiten …): fertig bekommen sie statt des Punkts
    ein passendes Icon – nach dem Schlüssel des Schritts (thinking.js), nicht nach dem Text. Suche behält die Lupe. */
@@ -3035,7 +3042,7 @@ const STEP_ICONS = { material: 'file', extract: 'file', depot: 'briefcase', port
 const stepIcon = (step, key) => { const n = STEP_ICONS[key]; if (n && step && !step.querySelector(':scope > .marker.ico')) markerIcon(step, n); };
 function thoughtIcon(title) {
   const t = String(title || '');
-  if (/(tabelle|\btables?\b|paradigm)/i.test(t) && THOUGHT_MAKE.test(t)) return 'table'; // Tabelle erstellen/bauen
+  if (/(tabelle|\btables?\b|paradigm)/i.test(t) && THOUGHT_MAKE.test(t)) return 'th-table'; // Tabelle erstellen/bauen
   for (const [re, name] of THOUGHT_ICONS) if (re.test(t)) return name;
   return ''; // nur ein Thema, keine Tätigkeit → Punkt
 }
