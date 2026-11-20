@@ -248,83 +248,56 @@ const Calendar = (() => {
      jeder Termin ein Balken von Beginn bis Ende (ganztägig = gestrichelter Balken über den ganzen Tag), Linie „jetzt“,
      unten Details zum gewählten Termin; leere Stelle antippen = neuer Termin zu dieser Uhrzeit ===== */
   let dayLine = null;
-  const HW = 88; // Breite einer Stunde
   const fmtM = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
   window.addEventListener('nav-view', () => closeDayLine()); // Ansicht gewechselt
   function closeDayLine() { if (!dayLine) return; const d = dayLine; dayLine = null; d.classList.add('closing'); setTimeout(() => d.remove(), 200); document.removeEventListener('keydown', dlKey, true); }
   const dlKey = (x) => { if (x.key === 'Escape' && dayLine && !document.querySelector('.ce-card, .ce-peek')) { x.stopPropagation(); closeDayLine(); } };
-  function openDayLine(date, keepScroll = null) {
-    const host = view.closest('.panel') || view; // direkt im Hauptteil (die Kalender-Ansicht selbst ist höher/verschoben)
-    const prevSel = dayLine?._sel;
+  function openDayLine(date) {
+    const host = view.closest('.panel') || view; // direkt im Hauptteil
     if (dayLine) { dayLine.remove(); dayLine = null; }
     const d = new Date(`${date}T12:00:00`), today = todayIso();
     const list = dayEvents(date);
-    const span = (e) => { const s0 = minsOf(e.time); if (s0 == null) return { s: 0, e: 1440, all: true }; let e0 = minsOf(e.end); if (e0 == null || e0 <= s0) e0 = Math.min(1440, s0 + 60); return { s: s0, e: e0, all: false }; };
+    const span = (e) => { const s0 = minsOf(e.time); if (s0 == null) return null; let e0 = minsOf(e.end); if (e0 == null || e0 <= s0) e0 = Math.min(1440, s0 + 60); return { s: s0, e: e0 }; };
+    const all = list.filter((e) => !span(e));
+    // Termine mit Uhrzeit: überlappende nebeneinander (Spuren)
+    const timed = list.map((e) => ({ e, sp: span(e) })).filter((r) => r.sp).sort((a, b) => a.sp.s - b.sp.s || b.sp.e - a.sp.e);
+    let group = [], lanes = [];
+    const flush = () => { group.forEach((r) => { r.n = lanes.length; }); group = []; lanes = []; };
+    timed.forEach((r) => {
+      if (group.length && Math.max(...group.map((g) => g.sp.e)) <= r.sp.s) flush();
+      let l = lanes.findIndex((end) => end <= r.sp.s); if (l < 0) { l = lanes.length; lanes.push(0); }
+      lanes[l] = r.sp.e; r.l = l; group.push(r);
+    });
+    flush();
+    const pct = (m) => `${(m / 1440 * 100).toFixed(4)}%`;
     const el = document.createElement('div');
     el.className = 'cdl';
-    const hours = Array.from({ length: 24 }, (_, h) => h);
-    const rows = list.map((e, i) => {
-      const sp = span(e), c = e.color || COLORS[0];
-      const prog = date < today ? 100 : date > today ? 0 : Math.max(0, Math.min(100, Math.round(((new Date().getHours() * 60 + new Date().getMinutes()) - sp.s) / Math.max(1, sp.e - sp.s) * 100)));
-      return { e, i, sp, c, prog };
-    });
     el.innerHTML = `<div class="cdl-top"><button type="button" class="cdl-btn" data-dl="close" aria-label="Zurück zum Monat" title="Zurück">${icon('f-back')}</button>
-        <div class="cdl-tt"><span class="cdl-title">${esc(`${WEEKDAYS[d.getDay()]}, ${dm(d)}`)}</span><span class="cdl-sub">${list.length === 1 ? '1 Termin' : `${list.length} Termine`}${date === today ? ' · heute' : ''}</span></div>
+        <span class="cdl-title">${esc(`${WEEKDAYS[d.getDay()]}, ${dm(d)}`)}</span>
         <span class="grow"></span><button type="button" class="cdl-btn" data-dl="-1" aria-label="Vorheriger Tag">${icon('f-back')}</button><button type="button" class="cdl-btn" data-dl="1" aria-label="Nächster Tag">${icon('f-forward')}</button></div>
-      <div class="cdl-body">
-        <div class="cdl-names"><div class="cdl-nh">Termin</div>${rows.map((r) => `<div class="cdl-name" data-i="${r.i}"><i style="background:${esc(r.c)}"></i><span>${esc(r.e.title)}</span></div>`).join('') || '<div class="cdl-none">Keine Termine – tippe auf eine Uhrzeit, um einen anzulegen.</div>'}</div>
-        <div class="cdl-scroll"><div class="cdl-canvas" style="width:${24 * HW}px">
-          <div class="cdl-hours">${hours.map((h) => `<span style="left:${h * HW}px">${String(h).padStart(2, '0')}:00</span>`).join('')}</div>
-          <div class="cdl-grid">${hours.map((h) => `<i style="left:${h * HW}px"></i>`).join('')}</div>
-          ${rows.map((r) => `<div class="cdl-row" data-i="${r.i}"><button type="button" class="cdl-bar${r.sp.all ? ' all' : ''}" data-i="${r.i}" style="--c:${esc(r.c)};left:${r.sp.s / 60 * HW + 2}px;width:${Math.max(28, (r.sp.e - r.sp.s) / 60 * HW - 4)}px">${r.sp.all ? '' : `<b style="width:${r.prog}%"></b>`}<span>${esc(r.e.title)}</span>${!r.sp.all && r.prog > 0 && r.prog < 100 ? `<em>${r.prog} %</em>` : ''}</button></div>`).join('')}
-          ${rows.length ? '' : '<div class="cdl-row"></div>'}
-          ${date === today ? (() => { const m = new Date().getHours() * 60 + new Date().getMinutes(); return `<div class="cdl-now" style="left:${m / 60 * HW}px"><span>${fmtM(m)}</span></div>`; })() : ''}
-        </div></div>
-      </div>
-      <div class="cdl-detail"></div>`;
+      ${all.length ? `<div class="cdl-all">${all.map((e) => `<button type="button" class="cdl-chip" data-id="${esc(e.id)}" style="--c:${esc(e.color || COLORS[0])}"><span>${esc(e.title)}</span></button>`).join('')}</div>` : ''}
+      <div class="cdl-day">
+        ${Array.from({ length: 24 }, (_, h) => `<div class="cdl-h"><span>${String(h).padStart(2, '0')}:00</span></div>`).join('')}
+        <div class="cdl-evs">${timed.map((r) => `<button type="button" class="cdl-ev${r.sp.e - r.sp.s <= 45 ? ' short' : ''}" data-id="${esc(r.e.id)}" style="--c:${esc(r.e.color || COLORS[0])};top:${pct(r.sp.s)};height:${pct(r.sp.e - r.sp.s)};left:${(r.l / r.n * 100).toFixed(3)}%;width:${(100 / r.n).toFixed(3)}%"><span class="cdl-et">${esc(r.e.title)}</span><span class="cdl-ez">${fmtM(r.sp.s)} – ${fmtM(r.sp.e)}</span></button>`).join('')}
+        ${date === today ? (() => { const m = new Date().getHours() * 60 + new Date().getMinutes(); return `<div class="cdl-now" style="top:${pct(m)}"><span>${fmtM(m)}</span></div>`; })() : ''}</div>
+      </div>`;
     host.append(el);
     dayLine = el; el._date = date;
-    const detail = el.querySelector('.cdl-detail');
-    const select = (i) => {
-      el._sel = i;
-      el.querySelectorAll('[data-i]').forEach((n) => n.classList.toggle('on', +n.dataset.i === i));
-      const r = rows[i]; if (!r) { detail.hidden = true; return; }
-      const pr = prioOf(r.e), tg = (window.TagMenu?.all?.() || []).filter((g) => (r.e.tags || []).includes(g.id));
-      detail.hidden = false;
-      detail.innerHTML = `<div class="cdl-dcol"><span class="cdl-dl">${esc(pr ? `Priorität ${pr.name}` : 'Termin')}</span><span class="cdl-dv"><b>${esc(r.e.title)}</b>${tg.slice(0, 2).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}</span></div>
-        <div class="cdl-dcol"><span class="cdl-dl">Zeit</span><span class="cdl-dv mono">${r.sp.all ? 'Ganztägig' : `${fmtM(r.sp.s)} bis ${fmtM(r.sp.e)}`}</span></div>
-        <div class="cdl-dcol cdl-prog"><span class="cdl-dl">Fortschritt <em>${r.sp.all ? '' : `${r.prog} %`}</em></span><span class="cdl-pbar"><i style="width:${r.sp.all ? 0 : r.prog}%"></i></span></div>
-        <button type="button" class="cdl-btn cdl-edit" data-dl="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil')}</button>`;
-    };
-    // vorausgewählt: heute der laufende bzw. nächste Termin, sonst der erste mit Uhrzeit
-    const nowM = new Date().getHours() * 60 + new Date().getMinutes();
-    const timed = rows.filter((r) => !r.sp.all);
-    const auto = (date === today && (timed.find((r) => r.sp.s <= nowM && r.sp.e > nowM) || timed.find((r) => r.sp.s > nowM))) || timed[0] || rows[0];
-    select(prevSel != null && rows[prevSel] ? prevSel : auto ? auto.i : -1);
-    // Start: aktuelle Uhrzeit (heute) bzw. erster Termin, sonst 7 Uhr
-    const sc = el.querySelector('.cdl-scroll');
-    const first = rows.filter((r) => !r.sp.all).map((r) => r.sp.s).sort((a, b) => a - b)[0];
-    const startM = date === today ? new Date().getHours() * 60 - 90 : first != null ? first - 60 : 7 * 60;
-    sc.scrollLeft = keepScroll ?? Math.max(0, startM / 60 * HW);
-    if (!reduced()) el.animate([{ opacity: 0, transform: 'translateY(6px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' });
+    if (!reduced()) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
     el.addEventListener('click', (x) => {
       const b = x.target.closest('[data-dl]');
       if (b) {
         const a = b.dataset.dl;
         if (a === 'close') { closeDayLine(); return; }
-        if (a === 'edit') { const r = rows[el._sel]; if (r) editEvent(r.e); return; }
-        const nd = new Date(`${date}T12:00:00`); nd.setDate(nd.getDate() + +a); openDayLine(iso(nd), sc.scrollLeft); return;
+        const nd = new Date(`${date}T12:00:00`); nd.setDate(nd.getDate() + +a); openDayLine(iso(nd)); return;
       }
-      const bar = x.target.closest('.cdl-bar, .cdl-name'); if (bar) { select(+bar.dataset.i); return; }
-      // leere Stelle in der Zeitleiste → neuer Termin zu dieser Uhrzeit (auf 15 Min. gerundet)
-      const cv = x.target.closest('.cdl-canvas'); if (!cv) return;
-      const m = Math.max(0, Math.min(1425, Math.round((x.clientX - cv.getBoundingClientRect().left) / HW * 4) * 15));
-      edit(null, date, fmtM(m), fmtM(Math.min(1439, m + 60)));
+      const ev = x.target.closest('[data-id]'); if (!ev) return;
+      const e = list.find((v) => String(v.id) === ev.dataset.id); if (e) editEvent(e);
     });
     setTimeout(() => document.addEventListener('keydown', dlKey, true), 0);
   }
   // nach dem Speichern/Löschen neu zeichnen, wenn die Zeitleiste offen ist
-  const refreshDayLine = () => { if (dayLine) openDayLine(dayLine._date, dayLine.querySelector('.cdl-scroll')?.scrollLeft); };
+  const refreshDayLine = () => { if (dayLine) openDayLine(dayLine._date); };
   window.addEventListener('calendar-changed', () => setTimeout(refreshDayLine, 0));
   // Wischen auf dem iPad: links/rechts = Monat vor/zurück
   let swipe = null;
