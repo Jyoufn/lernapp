@@ -14539,3 +14539,7 @@ html body .au-catform.au-catform .au-ic.on { background: rgba(255, 255, 255, 0.1
 html body .au-catform.au-catform .au-icgrid { border-top: 0 !important; padding: 2px 2px 4px !important; }
 html body .au-catform.au-catform .ce-foot { border-top: 0 !important; padding: 8px 2px 2px 4px !important; }
 html body .au-catform.au-catform .ce-headbox { padding-bottom: 6px !important; }
+/* 20.11.: Aufgaben-Karte – Datum/Uhrzeit unten kleiner, grauer, mit etwas mehr Abstand zum Text */
+html body .au-cm { font-size: 11px !important; color: var(--text-4) !important; margin-top: 4px; }
+html body .au-cm svg { width: 10.5px; height: 10.5px; opacity: 0.75; }
+html body .au-cm.over { color: #c4554d !important; }
