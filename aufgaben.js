@@ -229,12 +229,18 @@ const Aufgaben = (() => {
         const y = m.clientY - y0 + top0 + row.offsetHeight / 2;
         const others = [...list.children].filter((r) => r !== row);
         const next = others.find((r) => y < r.offsetTop + r.offsetHeight / 2);
-        if (next !== row.nextElementSibling || (!next && list.lastElementChild !== row)) list.insertBefore(row, next || null);
+        if (next !== row.nextElementSibling || (!next && list.lastElementChild !== row)) {
+          // FLIP: die anderen Zeilen gleiten an ihren neuen Platz
+          const before = new Map(others.map((r) => [r, r.offsetTop]));
+          list.insertBefore(row, next || null);
+          others.forEach((r) => { const d = before.get(r) - r.offsetTop; if (d) r.animate([{ transform: `translateY(${d}px)` }, { transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }); });
+        }
         row.style.transform = `translateY(${m.clientY - y0 + top0 - row.offsetTop}px)`;
       };
       const up = () => {
         row.removeEventListener('pointermove', move); row.removeEventListener('pointerup', up); row.removeEventListener('pointercancel', up);
-        row.classList.remove('drag'); row.style.transform = '';
+        const off = row.style.transform; row.classList.remove('drag'); row.style.transform = '';
+        if (off) row.animate([{ transform: off, background: 'rgba(255, 255, 255, 0.09)' }, { transform: 'none' }], { duration: 240, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
         const ids = [...list.children].map((r) => r.dataset.ok);
         try { localStorage.setItem(OKEY, JSON.stringify(ids)); } catch {}
         buildBoard(); render();

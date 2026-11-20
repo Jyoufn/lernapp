@@ -14624,3 +14624,6 @@ html body.au-dragging, html body.au-dragging * { -webkit-user-select: none !impo
 html body .au-cat2 .au-ordrow { cursor: grab; touch-action: none; user-select: none; position: relative; }
 html body .au-cat2 .au-ordrow.drag { z-index: 2; cursor: grabbing; background: rgba(255, 255, 255, 0.09); }
 html body .au-cat2 .au-ordg { display: grid; place-items: center; width: 16px; height: 24px; margin-left: -4px; color: var(--text-4); }
+html body .au-cat2 .au-ordrow { transition: background-color 160ms ease, color 160ms ease; }
+html body .au-cat2 .au-ordrow.drag { color: var(--text); }
+html body .au-cat2 .au-ordrow.drag .au-ordg { color: var(--text-2); }
