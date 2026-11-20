@@ -61,7 +61,7 @@ const Aufgaben = (() => {
   const board = main.querySelector('.au-board');
   function buildBoard() {
     board.innerHTML = cols().map(([k, n]) => { const c = cats.find((x) => x.id === k);
-      return `<section class="au-col${c ? ' au-ccat' : ''}" data-col="${esc(k)}"><div class="au-ch"${c ? ` data-cat="${esc(k)}" role="button" tabindex="0" title="Kategorie bearbeiten"` : ''}><span class="au-si">${c ? icon(`f-${c.icon}`, 14) : SI[k]}</span><span class="au-cn">${esc(n)}</span><span class="au-n" data-n="${esc(k)}"></span></div><div class="au-cards" data-cards="${esc(k)}"></div></section>`; }).join('');
+      return `<section class="au-col${c ? ' au-ccat' : ''}" data-col="${esc(k)}"><div class="au-ch"${c ? ` data-cat="${esc(k)}" role="button" tabindex="0" title="Kategorie bearbeiten"` : ''}><span class="au-si"${c?.color ? ` style="color:${esc(c.color)}"` : ''}>${c ? icon(`f-${c.icon}`, 14) : SI[k]}</span><span class="au-cn">${esc(n)}</span><span class="au-n" data-n="${esc(k)}"></span></div><div class="au-cards" data-cards="${esc(k)}"></div></section>`; }).join('');
     board.style.setProperty('--au-cols', cols().length);
     board.classList.toggle('au-many', cols().length > 4);
   }
@@ -166,24 +166,43 @@ const Aufgaben = (() => {
   const CAT_SKIP = /^(x|check|plus|minus|back|forward|next|prev|chevron-|arrow-|send|more|grip|sidebar|expand|shrink|focus|refresh|undo|play|pause|stop|power|x-circle|plus-circle|filter|sliders|align-|divider|hash|link|copy|trash|pencil|eye|lock|download|upload|cloud-up|share|share-up|st-|bars-h|table|list-num|callout|gallery|codewin|dashboard|search|settings|more)/;
   const CAT_ICONS = (() => { const all = Object.keys(window.LineIcons?.f || {}).filter((n) => !CAT_SKIP.test(n)); return all.length ? all : ['book', 'book-open', 'cap', 'bulb', 'sparkle', 'bolt', 'star', 'heart', 'flag', 'target', 'folder', 'briefcase', 'bookmark', 'pin', 'tag', 'calendar', 'clock', 'bell', 'home', 'people', 'user', 'chat', 'file', 'list', 'check-circle', 'alert', 'chart', 'trend', 'mindmap', 'palette', 'music', 'mic', 'camera', 'video', 'image', 'globe', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'plane', 'car', 'cart', 'archive']; })();
   function catDialog(cat = null) {
+    // 20.11.: aufgebaut wie „Neue Aufgabe“ – oben der Name, darunter Menü-Zeilen (Icon, Farbe); eine Zeile antippen = eigene Seite mit „‹“
     const icons = CAT_ICONS.filter((n) => !window.LineIcons || window.LineIcons.f?.[n] || document.getElementById(`f-${n}`));
-    let pick = cat?.icon || icons[0];
+    const COLS = window.UIKit?.COLORS || ['#bbbbbb'];
+    let pick = cat?.icon || icons[0], color = cat?.color || '', page = 'main', name = cat?.name || '';
     const modal = document.createElement('div'); modal.className = 'tk-modal cal-emodal au-catmodal';
-    modal.innerHTML = `<form class="tk-form tk-sheet ce-card au-catform" autocomplete="off">
-      <div class="tk-sheet-main ce-headbox"><input class="tk-f-title" name="name" value="${esc(cat?.name || '')}" placeholder="Name der Kategorie" maxlength="30" aria-label="Name der Kategorie" required /></div>
-      <div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}">${icon(`f-${n}`, 16)}</button>`).join('')}</div>
-      <div class="tk-sheet-foot ce-foot">${cat ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>
-    </form>`;
+    modal.innerHTML = '<form class="tk-form tk-sheet ce-card au-catform au-cat2" autocomplete="off"></form>';
     document.body.append(modal);
-    const form = modal.querySelector('form'), name = form.querySelector('input');
+    const form = modal.querySelector('form');
+    const tint = () => (color ? ` style="color:${esc(color)}"` : '');
+    const draw = (dir = 0) => {
+      if (page === 'main') {
+        form.innerHTML = `<div class="tk-sheet-main ce-headbox"><input class="tk-f-title" name="name" value="${esc(name)}" placeholder="Name der Kategorie" maxlength="30" aria-label="Name der Kategorie" /></div>
+          <div class="ce-rows">
+            <div class="tk-pop"><button type="button" class="tk-pill" data-pg="icon"><span class="tk-si"${tint()}>${icon(`f-${pick}`, 14)}</span><span class="tk-rv">Icon</span></button></div>
+            <div class="tk-pop"><button type="button" class="tk-pill" data-pg="color"><span class="tk-si"><i class="au-cdot" style="background:${esc(color || '#8e8e93')}"></i></span><span class="tk-rv${color ? '' : ' ce-off'}">Farbe</span></button></div>
+          </div>
+          <div class="tk-sheet-foot ce-foot">${cat ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>`;
+        const inp = form.querySelector('input'); inp.addEventListener('input', () => { name = inp.value; });
+      } else {
+        const body = page === 'icon'
+          ? `<div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}"${tint()}>${icon(`f-${n}`, 16)}</button>`).join('')}</div>`
+          : `<div class="au-cgrid">${['', ...COLS].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}</div>`;
+        form.innerHTML = `<button type="button" class="au-cback" data-pg="main">${icon('f-back', 13)}<span>${page === 'icon' ? 'Icon' : 'Farbe'}</span></button>${body}`;
+      }
+      if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) [...form.children].forEach((c) => c.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
+    };
+    const go = (pg) => { const h0 = form.offsetHeight; const dir = pg === 'main' ? -1 : 1; page = pg; draw(dir); const h1 = form.offsetHeight; if (!matchMedia('(prefers-reduced-motion: reduce)').matches) form.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }); };
+    draw();
     const close = () => { modal.classList.add('closing'); setTimeout(() => modal.remove(), 200); document.removeEventListener('keydown', onKey, true); };
-    const onKey = (e) => { if (e.key === 'Escape') { e.stopPropagation(); close(); } };
+    const onKey = (e) => { if (e.key !== 'Escape') return; e.stopPropagation(); if (page !== 'main') go('main'); else close(); };
     document.addEventListener('keydown', onKey, true);
     modal.addEventListener('pointerdown', (e) => { if (e.target === modal) close(); });
     form.addEventListener('keydown', (e) => e.stopPropagation());
     form.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-ic]');
-      if (b) { pick = b.dataset.ic; form.querySelectorAll('.au-ic').forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', String(x === b)); }); return; }
+      const pg = e.target.closest('[data-pg]'); if (pg) { go(pg.dataset.pg); return; }
+      const ic = e.target.closest('[data-ic]'); if (ic) { pick = ic.dataset.ic; go('main'); return; }
+      const cc = e.target.closest('[data-cc]'); if (cc) { color = cc.dataset.cc; go('main'); return; }
       const d = e.target.closest('[data-act="del"]');
       if (d && cat) {
         if (!d.classList.contains('confirm')) { d.classList.add('confirm'); d.title = 'Nochmal tippen zum Löschen'; return; }
@@ -193,13 +212,13 @@ const Aufgaben = (() => {
     });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
-      const n = name.value.trim().slice(0, 30); if (!n) { name.focus(); return; }
-      if (cat) { cat.name = n; cat.icon = pick; }
-      else cats.push({ id: `c${Date.now().toString(36)}`, name: n, icon: pick });
+      const n = name.trim().slice(0, 30); if (!n) { form.querySelector('input')?.focus(); return; }
+      if (cat) Object.assign(cat, { name: n, icon: pick, color: color || undefined });
+      else cats.push({ id: `c${Date.now().toString(36)}`, name: n, icon: pick, ...(color ? { color } : {}) });
       saveCats(); buildBoard(); render(); close();
       if (!cat) requestAnimationFrame(() => board.scrollTo({ left: board.scrollWidth, behavior: 'smooth' })); // neue Spalte zeigen
     });
-    requestAnimationFrame(() => name.focus({ preventScroll: true }));
+    requestAnimationFrame(() => form.querySelector('input')?.focus({ preventScroll: true }));
   }
   main.addEventListener('click', (e) => {
     if (e.target.closest('[data-au="cat"]')) { catDialog(); return; }

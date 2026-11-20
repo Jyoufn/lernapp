@@ -14559,3 +14559,18 @@ html body .ce-peek .cm-sep { display: none; }
 html body .ce-card.ce-card .ce-rows { border-top: 0 !important; padding-top: 2px !important; }
 html body .ce-card.ce-card .ce-foot { border-top: 0 !important; padding-top: 8px !important; }
 html body .ce-card.ce-card .ce-cbox, html body .ce-card.ce-card .ce-cbox-edit { border-top: 0 !important; }
+/* 20.11.: Kategorie-Fenster als Menü (wie „Neue Aufgabe“): Name, Zeilen „Icon“/„Farbe“, Unterseiten mit „‹“ */
+html body .au-cat2 .ce-rows { padding-top: 2px !important; }
+html body .au-cat2 .au-cdot { display: block; width: 10px; height: 10px; border-radius: 50%; }
+html body .au-cat2 .au-cback { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: none; color: var(--text); font: 600 13px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; }
+html body .au-cat2 .au-cback svg { width: 13px; height: 13px; color: var(--text-4); }
+html body .au-cat2.au-cat2 .au-icgrid { margin-top: 4px !important; padding: 0 2px 2px !important; }
+/* gewähltes Icon: nur ein leichter Rand, keine Füllung, Icon genau mittig */
+html body .au-cat2.au-cat2 .au-ic { display: grid !important; place-items: center !important; padding: 0 !important; }
+html body .au-cat2.au-cat2 .au-ic svg { display: block; margin: auto; }
+html body .au-cat2.au-cat2 .au-ic.on { background: transparent !important; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22) !important; color: var(--text) !important; }
+html body .au-cat2 .au-cgrid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 2px; margin-top: 4px; padding: 0 2px 4px; }
+html body .au-cat2 .au-cc { display: grid; place-items: center; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+html body .au-cat2 .au-cc i { display: block; width: 14px; height: 14px; border-radius: 50%; }
+@media (hover: hover) { html body .au-cat2 .au-cc:hover { background: rgba(255, 255, 255, 0.06); } }
+html body .au-cat2 .au-cc.on { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22); }
