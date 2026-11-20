@@ -194,7 +194,7 @@ const Aufgaben = (() => {
       } else {
         const body = page === 'icon'
           ? `<div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}"${tint()}>${icon(`f-${n}`, 16)}</button>`).join('')}</div>`
-          : `<div class="au-cgrid">${['', ...COLS].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}</div>`;
+          : `<div class="au-cgrid">${['', ...COLS, ...(color && !COLS.includes(color) ? [color] : [])].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}<button type="button" class="au-cc au-ccustom" data-ccustom aria-label="Eigene Farbe" title="Eigene Farbe">${icon('f-plus', 13)}</button></div><div class="au-cpick"></div>`;
         form.innerHTML = `<button type="button" class="au-cback" data-pg="main">${icon('f-back', 13)}<span>${page === 'icon' ? 'Icon' : 'Farbe'}</span></button>${body}`;
       }
       if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) [...form.children].forEach((c) => c.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
@@ -213,6 +213,15 @@ const Aufgaben = (() => {
     form.addEventListener('click', (e) => {
       const pg = e.target.closest('[data-pg]'); if (pg) { go(pg.dataset.pg); return; }
       const ic = e.target.closest('[data-ic]'); if (ic) { pick = ic.dataset.ic; go('main'); return; }
+      if (e.target.closest('.tk-picker')) return;
+      if (e.target.closest('[data-ccustom]')) { // 20.11.: eigene Farbe – Farbwähler der App (wie überall)
+        const host = form.querySelector('.au-cpick'); if (!host) return;
+        if (host.firstChild) { host.replaceChildren(); return; }
+        const h0 = form.offsetHeight;
+        host.append(window.UIKit.colorPicker(color || '#6d9fff', (hex, done) => { if (done) { color = hex; go('main'); } }));
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) form.animate([{ height: `${h0}px` }, { height: `${form.offsetHeight}px` }], { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
+        return;
+      }
       const cc = e.target.closest('[data-cc]'); if (cc) { color = cc.dataset.cc; go('main'); return; }
       const d = e.target.closest('[data-act="del"]');
       if (d && cat && custom) {
@@ -234,7 +243,7 @@ const Aufgaben = (() => {
   }
   main.addEventListener('click', (e) => {
     if (e.target.closest('[data-au="cat"]')) { catDialog(); return; }
-    const m = e.target.closest('[data-colmenu]'); if (m) { e.stopPropagation(); const k = m.dataset.colmenu, c = cats.find((x) => x.id === k); catDialog(c || colInfo(k), m); }
+    const m = e.target.closest('[data-colmenu]'); if (m) { e.stopPropagation(); const k = m.dataset.colmenu, c = cats.find((x) => x.id === k); catDialog(c || colInfo(k)); }
   });
   const hit = (t) => {
     if (!passFilter(t)) return false;
