@@ -305,7 +305,7 @@ const Aufgaben = (() => {
     if (!reduced()) ghost.animate([{ transform: 'none' }, { transform: 'rotate(-2.5deg) scale(1.02)' }], { duration: 160, easing: 'ease-out', fill: 'forwards' });
     const ph = document.createElement('div'); ph.className = 'au-ph'; ph.style.height = `${r.height}px`;
     c.after(ph); c.classList.add('au-src'); drag.ph = ph;
-    document.body.classList.add('au-dragging');
+    document.body.classList.add('au-dragging'); try { window.getSelection()?.removeAllRanges(); } catch {} // 20.11.: keine Markierung beim Ziehen
     try { board.setPointerCapture(drag.pid); } catch {}
   }
   board.addEventListener('pointermove', (e) => {
