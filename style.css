@@ -14708,3 +14708,7 @@ html body .auth { background: var(--app-main, #141414); }
 .aa-rl { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 .aa-rl b { color: var(--text); font: 600 18px var(--font-ui, Inter), sans-serif; letter-spacing: -0.01em; }
 .auth-field:focus-within { border-color: #242424; } /* kein hellerer Rand beim Antippen */
+/* 20.11.: Termin-Karte etwas grauer (wie „Neuer Termin“ wirkt), Tags direkt unter dem Titel ohne Icon */
+html body .chat-pop.ce-peek { background: #1f1f1f !important; border-color: #2a2a2a !important; }
+html body .ce-peek .cpk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 3px 0 1px; }
+html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 90px; }

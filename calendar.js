@@ -479,11 +479,10 @@ const Calendar = (() => {
     const el = document.createElement('div');
     el.className = 'chat-pop chat-menu open ce-peek';
     el.setAttribute('role', 'dialog'); el.setAttribute('aria-label', ev.title);
-    el.innerHTML = `<div class="cpk-head"><div class="cpk-tt"><span class="cpk-title">${esc(ev.title)}</span>${ev.description ? `<span class="cpk-note">${esc(ev.description)}</span>` : ''}</div><button type="button" class="cpk-edit" data-pk="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil')}</button></div>
+    el.innerHTML = `<div class="cpk-head"><div class="cpk-tt"><span class="cpk-title">${esc(ev.title)}</span>${tg.length ? `<span class="cpk-tags">${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</span>` : ''}${ev.description ? `<span class="cpk-note">${esc(ev.description)}</span>` : ''}</div><button type="button" class="cpk-edit" data-pk="edit" aria-label="Bearbeiten" title="Bearbeiten">${icon('f-pencil')}</button></div>
       <div class="cpk-row">${icon('f-calendar')}<span>${esc(dateT)}</span></div>
       <div class="cpk-row">${icon('f-clock')}<span>${esc(timeT)}</span></div>
       ${(() => { const pr = prioOf(ev); return pr ? `<div class="cpk-row">${window.UIKit.prioIcon(pr.id, 14)}<span>${esc(pr.name)}</span></div>` : ''; })()}
-      ${tg.length ? `<div class="cpk-row cpk-tags">${icon('f-tag')}<span>${tg.slice(0, 3).map((g) => `<span class="lb2-tag" style="--c:${esc(g.c)}"><span>${esc(g.name)}</span></span>`).join('')}${tg.length > 3 ? `<span class="lb2-tag more">+${tg.length - 3}</span>` : ''}</span></div>` : ''}
       ${nC ? `<div class="cpk-row">${icon('f-chat')}<span>${nC === 1 ? '1 Kommentar' : `${nC} Kommentare`}</span></div>` : ''}
 `;
     document.body.append(el);
