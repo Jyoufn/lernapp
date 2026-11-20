@@ -2989,92 +2989,42 @@ function markerIcon(step, name, cls = '') {
   marker.innerHTML = FadeIcons.svg(name, 12);
 }
 
-/* Gedanken in der Zeitleiste: fertige Gedanken bekommen statt des Punkts ein kleines Icon, das zu ihrem Oberpunkt passt (Wunsch 15.11.) –
-   wie die Lupe bei der Quellensuche. Passt nichts eindeutig, kommt die Glühbirne. Reihenfolge = Vorrang (Genaues vor Allgemeinem). */
+/* Gedanken in der Zeitleiste: fertige Gedanken bekommen statt des Punkts ein Icon – aber NUR für eine erkennbare TÄTIGKEIT (Wunsch 20.11.):
+   Tabelle erstellen, analysieren, prüfen, suchen, überarbeiten, erweitern … Geht es nur um ein Thema („Lateinische Deklination“), bleibt der Punkt.
+   Deutsch UND Englisch (Oberfläche auf Englisch → Gedanken englisch). Reihenfolge = Vorrang. */
+const THOUGHT_MAKE = /(erstell|aufstell|anleg|konstru|\bbau|ausfüll|construct|build|creat|generat|fill|set(ting)? up|draft)/i;
 const THOUGHT_ICONS = [
-  // 20.11.: mehr und genauere Icons (Wunsch: z. B. Tabellenerstellung mit Tabellen-Icon) – Konkretes zuerst
-  [/(tabelle|deklination|konjugation|paradigma|endungsschema|flexionsschema|raster\b)/i, 'table'],
-  [/(kongruenz|kasus|numerus|genus|endung|merkmal|bestimmen|zuordn|kategorie|etikett|wortart)/i, 'tag'],
-  [/(satzglied|satzbau|satzstruktur|subjekt|prädikat|objekt\b|attribut|gliedsatz|nebensatz|hauptsatz)/i, 'align-left'],
-  [/(nummer|aufzähl|schritt für schritt|schritt \d|teilaufgabe|nacheinander|erstens|reihenfolge der)/i, 'list-num'],
-  [/(merk|eselsbrücke|lernhilfe|merksatz|faustregel|regel\b|regeln)/i, 'bookmark'],
-  [/(wiederhol|nochmal|erneut|überarbeit|verbesser|aktualisier)/i, 'refresh'],
-  [/(rückgängig|zurück zu|korrektur der)/i, 'undo'],
-  [/(sammlung|galerie|mehrere bilder|bilderreihe)/i, 'gallery'],
-  [/(abschnitt|trenn|unterteil|aufteil|gliedere in)/i, 'divider'],
-  [/(vorlage|muster|schablone|checkliste|liste der|notiz)/i, 'clipboard'],
-  [/(speicher|ablage|archiv|datenbank|gespeichert)/i, 'db'],
-  [/(ordner|kapitel|thema\b|themen\b|themenbereich|unterthema)/i, 'folder'],
-  [/(mehrere dateien|unterlagen|materialien|quellenlage)/i, 'files'],
-  [/(dashboard|kennzahl|überblick über zahlen)/i, 'dashboard'],
-  [/(erweiter|ergänz|hinzufüg|zusätzlich|mehr dazu)/i, 'plus-circle'],
-  [/(kürz|knapp|kompakt|reduzier|vereinfach|weglassen)/i, 'shrink'],
-  [/(ausführlich|vertief|ausbau|ausweit)/i, 'expand'],
-  [/(falsch|irrtum|widerspruch|ausschließ|verwerf|nicht passend)/i, 'x-circle'],
-  [/(weiter|nächste|übergang|überleit|anschließ)/i, 'arrow-right'],
-  [/(foto|kamera|aufnahme)/i, 'camera'],
-  [/(spiel\b|spiele|game|gamif)/i, 'gamepad'],
-  [/(job|beruf|arbeit\b|unternehmen|firma|praktikum|bewerbung)/i, 'briefcase'],
-  [/(erinner|benachrichtig|hinweis an)/i, 'bell'],
-  [/(geschenk|belohnung|bonus)/i, 'gift'],
-  [/(familie|freund|liebe|beziehung zwischen menschen)/i, 'heart'],
-  [/(pause|entspann|kaffee)/i, 'coffee'],
-  [/(auto\b|fahrzeug|motor\b)/i, 'car'],
-  [/(quelle|recherch|such|nachschlag|nachseh|internet|studyflix|simpleclub|knowunity|serlo)/i, 'search'],
-  [/(bild|foto|abbildung|schema|skizze|illustration|zeichn)/i, 'image'],
-  [/(präsentation|folie|vortrag|referat)/i, 'slides'],
-  [/(karteikarte|lernset|quiz|probeklausur|klausur|prüfungsvorbereit|lernzettel|abfrag)/i, 'cap'],
-  [/(diagramm|statistik|verlauf|entwicklung|anteil|prozent|daten\b|zahlen)/i, 'chart'],
-  [/(tabelle|vergleich|gegenüber|unterschied|gemeinsam)/i, 'table'],
-  [/(rechn|gleichung|formel|ableit|integral|umform|ergebnis|lösungsweg)/i, 'hash'],
-  [/(termin|kalender|datum|stundenplan|frist|abgabe)/i, 'calendar'],
-  [/(zeitstrahl|chronolog|jahreszahl|epoche|zeitlich|historisch)/i, 'clock'],
-  [/(datei|dokument|pdf|arbeitsblatt|material|buchseite|seite \d|aufgabenstellung|aufgabe \d|operator)/i, 'file'],
-  [/(code|programm|skript|funktion|html|javascript|python)/i, 'terminal'],
-  [/(übersetz|vokabel|grammatik|latein|englisch|französisch|spanisch|sprache)/i, 'globe'],
-  [/(aktie|börse|depot|kurs\b|kurse|rendite|markt|preis|kosten|wirtschaft|inflation|konjunktur)/i, 'trend'],
-  [/(karte|land\b|länder|stadt|region|kontinent|geograf|klima|standort|lage\b)/i, 'map-pin'],
-  [/(pflanze|tier|zelle|ökosystem|umwelt|natur|biolog|photosynthese|fotosynthese|evolution)/i, 'leaf'],
-  [/(körper|organ|krankheit|gesundheit|medizin|herz|blut|nerven|hormon)/i, 'medical'],
-  [/(person|autor|biograf|figur|charakter|politiker|gesellschaft|gruppe|bevölkerung)/i, 'people'],
-  [/(kunst|gemälde|farbe|design|gestalt|stil\b|epoche der kunst)/i, 'palette'],
-  [/(musik|lied|song|melodie|rhythmus|komponist)/i, 'music'],
-  // 16.11.: weitere Fächer und Themen (vor den allgemeinen Denk-Wörtern, damit das Konkrete gewinnt)
-  [/(licht|sonne|strahlung|wetter|tag und nacht)/i, 'sun'],
-  [/(energie|strom|spannung|elektr|kraft\b|kräfte|reaktion|chemisch|atom|molekül|teilchen)/i, 'bolt'],
-  [/(planet|stern|weltall|universum|mond|astronom)/i, 'moon'],
-  [/(gedicht|roman|novelle|lyrik|literatur|erzähl|kurzgeschichte|drama|szene|vers\b|strophe)/i, 'book'],
-  [/(zitat|aussage|textstelle|belegstelle|wörtlich)/i, 'callout'],
-  [/(krieg|revolution|herrschaft|könig|kaiser|staat|demokratie|verfassung|wahl\b|wahlen|partei|politik)/i, 'flag'],
-  [/(rangliste|ranking|reihenfolge nach|größte|kleinste|am meisten)/i, 'bars-h'],
-  [/(mindmap|überblick|übersicht|gesamtbild)/i, 'mindmap'],
-  [/(video|film|clip|youtube)/i, 'video'],
-  [/(sport|training|bewegung|muskel|fitness)/i, 'dumbbell'],
-  [/(ernährung|essen|lebensmittel|rezept|nährstoff|vitamin)/i, 'food'],
-  [/(verkehr|reise|flug|auto\b|mobilität|transport)/i, 'plane'],
-  [/(handel|kauf|verkauf|konsum|einkauf|produkt)/i, 'cart'],
-  [/(gefühl|emotion|stimmung|motivation|psycholog|verhalten)/i, 'smile'],
-  [/(sicherheit|datenschutz|passwort|schutz\b|verschlüssel)/i, 'lock'],
-  [/(dauer|zeitaufwand|minuten|stunden|tempo)/i, 'timer'],
-  [/(note\b|noten|bewertungsschema|punkte\b|punktzahl|erwartungshorizont)/i, 'star'],
-  [/(aussprache|hören|anhören|podcast|audio)/i, 'volume'],
-  [/(sprechen|rede\b|vortragen|diskussion|debatte)/i, 'mic'],
-  [/(detail|genauer|im einzelnen|feinheit)/i, 'focus'],
-  [/(perspektive|sichtweise|blickwinkel|beobacht)/i, 'eye'],
-  [/(fakt|tatsache|hintergrund|info\b|wissen)/i, 'info'],
-  [/(einstell|parameter|option|variante|anpass)/i, 'sliders'],
-  [/(prüf|kontroll|korrigier|fehler|stimmt|plausib)/i, 'check-circle'],
-  [/(analys|auswert|untersuch|interpret|deut\w*|beurteil|bewert|erörter|einschätz)/i, 'analytics'],
-  [/(zusammenhang|verbind|verknüpf|beziehung|ursache|folge\b|folgen|wirkung|wechselwirkung)/i, 'link'],
-  [/(einordn|sortier|auswähl|eingrenz|filter|priorisier|wichtigst|schwerpunkt|fokus|kern\b)/i, 'filter'],
-  [/(ziel|absicht|anforderung|gefragt|wunsch|anliegen|verstehen|klären)/i, 'target'],
-  [/(vorbereit|sammel|zusammenstell|zusammentrag|bereitstell|material sichten)/i, 'stack'],
-  [/(aufbau|glieder|struktur|reihenfolge|schritte|vorgehen|plan)/i, 'list'],
-  [/(begriff|definition|bedeutung|fachwort|grundlage)/i, 'book-open'],
-  [/(beispiel|anwendung|alltag|veranschaulich|anschaulich)/i, 'sparkle'],
-  [/(achtung|risiko|gefahr|warn|vorsicht|ausnahme|grenze|einschränk)/i, 'alert'],
-  [/(idee|ansatz|strategie|lösung|überleg)/i, 'bulb'],
-  [/(schreib|formulier|antwort|zusammenfass|erklär|aufsatz|text)/i, 'pencil'],
+  [/(such|recherch|nachschlag|nachseh|\bsearch|research|look(ing)? up|brows)/i, 'search'],
+  [/(vergleich|gegenüberstell|abgleich|compar|contrast)/i, 'table'],
+  [/(rechn|umform|ableit|gleichung lös|calculat|comput|\bsolv|\bderiv)/i, 'hash'],
+  [/(übersetz|translat)/i, 'globe'],
+  [/(prüf|kontroll|korrigier|verifiz|\bcheck|verif|validat|correct|confirm|bestätig)/i, 'check-circle'],
+  [/(bild|foto|abbild|skizz|zeichn|\bimage|picture|illustrat|visuali)/i, 'image'],
+  [/(diagramm|\bchart|\bgraph|statist|\bplot)/i, 'chart'],
+  [/(präsentation|folie|\bslide|presentation)/i, 'slides'],
+  [/(quiz|karteikarte|lernset|flashcard|probeklausur|\bexams?\b|lernzettel|study sheet|cheat sheet)/i, 'cap'],
+  [/(zeitstrahl|chronolog|timeline)/i, 'clock'],
+  [/(programmier|implementier|debug|\bcode|coding|implement|\bscript)/i, 'terminal'],
+  [/(analys|untersuch|auswert|beurteil|bewert|\bdeuten|\bdeute\b|interpret|analy[sz]|examin|investigat|evaluat|assess)/i, 'analytics'],
+  [/(bestimm|identifiz|erkenn|zuordn|klassifiz|determin|identif|recogni|classif|categori)/i, 'tag'],
+  [/(aufzähl|auflist|sammel|zusammenstell|zusammentrag|\blisting|\blist\b|gather|collect|compil|enumerat)/i, 'list-num'],
+  [/(\bplan|glieder|strukturier|ordnen|aufbau|outlin|structur|organi[sz])/i, 'list'],
+  [/(überarbeit|verfeiner|verbesser|anpass|aktualisier|refin|improv|revis|polish|adjust|updat)/i, 'refresh'],
+  [/(erweiter|ergänz|hinzufüg|expand|extend|supplement|adding)/i, 'plus-circle'],
+  [/(kürz|vereinfach|reduzier|zusammenfass|shorten|simplif|condens|summar)/i, 'shrink'],
+  [/(verwerf|ausschließ|streich|discard|reject|exclud|rule out)/i, 'x-circle'],
+  [/(fokus|schwerpunkt|priorisier|eingrenz|\bfocus|priorit|narrow)/i, 'filter'],
+  [/(verknüpf|verbind|zusammenhang|connect|\blink|relat)/i, 'link'],
+  [/(zitat|belegstell|\bquot|\bcit(e|ing|ation))/i, 'callout'],
+  [/(merkregel|merksatz|eselsbrück|mnemonic)/i, 'bookmark'],
+  [/(warn|risiko|vorsicht|ausnahme|exception|caveat|pitfall|edge case)/i, 'alert'],
+  [/(\blies\b|\blesen|durchgeh|sicht(e|en)\b|\bread|\bscan)/i, 'file'],
+  [/(erklär|veranschaulich|beispiel|explain|example|clarif)/i, 'book-open'],
+  [/(schreib|formulier|verfass|entw(u|e|i)rf|\bwrit|\bdraft|compos|phras|formulat|antwort|answer|respons|reply)/i, 'pencil'],
+  [/(abschließ|fertigstell|finali[sz]|wrap(ping)? up|conclud)/i, 'flag'],
+  [/(versteh|erfass|klären|anliegen|understand|grasp|request)/i, 'target'],
+  [/(überleg|abwäg|nachdenk|brainstorm|consider|weigh|reflect|ponder)/i, 'bulb'],
+  [THOUGHT_MAKE, 'sparkle'],
 ];
 /* Feste Schritte der Zeitleiste (Dokumente analysieren, Informationen auswerten, Antwort vorbereiten …): fertig bekommen sie statt des Punkts
    ein passendes Icon – nach dem Schlüssel des Schritts (thinking.js), nicht nach dem Text. Suche behält die Lupe. */
@@ -3085,8 +3035,9 @@ const STEP_ICONS = { material: 'file', extract: 'file', depot: 'briefcase', port
 const stepIcon = (step, key) => { const n = STEP_ICONS[key]; if (n && step && !step.querySelector(':scope > .marker.ico')) markerIcon(step, n); };
 function thoughtIcon(title) {
   const t = String(title || '');
+  if (/(tabelle|\btables?\b|paradigm)/i.test(t) && THOUGHT_MAKE.test(t)) return 'table'; // Tabelle erstellen/bauen
   for (const [re, name] of THOUGHT_ICONS) if (re.test(t)) return name;
-  return t.trim() ? 'bulb' : ''; // 20.11.: jeder Gedanke bekommt ein Icon – passt nichts Genaues, die Glühbirne (Idee)
+  return ''; // nur ein Thema, keine Tätigkeit → Punkt
 }
 window.thoughtIcon = thoughtIcon;
 
