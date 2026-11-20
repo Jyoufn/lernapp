@@ -2990,8 +2990,36 @@ function markerIcon(step, name, cls = '') {
 }
 
 /* Gedanken in der Zeitleiste: fertige Gedanken bekommen statt des Punkts ein kleines Icon, das zu ihrem Oberpunkt passt (Wunsch 15.11.) –
-   wie die Lupe bei der Quellensuche. Passt nichts eindeutig, bleibt der Punkt. Reihenfolge = Vorrang (Genaues vor Allgemeinem). */
+   wie die Lupe bei der Quellensuche. Passt nichts eindeutig, kommt die Glühbirne. Reihenfolge = Vorrang (Genaues vor Allgemeinem). */
 const THOUGHT_ICONS = [
+  // 20.11.: mehr und genauere Icons (Wunsch: z. B. Tabellenerstellung mit Tabellen-Icon) – Konkretes zuerst
+  [/(tabelle|deklination|konjugation|paradigma|endungsschema|flexionsschema|raster\b)/i, 'table'],
+  [/(kongruenz|kasus|numerus|genus|endung|merkmal|bestimmen|zuordn|kategorie|etikett|wortart)/i, 'tag'],
+  [/(satzglied|satzbau|satzstruktur|subjekt|prädikat|objekt\b|attribut|gliedsatz|nebensatz|hauptsatz)/i, 'align-left'],
+  [/(nummer|aufzähl|schritt für schritt|schritt \d|teilaufgabe|nacheinander|erstens|reihenfolge der)/i, 'list-num'],
+  [/(merk|eselsbrücke|lernhilfe|merksatz|faustregel|regel\b|regeln)/i, 'bookmark'],
+  [/(wiederhol|nochmal|erneut|überarbeit|verbesser|aktualisier)/i, 'refresh'],
+  [/(rückgängig|zurück zu|korrektur der)/i, 'undo'],
+  [/(sammlung|galerie|mehrere bilder|bilderreihe)/i, 'gallery'],
+  [/(abschnitt|trenn|unterteil|aufteil|gliedere in)/i, 'divider'],
+  [/(vorlage|muster|schablone|checkliste|liste der|notiz)/i, 'clipboard'],
+  [/(speicher|ablage|archiv|datenbank|gespeichert)/i, 'db'],
+  [/(ordner|kapitel|thema\b|themen\b|themenbereich|unterthema)/i, 'folder'],
+  [/(mehrere dateien|unterlagen|materialien|quellenlage)/i, 'files'],
+  [/(dashboard|kennzahl|überblick über zahlen)/i, 'dashboard'],
+  [/(erweiter|ergänz|hinzufüg|zusätzlich|mehr dazu)/i, 'plus-circle'],
+  [/(kürz|knapp|kompakt|reduzier|vereinfach|weglassen)/i, 'shrink'],
+  [/(ausführlich|vertief|ausbau|ausweit)/i, 'expand'],
+  [/(falsch|irrtum|widerspruch|ausschließ|verwerf|nicht passend)/i, 'x-circle'],
+  [/(weiter|nächste|übergang|überleit|anschließ)/i, 'arrow-right'],
+  [/(foto|kamera|aufnahme)/i, 'camera'],
+  [/(spiel\b|spiele|game|gamif)/i, 'gamepad'],
+  [/(job|beruf|arbeit\b|unternehmen|firma|praktikum|bewerbung)/i, 'briefcase'],
+  [/(erinner|benachrichtig|hinweis an)/i, 'bell'],
+  [/(geschenk|belohnung|bonus)/i, 'gift'],
+  [/(familie|freund|liebe|beziehung zwischen menschen)/i, 'heart'],
+  [/(pause|entspann|kaffee)/i, 'coffee'],
+  [/(auto\b|fahrzeug|motor\b)/i, 'car'],
   [/(quelle|recherch|such|nachschlag|nachseh|internet|studyflix|simpleclub|knowunity|serlo)/i, 'search'],
   [/(bild|foto|abbildung|schema|skizze|illustration|zeichn)/i, 'image'],
   [/(präsentation|folie|vortrag|referat)/i, 'slides'],
@@ -3058,7 +3086,7 @@ const stepIcon = (step, key) => { const n = STEP_ICONS[key]; if (n && step && !s
 function thoughtIcon(title) {
   const t = String(title || '');
   for (const [re, name] of THOUGHT_ICONS) if (re.test(t)) return name;
-  return '';
+  return t.trim() ? 'bulb' : ''; // 20.11.: jeder Gedanke bekommt ein Icon – passt nichts Genaues, die Glühbirne (Idee)
 }
 window.thoughtIcon = thoughtIcon;
 

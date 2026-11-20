@@ -83,7 +83,7 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Antworttext ohne Vorgehen**: „NUR DAS ERGEBNIS“ + `createAnswerGuard` (Vorgehens-Absätze und englische Gedanken-Überschriften wie „**Executing Task**“ am Anfang fallen weg).
 
 ## Denk-Zeitleiste (Client, `app.js` + `thinking.js`)
-- **Symbole an den Schritten (15.11.)**: fertige Gedanken bekommen ein Icon nach ihrem Oberpunkt (`THOUGHT_ICONS` in `app.js`, ~30 Gruppen: Analyse, Zusammenhang, Ziel,
+- **Symbole an den Schritten (15.11.)**: fertige Gedanken bekommen ein Icon nach ihrem Oberpunkt (`THOUGHT_ICONS` in `app.js`, ~80 Gruppen, seit 20.11. u. a. Tabelle/Deklination → table, Kasus/KNG → tag, Satzglieder → align-left, Schritte → list-num, Merkregel → bookmark; ohne Treffer Glühbirne; Analyse, Zusammenhang, Ziel,
   Vorbereiten, Beispiel, Karte, Biologie, Börse, Präsentation …); feste Schritte bekommen fertig ein Icon nach ihrem Schlüssel (`STEP_ICONS`/`stepIcon`: Dokumente → Datei,
   Auswerten → Balken, Antwort → Stift, Prüfen → Haken …). Nur Icons `#f-…`, keine Emojis; die KI muss dafür nichts tun (kein Prompt).
 - **To-dos** (17.11.): Kasten über der Zeitleiste wie vorher (Zeitleiste und Kopf mit den Gedanken-Titeln unverändert); jeder Punkt merkt sich die Schritte seiner Zeit, Klick klappt sie darunter auf (zu Beginn zu). Quellen/Suchen stehen nicht in der Zeitleiste, nur unter der Antwort. Diktat: Mitschrift beim Sprechen mit Lite (Gratis-Kontingent), Endfassung Flash.
