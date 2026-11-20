@@ -14620,3 +14620,7 @@ html body .au-cat2 .au-ordb:disabled { opacity: 0.25; cursor: default; }
 html body :is(.sidebar, .au-view, .cal-view, .au-head, .cm-head, .hm-head, .chat-bar, .chat-pop, .lb2-menu, .tk-menu, .ce-card, .ce-peek, .au-catform, .tagm-pop, .files-pop, .cmdk-box, .cl-list, .tabs, button, [role="button"], [role="menuitem"], [role="tab"]) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 html body :is(input, textarea, [contenteditable="true"], .md, .msg, .out-bubble, .dc-content, .lz-sheet, .answer, .thought-text, code, pre, .ce-card .tk-f-title, .ce-card .tk-f-notes, .ce-peek .cpk-note) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html body.au-dragging, html body.au-dragging * { -webkit-user-select: none !important; user-select: none !important; }
+/* 20.11.: Reihenfolge der Spalten per Ziehen */
+html body .au-cat2 .au-ordrow { cursor: grab; touch-action: none; user-select: none; position: relative; }
+html body .au-cat2 .au-ordrow.drag { z-index: 2; cursor: grabbing; background: rgba(255, 255, 255, 0.09); }
+html body .au-cat2 .au-ordg { display: grid; place-items: center; width: 16px; height: 24px; margin-left: -4px; color: var(--text-4); }
