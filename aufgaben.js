@@ -19,6 +19,11 @@ const Aufgaben = (() => {
   let cats = (() => { try { const a = JSON.parse(localStorage.getItem(CKEY)); return Array.isArray(a) ? a.filter((c) => c && c.id && c.name) : []; } catch { return []; } })();
   const saveCats = () => { try { localStorage.setItem(CKEY, JSON.stringify(cats)); } catch {} };
   const cols = () => [...TABS, ...cats.map((c) => [c.id, c.name])];
+  // 20.11.: Icon/Farbe auch für Offen, In Arbeit, Erledigt, Archiviert („⋯“ im Spaltenkopf) – gespeichert in „tasks.colprefs.v1“
+  const PKEY = 'tasks.colprefs.v1', BASE_IC = { open: 'st-open', doing: 'st-doing', done: 'st-done', archived: 'st-arch' };
+  let colPrefs = (() => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch { return {}; } })();
+  const savePrefs = () => { try { localStorage.setItem(PKEY, JSON.stringify(colPrefs)); } catch {} };
+  const colInfo = (k) => { const c = cats.find((x) => x.id === k); if (c) return { id: k, name: c.name, icon: c.icon, color: c.color || '', custom: true, ref: c }; const n = TABS.find(([x]) => x === k)?.[1] || k; return { id: k, name: n, icon: colPrefs[k]?.icon || BASE_IC[k], color: colPrefs[k]?.color || '', custom: false }; };
   const known = (st) => TABS.some(([k]) => k === st) || cats.some((c) => c.id === st);
   const statusOf = (t) => { const st = t.status || (t.done ? 'done' : 'open'); return known(st) ? st : 'open'; }; // ältere Einträge kannten nur done: true/false; gelöschte Kategorie → Offen
   const load = () => { try { const a = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(a) ? a.map((t) => ({ ...t, status: statusOf(t) })) : []; } catch { return []; } };
@@ -61,7 +66,8 @@ const Aufgaben = (() => {
   const board = main.querySelector('.au-board');
   function buildBoard() {
     board.innerHTML = cols().map(([k, n]) => { const c = cats.find((x) => x.id === k);
-      return `<section class="au-col${c ? ' au-ccat' : ''}" data-col="${esc(k)}"><div class="au-ch"${c ? ` data-cat="${esc(k)}" role="button" tabindex="0" title="Kategorie bearbeiten"` : ''}><span class="au-si"${c?.color ? ` style="color:${esc(c.color)}"` : ''}>${c ? icon(`f-${c.icon}`, 14) : SI[k]}</span><span class="au-cn">${esc(n)}</span><span class="au-n" data-n="${esc(k)}"></span></div><div class="au-cards" data-cards="${esc(k)}"></div></section>`; }).join('');
+      const ci = colInfo(k);
+      return `<section class="au-col${c ? ' au-ccat' : ''}" data-col="${esc(k)}"><div class="au-ch"><span class="au-si"${ci.color ? ` style="color:${esc(ci.color)}"` : ''}>${icon(`f-${ci.icon}`, 14)}</span><span class="au-cn">${esc(n)}</span><span class="au-n" data-n="${esc(k)}"></span><button type="button" class="au-cmore" data-colmenu="${esc(k)}" aria-label="Spalte einstellen" title="Einstellungen">${icon('f-more', 14)}</button></div><div class="au-cards" data-cards="${esc(k)}"></div></section>`; }).join('');
     board.style.setProperty('--au-cols', cols().length);
     board.classList.toggle('au-many', cols().length > 4);
   }
@@ -162,28 +168,29 @@ const Aufgaben = (() => {
     }
   });
   /* Neue Kategorie / Kategorie bearbeiten: Fenster mittig (wie „Neue Aufgabe“) – Name + Icon im Linien-Stil */
-  // 20.11.: mehr Icons – alle Linien-Icons der App, die sich als Kategorie eignen (Bedien-Symbole wie Pfeile/Haken bleiben weg)
-  const CAT_SKIP = /^(x|check|plus|minus|back|forward|next|prev|chevron-|arrow-|send|more|grip|sidebar|expand|shrink|focus|refresh|undo|play|pause|stop|power|x-circle|plus-circle|filter|sliders|align-|divider|hash|link|copy|trash|pencil|eye|lock|download|upload|cloud-up|share|share-up|st-|bars-h|table|list-num|callout|gallery|codewin|dashboard|search|settings|more)/;
-  const CAT_ICONS = (() => { const all = Object.keys(window.LineIcons?.f || {}).filter((n) => !CAT_SKIP.test(n)); return all.length ? all : ['book', 'book-open', 'cap', 'bulb', 'sparkle', 'bolt', 'star', 'heart', 'flag', 'target', 'folder', 'briefcase', 'bookmark', 'pin', 'tag', 'calendar', 'clock', 'bell', 'home', 'people', 'user', 'chat', 'file', 'list', 'check-circle', 'alert', 'chart', 'trend', 'mindmap', 'palette', 'music', 'mic', 'camera', 'video', 'image', 'globe', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'plane', 'car', 'cart', 'archive']; })();
-  function catDialog(cat = null) {
+  // 20.11.: ausgewählte Linien-Icons im einheitlichen Stil (ohne Ordner, Musik, Blitz, Doppel-Sterne, Auto …); dazu die Status-Symbole
+  const CAT_ICONS = ['st-open', 'st-doing', 'st-done', 'st-arch', 'check-circle', 'star', 'heart', 'flag', 'target', 'bookmark', 'pin', 'tag', 'book', 'book-open', 'cap', 'bulb', 'file', 'filedoc', 'clipboard', 'list', 'quote', 'slides', 'calendar', 'clock', 'timer', 'bell', 'alert', 'chat', 'people', 'user', 'chart', 'analytics', 'trend', 'mindmap', 'palette', 'mic', 'camera', 'video', 'image', 'globe', 'map-pin', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'briefcase', 'archive'];
+  function catDialog(cat = null, anchor = null) {
     // 20.11.: aufgebaut wie „Neue Aufgabe“ – oben der Name, darunter Menü-Zeilen (Icon, Farbe); eine Zeile antippen = eigene Seite mit „‹“
     const icons = CAT_ICONS.filter((n) => !window.LineIcons || window.LineIcons.f?.[n] || document.getElementById(`f-${n}`));
     const COLS = window.UIKit?.COLORS || ['#bbbbbb'];
-    let pick = cat?.icon || icons[0], color = cat?.color || '', page = 'main', name = cat?.name || '';
-    const modal = document.createElement('div'); modal.className = 'tk-modal cal-emodal au-catmodal';
+    const info = cat ? (cat.custom === false ? cat : { ...colInfo(cat.id), ref: cat }) : null; // feste Spalte oder eigene Kategorie
+    let pick = info?.icon || 'star', color = info?.color || '', page = 'main', name = info?.name || '';
+    const custom = !info || info.custom;
+    const modal = document.createElement('div'); modal.className = `tk-modal cal-emodal au-catmodal${anchor ? ' au-anch anchored' : ''}`;
     modal.innerHTML = '<form class="tk-form tk-sheet ce-card au-catform au-cat2" autocomplete="off"></form>';
     document.body.append(modal);
     const form = modal.querySelector('form');
     const tint = () => (color ? ` style="color:${esc(color)}"` : '');
     const draw = (dir = 0) => {
       if (page === 'main') {
-        form.innerHTML = `<div class="tk-sheet-main ce-headbox"><input class="tk-f-title" name="name" value="${esc(name)}" placeholder="Name der Kategorie" maxlength="30" aria-label="Name der Kategorie" /></div>
+        form.innerHTML = `<div class="tk-sheet-main ce-headbox">${custom ? `<input class="tk-f-title" name="name" value="${esc(name)}" placeholder="Name der Kategorie" maxlength="30" aria-label="Name der Kategorie" />` : `<div class="tk-f-title au-fixname">${esc(name)}</div>`}</div>
           <div class="ce-rows">
             <div class="tk-pop"><button type="button" class="tk-pill" data-pg="icon"><span class="tk-si"${tint()}>${icon(`f-${pick}`, 14)}</span><span class="tk-rv">Icon</span></button></div>
             <div class="tk-pop"><button type="button" class="tk-pill" data-pg="color"><span class="tk-si"><i class="au-cdot" style="background:${esc(color || '#8e8e93')}"></i></span><span class="tk-rv${color ? '' : ' ce-off'}">Farbe</span></button></div>
           </div>
-          <div class="tk-sheet-foot ce-foot">${cat ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>`;
-        const inp = form.querySelector('input'); inp.addEventListener('input', () => { name = inp.value; });
+          <div class="tk-sheet-foot ce-foot">${cat && custom ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>`;
+        const inp = form.querySelector('input'); inp?.addEventListener('input', () => { name = inp.value; });
       } else {
         const body = page === 'icon'
           ? `<div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}"${tint()}>${icon(`f-${n}`, 16)}</button>`).join('')}</div>`
@@ -194,6 +201,10 @@ const Aufgaben = (() => {
     };
     const go = (pg) => { const h0 = form.offsetHeight; const dir = pg === 'main' ? -1 : 1; page = pg; draw(dir); const h1 = form.offsetHeight; if (!matchMedia('(prefers-reduced-motion: reduce)').matches) form.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 320, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' }); };
     draw();
+    if (anchor) { // kleines Menü direkt unter „⋯“, rechtsbündig
+      const r = anchor.getBoundingClientRect(), w = form.offsetWidth;
+      Object.assign(form.style, { position: 'fixed', left: `${Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.right - w)))}px`, top: `${Math.round(r.bottom + 6)}px`, margin: '0' });
+    }
     const close = () => { modal.classList.add('closing'); setTimeout(() => modal.remove(), 200); document.removeEventListener('keydown', onKey, true); };
     const onKey = (e) => { if (e.key !== 'Escape') return; e.stopPropagation(); if (page !== 'main') go('main'); else close(); };
     document.addEventListener('keydown', onKey, true);
@@ -204,7 +215,7 @@ const Aufgaben = (() => {
       const ic = e.target.closest('[data-ic]'); if (ic) { pick = ic.dataset.ic; go('main'); return; }
       const cc = e.target.closest('[data-cc]'); if (cc) { color = cc.dataset.cc; go('main'); return; }
       const d = e.target.closest('[data-act="del"]');
-      if (d && cat) {
+      if (d && cat && custom) {
         if (!d.classList.contains('confirm')) { d.classList.add('confirm'); d.title = 'Nochmal tippen zum Löschen'; return; }
         items.forEach((t) => { if (t.status === cat.id) t.status = 'open'; }); // Aufgaben der Kategorie landen wieder in „Offen“
         cats = cats.filter((c) => c.id !== cat.id); saveCats(); save(); buildBoard(); render(); close();
@@ -212,17 +223,18 @@ const Aufgaben = (() => {
     });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (cat && !custom) { colPrefs[cat.id] = { icon: pick, ...(color ? { color } : {}) }; savePrefs(); buildBoard(); render(); close(); return; }
       const n = name.trim().slice(0, 30); if (!n) { form.querySelector('input')?.focus(); return; }
-      if (cat) Object.assign(cat, { name: n, icon: pick, color: color || undefined });
+      if (cat) Object.assign(info.ref || cat, { name: n, icon: pick, color: color || undefined });
       else cats.push({ id: `c${Date.now().toString(36)}`, name: n, icon: pick, ...(color ? { color } : {}) });
       saveCats(); buildBoard(); render(); close();
       if (!cat) requestAnimationFrame(() => board.scrollTo({ left: board.scrollWidth, behavior: 'smooth' })); // neue Spalte zeigen
     });
-    requestAnimationFrame(() => form.querySelector('input')?.focus({ preventScroll: true }));
+    if (!anchor) requestAnimationFrame(() => form.querySelector('input')?.focus({ preventScroll: true }));
   }
   main.addEventListener('click', (e) => {
     if (e.target.closest('[data-au="cat"]')) { catDialog(); return; }
-    const h = e.target.closest('[data-cat]'); if (h) { const c = cats.find((x) => x.id === h.dataset.cat); if (c) catDialog(c); }
+    const m = e.target.closest('[data-colmenu]'); if (m) { e.stopPropagation(); const k = m.dataset.colmenu, c = cats.find((x) => x.id === k); catDialog(c || colInfo(k), m); }
   });
   const hit = (t) => {
     if (!passFilter(t)) return false;

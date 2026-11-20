@@ -578,7 +578,8 @@ const Calendar = (() => {
     if (!Array.isArray(e.tags)) e.tags = [];
     const CATS = window.Aufgaben?.cats || []; // 19.11.: eigene Kategorien als weitere Status
     const STATI = [['open', 'Offen'], ['doing', 'In Arbeit'], ['done', 'Erledigt'], ['archived', 'Archiviert'], ...CATS.map((c) => [c.id, c.name])];
-    const STI = { open: 'f-st-open', doing: 'f-st-doing', done: 'f-st-done', archived: 'f-st-arch', ...Object.fromEntries(CATS.map((c) => [c.id, `f-${c.icon}`])) };
+    const CP = (() => { try { return JSON.parse(localStorage.getItem('tasks.colprefs.v1')) || {}; } catch { return {}; } })();
+    const STI = { open: `f-${CP.open?.icon || 'st-open'}`, doing: `f-${CP.doing?.icon || 'st-doing'}`, done: `f-${CP.done?.icon || 'st-done'}`, archived: `f-${CP.archived?.icon || 'st-arch'}`, ...Object.fromEntries(CATS.map((c) => [c.id, `f-${c.icon}`])) };
     const PRIOS = window.UIKit?.PRIOS || [{ id: 'none', name: 'Keine' }];
     let iconPicked = !!ev && ev.icon !== 'f-calendar'; // neuer Termin: Icon folgt dem Titel, bis eins gewählt wird
     // Aufbau wie das Aufgaben-Fenster: × oben rechts, Titel + „Beschreibung hinzufügen“, darunter Zeilen (Icon + Wert),
