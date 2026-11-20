@@ -745,6 +745,10 @@ const Calendar = (() => {
       }
       if (act === 'cover-x') { e.cover = ''; draw(); return; }
       if (act === 'close') eclose();
+      if (act === 'delete') { // 20.11.: zweimal fragen – erster Tipp lässt „Wirklich löschen“ rechts ausfahren
+        const d = x.target.closest('[data-act="delete"]');
+        if (d && !d.classList.contains('confirm')) { d.classList.add('confirm'); d.insertAdjacentHTML('beforeend', '<span class="del-txt">Wirklich löschen</span>'); clearTimeout(d._t); d._t = setTimeout(() => { d.classList.remove('confirm'); d.querySelector('.del-txt')?.remove(); }, 3500); return; }
+      }
       if (act === 'delete') { if (store) store.onDelete(e.id); else { events = events.filter((y) => y.id !== e.id); save(); render(); if (!dv.hidden) drawDay(); } eclose(); }
     });
     form.addEventListener('keydown', (x) => {

@@ -18,7 +18,11 @@ const Aufgaben = (() => {
   const CKEY = 'tasks.cats.v1';
   let cats = (() => { try { const a = JSON.parse(localStorage.getItem(CKEY)); return Array.isArray(a) ? a.filter((c) => c && c.id && c.name) : []; } catch { return []; } })();
   const saveCats = () => { try { localStorage.setItem(CKEY, JSON.stringify(cats)); } catch {} };
-  const cols = () => [...TABS, ...cats.map((c) => [c.id, c.name])];
+  // 20.11.: Reihenfolge der Spalten frei wählbar (Seite „Reihenfolge“ im Spalten-Fenster) – „tasks.colorder.v1“
+  const OKEY = 'tasks.colorder.v1';
+  const colOrder = () => { try { const a = JSON.parse(localStorage.getItem(OKEY)); return Array.isArray(a) ? a : []; } catch { return []; } };
+  const cols = () => { const all = [...TABS, ...cats.map((c) => [c.id, c.name])], o = colOrder(); const pos = (k) => { const i = o.indexOf(k); return i < 0 ? 1e3 + all.findIndex(([x]) => x === k) : i; }; return all.sort((a, b) => pos(a[0]) - pos(b[0])); };
+  const moveCol = (k, d) => { const ids = cols().map(([x]) => x), i = ids.indexOf(k), j = i + d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; try { localStorage.setItem(OKEY, JSON.stringify(ids)); } catch {} };
   // 20.11.: Icon/Farbe auch für Offen, In Arbeit, Erledigt, Archiviert („⋯“ im Spaltenkopf) – gespeichert in „tasks.colprefs.v1“
   const PKEY = 'tasks.colprefs.v1', BASE_IC = { open: 'st-open', doing: 'st-doing', done: 'st-done', archived: 'st-arch' };
   let colPrefs = (() => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch { return {}; } })();
@@ -192,14 +196,16 @@ const Aufgaben = (() => {
           <div class="ce-rows">
             <div class="tk-pop"><button type="button" class="tk-pill" data-pg="icon"><span class="tk-si"${tint()}>${icon(`f-${pick}`, 14)}</span><span class="tk-rv">Icon</span></button></div>
             <div class="tk-pop"><button type="button" class="tk-pill" data-pg="color"><span class="tk-si"><i class="au-cdot" style="background:${esc(color || '#8e8e93')}"></i></span><span class="tk-rv${color ? '' : ' ce-off'}">Farbe</span></button></div>
+            ${cat ? `<div class="tk-pop"><button type="button" class="tk-pill" data-pg="order"><span class="tk-si">${icon('f-grip', 14)}</span><span class="tk-rv">Reihenfolge</span></button></div>` : ''}
           </div>
           <div class="tk-sheet-foot ce-foot">${cat && custom ? `<button type="button" class="tk-sheet-ib danger" data-act="del" aria-label="Kategorie löschen" title="Kategorie löschen">${icon('f-trash', 15)}</button>` : ''}<span class="grow"></span><button type="submit" class="tk-create tk-make">${cat ? 'Speichern' : 'Erstellen'}</button></div>`;
         const inp = form.querySelector('input'); inp?.addEventListener('input', () => { name = inp.value; });
       } else {
-        const body = page === 'icon'
+        const body = page === 'order' ? '' : page === 'icon'
           ? `<div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}"${tint()}>${icon(`f-${n}`, 16)}</button>`).join('')}</div>`
           : `<div class="au-cgrid">${['', ...COLS, ...myCols().filter((c) => !COLS.includes(c))].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}<button type="button" class="au-cc au-ccustom" data-ccustom aria-label="Eigene Farbe" title="Eigene Farbe"><i></i></button></div><div class="au-cpick"></div>`;
-        form.innerHTML = `<button type="button" class="au-cback" data-pg="main">${icon('f-back', 13)}<span>${page === 'icon' ? 'Icon' : 'Farbe'}</span></button>${body}`;
+        const ordBody = () => `<div class="au-ord">${cols().map(([k, n], i, arr) => { const ci = colInfo(k); return `<div class="au-ordrow${k === cat?.id ? ' me' : ''}"><span class="au-ordic"${ci.color ? ` style="color:${esc(ci.color)}"` : ''}>${icon(`f-${ci.icon}`, 14)}</span><span class="au-ordn">${esc(n)}</span><button type="button" class="au-ordb" data-mv="${esc(k)}" data-d="-1" aria-label="Nach links"${i ? '' : ' disabled'}>${icon('f-arrow-up', 13)}</button><button type="button" class="au-ordb dn" data-mv="${esc(k)}" data-d="1" aria-label="Nach rechts"${i < arr.length - 1 ? '' : ' disabled'}>${icon('f-arrow-up', 13)}</button></div>`; }).join('')}</div>`;
+        form.innerHTML = `<button type="button" class="au-cback" data-pg="main">${icon('f-back', 13)}<span>${page === 'icon' ? 'Icon' : page === 'order' ? 'Reihenfolge' : 'Farbe'}</span></button>${page === 'order' ? ordBody() : body}`;
       }
       if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) [...form.children].forEach((c) => c.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
     };
@@ -226,10 +232,11 @@ const Aufgaben = (() => {
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) form.animate([{ height: `${h0}px` }, { height: `${form.offsetHeight}px` }], { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
         return;
       }
+      const mv = e.target.closest('[data-mv]'); if (mv) { moveCol(mv.dataset.mv, +mv.dataset.d); buildBoard(); render(); const keep = form.querySelector('.au-ord')?.scrollTop || 0; draw(); const o = form.querySelector('.au-ord'); if (o) o.scrollTop = keep; return; }
       const cc = e.target.closest('[data-cc]'); if (cc) { color = cc.dataset.cc; go('main'); return; }
       const d = e.target.closest('[data-act="del"]');
       if (d && cat && custom) {
-        if (!d.classList.contains('confirm')) { d.classList.add('confirm'); d.title = 'Nochmal tippen zum Löschen'; return; }
+        if (!d.classList.contains('confirm')) { d.classList.add('confirm'); d.insertAdjacentHTML('beforeend', '<span class="del-txt">Wirklich löschen</span>'); clearTimeout(d._t); d._t = setTimeout(() => { d.classList.remove('confirm'); d.querySelector('.del-txt')?.remove(); }, 3500); return; }
         items.forEach((t) => { if (t.status === cat.id) t.status = 'open'; }); // Aufgaben der Kategorie landen wieder in „Offen“
         cats = cats.filter((c) => c.id !== cat.id); saveCats(); save(); buildBoard(); render(); close();
       }

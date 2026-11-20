@@ -14601,3 +14601,18 @@ html body .au-cat2 .au-cc.on i { box-shadow: 0 0 0 2px var(--app-main, #141414),
 html body .au-cat2 .au-ccustom i { background: conic-gradient(from 0deg, #ff6b6b, #ffd166, #6bdc8b, #4dabf7, #b197fc, #ff6b6b) !important; }
 html body .au-cat2 .au-cpick:not(:empty) { display: flex; justify-content: center; padding: 6px 4px 4px !important; }
 html body .au-cat2 .au-cpick .tk-picker { width: 100% !important; max-width: 100%; margin: 0 !important; box-sizing: border-box; }
+/* 20.11.: Löschen in zwei Schritten – erster Tipp: Knopf fährt nach rechts aus „🗑 Wirklich löschen“ (rot), zweiter Tipp löscht */
+html body :is(.ce-card, .au-cat2) .ce-foot .tk-sheet-ib.danger { display: inline-flex; align-items: center; gap: 6px; width: auto !important; min-width: 28px; padding: 0 7px; justify-content: center; transition: background-color 160ms ease, color 160ms ease; }
+html body :is(.ce-card, .au-cat2) .ce-foot .tk-sheet-ib.danger.confirm { padding: 0 10px 0 8px; background: rgba(239, 107, 95, 0.12) !important; color: #ff7d6c !important; }
+html body .tk-sheet-ib .del-txt { white-space: nowrap; font: 600 12.5px var(--font-ui, Inter), sans-serif; animation: del-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+@keyframes del-in { from { opacity: 0; max-width: 0; } to { opacity: 1; max-width: 140px; } }
+/* Seite „Reihenfolge“: alle Spalten untereinander, aktuelle hervorgehoben, Pfeile zum Verschieben */
+html body .au-cat2 .au-ord { display: flex; flex-direction: column; gap: 1px; margin-top: 4px; padding: 0 2px 4px; max-height: 280px; overflow-y: auto; scrollbar-width: none; }
+html body .au-cat2 .au-ordrow { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 4px 0 8px; border-radius: 8px; color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .au-cat2 .au-ordrow.me { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+html body .au-cat2 .au-ordic { display: grid; place-items: center; width: 14px; color: var(--text-3); }
+html body .au-cat2 .au-ordn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .au-cat2 .au-ordb { display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-3); cursor: pointer; transform: rotate(-90deg); }
+html body .au-cat2 .au-ordb.dn { transform: rotate(90deg); }
+html body .au-cat2 .au-ordb:disabled { opacity: 0.25; cursor: default; }
+@media (hover: hover) { html body .au-cat2 .au-ordb:not(:disabled):hover { background: rgba(255, 255, 255, 0.07); color: var(--text); } }
