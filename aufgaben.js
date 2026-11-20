@@ -162,7 +162,9 @@ const Aufgaben = (() => {
     }
   });
   /* Neue Kategorie / Kategorie bearbeiten: Fenster mittig (wie „Neue Aufgabe“) – Name + Icon im Linien-Stil */
-  const CAT_ICONS = ['book', 'book-open', 'cap', 'bulb', 'sparkle', 'bolt', 'star', 'heart', 'flag', 'target', 'folder', 'briefcase', 'bookmark', 'pin', 'tag', 'calendar', 'clock', 'bell', 'home', 'people', 'user', 'chat', 'file', 'list', 'check-circle', 'alert', 'chart', 'trend', 'mindmap', 'palette', 'music', 'mic', 'camera', 'video', 'image', 'globe', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'plane', 'car', 'cart', 'archive'];
+  // 20.11.: mehr Icons – alle Linien-Icons der App, die sich als Kategorie eignen (Bedien-Symbole wie Pfeile/Haken bleiben weg)
+  const CAT_SKIP = /^(x|check|plus|minus|back|forward|next|prev|chevron-|arrow-|send|more|grip|sidebar|expand|shrink|focus|refresh|undo|play|pause|stop|power|x-circle|plus-circle|filter|sliders|align-|divider|hash|link|copy|trash|pencil|eye|lock|download|upload|cloud-up|share|share-up|st-|bars-h|table|list-num|callout|gallery|codewin|dashboard|search|settings|more)/;
+  const CAT_ICONS = (() => { const all = Object.keys(window.LineIcons?.f || {}).filter((n) => !CAT_SKIP.test(n)); return all.length ? all : ['book', 'book-open', 'cap', 'bulb', 'sparkle', 'bolt', 'star', 'heart', 'flag', 'target', 'folder', 'briefcase', 'bookmark', 'pin', 'tag', 'calendar', 'clock', 'bell', 'home', 'people', 'user', 'chat', 'file', 'list', 'check-circle', 'alert', 'chart', 'trend', 'mindmap', 'palette', 'music', 'mic', 'camera', 'video', 'image', 'globe', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'plane', 'car', 'cart', 'archive']; })();
   function catDialog(cat = null) {
     const icons = CAT_ICONS.filter((n) => !window.LineIcons || window.LineIcons.f?.[n] || document.getElementById(`f-${n}`));
     let pick = cat?.icon || icons[0];
