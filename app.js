@@ -2379,6 +2379,9 @@ function makeRenderer(target, opts = {}) {
       if (age < BLOCK_FADE_MS) {
         block.classList.add('md-in');
         block.style.animationDelay = `-${Math.round(age)}ms`;
+      } else if (block.classList.contains('md-in')) {
+        // 20.11.: wiederverwendete Blöcke (Link-Karten, Bilder, Lernsets …) behielten die Klasse → Einblenden startete bei jedem Textstück neu (Flackern)
+        block.classList.remove('md-in'); block.style.animationDelay = '';
       }
     });
     if (target.scrollHeight > target.clientHeight) target.scrollTop = target.scrollHeight; // Gedanken-Box scrollt mit

@@ -14724,3 +14724,11 @@ html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 90px; }
 /* ===== 20.11.: Quellen-Logos hinter dem Schritt-Text: näher am Text und optisch auf gleicher Höhe (vorher großer Abstand, Logo etwas zu hoch) ===== */
 html body .step-line .t:empty { display: none; }
 html body .step-srcs { margin-left: 2px; position: relative; top: 1px; }
+
+/* ===== 20.11. (2): Link-Karten ruhig, während die Antwort noch geschrieben wird =====
+   Die Karten werden bei jedem neuen Textstück neu eingesetzt; CSS-Animationen starten dabei von vorn (Text kommt schneller als 320 ms) →
+   Bild blinkte, grauer Lade-Schimmer zuckte. Jetzt: keine Animationen mehr an der Karte – Bild blendet per Übergang ein (startet beim Neu-Einsetzen
+   nicht neu), Platzhalter ist eine ruhige Fläche. */
+html body .lk-img img { animation: none; opacity: 1; transition: opacity 320ms ease; }
+html body .lk-img.loading img { opacity: 0; }
+html body .lk-img.loading::after { animation: none; background: none; }
