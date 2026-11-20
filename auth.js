@@ -192,8 +192,21 @@
     wrap.className = 'auth';
     wrap.setAttribute('aria-label', 'Sign in');
     wrap.innerHTML = `
+      <div class="auth-win">
+      <div class="auth-art" aria-hidden="true"><div class="aa-win">
+        <div class="aa-bar"><i></i><i></i><i></i><b></b></div>
+        <div class="aa-grid">
+          <div class="aa-card aa-text"><b class="aa-chip"></b><s></s><s></s><s style="width:70%"></s><s style="width:82%"></s></div>
+          <div class="aa-card aa-chart"><s style="width:38%"></s><div class="aa-bars"><i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i class="hi" style="height:92%"></i><i style="height:70%"></i></div></div>
+          <div class="aa-card aa-img"><svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMax slice"><circle cx="86" cy="22" r="7"/><path d="M0 80 L34 42 L56 64 L76 46 L120 80 Z"/></svg></div>
+          <div class="aa-card aa-text"><s style="width:46%"></s><s></s><s style="width:88%"></s><s style="width:64%"></s><s style="width:30%"></s></div>
+          <div class="aa-card aa-comp"><s style="width:72%"></s><div class="aa-crow"><b class="aa-chip"></b><span class="grow"></span><i class="aa-send"></i></div></div>
+        </div>
+      </div></div>
+      <div class="auth-side">
       <form class="auth-card" novalidate autocomplete="on">
         <h1 class="auth-title">Welcome to Agenten</h1>
+        <p class="auth-lead">Sign in or create an account. We'll email you a 6&#8209;digit code.</p>
         <div class="auth-fields">
           <label class="auth-label" for="authEmail">Email</label>
           <div class="auth-field"><input id="authEmail" name="username" type="text" inputmode="email" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required /></div>
@@ -224,7 +237,9 @@
             <button type="button" class="auth-link" data-mode="reset">Forgot password?</button>
           </div>
         </div>
-      </form>`;
+      </form>
+      <div class="auth-note"><span>Free for personal use. Your data syncs with your account.</span></div>
+      </div></div>`;
     document.body.append(wrap);
 
     const form = wrap.querySelector('form');
