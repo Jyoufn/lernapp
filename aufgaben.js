@@ -170,6 +170,10 @@ const Aufgaben = (() => {
   /* Neue Kategorie / Kategorie bearbeiten: Fenster mittig (wie „Neue Aufgabe“) – Name + Icon im Linien-Stil */
   // 20.11.: ausgewählte Linien-Icons im einheitlichen Stil (ohne Ordner, Musik, Blitz, Doppel-Sterne, Auto …); dazu die Status-Symbole
   const CAT_ICONS = ['st-open', 'st-doing', 'st-done', 'st-arch', 'check-circle', 'star', 'heart', 'flag', 'target', 'bookmark', 'pin', 'tag', 'book', 'book-open', 'cap', 'bulb', 'file', 'filedoc', 'clipboard', 'list', 'quote', 'slides', 'calendar', 'clock', 'timer', 'bell', 'alert', 'chat', 'people', 'user', 'chart', 'analytics', 'trend', 'mindmap', 'palette', 'mic', 'camera', 'video', 'image', 'globe', 'map-pin', 'terminal', 'gamepad', 'dumbbell', 'medical', 'coffee', 'food', 'gift', 'leaf', 'sun', 'moon', 'briefcase', 'archive'];
+  // eigene Farben bleiben gespeichert (mit dem Konto abgeglichen) und stehen beim nächsten Mal wieder in der Liste
+  const MYC = 'tasks.mycolors.v1';
+  const myCols = () => { try { const a = JSON.parse(localStorage.getItem(MYC)); return Array.isArray(a) ? a.filter((c) => /^#[\da-f]{6}$/i.test(c)) : []; } catch { return []; } };
+  const addMyCol = (hex) => { const l = myCols().filter((c) => c.toLowerCase() !== hex.toLowerCase()); l.push(hex); try { localStorage.setItem(MYC, JSON.stringify(l.slice(-12))); } catch {} };
   function catDialog(cat = null, anchor = null) {
     // 20.11.: aufgebaut wie „Neue Aufgabe“ – oben der Name, darunter Menü-Zeilen (Icon, Farbe); eine Zeile antippen = eigene Seite mit „‹“
     const icons = CAT_ICONS.filter((n) => !window.LineIcons || window.LineIcons.f?.[n] || document.getElementById(`f-${n}`));
@@ -194,7 +198,7 @@ const Aufgaben = (() => {
       } else {
         const body = page === 'icon'
           ? `<div class="au-icgrid" role="radiogroup" aria-label="Icon">${icons.map((n) => `<button type="button" class="au-ic${n === pick ? ' on' : ''}" data-ic="${n}" role="radio" aria-checked="${n === pick}" aria-label="${n}"${tint()}>${icon(`f-${n}`, 16)}</button>`).join('')}</div>`
-          : `<div class="au-cgrid">${['', ...COLS, ...(color && !COLS.includes(color) ? [color] : [])].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}<button type="button" class="au-cc au-ccustom" data-ccustom aria-label="Eigene Farbe" title="Eigene Farbe">${icon('f-plus', 13)}</button></div><div class="au-cpick"></div>`;
+          : `<div class="au-cgrid">${['', ...COLS, ...myCols().filter((c) => !COLS.includes(c))].map((c) => `<button type="button" class="au-cc${c === color ? ' on' : ''}" data-cc="${esc(c)}" aria-label="${c ? 'Farbe' : 'Keine Farbe'}"><i style="background:${esc(c || '#8e8e93')}"></i></button>`).join('')}<button type="button" class="au-cc au-ccustom" data-ccustom aria-label="Eigene Farbe" title="Eigene Farbe"><i></i></button></div><div class="au-cpick"></div>`;
         form.innerHTML = `<button type="button" class="au-cback" data-pg="main">${icon('f-back', 13)}<span>${page === 'icon' ? 'Icon' : 'Farbe'}</span></button>${body}`;
       }
       if (dir && !matchMedia('(prefers-reduced-motion: reduce)').matches) [...form.children].forEach((c) => c.animate([{ opacity: 0, transform: `translateX(${dir * 14}px)` }, { opacity: 1, transform: 'none' }], { duration: 280, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }));
@@ -218,7 +222,7 @@ const Aufgaben = (() => {
         const host = form.querySelector('.au-cpick'); if (!host) return;
         if (host.firstChild) { host.replaceChildren(); return; }
         const h0 = form.offsetHeight;
-        host.append(window.UIKit.colorPicker(color || '#6d9fff', (hex, done) => { if (done) { color = hex; go('main'); } }));
+        host.append(window.UIKit.colorPicker(color || '#6d9fff', (hex, done) => { if (done) { color = hex; addMyCol(hex); go('main'); } }));
         if (!matchMedia('(prefers-reduced-motion: reduce)').matches) form.animate([{ height: `${h0}px` }, { height: `${form.offsetHeight}px` }], { duration: 300, easing: 'cubic-bezier(0.32, 0.72, 0, 1)' });
         return;
       }

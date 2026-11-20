@@ -14593,3 +14593,11 @@ html body .au-cat2 .au-ccustom { color: var(--text-3); box-shadow: inset 0 0 0 1
 html body .au-cat2 .au-cpick:not(:empty) { padding: 4px 6px 6px; }
 html body .au-cat2 .au-cpick .tk-picker { width: 100%; box-sizing: border-box; }
 html body .au-cat2 .au-cpick :is(.tk-sv, .tk-hue, .tk-picker-foot) { width: 100%; box-sizing: border-box; }
+/* 20.11.: Farbseite – Auswahl als schmaler Ring direkt um den Kreis (kein großer Kasten), „eigene Farbe“ als Farbverlauf-Kreis, Farbwähler mittig */
+html body .au-cat2 .au-cc { height: 30px; box-shadow: none !important; background: none !important; }
+html body .au-cat2 .au-cc i { width: 16px; height: 16px; transition: box-shadow 120ms ease; }
+@media (hover: hover) { html body .au-cat2 .au-cc:hover i { box-shadow: 0 0 0 2px var(--app-main, #141414), 0 0 0 3px rgba(255, 255, 255, 0.25); } }
+html body .au-cat2 .au-cc.on i { box-shadow: 0 0 0 2px var(--app-main, #141414), 0 0 0 3px rgba(255, 255, 255, 0.7) !important; }
+html body .au-cat2 .au-ccustom i { background: conic-gradient(from 0deg, #ff6b6b, #ffd166, #6bdc8b, #4dabf7, #b197fc, #ff6b6b) !important; }
+html body .au-cat2 .au-cpick:not(:empty) { display: flex; justify-content: center; padding: 6px 4px 4px !important; }
+html body .au-cat2 .au-cpick .tk-picker { width: 100% !important; max-width: 100%; margin: 0 !important; box-sizing: border-box; }
