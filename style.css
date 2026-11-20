@@ -14627,3 +14627,7 @@ html body .au-cat2 .au-ordg { display: grid; place-items: center; width: 16px; h
 html body .au-cat2 .au-ordrow { transition: background-color 160ms ease, color 160ms ease; }
 html body .au-cat2 .au-ordrow.drag { color: var(--text); }
 html body .au-cat2 .au-ordrow.drag .au-ordg { color: var(--text-2); }
+/* 20.11.: Board mit vielen Spalten rastet immer an einer Spalte ein (sonst ragt links ein Streifen der vorigen Spalte an den Rand, v. a. Safari) */
+html:not(.is-ipad) body .au-board.au-board, html:not(.is-ipad) body .au-board.au-many { scroll-snap-type: x mandatory; }
+html:not(.is-ipad) body .au-board > .au-col { scroll-snap-align: start; scroll-snap-stop: normal; }
+html body.au-dragging .au-board.au-board { scroll-snap-type: none !important; } /* beim Ziehen frei mitscrollen */
