@@ -246,13 +246,14 @@
     "Termine durchsuchen": "Search events", "Keine Termine gefunden": "No events found", "Alle Termine": "All events", "Kommende": "Upcoming", "Nächste 7 Tage": "Next 7 days", "Dieser Monat": "This month", "Vergangene": "Past",
     // 19.11.: Kategorien
     "Neue Kategorie": "New category", "Name der Kategorie": "Category name", "Kategorie bearbeiten": "Edit category", "Kategorie löschen": "Delete category", "Nochmal tippen zum Löschen": "Tap again to delete",
-    'Duplizieren': 'Duplicate', 'Wirklich löschen': 'Really delete', 'Reihenfolge': 'Order', 'Nach links': 'Move left', 'Nach rechts': 'Move right', 'Fotos & Dateien hinzufügen': 'Add photos & files', 'Dateien suchen': 'Search files', '1 Kommentar': '1 comment', '(Kopie)': '(copy)',
+    'Duplizieren': 'Duplicate', 'Zurück zum Monat': 'Back to month', 'Vorheriger Tag': 'Previous day', 'Nächster Tag': 'Next day', 'Fortschritt': 'Progress', 'Keine Termine – tippe auf eine Uhrzeit, um einen anzulegen.': 'No events – tap a time to add one.', 'Wirklich löschen': 'Really delete', 'Reihenfolge': 'Order', 'Nach links': 'Move left', 'Nach rechts': 'Move right', 'Fotos & Dateien hinzufügen': 'Add photos & files', 'Dateien suchen': 'Search files', '1 Kommentar': '1 comment', '(Kopie)': '(copy)',
   };
   Object.assign(D, D2);
   // Teilstücke in zusammengesetzten Texten (Zahlen, Namen davor/danach): längste zuerst ersetzen – nur außerhalb von Nutzer-/KI-Inhalten
   const PHRASES = Object.keys(D).filter((k) => k.length >= 6 && /\s/.test(k)).sort((a, b) => b.length - a.length);
   const RULES = [
     [/^(\d{1,2}:\d{2}) bis (\d{1,2}:\d{2}) Uhr$/, '$1 – $2'], [/^(\d{1,2}:\d{2}) Uhr$/, '$1'], [/^(\d{1,2}:\d{2}) Uhr – (\d{1,2}:\d{2}) Uhr$/, '$1 – $2'],
+    [/^(\d+) Termine$/, '$1 events'], [/^1 Termin$/, '1 event'],
     [/^Vor (\d+) Min\.$/, '$1 min ago'], [/^Vor (\d+) Std\.$/, '$1 h ago'], [/^Vor (\d+) Tagen$/, '$1 days ago'], [/^(\d+) ausgewählt$/, '$1 selected'],
     [/^(\d+) Seiten? gelesen$/, '$1 pages read'], [/^· (\d+)\/(\d+) Seiten?$/, '· $1/$2 pages'], [/^· (\d+) Seiten?$/, '· $1 pages'], [/^(\d+) Seiten?$/, '$1 pages'],
     [/^Frage (\d+) von (\d+)$/, 'Question $1 of $2'], [/^(\d+) Fragen? gestellt$/, '$1 questions asked'], [/^Eine Frage gestellt$/, 'Asked one question'], [/^(\d+) Fragen$/, '$1 questions'],

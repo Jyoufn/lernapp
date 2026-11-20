@@ -14620,3 +14620,61 @@ html body .au-cat2 .au-ordb:disabled { opacity: 0.25; cursor: default; }
 html body :is(.sidebar, .au-view, .cal-view, .au-head, .cm-head, .hm-head, .chat-bar, .chat-pop, .lb2-menu, .tk-menu, .ce-card, .ce-peek, .au-catform, .tagm-pop, .files-pop, .cmdk-box, .cl-list, .tabs, button, [role="button"], [role="menuitem"], [role="tab"]) { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 html body :is(input, textarea, [contenteditable="true"], .md, .msg, .out-bubble, .dc-content, .lz-sheet, .answer, .thought-text, code, pre, .ce-card .tk-f-title, .ce-card .tk-f-notes, .ce-peek .cpk-note) { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
 html body.au-dragging, html body.au-dragging * { -webkit-user-select: none !important; user-select: none !important; }
+/* ===== 20.11.: Tages-Zeitleiste im Kalender (Vorlage: Zeitplan mit Balken) ===== */
+html body .cal-month-view { position: relative; }
+html body .cdl { position: absolute; inset: 0; z-index: 25; display: flex; flex-direction: column; gap: 12px; padding: inherit; box-sizing: border-box; background: var(--app-main, #141414); }
+html body .cdl.closing { opacity: 0; transition: opacity 180ms ease; }
+html body .cdl-top { display: flex; align-items: center; gap: 8px; min-height: 28px; padding-left: 38px; }
+html body .cdl-tt { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+html body .cdl-title { color: var(--text); font: 600 17px var(--font-ui, Inter), sans-serif; white-space: nowrap; }
+html body .cdl-sub { color: var(--text-4); font: 500 12.5px var(--font-ui, Inter), sans-serif; white-space: nowrap; }
+html body .cdl-btn { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 9px; background: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); color: var(--text-3); cursor: pointer; }
+html body .cdl-btn svg { width: 14px; height: 14px; }
+@media (hover: hover) { html body .cdl-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.05); } }
+html body .cdl-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: 200px minmax(0, 1fr); overflow: hidden auto; border-radius: 12px; box-shadow: inset 0 0 0 1px #242424; }
+html body .cdl-names { border-right: 1px solid #242424; }
+html body .cdl-nh, html body .cdl-hours { height: 40px; }
+html body .cdl-nh { display: flex; align-items: center; padding: 0 14px; color: var(--text-4); font: 500 12px var(--font-ui, Inter), sans-serif; border-bottom: 1px solid #1f1f1f; }
+html body .cdl-name { display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 14px; color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; cursor: pointer; }
+html body .cdl-name i { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+html body .cdl-name span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .cdl-name.on { color: var(--text); }
+html body .cdl-none { padding: 12px 14px; color: var(--text-4); font: 500 12.5px/1.45 var(--font-ui, Inter), sans-serif; }
+html body .cdl-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.14) transparent; }
+html body .cdl-canvas { position: relative; min-height: 100%; }
+html body .cdl-hours { position: relative; border-bottom: 1px solid #1f1f1f; }
+html body .cdl-hours span { position: absolute; top: 13px; padding-left: 8px; color: var(--text-3); font: 500 11.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; }
+html body .cdl-grid { position: absolute; inset: 40px 0 0 0; pointer-events: none; }
+html body .cdl-grid i { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.04); }
+html body .cdl-row { position: relative; height: 38px; cursor: copy; }
+html body .cdl-bar { position: absolute; top: 6px; height: 26px; display: flex; align-items: center; gap: 6px; padding: 0 9px; overflow: hidden; border: 0; border-radius: 7px; background: #1c1c1c; box-shadow: inset 0 0 0 1px #2e2e2e; color: var(--text); font: 500 12.5px var(--font-ui, Inter), sans-serif; text-align: left; cursor: pointer; }
+html body .cdl-bar b { position: absolute; inset: 0 auto 0 0; background: color-mix(in srgb, var(--c) 22%, transparent); pointer-events: none; }
+html body .cdl-bar span { position: relative; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .cdl-bar em { position: relative; margin-left: auto; color: var(--text-4); font: 500 10.5px var(--font-ui, Inter), sans-serif; font-style: normal; }
+html body .cdl-bar.all { background: transparent; box-shadow: none; border: 1px dashed #333; color: var(--text-2); }
+html body .cdl-bar.on { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 70%, white 10%); }
+html body .cdl-bar.all.on { border-color: color-mix(in srgb, var(--c) 70%, white 10%); box-shadow: none; }
+html body .cdl-now { position: absolute; top: 28px; bottom: 0; width: 1px; background: rgba(255, 255, 255, 0.75); pointer-events: none; z-index: 2; }
+html body .cdl-now span { position: absolute; top: -2px; left: 50%; transform: translateX(-50%); padding: 1px 6px; border-radius: 6px; background: #2a2a2a; color: var(--text); font: 600 10.5px var(--font-ui, Inter), sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; }
+html body .cdl-detail { flex: none; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) 28px; align-items: center; gap: 18px; padding: 14px 16px; border-radius: 12px; box-shadow: inset 0 0 0 1px #242424; }
+html body .cdl-detail[hidden] { display: none; }
+html body .cdl-dcol { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+html body .cdl-dl { display: flex; justify-content: space-between; color: var(--text-4); font: 500 11.5px var(--font-ui, Inter), sans-serif; }
+html body .cdl-dl em { font-style: normal; color: var(--text-2); }
+html body .cdl-dv { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-2); font: 500 13px var(--font-ui, Inter), sans-serif; }
+html body .cdl-dv b { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .cdl-dv.mono { font-variant-numeric: tabular-nums; }
+html body .cdl-pbar { height: 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+html body .cdl-pbar i { display: block; height: 100%; border-radius: 4px; background: #ededed; }
+@media (max-width: 760px) { html body .cdl-body { grid-template-columns: 120px minmax(0, 1fr); } html body .cdl-detail { grid-template-columns: minmax(0, 1fr) 28px; } html body .cdl-detail .cdl-dcol:not(:first-child) { display: none; } }
+html body .cdl { padding: 10px 16px 14px !important; }
+html body .app.collapsed .cdl-top { padding-left: 84px; }
+html body .cdl-bar.all { top: 7px; height: 24px; border: 1px dashed color-mix(in srgb, var(--c) 55%, #333); background: color-mix(in srgb, var(--c) 9%, transparent); }
+html body .cdl-bar.all span { position: sticky; left: 8px; }
+html body .cdl-bar.all.on { border-color: color-mix(in srgb, var(--c) 85%, white 10%); }
+html body .cdl-now span { top: 4px; }
+html body .cdl-body { flex: 0 1 auto; max-height: 100%; }
+html body .panel > .cdl { z-index: 40; border-radius: inherit; }
+html body .panel > .cdl { z-index: 9; } /* unter dem Sidebar-Knopf */
+html body .panel > .cdl { z-index: 50; } html body .titlebar-controls { z-index: 60; } /* Sidebar-Knopf bleibt über der Zeitleiste */
+html body #sidebarToggle { z-index: 60; } /* über der Tages-Zeitleiste */
