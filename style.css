@@ -14720,3 +14720,7 @@ html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 90px; }
   .msg-out .out-actions { margin-top: 0; padding-top: 2px; pointer-events: auto; transition: opacity 160ms ease 350ms; }
   .msg-out:hover .out-actions, .msg-out .out-actions:hover, .msg-out .out-actions:focus-within { opacity: 1; transition-delay: 0ms; }
 }
+
+/* ===== 20.11.: Quellen-Logos hinter dem Schritt-Text: näher am Text und optisch auf gleicher Höhe (vorher großer Abstand, Logo etwas zu hoch) ===== */
+html body .step-line .t:empty { display: none; }
+html body .step-srcs { margin-left: 2px; position: relative; top: 1px; }

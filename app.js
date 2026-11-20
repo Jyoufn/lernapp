@@ -2090,7 +2090,7 @@ function renderMarkdown(target, text, opts = {}) {
       if (target._pzWait) { f.classList.add('pz-reveal'); target._pzWait = null; } // fertig → weich einblenden statt hart umspringen
       keep.set(raw, f);
     }
-    pre.replaceWith(keep.get(raw));
+    pre.replaceWith(settled(keep.get(raw)));
   });
   // Lernzettel (````lernzettel, 18.11.): Karte im Chat, das Blatt öffnet sich rechts (lernzettel.js)
   window.Lernzettel?.enhance(target, { live: !!opts.live });
@@ -2113,21 +2113,21 @@ function renderMarkdown(target, text, opts = {}) {
     const raw = pre.querySelector('code').textContent;
     const keep = (target._lk ||= new Map());
     if (!keep.has(raw)) { const f = linksFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
-    pre.replaceWith(keep.get(raw));
+    pre.replaceWith(settled(keep.get(raw)));
   });
   // Bild aus einer frei lizenzierten Quelle (```quellbild: serlo, Wikipedia) – mit Bildunterschrift, Lizenz und Link zur Quelle
   target.querySelectorAll('pre:has(code.language-quellbild)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent;
     const keep = (target._qb ||= new Map());
     if (!keep.has(raw)) { const f = sourceImageFigure(raw, opts.sources || []); if (!f) { pre.remove(); return; } keep.set(raw, f); }
-    pre.replaceWith(keep.get(raw));
+    pre.replaceWith(settled(keep.get(raw)));
   });
   // Bild zur Erklärung (```webbild): echtes Bild aus einer Lernquelle bzw. Wikimedia Commons, vom Server passend geprüft – mit Unterschrift und Link
   target.querySelectorAll('pre:has(code.language-webbild)').forEach((pre) => {
     const raw = pre.querySelector('code').textContent;
     const keep = (target._wb ||= new Map());
     if (!keep.has(raw)) { const f = webImageFigure(raw); if (!f) { pre.remove(); return; } keep.set(raw, f); }
-    pre.replaceWith(keep.get(raw));
+    pre.replaceWith(settled(keep.get(raw)));
   });
   target.querySelector(':scope > .wb-credits')?.remove(); // Bildquellen stehen jetzt unten bei den Quellen (placeSourceStack)
   wbFit(target);
@@ -2150,7 +2150,7 @@ function renderMarkdown(target, text, opts = {}) {
       let cur = raw; // jede Frage ändert das Skript – gespeichert wird immer der neueste Stand
       keep.set(raw, Podcast.figure(data, { onChange: (next) => { updatePodcast(cur, next); cur = next; } }));
     }
-    pre.replaceWith(keep.get(raw));
+    pre.replaceWith(settled(keep.get(raw)));
   });
   const drawn = new Set(); // dieselbe Zahlenreihe nur einmal zeigen
   // 19.11.: Funktionsgraphen (```graph / ```funktion): Koordinatensystem, Kurven automatisch gezeichnet (graph.js)
@@ -3084,6 +3084,12 @@ const STAGE_TEXT = {
 const safeUrl = (u) => (/^https?:\/\//i.test(u || '') ? u : '#');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/* 20.11.: Blöcke (Link-Karten, Bilder, Lernsets …) werden beim Schreiben bei jedem neuen Textstück wieder ins Dokument gesetzt – dabei liefen ihre
+   Einblend-Animationen jedes Mal neu (Karten flackerten während des Schreibens). Einmal fertig eingeblendet → Animation aus. */
+function settled(f) {
+  if (f && !f._settled) { f._settled = true; f.addEventListener('animationend', (e) => { if (!e.pseudoElement) e.target.style.animation = 'none'; }); }
+  return f;
+}
 /* ---------- Funde mit Link (```links) ----------
    {"links":[{"n":4,"titel":"…","text":"…"} | {"url":"https://…","titel":"…"}]} → Raster aus Karten: Vorschaubild, Titel, Website mit Logo, ein Satz.
    Bild: Foto des Funds (freie Bilder) → Seitenbild der Website (/api/link, og:image) → Screenshot der Seite (WordPress mShots; erst ein
