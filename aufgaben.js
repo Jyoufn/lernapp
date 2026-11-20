@@ -67,6 +67,19 @@ const Aufgaben = (() => {
     <div class="au-board"></div>`;
   view.append(main);
   const board = main.querySelector('.au-board');
+  // 20.11.: nach dem Seitwärts-Scrollen immer genau an einer Spalte einrasten (Safari blieb mit CSS-Einrasten manchmal halb stehen → Streifen am linken Rand)
+  { let tm = 0, busy = false;
+    const settle = () => {
+      if (document.body.classList.contains('au-dragging') || document.documentElement.classList.contains('is-ipad')) return;
+      const cs = [...board.querySelectorAll(':scope > .au-col')]; if (cs.length < 2) return;
+      const max = board.scrollWidth - board.clientWidth; if (max <= 0) return;
+      const x0 = board.getBoundingClientRect().left - board.scrollLeft;
+      const stops = cs.map((c) => Math.min(max, Math.round(c.getBoundingClientRect().left - x0))).concat(max);
+      const sl = board.scrollLeft, best = stops.reduce((a, b) => (Math.abs(b - sl) < Math.abs(a - sl) ? b : a));
+      if (Math.abs(best - sl) > 1) { busy = true; board.scrollTo({ left: best, behavior: 'smooth' }); setTimeout(() => { busy = false; }, 450); }
+    };
+    board.addEventListener('scroll', () => { if (busy) return; clearTimeout(tm); tm = setTimeout(settle, 140); }, { passive: true });
+  }
   function buildBoard() {
     board.innerHTML = cols().map(([k, n]) => { const c = cats.find((x) => x.id === k);
       const ci = colInfo(k);

@@ -14632,3 +14632,5 @@ html:not(.is-ipad) body .au-board.au-board, html:not(.is-ipad) body .au-board.au
 html:not(.is-ipad) body .au-board > .au-col { scroll-snap-align: start; scroll-snap-stop: normal; }
 html body.au-dragging .au-board.au-board { scroll-snap-type: none !important; } /* beim Ziehen frei mitscrollen */
 html body .chat-pop.au-menu { width: 204px !important; min-width: 204px; max-width: 204px; } /* 20.11.: etwas schmaler */
+/* 20.11.: Einrasten macht jetzt aufgaben.js (zuverlässig auch in Safari); Board schneidet sauber am Rand ab */
+html:not(.is-ipad) body .au-board.au-board, html:not(.is-ipad) body .au-board.au-many { scroll-snap-type: none; contain: paint; }
