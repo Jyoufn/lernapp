@@ -14712,3 +14712,11 @@ html body .auth { background: var(--app-main, #141414); }
 html body .chat-pop.ce-peek { background: #1f1f1f !important; border-color: #2a2a2a !important; }
 html body .ce-peek .cpk-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 3px 0 1px; }
 html body .ce-peek .cpk-tags .lb2-tag { font-size: 11px; max-width: 90px; }
+
+/* ===== 20.11.: Kopieren/Bearbeiten unter der eigenen Nachricht leicht erreichbar =====
+   Vorher: Leiste lag 2 px unter der Nachricht und war unsichtbar nicht anfassbar → beim Hinfahren verschwand sie.
+   Jetzt (Maus): Leiste ohne Lücke, auch unsichtbar „anfassbar“ (gehört zur Nachricht → hält sie sichtbar), Ausblenden erst nach kurzer Pause. */
+@media (hover: hover) {
+  .msg-out .out-actions { margin-top: 0; padding-top: 2px; pointer-events: auto; transition: opacity 160ms ease 350ms; }
+  .msg-out:hover .out-actions, .msg-out .out-actions:hover, .msg-out .out-actions:focus-within { opacity: 1; transition-delay: 0ms; }
+}
