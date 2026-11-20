@@ -14543,3 +14543,6 @@ html body .au-catform.au-catform .ce-headbox { padding-bottom: 6px !important; }
 html body .au-cm { font-size: 11px !important; color: var(--text-4) !important; margin-top: 4px; }
 html body .au-cm svg { width: 10.5px; height: 10.5px; opacity: 0.75; }
 html body .au-cm.over { color: #c4554d !important; }
+/* 20.11.: Erstellen – Umschalter „Agenten · Dokumente“ ohne eigene Fläche (Haupt-Hintergrund), Auswahl dezenter/dunkler */
+html body .cs-pill[aria-label="Erstellen"] { background: transparent !important; }
+html body .cs-pill[aria-label="Erstellen"] .cs-thumb { background: rgba(255, 255, 255, 0.05) !important; }
