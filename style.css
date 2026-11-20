@@ -14631,3 +14631,4 @@ html body .au-cat2 .au-ordrow.drag .au-ordg { color: var(--text-2); }
 html:not(.is-ipad) body .au-board.au-board, html:not(.is-ipad) body .au-board.au-many { scroll-snap-type: x mandatory; }
 html:not(.is-ipad) body .au-board > .au-col { scroll-snap-align: start; scroll-snap-stop: normal; }
 html body.au-dragging .au-board.au-board { scroll-snap-type: none !important; } /* beim Ziehen frei mitscrollen */
+html body .chat-pop.au-menu { width: 204px !important; min-width: 204px; max-width: 204px; } /* 20.11.: etwas schmaler */

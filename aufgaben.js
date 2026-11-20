@@ -120,6 +120,7 @@ const Aufgaben = (() => {
       due: (a, b) => dueKey(a).localeCompare(dueKey(b)) || (PRANK[a.priority || 'none'] - PRANK[b.priority || 'none']), // was am nächsten fällig ist, oben
       prio: (a, b) => (PRANK[a.priority || 'none'] - PRANK[b.priority || 'none']) || dueKey(a).localeCompare(dueKey(b)),
       tags: (a, b) => { const x = tagName(a), y = tagName(b); return (!x - !y) || x.localeCompare(y, 'de') || dueKey(a).localeCompare(dueKey(b)); }, // ohne Tag ans Ende
+      late: (a, b) => (!a.due - !b.due) || dueKey(b).localeCompare(dueKey(a)) || (PRANK[a.priority || 'none'] - PRANK[b.priority || 'none']), // am spätesten fällig oben, ohne Datum ans Ende
       title: (a, b) => a.title.localeCompare(b.title, 'de'),
       created: (a, b) => (b.created || 0) - (a.created || 0),
     }[vs.sort];
@@ -166,7 +167,7 @@ const Aufgaben = (() => {
     }
     const sb = e.target.closest('[data-au="sort"]');
     if (sb) {
-      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Fälligkeit (nächste zuerst)', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'plus']];
+      const SORTS = [['manual', 'Eigene Reihenfolge', 'grip'], ['due', 'Früheste zuerst', 'clock'], ['late', 'Späteste zuerst', 'clock'], ['prio', 'Priorität', 'flag'], ['tags', 'Tags', 'tag'], ['title', 'Titel (A–Z)', 'align-left'], ['created', 'Zuletzt erstellt', 'plus']];
       openAMenu(sb, () => SORTS.map(([v, l, ic]) => mi(v, l, vs.sort === v, mic(ic))).join(''), (v) => { vs.sort = v; saveVs(); syncHead(); render(); });
     }
   });
