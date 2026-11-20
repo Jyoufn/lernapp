@@ -196,10 +196,10 @@
       <div class="auth-art" aria-hidden="true"><div class="aa-win">
         <div class="aa-bar"><i></i><i></i><i></i><b></b></div>
         <div class="aa-grid">
-          <div class="aa-card aa-text"><b class="aa-chip"></b><s></s><s></s><s style="width:70%"></s><s style="width:82%"></s></div>
-          <div class="aa-card aa-chart"><s style="width:38%"></s><div class="aa-bars"><i style="height:40%"></i><i style="height:62%"></i><i style="height:48%"></i><i class="hi" style="height:92%"></i><i style="height:70%"></i></div></div>
-          <div class="aa-card aa-img"><svg viewBox="0 0 120 80" preserveAspectRatio="xMidYMax slice"><circle cx="86" cy="22" r="7"/><path d="M0 80 L34 42 L56 64 L76 46 L120 80 Z"/></svg></div>
-          <div class="aa-card aa-text"><s style="width:46%"></s><s></s><s style="width:88%"></s><s style="width:64%"></s><s style="width:30%"></s></div>
+          <div class="aa-card aa-text aa-note"><b class="aa-chip"></b><s></s><s class="mk" style="width:76%"></s><s style="width:88%"></s><s style="width:58%"></s><s class="mk" style="width:44%"></s></div>
+          <div class="aa-card aa-chart"><s style="width:38%"></s><div class="aa-bars"><i style="height:34%"></i><i style="height:52%"></i><i style="height:44%"></i><i style="height:68%"></i><i class="hi" style="height:92%"></i><i style="height:60%"></i><i style="height:26%"></i></div></div>
+          <div class="aa-card aa-quiz"><s style="width:70%"></s><div class="aa-opt"><i></i><s style="width:62%"></s></div><div class="aa-opt on"><i><svg viewBox="0 0 12 12"><path d="M3 6.2l2 2 4-4.4"/></svg></i><s style="width:74%"></s></div><div class="aa-opt"><i></i><s style="width:50%"></s></div></div>
+          <div class="aa-card aa-ring"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="17"/><circle class="v" cx="22" cy="22" r="17" pathLength="100" stroke-dasharray="72 100"/></svg><div class="aa-rl"><b>72%</b><s style="width:80%"></s><s style="width:56%"></s></div></div>
           <div class="aa-card aa-comp"><s style="width:72%"></s><div class="aa-crow"><b class="aa-chip"></b><span class="grow"></span><i class="aa-send"></i></div></div>
         </div>
       </div></div>
@@ -238,7 +238,6 @@
           </div>
         </div>
       </form>
-      <div class="auth-note"><span>Free for personal use. Your data syncs with your account.</span></div>
       </div></div>`;
     document.body.append(wrap);
 
