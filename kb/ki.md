@@ -65,6 +65,9 @@ Kern immer – Einzelheiten nur bei Bedarf; Antwort zuerst; ein Vergleich statt 
 - **Bild zur Erklärung** (`bild` in `ROUTE_SYSTEM`): auch für echte Dinge, die man gesehen haben sollte (Tier, Pflanze, Ort, Gerät, historische Person/Szene, Kunststil) – weiterhin nicht bei jeder Nachricht.
 - **Coding-Agent (MiniMax, `lib/codeloop.js`)**: Gedanken laufen durch denselben Filter (`code: true`), Pausen/Aussetzer nur als Live-Zeile; `update_plan` → Ereignis `todos` mit `done`/`fixed` (der Agent hakt selbst ab, Liste in der Zeitleiste statt ```plan im Text); vor der ersten Datei ein kurzer Satz („Ich lege jetzt … an“, vom Modell oder aus den Dateinamen); Werkzeug `web_search` mit EIGENEN Suchbegriffen (höchstens 4), Treffer als ```search-Zeile mit Quellen-Logos, Ergebnis mit Hinweis „keinen Code übernehmen“.
 - **Antwort wartet höchstens 2,5 s** auf die Übersetzung der Gedanken (`gateWait`, auch bei MiniMax/DeepSeek).
+- **Alle Gedanken zeigen (24.11.)**: bis zu 80 Abschnitte (`maxSections`), Übersetzung wird bei Fehlern bis zu zweimal wiederholt, fehlende Abschnitte einzeln nachgereicht.
+- **Kein „Working/Thinking“ ohne Grund (24.11.)**: die Zeitleiste erscheint erst bei echten Schritten (Gedanken, Recherche, Dateien) – denkt die KI nicht, kommt nur der Text.
+- **Keine Längengrenze (24.11.)**: Prompt sagt „schreib aus, wenn es mehr Wichtiges gibt“; Low 32k/4 Fortsetzungen, Medium 64k/6 (`EFFORTS`).
 - **Kalender per Chat** (`PLAN_WORDS` → `planPrompt` in `extrasPrompt`): Block ```termin {titel, datum, zeit, beschreibung} – die App trägt ihn ein und zeigt eine Bestätigung mit „Rückgängig“ (`planChip` in `code-box.js`). Aufgaben gibt es nicht mehr; ein alter ```aufgabe-Block wird ausgeblendet.
 
 ## Fähigkeiten statt Vorgaben (10.11. abends)

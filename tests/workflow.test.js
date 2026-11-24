@@ -54,7 +54,7 @@ test('1 Low, einfache Frage: direkt ohne Vorab-Planung – keine Recherche, klei
   const gen = fx.calls.filter(M.is.geminiStream);
   assert.equal(gen.length, 1);
   assert.equal(gen[0].body.generationConfig.thinkingConfig.thinkingBudget, 0); // Low: ohne Denken (schnell)
-  assert.equal(gen[0].body.generationConfig.maxOutputTokens, 16384);
+  assert.equal(gen[0].body.generationConfig.maxOutputTokens, 32768);
   assert.equal(gen[0].body.tools, undefined);
 });
 

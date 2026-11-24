@@ -3682,10 +3682,8 @@ async function runChat(msgEl, signal, cont = null, tab = activeTab(), prefix = '
     if (signal.aborted || quiet) return;
     if (pictureAsk && !picWaitsForFiles) { ensureWork(); showPicStep(); return; } // Bildbitte: „Bild erzeugen“ als Schritt in der Zeitleiste, nicht frei
     if (pictureAsk) { ensureWork(); return; } // mit Dateien: erst die Materialprüfung (Server-Stufe), dann der Bild-Schritt
-    if (answerR || work) return;
-    // gleich die echte Zeitleiste mit arbeitendem Hund (statt eines eigenen „Arbeiten“ mit Drehkreis ohne Hund)
-    ensureWork();
-    scrollToBottom();
+    // 24.11.: kein „Working/Thinking/Cooking“ mehr nur weil Zeit vergeht – die Zeitleiste erscheint erst, wenn wirklich etwas passiert
+    // (Gedanken, Recherche, Dateien lesen …). Denkt die KI nicht, kommt einfach der Text.
   }, pictureAsk ? 0 : PENDING_DELAY);
   const removePending = () => { clearTimeout(pendingTimer); pending?.remove(); pending = null; };
 
